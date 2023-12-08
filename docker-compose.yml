@@ -1,0 +1,14 @@
+version: '3.9'
+
+services:
+  rust:
+    build:
+      context: .
+      dockerfile: ./rust/Dockerfile
+    volumes:
+      # Compiled binaries will also go here w
+      - "./rust:/usr/src/app/rust"
+      # Keep compiled intermediate folders
+      - "rust_home_dir:/root"
+
+
