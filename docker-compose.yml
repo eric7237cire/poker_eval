@@ -12,3 +12,6 @@ services:
       - "rust_home_dir:/root"
 
 
+volumes:
+
+  rust_home_dir:
