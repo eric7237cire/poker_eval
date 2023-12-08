@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-use std::collections::HashSet;
 
 use itertools::Itertools;
 //use poker_rs::{core::Hand as CoreHand, holdem::MonteCarloGame};
@@ -15,7 +13,6 @@ use postflop_solver::Hand;
 use postflop_solver::card_pair_to_index;
 use postflop_solver::card_to_string;
 use postflop_solver::flop_from_str;
-use postflop_solver::index_to_card_pair;
 use postflop_solver::rank_to_char;
 
 fn category_to_string(rank: i32) -> &'static str {
@@ -53,9 +50,11 @@ fn get_hand_category_rank(hand: &Hand) -> i32 {
 
 fn main() {
     
-    try_evaluate();
+    //try_evaluate();
 
-    try_ranges();
+    //try_ranges();
+
+    run_simul();
 }
 
 //returns AA, AK, 76s
@@ -88,7 +87,9 @@ fn try_ranges() {
     println!("Range2 num hands = {}", range2_weights.len());
     println!("Range3 num hands = {}", range3_weights.len());
     println!("Total num hands = {}\n\n", 52*51 / 2);
+}
 
+fn run_simul() {
     //flop_from_str
     
     let my_hand = Hand::new();
@@ -98,106 +99,28 @@ fn try_ranges() {
     let flop_str = "Ah Ts 5d";
     let flop = flop_from_str(&flop_str).unwrap();
 
+    let mut villain_ranges: Vec<Range> = vec![
+        //all
+        "22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32".parse().unwrap(),
+        //75%
+        "22+, A2s+, K2s+, Q2s+, J2s+, T2s+, 92s+, 82s+, 72s+, 62s+, 52s+, 42s+, A2o+, K2o+, Q2o+, J4o+, T6o+, 96o+, 86o+, 76o".parse().unwrap(),
+        //50%
+        "22+, A2s+, K2s+, Q2s+, J2s+, T5s+, 96s+, 86s+, 75s+, A2o+, K5o+, Q7o+, J8o+, T8o+".parse().unwrap(),
+        //25%
+        "55+, A2s+, K5s+, Q8s+, J8s+, T9s, A8o+, K9o+, QTo+, JTo".parse().unwrap(),
+    ];
+
     let dead_cards_mask: u64 =  (1 << flop[0]) | (1 << flop[1]) | (1 << flop[2]) | (1 << my_hand.cards[0]) | (1 << my_hand.cards[1]);
 
     assert_eq!(5, dead_cards_mask.count_ones());
 
-    let (range1_weights, _) = range1.get_hands_weights(dead_cards_mask);
-    let (range2_weights, _) = range2.get_hands_weights(dead_cards_mask);
-    let (range3_weights, _) = range3.get_hands_weights(dead_cards_mask);
-
-    println!("Range1 num hands = {}", range1_weights.len());
-    println!("Range2 num hands = {}", range2_weights.len());
-    println!("Range3 num hands = {}", range3_weights.len());
-    println!("Total num hands = {}", 52*51 / 2);
-
-    println!("range 3 {}", range3.to_string());
-
-    //let mut range1 = range1.clone();
-    //let mut range2 = range2.clone();
-    let mut range3 = range3.clone();
-
-    //range3.set_weight(&[my_hand.cards[0], my_hand.cards[1]], 0.0);
-    //range3.set_weight(&[flop[0] as usize, flop[1] as usize, flop[2] as usize], 0.0);
-
-    // for card1 in 0..52 {
-    //     for card2 in 0..52 {
-            
-    //     }
-    // }
-    // for index in 0..20 {
-    //     let (card1, card2) = index_to_card_pair(index);
-    //     println!("card1 = {} {} card2 = {} {}", 
-    //     card1,
-    //     card_to_string(card1 as u8).unwrap(), 
-    //     card2,
-    //     card_to_string(card2 as u8).unwrap());
-    // }
-
-    let mut range3_strings : HashMap<String, u8> = HashMap::new();
-
-    let mut range_index = 0;
-    for card1 in 0..=51 {
-        for card2 in card1+1..=51 {
-            
-            let check_index = card_pair_to_index(card1, card2);
-
-            /*println!("card1 = {} {} card2 = {} {}  index = {}, check index = {}", 
-            card1, card_to_string(card1 as u8).unwrap(), card2, card_to_string(card2 as u8).unwrap(),
-            range_index, check_index);*/
-
-            assert_eq!(check_index, range_index);
-
-            let mut taken = false;
-
-            if card1 == my_hand.cards[0] as u8 || card1 == my_hand.cards[1] as u8 || card2 == my_hand.cards[0] as u8 || card2 == my_hand.cards[1] as u8 {
-                taken = true;
-            } 
-
-            //same with flop
-            if card1 == flop[0] || card1 == flop[1] || card1 == flop[2] || card2 == flop[0] || card2 == flop[1] || card2 == flop[2] {
-                taken = true;
-                
-            }
-
-            if taken {
-                range3.set_weight(&[range_index], 0.0);
-                
-            } else {
-                let ss = cards_to_simple_string(card2, card1).unwrap();
-                range3_strings.entry(ss).and_modify(|count| *count+=1).or_insert(1);
-            }
-
-            range_index += 1;
-        }
+    for range in villain_ranges.iter() {
+        let (range_weights, _) = range.get_hands_weights(dead_cards_mask);
+        println!("Range num hands = {} {:.1}%", range_weights.len(), range_weights.len() as f64 / 1326.0 * 100.0);
     }
-
-    assert_eq!(range_index, 1326);
-    assert_eq!(range_index, 52*51/2);
-
-    //let flop_range: Range = flop_str.replace(" ", ", ").parse().unwrap();
-    // for (hand, _weight) in flop_range.get_hands_weights(dead_cards_mask).0 {
-    //     range3.set_weight(&[hand as usize], 0.0);
-    // }
-
-    //range3.update_with_singleton(&card_to_string(my_hand.cards[0] as u8).unwrap(), 0.0).unwrap();
     
-    let (range3_weights, _) = range3.get_hands_weights(0);
-
-    println!("Range3 num hands = {} and should be {}", range3_weights.len(), 47*46/2);
-    println!("range 3 {}", range3.to_string());
-
-    // for s in range3_strings.keys() {
-    //     println!("{} {}", s, range3_strings.get(s).unwrap());
-    // }
-
-    let new_range_string = range3_strings.keys().join(",");
-    //println!("new range string {}", new_range_string);
-    //let range3_again = new_range_string.parse::<Range>().unwrap();
-    //will be everything again
-    //println!("range 3 again {}\n{}", range3_again.to_string(), range3_again.get_hands_weights(0).0.len());
-    //# of hands
-
+    
+    
 
     //print hole cards and flop again
     println!("Hole Cards: {} {}", card_to_string(my_hand.cards[0] as u8).unwrap(), card_to_string(my_hand.cards[1] as u8).unwrap());
@@ -223,13 +146,142 @@ fn try_ranges() {
     let hero_rank = get_hand_category_rank(&hand_hero);
     let hero_eval = hand_hero.evaluate_internal();
 
-    let mut vil_range_results = RangeEval::new();
+    let cards_to_remove: Vec<Card> = vec![my_hand.cards[0] as u8, my_hand.cards[1] as u8, flop[0], flop[1], flop[2]];
+    let cards_to_remove_usize = cards_to_remove.iter().map(|c| *c as usize).collect::<Vec<usize>>();
+    for range in villain_ranges.iter_mut() {
+        remove_cards_from_range(range, &cards_to_remove_usize);
+    }
 
-    for (card1, card2) in range3.get_hands_weights(0).0 {
+    
+
+    //now print out the results
+
+    println!("Hero category {}", category_to_string(hero_rank));
+
+    for (vil_idx, vil_range) in villain_ranges.iter().enumerate() {
+    
+        let mut vil_results = RangeEval::new();
+        eval_villian_range(&mut vil_results, hand_base, vil_range, hero_eval);
+        let num_hands = vil_range.get_hands_weights(0).0.len();
+        println!("\n\nVillian {} with {}\n", vil_idx + 1, num_hands);
+        print_villian_range_results(&vil_results, num_hands);
+
+    }
+
+    //Now simulate all remaining turn cards
+    //let mut turn_cards: Vec<Card> = Vec::new();
+
+    let mut villian_results = villain_ranges.iter().map(|_| RangeEval::new()).collect::<Vec<RangeEval>>();
+
+    for turn_card in 0..=51 {
+        if cards_to_remove.contains(&turn_card) {
+            continue;
+        }
+
+        let turn_card_indexes = get_indexes_for_cards(&vec![turn_card]);
+
+        let turn_hero_hand = hand_hero.add_card(turn_card as usize);
+        let turn_hero_eval = turn_hero_hand.evaluate_internal();
+
+        for (villian_index, villian_range) in villain_ranges.iter_mut().enumerate() {
+            let removed_indexes = remove_cards_from_range(villian_range, &turn_card_indexes);
+            assert!(removed_indexes.len() > 0);
+
+            eval_villian_range(&mut villian_results[villian_index], 
+                hand_base.add_card(turn_card as usize), &villian_range, turn_hero_eval);
+
+            //add them back
+            add_cards_from_range(villian_range, &removed_indexes);
+        }
+    }
+
+    for (villian_index, villian_results) in villian_results.iter().enumerate() {
+        //let num_hands = villain_ranges[villian_index].get_hands_weights(0).0.len();
+        println!("\n\n*Turn* Villian {}\n", villian_index + 1);
+        print_villian_range_results(&villian_results, 
+            villian_results.category_winning_hands.iter().sum::<u32>() as usize +
+            villian_results.category_losing_hands.iter().sum::<u32>() as usize +
+            villian_results.category_tie_hands.iter().sum::<u32>() as usize
+        );
+    }
+
+}
+
+fn get_indexes_for_cards(cards: &Vec<Card>) -> Vec<usize> {
+    let mut indexes: Vec<usize> = Vec::new();
+
+    for card1 in 0..=51 {
+        for card2 in card1+1..=51 {
+            if cards.contains(&card1) || cards.contains(&card2) {
+                indexes.push(card_pair_to_index(card1, card2));
+            }
+        }
+    }
+
+    indexes
+}
+
+//Returns indexes actually removed
+fn remove_cards_from_range(range: &mut Range, card_indexes: &Vec<usize>) -> Vec<usize> {
+
+    let mut removed_indexes: Vec<usize> = Vec::with_capacity(7);
+
+    for card_index in card_indexes {
+        if range.data[*card_index] <= 0.0 {
+            continue;
+        }
+        
+        removed_indexes.push(*card_index);
+        range.data[*card_index] = 0.0;
+    }
+
+    removed_indexes
+}
+
+fn add_cards_from_range(range: &mut Range, card_indexes: &Vec<usize>)  {
+
+    for card_index in card_indexes {
+        assert_eq!(range.data[*card_index], 0.0);
+        
+        range.data[*card_index] = 1.0;
+    }
+}
+/*
+fn remove_cards_from_range(range: &mut Range, cards: &Vec<Card>) {
+    
+    let mut range_index = 0;
+    for card1 in 0..=51 {
+        for card2 in card1+1..=51 {
+            
+            let check_index = card_pair_to_index(card1, card2);
+
+            /*println!("card1 = {} {} card2 = {} {}  index = {}, check index = {}", 
+            card1, card_to_string(card1 as u8).unwrap(), card2, card_to_string(card2 as u8).unwrap(),
+            range_index, check_index);*/
+
+            assert_eq!(check_index, range_index);
+
+            let taken = cards.contains(&card1) || cards.contains(&card2);
+
+            
+            if taken {
+                range.set_weight(&[range_index], 0.0);
+                
+            } 
+
+            range_index += 1;
+        }
+    }
+
+}*/
+
+fn eval_villian_range(vil_range_results: &mut RangeEval, hand_base: Hand, vil_range: &Range, hero_eval: i32)  {
+    
+    for (card1, card2) in vil_range.get_hands_weights(0).0 {
         let hand_villian = hand_base.add_card(card1 as usize);
         let hand_villian = hand_villian.add_card(card2 as usize);
 
-        assert_eq!(hand_villian.num_cards, 5);
+        assert!(hand_villian.num_cards >= 5 && hand_villian.num_cards <= 7);
 
         let vil_rank = get_hand_category_rank(&hand_villian);
 
@@ -250,23 +302,20 @@ fn try_ranges() {
         }
     }
 
-    //now print out the results
+}
 
-    println!("Hero category {}", category_to_string(hero_rank));
-
+fn print_villian_range_results(vil_range_results: &RangeEval, range_total: usize) {
     for cat in 0..9 {
-        println!("Category {:<20} => Win {:>3} => {:>4.1}% | Lose {:>3} {:>4.1}% Tie {:>3} {:.1}%", 
+        println!("Category {:<20} => Win {:>4} => {:>4.1}% | Lose {:>4} {:>4.1}% Tie {:>4} {:.1}%", 
         category_to_string(cat), 
         vil_range_results.category_winning_hands[cat as usize], 
-        vil_range_results.category_winning_hands[cat as usize] as f64 / range3_weights.len() as f64 * 100.0,
+        vil_range_results.category_winning_hands[cat as usize] as f64 / range_total as f64 * 100.0,
         vil_range_results.category_losing_hands[cat as usize],
-        vil_range_results.category_losing_hands[cat as usize] as f64 / range3_weights.len() as f64 * 100.0,
+        vil_range_results.category_losing_hands[cat as usize] as f64 / range_total as f64 * 100.0,
         vil_range_results.category_tie_hands[cat as usize], 
-        vil_range_results.category_tie_hands[cat as usize] as f64 / range3_weights.len() as f64 * 100.0,
+        vil_range_results.category_tie_hands[cat as usize] as f64 / range_total as f64 * 100.0,
     );
-
-    }
-
+}
 }
 
 struct RangeEval {

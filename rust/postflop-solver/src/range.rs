@@ -40,7 +40,7 @@ use bincode::{Decode, Encode};
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "bincode", derive(Decode, Encode))]
 pub struct Range {
-    data: [f32; 52 * 51 / 2],
+    pub data: [f32; 52 * 51 / 2],
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
