@@ -1,64 +1,8 @@
-[package]
-name = "rs_poker"
-version = "3.0.0-beta.4"
-authors = ["Elliott Clark <eclark@apache.org>"]
-keywords = ["cards", "poker"]
-categories = ["games"]
-homepage = "https://docs.rs/rs_poker"
-repository = "https://github.com/elliottneilclark/rs-poker"
-description = "A library to help with any Rust code dealing with poker. This includes card values, suits, hands, hand ranks, 5 card hand strength calculation, 7 card hand strength calulcation, and monte carlo game simulation helpers."
-readme = "README.md"
-license = "Apache-2.0"
-edition = "2021"
+[workspace]
+resolver = "2"
 
-[dependencies]
-rand = "0.8.5"
-thiserror = "1.0.49"
-serde = { version = "1.0.189", optional = true, features = ["derive"] }
-arbitrary = { version = "1.3.1", optional = true, features = ["derive"] }
-tracing = { version = "0.1.40", optional = true}
-dyn-clone = { version = "1.0.14", optional = true }
-
-[dev-dependencies]
-criterion = "0.5.1"
-test-log = { version = "0.2.12", features = ["trace", "log"] }
-tracing-subscriber = {version = "0.3.17", default-features = true, features = ["env-filter", "fmt"]}
-env_logger = {version = "0.10.0"}
-
-[features]
-default = ["arena"]
-serde = ["dep:serde"]
-arena = ["dep:tracing", "dep:dyn-clone"]
-
-[[bench]]
-name = "arena"
-harness = false
-required-features = ["arena"]
-
-[[bench]]
-name = "monte_carlo_game"
-harness = false
-
-[[bench]]
-name = "holdem_starting_hand"
-harness = false
-
-[[bench]]
-name = "iter"
-harness = false
-
-[[bench]]
-name = "parse"
-harness = false
-
-[[bench]]
-name = "rank"
-harness = false
-
-[[bench]]
-name = "icm_sim"
-harness = false
-
-[profile.release]
-debug = true
-lto = true
+members = [
+	"poker_rs",
+    "postflop-solver",
+    "runner"
+]
