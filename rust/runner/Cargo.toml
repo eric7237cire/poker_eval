@@ -19,3 +19,4 @@ path = "src/bin.rs"
 poker_rs = { path = "../poker_rs" }
 postflop-solver = {path = "../postflop-solver"}
 
+itertools = "*"

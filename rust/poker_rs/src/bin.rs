@@ -57,7 +57,6 @@ mod tests {
 
         assert_eq!(hand2.cmp(&hand1), Ordering::Equal);
 
-        assert_eq!(1, 2);
 
         
     }

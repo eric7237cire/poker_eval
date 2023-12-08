@@ -40,25 +40,6 @@ default = ["arena"]
 serde = ["dep:serde"]
 arena = ["dep:tracing", "dep:dyn-clone"]
 
-[[bench]]
-name = "monte_carlo_game"
-harness = false
-
-[[bench]]
-name = "holdem_starting_hand"
-harness = false
-
-[[bench]]
-name = "iter"
-harness = false
-
-[[bench]]
-name = "parse"
-harness = false
-
-[[bench]]
-name = "rank"
-harness = false
 
 
 [profile.release]

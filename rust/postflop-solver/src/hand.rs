@@ -1,9 +1,9 @@
 use crate::hand_table::*;
 
 #[derive(Clone, Copy, Default)]
-pub(crate) struct Hand {
-    cards: [usize; 7],
-    num_cards: usize,
+pub struct Hand {
+    pub cards: [usize; 7],
+    pub num_cards: usize,
 }
 
 #[inline]
@@ -54,18 +54,24 @@ impl Hand {
         HAND_TABLE.binary_search(&self.evaluate_internal()).unwrap() as u16
     }
 
-    fn evaluate_internal(&self) -> i32 {
+    pub fn evaluate_internal(&self) -> i32 {
         let mut rankset = 0i32;
         let mut rankset_suit = [0i32; 4];
         let mut rankset_of_count = [0i32; 5];
         let mut rank_count = [0i32; 13];
 
+        let mut c_idx = 0;
         for &card in &self.cards {
             let rank = card / 4;
             let suit = card % 4;
             rankset |= 1 << rank;
             rankset_suit[suit] |= 1 << rank;
             rank_count[rank] += 1;
+
+            c_idx += 1;
+            if c_idx == self.num_cards {
+                break;
+            }
         }
 
         for rank in 0..13 {
@@ -163,14 +169,16 @@ mod tests {
         }
 
         assert!(appeared.iter().all(|&x| x));
-        assert_eq!(counter[8], 41584); // straight flush
-        assert_eq!(counter[7], 224848); // four of a kind
-        assert_eq!(counter[6], 3473184); // full house
-        assert_eq!(counter[5], 4047644); // flush
-        assert_eq!(counter[4], 6180020); // straight
-        assert_eq!(counter[3], 6461620); // three of a kind
-        assert_eq!(counter[2], 31433400); // two pair
-        assert_eq!(counter[1], 58627800); // one pair
-        assert_eq!(counter[0], 23294460); // high card
+        assert_eq!(counter[8], 41_584); // straight flush
+        assert_eq!(counter[7], 224_848); // four of a kind
+        assert_eq!(counter[6], 3_473_184); // full house
+        assert_eq!(counter[5], 4_047_644); // flush
+        assert_eq!(counter[4], 6_180_020); // straight
+        assert_eq!(counter[3], 6_461_620); // three of a kind
+        assert_eq!(counter[2], 31_433_400); // two pair
+        assert_eq!(counter[1], 58_627_800); // one pair
+        assert_eq!(counter[0], 23_294_460); // high card
+
+        assert_eq!(2, 3);
     }
 }

@@ -163,7 +163,7 @@ fn char_to_suit(c: char) -> Result<u8, String> {
 ///
 /// `12` => `'A'`, `11` => `'K'`, ..., `0` => `'2'`.
 #[inline]
-fn rank_to_char(rank: u8) -> Result<char, String> {
+pub fn rank_to_char(rank: u8) -> Result<char, String> {
     match rank {
         12 => Ok('A'),
         11 => Ok('K'),
@@ -699,14 +699,14 @@ impl Range {
     }
 
     #[inline]
-    fn set_weight(&mut self, indices: &[usize], weight: f32) {
+    pub fn set_weight(&mut self, indices: &[usize], weight: f32) {
         for &i in indices {
             self.data[i] = weight;
         }
     }
 
     #[inline]
-    fn update_with_singleton(&mut self, combo: &str, weight: f32) -> Result<(), String> {
+    pub fn update_with_singleton(&mut self, combo: &str, weight: f32) -> Result<(), String> {
         let (rank1, rank2, suitedness) = parse_singleton(combo)?;
         self.set_weight(&indices_with_suitedness(rank1, rank2, suitedness), weight);
         Ok(())
