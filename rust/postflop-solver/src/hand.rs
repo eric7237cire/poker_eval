@@ -1,4 +1,4 @@
-use crate::hand_table::*;
+use crate::{hand_table::*, card_to_string};
 
 #[derive(Clone, Copy, Default)]
 pub struct Hand {
@@ -63,10 +63,21 @@ impl Hand {
         let mut c_idx = 0;
         for &card in &self.cards {
             let rank = card / 4;
+            assert!(rank < 13);
+
             let suit = card % 4;
             rankset |= 1 << rank;
             rankset_suit[suit] |= 1 << rank;
             rank_count[rank] += 1;
+
+            if rank_count[rank] > 4 {
+                println!("Card count {}", self.num_cards);
+                for i in 0..self.num_cards {
+                    println!("Card {}={}", self.cards[i],
+                    card_to_string(self.cards[i] as u8).unwrap());
+                }
+            }
+            assert!(rank_count[rank] <= 4);
 
             c_idx += 1;
             if c_idx == self.num_cards {

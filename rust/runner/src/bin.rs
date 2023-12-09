@@ -101,11 +101,14 @@ fn run_simul() {
 
     let mut villain_ranges: Vec<Range> = vec![
         //all
-        "22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32".parse().unwrap(),
+        //"22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32".parse().unwrap(),
+
         //75%
-        "22+, A2s+, K2s+, Q2s+, J2s+, T2s+, 92s+, 82s+, 72s+, 62s+, 52s+, 42s+, A2o+, K2o+, Q2o+, J4o+, T6o+, 96o+, 86o+, 76o".parse().unwrap(),
+        //"22+, A2s+, K2s+, Q2s+, J2s+, T2s+, 92s+, 82s+, 72s+, 62s+, 52s+, 42s+, A2o+, K2o+, Q2o+, J4o+, T6o+, 96o+, 86o+, 76o".parse().unwrap(),
+        
         //50%
         "22+, A2s+, K2s+, Q2s+, J2s+, T5s+, 96s+, 86s+, 75s+, A2o+, K5o+, Q7o+, J8o+, T8o+".parse().unwrap(),
+        
         //25%
         "55+, A2s+, K5s+, Q8s+, J8s+, T9s, A8o+, K9o+, QTo+, JTo".parse().unwrap(),
     ];
@@ -147,9 +150,10 @@ fn run_simul() {
     let hero_eval = hand_hero.evaluate_internal();
 
     let cards_to_remove: Vec<Card> = vec![my_hand.cards[0] as u8, my_hand.cards[1] as u8, flop[0], flop[1], flop[2]];
-    let cards_to_remove_usize = cards_to_remove.iter().map(|c| *c as usize).collect::<Vec<usize>>();
+    //let cards_to_remove_usize = cards_to_remove.iter().map(|c| *c as usize).collect::<Vec<usize>>();
+    let flop_card_range_indexes = get_indexes_for_cards(&cards_to_remove);
     for range in villain_ranges.iter_mut() {
-        remove_cards_from_range(range, &cards_to_remove_usize);
+        remove_cards_from_range(range, &flop_card_range_indexes);
     }
 
     
@@ -163,7 +167,7 @@ fn run_simul() {
         let mut vil_results = RangeEval::new();
         eval_villian_range(&mut vil_results, hand_base, vil_range, hero_eval);
         let num_hands = vil_range.get_hands_weights(0).0.len();
-        println!("\n\nVillian {} with {}\n", vil_idx + 1, num_hands);
+        println!("\n\n*Flop* Villian {} with {}\n", vil_idx + 1, num_hands);
         print_villian_range_results(&vil_results, num_hands);
 
     }
@@ -171,12 +175,14 @@ fn run_simul() {
     //Now simulate all remaining turn cards
     //let mut turn_cards: Vec<Card> = Vec::new();
 
-    let mut villian_results = villain_ranges.iter().map(|_| RangeEval::new()).collect::<Vec<RangeEval>>();
+    let mut villian_results_turn = villain_ranges.iter().map(|_| RangeEval::new()).collect::<Vec<RangeEval>>();
+    let mut villian_results_river = villain_ranges.iter().map(|_| RangeEval::new()).collect::<Vec<RangeEval>>();
 
     for turn_card in 0..=51 {
         if cards_to_remove.contains(&turn_card) {
             continue;
         }
+        //println!("Turn card {}", card_to_string(turn_card as u8).unwrap());
 
         let turn_card_indexes = get_indexes_for_cards(&vec![turn_card]);
 
@@ -185,19 +191,65 @@ fn run_simul() {
 
         for (villian_index, villian_range) in villain_ranges.iter_mut().enumerate() {
             let removed_indexes = remove_cards_from_range(villian_range, &turn_card_indexes);
-            assert!(removed_indexes.len() > 0);
+            //assert!(removed_indexes.len() > 0);
 
-            eval_villian_range(&mut villian_results[villian_index], 
+            eval_villian_range(&mut villian_results_turn[villian_index], 
                 hand_base.add_card(turn_card as usize), &villian_range, turn_hero_eval);
 
             //add them back
             add_cards_from_range(villian_range, &removed_indexes);
         }
+
+        for river_card in 0..=51 {
+            if cards_to_remove.contains(&river_card) {
+                continue;
+            }
+            if river_card == turn_card {
+                continue;
+            }
+            //println!("River card {}", card_to_string(river_card as u8).unwrap());
+
+            let river_card_indexes = get_indexes_for_cards(&vec![river_card]);
+
+            let river_hero_hand = turn_hero_hand.add_card(river_card as usize);
+            assert_eq!(7, river_hero_hand.num_cards);
+
+            let river_hero_eval = river_hero_hand.evaluate_internal();
+
+            for (villian_index, villian_range) in villain_ranges.iter_mut().enumerate() {
+                let removed_indexes_turn = remove_cards_from_range(villian_range, &turn_card_indexes);
+                //assert!(removed_indexes_turn.len() > 0);
+
+                let removed_indexes_river = remove_cards_from_range(villian_range, &river_card_indexes);
+                //Sometimes with pocket pairs we already removed it
+                //assert!(removed_indexes_river.len() > 0);
+
+                let villian_hand = hand_base.add_card(turn_card as usize).add_card(river_card as usize);
+                assert_eq!(5, villian_hand.num_cards);
+
+                eval_villian_range(&mut villian_results_river[villian_index], 
+                villian_hand    , &villian_range, river_hero_eval);
+
+                //add them back
+                add_cards_from_range(villian_range, &removed_indexes_river);
+                add_cards_from_range(villian_range, &removed_indexes_turn);
+            }
+        }
     }
 
-    for (villian_index, villian_results) in villian_results.iter().enumerate() {
+    for (villian_index, villian_results) in villian_results_turn.iter().enumerate() {
         //let num_hands = villain_ranges[villian_index].get_hands_weights(0).0.len();
         println!("\n\n*Turn* Villian {}\n", villian_index + 1);
+        print_villian_range_results(&villian_results, 
+            villian_results.category_winning_hands.iter().sum::<u32>() as usize +
+            villian_results.category_losing_hands.iter().sum::<u32>() as usize +
+            villian_results.category_tie_hands.iter().sum::<u32>() as usize
+        );
+    }
+
+    for (villian_index, villian_results) in villian_results_river.iter().enumerate() {
+        //let num_hands = villain_ranges[villian_index].get_hands_weights(0).0.len();
+        println!("\n\n*River* Villian {}\n", villian_index + 1);
         print_villian_range_results(&villian_results, 
             villian_results.category_winning_hands.iter().sum::<u32>() as usize +
             villian_results.category_losing_hands.iter().sum::<u32>() as usize +
@@ -305,8 +357,12 @@ fn eval_villian_range(vil_range_results: &mut RangeEval, hand_base: Hand, vil_ra
 }
 
 fn print_villian_range_results(vil_range_results: &RangeEval, range_total: usize) {
+    let mut win_sum = 0;
+    let mut lose_sum = 0;
+    let mut tie_sum = 0;
+
     for cat in 0..9 {
-        println!("Category {:<20} => Win {:>4} => {:>4.1}% | Lose {:>4} {:>4.1}% Tie {:>4} {:.1}%", 
+        println!("Category {:<20} => Win {:>5} => {:>4.1}% | Lose {:>5} {:>4.1}% Tie {:>4} {:.1}%", 
         category_to_string(cat), 
         vil_range_results.category_winning_hands[cat as usize], 
         vil_range_results.category_winning_hands[cat as usize] as f64 / range_total as f64 * 100.0,
@@ -314,8 +370,21 @@ fn print_villian_range_results(vil_range_results: &RangeEval, range_total: usize
         vil_range_results.category_losing_hands[cat as usize] as f64 / range_total as f64 * 100.0,
         vil_range_results.category_tie_hands[cat as usize], 
         vil_range_results.category_tie_hands[cat as usize] as f64 / range_total as f64 * 100.0,
-    );
-}
+        );
+
+        win_sum += vil_range_results.category_winning_hands[cat as usize];
+        lose_sum += vil_range_results.category_losing_hands[cat as usize];
+        tie_sum += vil_range_results.category_tie_hands[cat as usize];
+    }
+
+    println!("Total                         => Win {:>5} => {:>4.1}% | Lose {:>5} {:>4.1}% Tie {:>4} {:.1}%", 
+        win_sum, 
+        win_sum as f64 / range_total as f64 * 100.0,
+        lose_sum,
+        lose_sum as f64 / range_total as f64 * 100.0,
+        tie_sum, 
+        tie_sum as f64 / range_total as f64 * 100.0,
+        );
 }
 
 struct RangeEval {
