@@ -15,6 +15,8 @@ use postflop_solver::card_to_string;
 use postflop_solver::flop_from_str;
 use postflop_solver::rank_to_char;
 
+mod agent;
+
 fn category_to_string(rank: i32) -> &'static str {
 
     match rank {
