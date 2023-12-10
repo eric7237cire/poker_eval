@@ -1,45 +1,9 @@
 
-use postflop_solver::{Range, Card, Hand};
+use crate::{game::Position, GameState, PassiveCallingStation, build_range, PreFrabRanges, Round, Agent, Action, AgentRoundInfo, ChipType};
 
-enum Round {
-    Preflop,
-    Flop,
-    Turn,
-    River,
-}
 
-struct GameState {
-    //Big blind is assumed to be 1 
-    num_callers: u8,
-    //In terms of # of big blinds
-    current_pot: u16,
 
-    to_call: u16,
-
-    agents: Vec<AgentState>,
-
-    //index 0,1,2 for flop 3 and 4 for river
-    common_cards: Vec<Card>,
-    common_hand: Hand
-}
-
-struct AgentState {
-    //In terms of # of big blinds
-    stack: u16,
-    position: Position,
-    //Index into range
-    hole_cards: usize
-}
-
-enum Position {    
-    SmallBlind,
-    BigBlind,
-    Utg,
-    HiJack,
-    Button,
-}
-
-//Preflop goes left of bb, bb is last
+//Preflop goes left of buttonb, bb is last
 
 //Then flop/turn/river order
 //sb, bb, .... button
@@ -48,100 +12,130 @@ enum Position {
 
 
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-enum Action {
-    Fold,
-    Call,
-    Raise(u16),
-}
 
 //Any probabilities are handled in the agent, but they always do one thing
 
-trait Agent {
-    //Get hand cards with index_to_card_pair
-    fn decide_round(&self, agent_index: usize, round: &Round, game_state: &GameState) -> Action;
-
-    
-}
-
-enum PreFrabRanges {
-    RANGE_ALL,
-    RANGE_75,
-    RANGE_50,
-    RANGE_25,
-}
-
-
-fn build_range(range: PreFrabRanges) -> Range {
-    match range {
-        PreFrabRanges::RANGE_ALL => "22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32".parse().unwrap(),
-        PreFrabRanges::RANGE_75 => "22+, A2s+, K2s+, Q2s+, J2s+, T2s+, 92s+, 82s+, 72s+, 62s+, 52s+, 42s+, A2o+, K2o+, Q2o+, J4o+, T6o+, 96o+, 86o+, 76o".parse().unwrap(),
-        PreFrabRanges::RANGE_50 => "22+, A2s+, K2s+, Q2s+, J2s+, T5s+, 96s+, 86s+, 75s+, A2o+, K5o+, Q7o+, J8o+, T8o+".parse().unwrap(),
-        PreFrabRanges::RANGE_25 => "55+, A2s+, K5s+, Q8s+, J8s+, T9s, A8o+, K9o+, QTo+, JTo".parse().unwrap(),
-    }
-}
 
 
 //Once we run it, we produce a probability distribution of the hands
 
 
-struct PassiveCallingStation {
-    calling_range: Range
-}
-
-impl Agent for PassiveCallingStation {
-    fn decide_round(&self, agent_index: usize, round: &Round, game_state: &GameState) -> Action {
-
-        let this_agent = &game_state.agents[agent_index];
-
-        match round {
-            Round::Preflop => {
-                //not handling all ins
-                if self.calling_range.data[this_agent.hole_cards] > 0.0 {
-                    Action::Call
-                } else {
-                    Action::Fold
-                }
-            },
-            Round::Flop => {
-                Action::Call
-            },
-            Round::Turn => {
-                Action::Call
-            },
-            Round::River => {
-                Action::Call
-            },
-        }
-    }
-    
-}
-
-
-
 
 #[cfg(test)]
 mod tests {
-    use postflop_solver::Hand;
+    
+    use postflop_solver::Hand as Hand;
 
-    use crate::agent::{PassiveCallingStation, GameState, PreFrabRanges, build_range, Agent, Round, Action};
+    use poker_rs::core::Card as PsCard;
+    use poker_rs::{core::Deck as PsDeck, arena::HoldemSimulationBuilder, arena::game_state::Round as PsRound};
+    use poker_rs::arena::GameState as PsGameState;
+    
 
-    #[test]
-    fn test_passive_agent() {
-        let agent = PassiveCallingStation {
-            calling_range: build_range(PreFrabRanges::RANGE_75)
-        };
+    use crate::{PassiveCallingStation, GameState, PreFrabRanges, build_range, Agent, Round, Action, AgentState, Position};
 
-        let game_state = GameState {
-            num_callers: 0,
-            current_pot: 0,
-            to_call: 0,
-            agents: vec![],
-            common_hand: Hand::new(),
-            common_cards: vec![]
-        };
+    
 
-        let action = agent.decide_round(0, &Round::Preflop, &game_state);
-        assert_eq!(action, Action::Call);
-    }
+    // #[test]
+    // fn test_run_game_with_split_pot() {
+        
+    //     //order is sb, bb, utg, hj, button
+    //     let stacks = vec![70, 20, 40, 25, 30];
+
+    //     //we'll split the winners bettween bb and hj, then utg/button, then sb
+
+    //     let mut game_state = PsGameState::new(stacks, 10, 5, 4);
+    //     let mut deck = PsDeck::default();
+
+    //     deal_hand_card(0, "Ts", &mut deck, &mut game_state);
+    //     deal_hand_card(0, "Th", &mut deck, &mut game_state);
+
+    //     deal_hand_card(1, "Ac", &mut deck, &mut game_state);
+    //     deal_hand_card(1, "Ad", &mut deck, &mut game_state);
+
+    //     deal_hand_card(2, "Kd", &mut deck, &mut game_state);
+    //     deal_hand_card(2, "Kh", &mut deck, &mut game_state);
+
+    //     deal_hand_card(3, "As", &mut deck, &mut game_state);
+    //     deal_hand_card(3, "Ah", &mut deck, &mut game_state);
+
+    //     deal_hand_card(4, "Ks", &mut deck, &mut game_state);
+    //     deal_hand_card(4, "Kc", &mut deck, &mut game_state);
+
+    //     // Start
+    //     game_state.advance_round();
+    //     // Preflop
+    //     assert_eq!(Position::SmallBlind as usize, game_state.current_round_data().to_act_idx);
+    //     game_state.do_bet(5, true).unwrap(); 
+
+    //     assert_eq!(Position::BigBlind as usize, game_state.current_round_data().to_act_idx);
+    //     game_state.do_bet(10, true).unwrap(); 
+
+    //     //utg calls
+    //     assert_eq!(Position::Utg as usize, game_state.current_round_data().to_act_idx);
+    //     game_state.do_bet(10, false).unwrap(); 
+
+    //     //hj raises
+    //     assert_eq!(Position::HiJack as usize, game_state.current_round_data().to_act_idx);
+    //     game_state.do_bet(20, false).unwrap(); 
+
+    //     game_state.advance_round();
+    //     assert_eq!(game_state.num_active_players(), 5);
+
+    //     deal_community_card("6c", &mut deck, &mut game_state);
+    //     deal_community_card("2d", &mut deck, &mut game_state);
+    //     deal_community_card("3d", &mut deck, &mut game_state);
+    //     // Flop
+    //     game_state.do_bet(90, false).unwrap(); // idx 4
+    //     game_state.do_bet(90, false).unwrap(); // idx 0
+    //     game_state.advance_round();
+    //     assert_eq!(game_state.num_active_players(), 5);
+
+    //     deal_community_card("8h", &mut deck, &mut game_state);
+    //     // Turn
+    //     game_state.do_bet(0, false).unwrap(); // idx 4
+    //     game_state.advance_round();
+    //     assert_eq!(game_state.num_active_players(), 5);
+
+    //     // River
+    //     deal_community_card("8s", &mut deck, &mut game_state);
+    //     game_state.do_bet(100, false).unwrap(); // idx 4
+    //     game_state.advance_round();
+    //     assert_eq!(game_state.num_active_players(), 5);
+
+    //     let mut sim = HoldemSimulationBuilder::default()
+    //         .game_state(game_state)
+    //         .build()
+    //         .unwrap();
+    //     sim.run();
+
+    //     assert_eq!(PsRound::Complete, sim.game_state.round);
+
+    //     // assert_eq!(180, sim.game_state.player_winnings[0]);
+    //     // assert_eq!(10, sim.game_state.player_winnings[1]);
+    //     // assert_eq!(25, sim.game_state.player_winnings[2]);
+    //     // assert_eq!(0, sim.game_state.player_winnings[3]);
+    //     // assert_eq!(100, sim.game_state.player_winnings[4]);
+
+    //     // assert_eq!(180, sim.game_state.stacks[0]);
+    //     // assert_eq!(10, sim.game_state.stacks[1]);
+    //     // assert_eq!(25, sim.game_state.stacks[2]);
+    //     // assert_eq!(100, sim.game_state.stacks[3]);
+    //     // assert_eq!(100, sim.game_state.stacks[4]);
+    // }
+    
+    // fn deal_hand_card(idx: usize, card_str: &str, deck: &mut PsDeck, game_state: &mut PsGameState) {
+    //     let c = PsCard::try_from(card_str).unwrap();
+    //     assert!(deck.remove(&c));
+    //     game_state.hands[idx].push(c);
+    // }
+
+    // fn deal_community_card(card_str: &str, deck: &mut PsDeck, game_state: &mut PsGameState) {
+    //     let c = PsCard::try_from(card_str).unwrap();
+    //     assert!(deck.remove(&c));
+    //     for h in &mut game_state.hands {
+    //         h.push(c);
+    //     }
+
+    //     game_state.board.push(c);
+    // }
 }

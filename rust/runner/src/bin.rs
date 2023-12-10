@@ -16,6 +16,10 @@ use postflop_solver::flop_from_str;
 use postflop_solver::rank_to_char;
 
 mod agent;
+mod agents;
+pub use agents::*;
+mod game;
+pub use game::*;
 
 fn category_to_string(rank: i32) -> &'static str {
 

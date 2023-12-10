@@ -16,7 +16,9 @@ name = "runner"
 path = "src/bin.rs"
 
 [dependencies]
-poker_rs = { path = "../poker_rs" }
+poker_rs = { path = "../poker_rs", features=["arena"] }
 postflop-solver = {path = "../postflop-solver"}
 
 itertools = "*"
+log = "*"
+env_logger = "*"
