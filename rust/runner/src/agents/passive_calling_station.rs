@@ -13,8 +13,11 @@ impl Agent for PassiveCallingStation {
 
         match round_info.round {
             Round::Preflop => {
+
+                //poker_eval as a different idea of card
+
                 //not handling all ins
-                if self.calling_range.data[agent_state.hole_cards] > 0.0 {
+                if self.calling_range.data[agent_state.get_range_index_for_hole_cards()] > 0.0 {
                     Action::Call
                 } else {
                     Action::Fold

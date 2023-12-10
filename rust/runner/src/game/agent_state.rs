@@ -1,12 +1,16 @@
+use postflop_solver::{Hand, card_pair_to_index};
+use poker_rs::core::{Card as PsCard, Suit as PsSuit};
 use crate::{Position, ChipType};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug)]
 pub struct AgentState {
     //if stack is 0, is all in if not folded
     pub stack: ChipType,
     pub position: Position,
-    //Index into range
-    pub hole_cards: usize,
+    
+    
+    //First 2 are hole tards, then flop (3 cards), turn, river
+    pub cards: Vec<PsCard>,
 
     pub folded: bool,
 
@@ -19,22 +23,36 @@ impl Default for AgentState {
         AgentState {
             stack: 100,
             position: Position::Button,
-            hole_cards: 0,
+            cards: Vec::with_capacity(7),
             folded: false,
             already_bet: 0
         }
     }
+
+    
+}
+
+fn poker_rs_card_to_eval_card(card: PsCard) -> u8 {
+
+    //Use values from poker_evaluate
+    let suit = match card.suit {
+        PsSuit::Spade => 3,
+        PsSuit::Heart => 2,
+        PsSuit::Diamond => 1,
+        PsSuit::Club => 0,        
+    };
+    let value = card.value as u8;
+
+    (value << 2) | suit
 }
 
 impl AgentState {
-    pub fn new(stack: ChipType, position: Position, hole_cards: usize) -> Self {
-        AgentState {
-            stack,
-            position,
-            hole_cards,
-            folded: false,
-            already_bet: 0
-        }
+    pub fn get_range_index_for_hole_cards(&self) -> usize {
+        
+        card_pair_to_index(
+            poker_rs_card_to_eval_card(self.cards[0]),
+            poker_rs_card_to_eval_card(self.cards[1]),
+        )
     }
 
     //Used for sb, bb as well, handles if puts them all in

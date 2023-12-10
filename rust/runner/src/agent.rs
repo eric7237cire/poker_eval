@@ -38,28 +38,7 @@ mod tests {
     // #[test]
     // fn test_run_game_with_split_pot() {
         
-    //     //order is sb, bb, utg, hj, button
-    //     let stacks = vec![70, 20, 40, 25, 30];
-
-    //     //we'll split the winners bettween bb and hj, then utg/button, then sb
-
-    //     let mut game_state = PsGameState::new(stacks, 10, 5, 4);
-    //     let mut deck = PsDeck::default();
-
-    //     deal_hand_card(0, "Ts", &mut deck, &mut game_state);
-    //     deal_hand_card(0, "Th", &mut deck, &mut game_state);
-
-    //     deal_hand_card(1, "Ac", &mut deck, &mut game_state);
-    //     deal_hand_card(1, "Ad", &mut deck, &mut game_state);
-
-    //     deal_hand_card(2, "Kd", &mut deck, &mut game_state);
-    //     deal_hand_card(2, "Kh", &mut deck, &mut game_state);
-
-    //     deal_hand_card(3, "As", &mut deck, &mut game_state);
-    //     deal_hand_card(3, "Ah", &mut deck, &mut game_state);
-
-    //     deal_hand_card(4, "Ks", &mut deck, &mut game_state);
-    //     deal_hand_card(4, "Kc", &mut deck, &mut game_state);
+  
 
     //     // Start
     //     game_state.advance_round();

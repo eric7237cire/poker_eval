@@ -2,6 +2,7 @@ use postflop_solver::Range;
 
 pub type ChipType = u16;
 
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum Round {
     Preflop,
     Flop,
@@ -27,6 +28,17 @@ impl Position {
             Position::Utg => Position::HiJack,
             Position::HiJack => Position::Button,
             Position::Button => Position::SmallBlind,
+        }
+    }
+
+    pub fn from_usize(pos: usize) -> Position {
+        match pos {
+            0 => Position::SmallBlind,
+            1 => Position::BigBlind,
+            2 => Position::Utg,
+            3 => Position::HiJack,
+            4 => Position::Button,
+            _ => panic!("Invalid position"),
         }
     }
 }

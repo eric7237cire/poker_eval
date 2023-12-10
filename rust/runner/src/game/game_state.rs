@@ -9,9 +9,6 @@ pub struct GameState {
     //pot from prev. betting rounds
     pub current_pot: ChipType,
 
-    //index 0,1,2 for flop 3 and 4 for river
-    pub common_cards: Vec<Card>,
-    pub common_hand: Hand
 }
 
 impl Default for GameState {
@@ -20,8 +17,6 @@ impl Default for GameState {
             
                 
             current_pot: 0,
-            common_cards: vec![],
-            common_hand: Hand::new()
         }
     }
 
@@ -34,8 +29,6 @@ impl GameState {
 
         GameState {
             current_pot: 0,
-            common_cards: vec![],
-            common_hand: Hand::new()
         }
     }
 }

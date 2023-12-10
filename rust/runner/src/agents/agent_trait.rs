@@ -17,6 +17,7 @@ pub struct AgentRoundInfo {
 pub trait Agent {
     //Get hand cards with index_to_card_pair
     fn decide_round(
+        //To be able to mutate internal state
         &self, 
         round_info: &AgentRoundInfo,
         agent_state: &AgentState, 

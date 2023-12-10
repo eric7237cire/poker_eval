@@ -1,6 +1,6 @@
-use crate::{hand_table::*, card_to_string};
+use crate::{hand_table::*, card_to_string, Card};
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, Debug)]
 pub struct Hand {
     pub cards: [usize; 7],
     pub num_cards: usize,
@@ -42,6 +42,14 @@ impl Hand {
         hand.cards[hand.num_cards] = card;
         hand.num_cards += 1;
         hand
+    }
+
+    #[inline]
+    pub fn from_hole_cards(card1: Card, card2: Card) -> Hand {
+        Hand {
+            cards: [card1 as usize, card2 as usize, 0, 0, 0, 0, 0],
+            num_cards: 2,
+        }
     }
 
     #[inline]

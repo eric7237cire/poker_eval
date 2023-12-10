@@ -2,6 +2,7 @@ use std::cmp;
 use std::convert::TryFrom;
 use std::fmt;
 use std::mem;
+use std::str::Chars;
 
 use super::error::RSPokerError;
 
@@ -316,6 +317,20 @@ impl TryFrom<&str> for Card {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let mut chars = value.chars();
+        let value_char = chars.next().ok_or(RSPokerError::TooFewChars)?;
+        let suit_char = chars.next().ok_or(RSPokerError::TooFewChars)?;
+        Ok(Self {
+            value: Value::try_from(value_char)?,
+            suit: Suit::try_from(suit_char)?,
+        })
+    }
+}
+
+
+impl <'a> TryFrom<Chars<'a>> for Card {
+    type Error = RSPokerError;
+
+    fn try_from(mut chars: Chars<'a>) -> Result<Self, Self::Error> {
         let value_char = chars.next().ok_or(RSPokerError::TooFewChars)?;
         let suit_char = chars.next().ok_or(RSPokerError::TooFewChars)?;
         Ok(Self {
