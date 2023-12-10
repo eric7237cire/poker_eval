@@ -3,7 +3,7 @@
 use log::debug;
 
 use crate::{GameState, ChipType, Agent, Position, AgentRoundInfo, Round, Action, AgentState};
-use poker_rs::core::{Card as PsCard, Value as PsValue, Suit as PsSuit};
+use poker_rs::core::{Card as PsCard, Rank as PsRank, Value as PsValue, Suit as PsSuit, Rankable};
 
 pub struct GameRunner<'a> {
     game_state: GameState,
@@ -35,22 +35,14 @@ impl <'a> GameRunner<'a>  {
         }
     }
 
-    fn init_agent_state(&mut self, position: Position, hole_cards: &str, stack: ChipType) {
+    fn init_agent_pos_and_stack(&mut self, position: Position, stack: ChipType) {
         let agent_state = &mut self.agent_states[position as usize];
         assert_eq!(    agent_state.position, position);
 
         agent_state.stack = stack;
         agent_state.initial_stack = stack;
 
-        let str1: String = hole_cards.chars().take(2).collect();
-        let str2: String = hole_cards.chars().skip(2).take(2).collect();
-
-        agent_state.cards.push(
-            PsCard::try_from(str1.as_str()).unwrap()
-        );
-        agent_state.cards.push(
-            PsCard::try_from(str2.as_str()).unwrap()
-        );
+        
     }
 
     fn run_round(&mut self, round: Round) {
@@ -124,22 +116,160 @@ impl <'a> GameRunner<'a>  {
         }
     }
 
-    fn run_game(&mut self) {
+    //returns winnings for each player and chips put in pot, net winnings winning-chips put in pot'
+    fn run_game(&mut self, cards: &[PsCard]) -> (Vec<ChipType>, Vec<ChipType>) {
 
         debug!("Running game");
 
+        //need cards for all agents + 5 community cards
+        assert_eq!(cards.len(), self.agents.len() * 2 + 5);
+
+        //Deal hole cards to agents
+        let mut card_index = 0;
+        for agent_state in &mut self.agent_states {
+            agent_state.cards.push(cards[card_index]);
+            card_index += 1;
+            agent_state.cards.push(cards[card_index]);
+            card_index += 1;
+        }
         
         //Now loop until all players either folded, called what they need to, or are all in
         
         self.run_round(Round::Preflop);
+
+        //deal flop to all agents
+        for agent_state in &mut self.agent_states {
+            agent_state.cards.push(cards[card_index]);
+            agent_state.cards.push(cards[card_index+1]);
+            agent_state.cards.push(cards[card_index+2]);
+        }
+        card_index += 3;
+
         self.run_round(Round::Flop);
+
+        //deal turn to all agents
+        for agent_state in &mut self.agent_states {
+            agent_state.cards.push(cards[card_index]);
+        }
         self.run_round(Round::Turn);
+        card_index += 1;
+
+        //deal flop to all agents
+        for agent_state in &mut self.agent_states {
+            agent_state.cards.push(cards[card_index]);
+        }
         self.run_round(Round::River);
 
 
-        
-        
+        //Return how much each player won
+        let hand_ranks = self.agent_states.iter().map(|agent_state| {            
+            agent_state.cards.rank()
+        }).collect::<Vec<_>>();
 
+        let mut sorted_hand_ranks = self.agent_states.iter().enumerate().filter_map(|(agent_index, agent_state)| {
+            if agent_state.folded {
+                return None;
+            }
+            Some((hand_ranks[agent_index], agent_index))
+        }).collect::<Vec<_>>();
+
+        let mut amount_bet_by_showdown_agent = self.agent_states.iter().enumerate().filter_map(|(agent_index, agent_state)| {
+            if agent_state.folded {
+                return None;
+            }
+            Some((agent_state.initial_stack - agent_state.stack, agent_index))
+        }).collect::<Vec<_>>();
+
+        //Sort by rank, first one is highest rank 
+        sorted_hand_ranks.sort_by(|a, b| b.0.cmp(&a.0));
+
+        //Sort by stack size, first one is smallest amount bet
+        amount_bet_by_showdown_agent.sort_by(|a, b| a.0.cmp(&b.0));
+
+        //assert!(hand_ranks[0].0 > hand_ranks[4].0);
+
+        let mut winnings = vec![0; self.agents.len()];
+
+        //sanity check amount bet total == pot
+        let total_bet = self.agent_states.iter().map(|agent_state| {
+            agent_state.initial_stack - agent_state.stack
+        }).sum::<ChipType>();
+
+        assert_eq!(total_bet, self.game_state.current_pot);
+
+        //we are left with all the hands that are in the showdown
+
+        //start with smallest stack, if it didn't win, then it's out
+        while !sorted_hand_ranks.is_empty() {
+            assert_eq!(sorted_hand_ranks.len(), amount_bet_by_showdown_agent.len());
+            let small_stack_agent_index = amount_bet_by_showdown_agent[0].1;
+
+            let small_stack_rank = hand_ranks[small_stack_agent_index];
+
+            if small_stack_rank < sorted_hand_ranks[0].0 {
+                //small stack didn't win, just remove them
+                amount_bet_by_showdown_agent.remove(0);
+
+                let shr_pos_to_remove = sorted_hand_ranks.iter().position( |(_, ag_index)| *ag_index == small_stack_agent_index).unwrap();
+                sorted_hand_ranks.remove(shr_pos_to_remove);
+            } else {
+                //small stack won, me take max amount bet (== the small stack) and subtract from remaining stacks
+                //the pot gets reduced by the delta between the remaining winning stacks amount bet and the small stack amount bet
+                let amount_put_in_pot_by_current_winner = amount_bet_by_showdown_agent[0].0;
+                let remaining_agent_side_pot = sorted_hand_ranks.len() as ChipType * amount_put_in_pot_by_current_winner;
+                let remaining_agent_total_put_in_pot = amount_bet_by_showdown_agent.iter().map(|(amt_bet, _)| *amt_bet).sum::<ChipType>();
+                assert!(remaining_agent_total_put_in_pot >= remaining_agent_side_pot);
+
+                let pot_to_split = self.game_state.current_pot - remaining_agent_total_put_in_pot + remaining_agent_side_pot;
+
+                debug!("Pot to split: {} of pot {}", pot_to_split, self.game_state.current_pot);
+                self.game_state.current_pot -= pot_to_split;
+
+                let mut current_winning_hand_end = 0;
+
+                //find last hand rank that is equal to the first one
+                for (i, hand_rank) in sorted_hand_ranks.iter().enumerate() {
+                    if hand_rank.0 == sorted_hand_ranks[0].0 {
+                        current_winning_hand_end = i;
+                    } else {
+                        break;
+                    }
+                }
+
+                //For everyone else, reduce the amount they put in the pot by the amount the small stack put in
+                for ab_index in 1..sorted_hand_ranks.len() {                    
+                    amount_bet_by_showdown_agent[ab_index].0 -= amount_put_in_pot_by_current_winner;
+                }
+
+                let num_tied = (current_winning_hand_end - 0 + 1) as ChipType;
+
+                //Give side pot / num_tied to each winner
+                for sh_index in (0..=current_winning_hand_end).rev() {
+                    let agent_index = sorted_hand_ranks[sh_index].1;
+
+                    //This is + since 2 players that tied will get processed once for the smallest stack, and twice
+                    //for the bigger stack, so we will add the second one with num_tied=0
+                    winnings[agent_index] += pot_to_split / num_tied;
+
+                }
+
+                //Remove the small stack we just processed
+                amount_bet_by_showdown_agent.remove(0);
+
+                let shr_pos_to_remove = sorted_hand_ranks.iter().position( |(_, ag_index)| *ag_index == small_stack_agent_index).unwrap();
+                sorted_hand_ranks.remove(shr_pos_to_remove);
+                
+            }
+
+        }
+
+
+        
+        let losses = self.agent_states.iter().map(|agent_state| {
+            agent_state.initial_stack - agent_state.stack
+        }).collect::<Vec<_>>();
+
+        (winnings, losses)
 
     }
 
@@ -546,11 +676,11 @@ mod tests {
         
         let mut game_runner = GameRunner::new(agents, 1);
 
-        game_runner.init_agent_state(Position::SmallBlind, "TsTc", 70);
-        game_runner.init_agent_state(Position::BigBlind, "AdAh", 20);
-        game_runner.init_agent_state(Position::Utg, "KdKh", 40);
-        game_runner.init_agent_state(Position::HiJack, "AsAc", 25);
-        game_runner.init_agent_state(Position::Button, "KsKc", 29);
+        game_runner.init_agent_pos_and_stack(Position::SmallBlind, 70);
+        game_runner.init_agent_pos_and_stack(Position::BigBlind, 20);
+        game_runner.init_agent_pos_and_stack(Position::Utg, 40);
+        game_runner.init_agent_pos_and_stack(Position::HiJack, 25);
+        game_runner.init_agent_pos_and_stack(Position::Button,  29);
         
         //0. utg limps in for 2; 
         //1. hj raises to 8; pot = 5 (raise amount 6)
@@ -572,12 +702,51 @@ mod tests {
 
         //https://poker.stackexchange.com/questions/158/minimum-re-raise-in-hold-em
         //https://www.reddit.com/r/poker/comments/g4n0oc/minimum_reraise_in_texas_holdem/
-        game_runner.run_game();
 
+        let cards = vec![
+            PsCard::try_from("Ts").unwrap(),
+            PsCard::try_from("Tc").unwrap(),
+            //BB cards
+            PsCard::try_from("Ad").unwrap(),
+            PsCard::try_from("Ah").unwrap(),
+            PsCard::try_from("Kd").unwrap(),
+            PsCard::try_from("Kh").unwrap(),
+            //HJ cards
+            PsCard::try_from("As").unwrap(),
+            PsCard::try_from("Ac").unwrap(),
+            PsCard::try_from("Ks").unwrap(),
+            PsCard::try_from("Kc").unwrap(),
+
+            PsCard::try_from("6c").unwrap(),
+            PsCard::try_from("2d").unwrap(),
+            PsCard::try_from("3d").unwrap(),
+            PsCard::try_from("8h").unwrap(),
+            PsCard::try_from("8s").unwrap(),
+        ];
+
+        let (winnings, losses) = game_runner.run_game(&cards);
+
+        assert_eq!(winnings[Position::BigBlind as usize], 50); //split 100 by 2
+        assert_eq!(winnings[Position::HiJack as usize], 70); //split 100 by 2, then +5 from remaining players (4)
+
+        //side pot is 4, 4, 4
+        assert_eq!(winnings[Position::Button as usize], 6); //split side pot by 2, 29 stack size - 25 stack size
+        assert_eq!(winnings[Position::Utg as usize], 6+11+11); //side pot + remaining stack from self + loser
+
+        assert_eq!(winnings[Position::SmallBlind as usize], 0); 
+
+        assert_eq!(losses[Position::BigBlind as usize], 20); 
+        assert_eq!(losses[Position::HiJack as usize], 25);
+
+        assert_eq!(losses[Position::Button as usize], 29);
+        assert_eq!(losses[Position::Utg as usize], 40); 
+
+        assert_eq!(losses[Position::SmallBlind as usize], 40); 
 
         assert_eq!(18, *action_counter.borrow());
 
         //assert!(false);
     }
 
+    
 }
