@@ -40,6 +40,7 @@ impl <'a> GameRunner<'a>  {
         assert_eq!(    agent_state.position, position);
 
         agent_state.stack = stack;
+        agent_state.initial_stack = stack;
 
         let str1: String = hole_cards.chars().take(2).collect();
         let str2: String = hole_cards.chars().skip(2).take(2).collect();
@@ -56,6 +57,11 @@ impl <'a> GameRunner<'a>  {
 
         debug!("Running game");
 
+        //Initialize round
+        for agent_state in &mut self.agent_states {
+            agent_state.already_bet = 0;
+        }
+
         //Preflop
         self.game_state.current_pot += self.agent_states[Position::SmallBlind as usize].handle_put_money_in_pot(self.small_blind);
         self.game_state.current_pot += self.agent_states[Position::BigBlind as usize].handle_put_money_in_pot(self.big_blind);
@@ -65,10 +71,7 @@ impl <'a> GameRunner<'a>  {
 
         let mut to_act =Position::BigBlind.next();
 
-        //Initialize round
-        for agent_state in &mut self.agent_states {
-            agent_state.already_bet = 0;
-        }
+        
        
 
         //minus folded and all_in
@@ -105,7 +108,7 @@ impl <'a> GameRunner<'a>  {
 
                 if did_raise {
                     debug!("Player {:?} raised to {}", to_act, agent_round_info.current_amt_to_call);
-                    last_to_act = to_act;
+                    last_to_act = to_act.prev();
                 }
 
                 if agent_state.folded || agent_state.stack <= 0 {
@@ -166,7 +169,8 @@ fn handle_player_action(
         Action::Call => {
             let in_pot = agent_state.handle_put_money_in_pot(agent_round_info.current_amt_to_call);
             if agent_state.stack > 0 {
-                assert_eq!(in_pot, agent_round_info.current_amt_to_call);        
+                //actually the agent can be calling a raise so the amount put in pot may be less than the amount to call
+                //assert_eq!(in_pot, agent_round_info.current_amt_to_call);        
                 assert_eq!(agent_state.already_bet, agent_round_info.current_amt_to_call);
             } 
             game_state.current_pot+= in_pot;
@@ -176,10 +180,15 @@ fn handle_player_action(
         },
         Action::Raise(bet) => {
             
+            debug!("Player {:?} raised to {}.  Prev raise {} cur to call {}", 
+                to_act, bet,
+                agent_round_info.prev_raise_amt, agent_round_info.current_amt_to_call);
+
             game_state.current_pot+= agent_state.handle_put_money_in_pot(bet);
 
             //The bet has to be at least the size of the previous raise more than amt to call, unless it's an all in
             if agent_state.stack > 0 {
+
                 assert!(bet >= agent_round_info.current_amt_to_call + agent_round_info.prev_raise_amt);
 
                 //Divisible by # of big blinds
@@ -225,9 +234,11 @@ mod tests {
             agent_state: &AgentState,  game_state: &GameState) -> Action {
     
             debug!("TEST Action : {} for position {:?}", self.action_counter.borrow(), agent_state.position);
+            let action_counter = *self.action_counter.borrow();
+            *self.action_counter.borrow_mut() += 1;
 
             //First to act should be utfg
-            match *self.action_counter.borrow() {
+            match action_counter {
                  0 => {
                     assert_eq!(round_info.round, Round::Preflop);
                     assert_eq!(agent_state.position, Position::Utg);
@@ -239,13 +250,74 @@ mod tests {
                     assert_eq!(range_index, card_pair_to_index(
                         card_from_str("Kd").unwrap(), card_from_str("Kh").unwrap()
                         ));
+
+                    assert_eq!(round_info.current_amt_to_call, round_info.bb_amt);
+                    assert_eq!(game_state.current_pot, 3);
+
+                    return Action::Call;
                  },
+                 1 => {
+                    assert_eq!(round_info.round, Round::Preflop);
+                    assert_eq!(agent_state.position, Position::HiJack);
+
+                    assert_eq!(agent_state.cards[0].value, PsValue::Ace);
+                    assert_eq!(agent_state.cards[0].suit, PsSuit::Spade);
+
+                    assert_eq!(game_state.current_pot, 5);
+                    
+                    return Action::Raise(round_info.prev_raise_amt + round_info.bb_amt * 3);
+                 },
+                    2 => {
+                        assert_eq!(round_info.round, Round::Preflop);
+                        assert_eq!(agent_state.position, Position::Button);
+    
+                        assert_eq!(round_info.current_amt_to_call, round_info.bb_amt * 4);
+                        assert_eq!(agent_state.cards[0].value, PsValue::King);
+                        assert_eq!(agent_state.cards[0].suit, PsSuit::Spade);
+
+                        assert_eq!(agent_state.already_bet, 0);
+
+                        assert_eq!(game_state.current_pot, 5+8);
+    
+                        return Action::Call;
+                    },
+                    3 => {
+                        assert_eq!(round_info.round, Round::Preflop);
+                        assert_eq!(agent_state.position, Position::SmallBlind);
+    
+                        assert_eq!(round_info.current_amt_to_call, round_info.bb_amt * 4);
+                        
+                        //already posted big blind
+                        assert_eq!(agent_state.stack, 69);
+                        assert_eq!(agent_state.already_bet, 1);
+
+                        assert_eq!(game_state.current_pot, 5+8+8);
+    
+                        //min raise
+                        return Action::Raise(round_info.prev_raise_amt + round_info.current_amt_to_call);
+                    },
+                    4 => {
+                        assert_eq!(round_info.round, Round::Preflop);
+                        assert_eq!(agent_state.position, Position::BigBlind);
+    
+                        assert_eq!(round_info.current_amt_to_call, round_info.bb_amt * 5);
+                        
+                        //already posted big blind
+                        assert_eq!(agent_state.stack, 18);
+                        assert_eq!(agent_state.stack, agent_state.initial_stack - round_info.bb_amt);
+                        assert_eq!(agent_state.already_bet, 2);
+
+                        assert_eq!(game_state.current_pot, 5+8+8+9);
+    
+                        //min raise
+                        return Action::Raise(round_info.prev_raise_amt + round_info.current_amt_to_call);
+                    },
                  df => {
                     assert!(false, "Unexpected action counter: {}", df);
                  }
             }
 
-            *self.action_counter.borrow_mut() += 1;
+            
             Action::Fold
             //match round_info.round {
         }

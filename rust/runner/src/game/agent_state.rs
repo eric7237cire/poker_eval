@@ -4,6 +4,10 @@ use crate::{Position, ChipType};
 
 #[derive(Debug)]
 pub struct AgentState {
+    
+    //Stack they had when cards dealt
+    pub initial_stack: ChipType,
+
     //if stack is 0, is all in if not folded
     pub stack: ChipType,
     pub position: Position,
@@ -22,6 +26,7 @@ impl Default for AgentState {
     fn default() -> Self {
         AgentState {
             stack: 100,
+            initial_stack: 100,
             position: Position::Button,
             cards: Vec::with_capacity(7),
             folded: false,

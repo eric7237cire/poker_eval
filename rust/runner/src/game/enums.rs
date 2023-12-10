@@ -31,6 +31,16 @@ impl Position {
         }
     }
 
+    pub fn prev(&self) -> Position {
+        match self {
+            Position::SmallBlind => Position::Button,
+            Position::BigBlind => Position::SmallBlind,
+            Position::Utg => Position::BigBlind,
+            Position::HiJack => Position::Utg,
+            Position::Button => Position::HiJack,
+        }
+    }
+
     pub fn from_usize(pos: usize) -> Position {
         match pos {
             0 => Position::SmallBlind,
