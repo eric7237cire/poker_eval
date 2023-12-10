@@ -3,12 +3,15 @@ use crate::{Round, GameState, Action, AgentState, ChipType};
 //For convenience, also build a struct that gives agent relavant info
 
 pub struct AgentRoundInfo {
-    pub agents_already_acted: u8,
+    //pub agents_already_acted: u8,
     pub agents_left_to_act: u8,
 
     //They need to call this - already_bet
     pub current_amt_to_call: ChipType,
-    pub prev_raise_amt: ChipType,
+
+    //https://www.reddit.com/r/poker/comments/oqrmyk/minimal_raise/
+    pub min_raise: ChipType,
+
     pub bb_amt : ChipType,
 
     pub round: Round,

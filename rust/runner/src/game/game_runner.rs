@@ -67,27 +67,21 @@ impl <'a> GameRunner<'a>  {
         self.game_state.current_pot += self.agent_states[Position::BigBlind as usize].handle_put_money_in_pot(self.big_blind);
 
         //Now loop until all players either folded, called what they need to, or are all in
-        let mut last_to_act = Position::BigBlind;
-
+        
         let mut to_act =Position::BigBlind.next();
 
         
-       
-
-        //minus folded and all_in
-        let mut num_effective_players = self.agents.len() as u8;
-
         //Initialize for preflop round
         let mut agent_round_info = AgentRoundInfo {
-            agents_already_acted: 0,
-            agents_left_to_act: num_effective_players,
+            //agents_already_acted: 0,
+            agents_left_to_act: self.agents.len() as u8,
             current_amt_to_call: self.big_blind,
-            prev_raise_amt: self.big_blind,
+            min_raise: self.big_blind,
             round: Round::Preflop,
             bb_amt: self.big_blind,
         };
 
-        let loop_check = 10;
+        let loop_check = 20;
         let mut loop_counter = 0;
         loop {
 
@@ -98,43 +92,30 @@ impl <'a> GameRunner<'a>  {
             let agent = &mut self.agents[to_act as usize];
             let agent_state = &mut self.agent_states[to_act as usize];
 
-            debug!("In round {:?}, position {:?}, stack: {}, already_bet: {}, folded: {} last to act: {:?}", 
+            debug!("In round {:?}, position {:?}, stack: {}, already_bet: {}, folded: {}", 
                 agent_round_info.round, agent_state.position, agent_state.stack, agent_state.already_bet, agent_state.folded,
-                last_to_act
+                
             );
             
             if !agent_state.folded && agent_state.stack > 0 {
-                let did_raise = handle_player_action(agent, to_act, &mut agent_round_info, &mut self.game_state, agent_state, &mut num_effective_players);
+                let did_raise = handle_player_action(agent, to_act, &mut agent_round_info, &mut self.game_state, agent_state);
 
                 if did_raise {
                     debug!("Player {:?} raised to {}", to_act, agent_round_info.current_amt_to_call);
-                    last_to_act = to_act.prev();
-                }
+                    
 
-                if agent_state.folded || agent_state.stack <= 0 {
-                    num_effective_players -= 1;
+                    agent_round_info.agents_left_to_act = self.agents.len() as u8;
                 }
             }
 
             //End condition is to_act==last_to_act and all players have called or folded
             let agent_state = &self.agent_states[to_act as usize];
-            if to_act == last_to_act && (
-                agent_state.folded || agent_state.stack <= 0 || 
-                agent_state.already_bet == agent_round_info.current_amt_to_call
-            ) {
-            
-                
+            agent_round_info.agents_left_to_act -= 1;
+
+            if agent_round_info.agents_left_to_act == 0 { 
                 debug!("End of round");
                 break;
             }
-
-            if to_act == last_to_act {
-                agent_round_info.agents_already_acted = 0;
-                agent_round_info.agents_left_to_act = num_effective_players;
-            }
-
-            agent_round_info.agents_left_to_act -= 1;
-            assert!(agent_round_info.agents_left_to_act <= num_effective_players);
 
             to_act = to_act.next();
         }
@@ -152,8 +133,7 @@ fn handle_player_action(
     agent: &Box<dyn Agent + '_>, to_act: Position, 
     agent_round_info: &mut AgentRoundInfo, 
     game_state: &mut GameState,
-    agent_state: &mut AgentState,
-    num_effective_players: &mut u8) -> bool {
+    agent_state: &mut AgentState) -> bool {
     let action = agent.decide_round(&agent_round_info,
         &agent_state, game_state);
 
@@ -180,16 +160,21 @@ fn handle_player_action(
         },
         Action::Raise(bet) => {
             
-            debug!("Player {:?} raised to {}.  Prev raise {} cur to call {}", 
+            debug!("Player {:?} raised to {}.  Min raise {} cur to call {}", 
                 to_act, bet,
-                agent_round_info.prev_raise_amt, agent_round_info.current_amt_to_call);
+                agent_round_info.min_raise, agent_round_info.current_amt_to_call);
 
-            game_state.current_pot+= agent_state.handle_put_money_in_pot(bet);
+            game_state.current_pot += agent_state.handle_put_money_in_pot(bet);
+
+            //If the player raised to X, then that's exactly what should have been bet
+            assert_eq!(agent_state.already_bet, bet);
 
             //The bet has to be at least the size of the previous raise more than amt to call, unless it's an all in
             if agent_state.stack > 0 {
 
-                assert!(bet >= agent_round_info.current_amt_to_call + agent_round_info.prev_raise_amt);
+                assert!(bet >= agent_round_info.current_amt_to_call + agent_round_info.min_raise);
+
+                agent_round_info.min_raise = bet - agent_round_info.current_amt_to_call;
 
                 //Divisible by # of big blinds
                 assert!(bet % agent_round_info.bb_amt == 0);
@@ -265,13 +250,14 @@ mod tests {
 
                     assert_eq!(game_state.current_pot, 5);
                     
-                    return Action::Raise(round_info.prev_raise_amt + round_info.bb_amt * 3);
+                    return Action::Raise(round_info.min_raise + round_info.bb_amt * 3);
                  },
                     2 => {
                         assert_eq!(round_info.round, Round::Preflop);
                         assert_eq!(agent_state.position, Position::Button);
     
                         assert_eq!(round_info.current_amt_to_call, round_info.bb_amt * 4);
+                        assert_eq!(8, round_info.current_amt_to_call);
                         assert_eq!(agent_state.cards[0].value, PsValue::King);
                         assert_eq!(agent_state.cards[0].suit, PsSuit::Spade);
 
@@ -292,25 +278,148 @@ mod tests {
                         assert_eq!(agent_state.already_bet, 1);
 
                         assert_eq!(game_state.current_pot, 5+8+8);
+
+                        assert_eq!(round_info.min_raise, 6);
     
-                        //min raise
-                        return Action::Raise(round_info.prev_raise_amt + round_info.current_amt_to_call);
+                        return Action::Raise(16);
                     },
                     4 => {
                         assert_eq!(round_info.round, Round::Preflop);
                         assert_eq!(agent_state.position, Position::BigBlind);
     
-                        assert_eq!(round_info.current_amt_to_call, round_info.bb_amt * 5);
+                        assert_eq!(round_info.current_amt_to_call, round_info.bb_amt * 8);
                         
                         //already posted big blind
                         assert_eq!(agent_state.stack, 18);
                         assert_eq!(agent_state.stack, agent_state.initial_stack - round_info.bb_amt);
                         assert_eq!(agent_state.already_bet, 2);
 
-                        assert_eq!(game_state.current_pot, 5+8+8+9);
+                        assert_eq!(game_state.current_pot, 36); 
+
+
+                        assert_eq!(round_info.min_raise, 8);
     
-                        //min raise
-                        return Action::Raise(round_info.prev_raise_amt + round_info.current_amt_to_call);
+                        //min raise. effectively an all in
+                        return Action::Raise(agent_state.initial_stack);
+                    },
+                    5 => {
+                        assert_eq!(round_info.round, Round::Preflop);
+                        assert_eq!(agent_state.position, Position::Utg);
+    
+                        assert_eq!(round_info.current_amt_to_call, round_info.bb_amt * 10);
+                        
+                        //already posted big blind
+                        assert_eq!(agent_state.stack, 38);
+                        assert_eq!(agent_state.stack, agent_state.initial_stack - round_info.bb_amt);
+                        assert_eq!(agent_state.already_bet, round_info.bb_amt);
+
+                        assert_eq!(game_state.current_pot, 54);
+
+                        assert_eq!(round_info.min_raise, 8);
+    
+                        return Action::Call;
+                    },
+                    6 => {
+                        assert_eq!(round_info.round, Round::Preflop);
+                        assert_eq!(agent_state.position, Position::HiJack);
+    
+                        assert_eq!(round_info.current_amt_to_call, round_info.bb_amt * 10);
+                        
+                        //already posted big blind
+                        assert_eq!(agent_state.stack, agent_state.initial_stack - 8);
+                        assert_eq!(agent_state.stack, 17);
+                        
+                        assert_eq!(agent_state.already_bet, round_info.bb_amt*4);
+
+                        assert_eq!(game_state.current_pot, 72);
+    
+                        return Action::Call;
+                    },
+                    7 => {
+                        assert_eq!(round_info.round, Round::Preflop);
+                        assert_eq!(agent_state.position, Position::Button);
+    
+                        assert_eq!(round_info.current_amt_to_call, round_info.bb_amt * 10);
+                        
+                        assert_eq!(agent_state.stack, agent_state.initial_stack - 8);
+                        assert_eq!(agent_state.stack, 21);
+                        
+                        assert_eq!(agent_state.already_bet, round_info.bb_amt*4);
+
+                        assert_eq!(game_state.current_pot, 84);
+    
+                        return Action::Raise(agent_state.initial_stack);
+                    },
+                    8 => {
+                        assert_eq!(round_info.round, Round::Preflop);
+                        assert_eq!(agent_state.position, Position::SmallBlind);
+    
+                        assert_eq!(round_info.current_amt_to_call, 29);
+                        
+                        assert_eq!(agent_state.stack, agent_state.initial_stack - 16);
+                        assert_eq!(agent_state.stack, 54);
+                        
+                        assert_eq!(agent_state.already_bet, 16);
+
+                        assert_eq!(game_state.current_pot, 105);
+    
+                        return Action::Call;
+                    },
+                    9 => {
+                        assert_eq!(round_info.round, Round::Preflop);
+                        //BB is all in
+                        assert_eq!(agent_state.position, Position::Utg);
+    
+                        assert_eq!(round_info.current_amt_to_call, 29);
+                        
+                        assert_eq!(agent_state.stack, agent_state.initial_stack - 20);
+                        assert_eq!(agent_state.stack, 20);
+                        
+                        assert_eq!(agent_state.already_bet, 20);
+
+                        assert_eq!(round_info.min_raise, 8);
+
+                        assert_eq!(game_state.current_pot, 118);
+    
+                        //min raise 37 but we want it divisible by bb (2)
+                        return Action::Raise(38);
+                    },
+                    10 => {
+                        assert_eq!(round_info.round, Round::Preflop);
+                        //BB is all in
+                        assert_eq!(agent_state.position, Position::HiJack);
+    
+                        assert_eq!(round_info.current_amt_to_call, 38);
+                        
+                        assert_eq!(agent_state.stack, agent_state.initial_stack - 20);
+                        assert_eq!(agent_state.stack, 5);
+                        
+                        assert_eq!(agent_state.already_bet, 20);
+
+                        //assert_eq!(round_info.min_raise, 8);
+
+                        assert_eq!(game_state.current_pot, 136);
+    
+                        //puts us all in
+                        return Action::Call;
+                    },
+                    11 => {
+                        assert_eq!(round_info.round, Round::Preflop);
+                        //BB is all in
+                        assert_eq!(agent_state.position, Position::SmallBlind);
+    
+                        assert_eq!(round_info.current_amt_to_call, 38);
+                        
+                        assert_eq!(agent_state.stack, agent_state.initial_stack - 29);
+                        assert_eq!(agent_state.stack, 41);
+                        
+                        assert_eq!(agent_state.already_bet, 29);
+
+                        //assert_eq!(round_info.min_raise, 8);
+
+                        assert_eq!(game_state.current_pot, 141);
+    
+                        return Action::Call;
                     },
                  df => {
                     assert!(false, "Unexpected action counter: {}", df);
@@ -350,14 +459,28 @@ mod tests {
         game_runner.init_agent_state(Position::BigBlind, "AdAh", 20);
         game_runner.init_agent_state(Position::Utg, "KdKh", 40);
         game_runner.init_agent_state(Position::HiJack, "AsAc", 25);
-        game_runner.init_agent_state(Position::Button, "KsKc", 30);
+        game_runner.init_agent_state(Position::Button, "KsKc", 29);
         
+        //0. utg limps in for 2; 
+        //1. hj raises to 8; pot = 5 (raise amount 6)
+        //2. button calls 8; pot = 13
+        //3. sb raises to 16; pot = 21 (adds 15 more), raise amount 8
+        //4. bb goes all in for 20; pot = 36 (adds 18 more)
+        //5. utg calls; pot = 54 (adds 18 more)
+        //6. hj calls 20; pot = 72 (adds 20-8 more)
+        //7. button goes all in, 21 more
+        //8. sb calls
+        //9. bb is already all in, utg raises to 38
+        //10. hj calls (all in)
+        //11. button already all in, sb calls action stops
 
+        //https://poker.stackexchange.com/questions/158/minimum-re-raise-in-hold-em
+        //https://www.reddit.com/r/poker/comments/g4n0oc/minimum_reraise_in_texas_holdem/
         game_runner.run_game();
 
     
 
-        assert!(false);
+        //assert!(false);
     }
 
 }

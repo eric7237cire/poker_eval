@@ -78,9 +78,8 @@ impl AgentState {
             
         } else {
             self.stack -= chips_needed_in_pot;
+            self.already_bet += chips_put_in_pot;
         }
-
-        self.already_bet += chips_put_in_pot;
 
         chips_put_in_pot
     }
