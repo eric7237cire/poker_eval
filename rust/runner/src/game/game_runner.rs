@@ -53,31 +53,36 @@ impl <'a> GameRunner<'a>  {
         );
     }
 
-    fn run_game(&mut self) {
+    fn run_round(&mut self, round: Round) {
 
-        debug!("Running game");
+        let mut to_act =
+        if round == Round::Preflop {
+            Position::Utg
+        } else {
+            Position::SmallBlind
+        };
 
-        //Initialize round
+        let current_amt_to_call = if round == Round::Preflop {
+             self.big_blind } else {0};
+
+         //Initialize round
         for agent_state in &mut self.agent_states {
             agent_state.already_bet = 0;
         }
 
-        //Preflop
-        self.game_state.current_pot += self.agent_states[Position::SmallBlind as usize].handle_put_money_in_pot(self.small_blind);
-        self.game_state.current_pot += self.agent_states[Position::BigBlind as usize].handle_put_money_in_pot(self.big_blind);
+        //Preflop blinds
+        if round == Round::Preflop {
+            self.game_state.current_pot += self.agent_states[Position::SmallBlind as usize].handle_put_money_in_pot(self.small_blind);
+            self.game_state.current_pot += self.agent_states[Position::BigBlind as usize].handle_put_money_in_pot(self.big_blind);
+        }
 
-        //Now loop until all players either folded, called what they need to, or are all in
-        
-        let mut to_act =Position::BigBlind.next();
-
-        
         //Initialize for preflop round
         let mut agent_round_info = AgentRoundInfo {
             //agents_already_acted: 0,
             agents_left_to_act: self.agents.len() as u8,
-            current_amt_to_call: self.big_blind,
+            current_amt_to_call,
             min_raise: self.big_blind,
-            round: Round::Preflop,
+            round,
             bb_amt: self.big_blind,
         };
 
@@ -102,8 +107,6 @@ impl <'a> GameRunner<'a>  {
 
                 if did_raise {
                     debug!("Player {:?} raised to {}", to_act, agent_round_info.current_amt_to_call);
-                    
-
                     agent_round_info.agents_left_to_act = self.agents.len() as u8;
                 }
             }
@@ -119,6 +122,23 @@ impl <'a> GameRunner<'a>  {
 
             to_act = to_act.next();
         }
+    }
+
+    fn run_game(&mut self) {
+
+        debug!("Running game");
+
+        
+        //Now loop until all players either folded, called what they need to, or are all in
+        
+        self.run_round(Round::Preflop);
+        self.run_round(Round::Flop);
+        self.run_round(Round::Turn);
+        self.run_round(Round::River);
+
+
+        
+        
 
 
     }
@@ -146,7 +166,15 @@ fn handle_player_action(
             agent_state.folded = true;
             false
         },
+        Action::Check => {
+            assert_eq!(agent_round_info.current_amt_to_call, 0);
+            assert_eq!(agent_state.already_bet, 0);
+            false
+        }
         Action::Call => {
+
+            assert!(agent_round_info.current_amt_to_call > 0, "Cannot call a 0 bet, that is a check");
+
             let in_pot = agent_state.handle_put_money_in_pot(agent_round_info.current_amt_to_call);
             if agent_state.stack > 0 {
                 //actually the agent can be calling a raise so the amount put in pot may be less than the amount to call
@@ -222,6 +250,7 @@ mod tests {
             let action_counter = *self.action_counter.borrow();
             *self.action_counter.borrow_mut() += 1;
 
+            
             //First to act should be utfg
             match action_counter {
                  0 => {
@@ -421,6 +450,68 @@ mod tests {
     
                         return Action::Call;
                     },
+                    12 => {
+                        assert_eq!(round_info.round, Round::Flop);
+                        assert_eq!(agent_state.position, Position::SmallBlind);
+    
+                        assert_eq!(round_info.current_amt_to_call, 0);
+                        
+                        assert_eq!(agent_state.stack, agent_state.initial_stack - 38);
+                        assert_eq!(agent_state.stack, 32);
+                        
+                        assert_eq!(agent_state.already_bet, 0);
+
+                        //assert_eq!(round_info.min_raise, 8);
+
+                        assert_eq!(game_state.current_pot, 150);
+    
+                        return Action::Check;
+                    },
+
+                    13 => {
+                        assert_eq!(round_info.round, Round::Flop);
+                        assert_eq!(agent_state.position, Position::Utg);
+    
+                        assert_eq!(round_info.current_amt_to_call, 0);
+                        
+                        assert_eq!(agent_state.stack, agent_state.initial_stack - 38);
+                        assert_eq!(agent_state.stack, 2);
+                        
+                        assert_eq!(agent_state.already_bet, 0);
+
+                        //assert_eq!(round_info.min_raise, 8);
+
+                        assert_eq!(game_state.current_pot, 150);
+    
+                        return Action::Check;
+                    },
+                    14 => {
+                        assert_eq!(round_info.round, Round::Turn);
+                        assert_eq!(agent_state.position, Position::SmallBlind);
+
+                        return Action:: Check;
+                    },
+                    15 => {
+                        assert_eq!(round_info.round, Round::Turn);
+                        assert_eq!(agent_state.position, Position::Utg);
+
+                        return Action:: Raise(2);
+                    },
+                    16 => {
+                        assert_eq!(round_info.round, Round::Turn);
+                        assert_eq!(agent_state.position, Position::SmallBlind);
+
+                        return Action:: Call;
+                    },
+                    17 => {
+                        assert_eq!(round_info.round, Round::River);
+                        assert_eq!(agent_state.position, Position::SmallBlind);
+
+                        //No one left in hand?
+                        return Action::Check;
+                    },
+
+
                  df => {
                     assert!(false, "Unexpected action counter: {}", df);
                  }
@@ -469,16 +560,22 @@ mod tests {
         //5. utg calls; pot = 54 (adds 18 more)
         //6. hj calls 20; pot = 72 (adds 20-8 more)
         //7. button goes all in, 21 more
-        //8. sb calls
+        //8. sb calls 29
         //9. bb is already all in, utg raises to 38
         //10. hj calls (all in)
         //11. button already all in, sb calls action stops
+
+        //12 flop utg checks
+        //13 sb checks
+        //14 turn utg all in
+        //15 sb calls
 
         //https://poker.stackexchange.com/questions/158/minimum-re-raise-in-hold-em
         //https://www.reddit.com/r/poker/comments/g4n0oc/minimum_reraise_in_texas_holdem/
         game_runner.run_game();
 
-    
+
+        assert_eq!(18, *action_counter.borrow());
 
         //assert!(false);
     }
