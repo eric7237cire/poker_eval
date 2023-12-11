@@ -94,79 +94,102 @@ fn find_flush(suit_value_sets: &[u32]) -> Option<usize> {
     suit_value_sets.iter().position(|sv| sv.count_ones() >= 5)
 }
 
-pub fn rank_cards(cards: &[Card]) -> Rank {
-    let mut value_to_count: [u8; 13] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    let mut count_to_value: [u32; 5] = [0, 0, 0, 0, 0];
-    let mut suit_value_sets: [u32; 4] = [0, 0, 0, 0];
-    let mut value_set: u32 = 0;
+pub struct CardsMetrics {
+    pub value_to_count: [u8; 13],
+    pub count_to_value: [u32; 5],
+    pub suit_value_sets: [u32; 4],
+    pub value_set: u32,
+}
 
+impl Default for CardsMetrics {
+    fn default() -> Self {
+        CardsMetrics {
+            value_to_count: [0; 13],
+            count_to_value: [0; 5],
+            suit_value_sets: [0; 4],
+            value_set: 0,
+        }
+    }
+    
+}
+
+pub fn calc_cards_metrics(cards: &[Card]) -> CardsMetrics {
+    let mut card_metrics = CardsMetrics::default();
+    
     for c in cards.iter() {
         let v = c.value as u8;
         let s = c.suit as u8;
-        value_set |= 1 << v;
-        value_to_count[v as usize] += 1;
-        suit_value_sets[s as usize] |= 1 << v;
+        card_metrics.value_set |= 1 << v;
+        card_metrics.value_to_count[v as usize] += 1;
+        card_metrics.suit_value_sets[s as usize] |= 1 << v;
     }
 
     // Now rotate the value to count map.
-    for (value, &count) in value_to_count.iter().enumerate() {
-        count_to_value[count as usize] |= 1 << value;
+    for (value, &count) in card_metrics.value_to_count.iter().enumerate() {
+        card_metrics.count_to_value[count as usize] |= 1 << value;
     }
 
+    card_metrics
+}
+
+pub fn rank_cards(cards: &[Card]) -> Rank {
+    
+    let cards_metrics = calc_cards_metrics(cards);
+
     // Find out if there's a flush
-    let flush: Option<usize> = find_flush(&suit_value_sets);
+    let flush: Option<usize> = find_flush(&cards_metrics.suit_value_sets);
 
     // If this is a flush then it could be a straight flush
     // or a flush. So check only once.
     if let Some(flush_idx) = flush {
         // If we can find a straight in the flush then it's a straight flush
-        if let Some(rank) = rank_straight(suit_value_sets[flush_idx]) {
+        if let Some(rank) = rank_straight(cards_metrics.suit_value_sets[flush_idx]) {
             Rank::StraightFlush(rank)
         } else {
             // Else it's just a normal flush
-            let rank = keep_n(suit_value_sets[flush_idx], 5);
+            let rank = keep_n(cards_metrics.suit_value_sets[flush_idx], 5);
             Rank::Flush(rank)
         }
-    } else if count_to_value[4] != 0 {
+    } else if cards_metrics.count_to_value[4] != 0 {
         // Four of a kind.
-        let high = keep_highest(value_set ^ count_to_value[4]);
-        Rank::FourOfAKind(count_to_value[4] << 13 | high)
-    } else if count_to_value[3] != 0 && count_to_value[3].count_ones() == 2 {
+        let high = keep_highest(cards_metrics.value_set ^ cards_metrics.count_to_value[4]);
+        Rank::FourOfAKind(cards_metrics.count_to_value[4] << 13 | high)
+    } else if cards_metrics.count_to_value[3] != 0 && cards_metrics.count_to_value[3].count_ones() == 2 {
         // There are two sets. So the best we can make is a full house.
-        let set = keep_highest(count_to_value[3]);
-        let pair = count_to_value[3] ^ set;
+        let set = keep_highest(cards_metrics.count_to_value[3]);
+        let pair = cards_metrics.count_to_value[3] ^ set;
         Rank::FullHouse(set << 13 | pair)
-    } else if count_to_value[3] != 0 && count_to_value[2] != 0 {
+    } else if cards_metrics.count_to_value[3] != 0 && cards_metrics.count_to_value[2] != 0 {
         // there is a pair and a set.
-        let set = count_to_value[3];
-        let pair = keep_highest(count_to_value[2]);
+        let set = cards_metrics.count_to_value[3];
+        let pair = keep_highest(cards_metrics.count_to_value[2]);
         Rank::FullHouse(set << 13 | pair)
-    } else if let Some(s_rank) = rank_straight(value_set) {
+    } else if let Some(s_rank) = rank_straight(cards_metrics.value_set) {
         // If there's a straight return it now.
         Rank::Straight(s_rank)
-    } else if count_to_value[3] != 0 {
+    } else if cards_metrics.count_to_value[3] != 0 {
         // if there is a set then we need to keep 2 cards that
         // aren't in the set.
-        let low = keep_n(value_set ^ count_to_value[3], 2);
-        Rank::ThreeOfAKind(count_to_value[3] << 13 | low)
-    } else if count_to_value[2].count_ones() >= 2 {
+        let low = keep_n(cards_metrics.value_set ^ cards_metrics.count_to_value[3], 2);
+        Rank::ThreeOfAKind(cards_metrics.count_to_value[3] << 13 | low)
+    } else if cards_metrics.count_to_value[2].count_ones() >= 2 {
         // Two pair
         //
         // That can be because we have 3 pairs and a high card.
         // Or we could have two pair and two high cards.
-        let pairs = keep_n(count_to_value[2], 2);
-        let low = keep_highest(value_set ^ pairs);
+        let pairs = keep_n(cards_metrics.count_to_value[2], 2);
+        let low = keep_highest(cards_metrics.value_set ^ pairs);
         Rank::TwoPair(pairs << 13 | low)
-    } else if count_to_value[2] == 0 {
+    } else if cards_metrics.count_to_value[2] == 0 {
         // This means that there's no pair
         // no sets, no straights, no flushes, so only a
         // high card.
-        Rank::HighCard(keep_n(value_set, 5))
+        Rank::HighCard(keep_n(cards_metrics.value_set, 5))
     } else {
         // Otherwise there's only one pair.
-        let pair = count_to_value[2];
+        let pair = cards_metrics.count_to_value[2];
         // Keep the highest three cards not in the pair.
-        let low = keep_n(value_set ^ count_to_value[2], 3);
+        let low = keep_n(cards_metrics.value_set ^ cards_metrics.count_to_value[2], 3);
         Rank::OnePair(pair << 13 | low)
     }
 }
