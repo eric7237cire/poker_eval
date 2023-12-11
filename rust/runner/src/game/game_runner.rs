@@ -2,8 +2,7 @@
 
 use log::debug;
 
-use crate::{GameState, ChipType, Agent, Position, AgentRoundInfo, Round, Action, AgentState};
-use poker_rs::core::{Card as PsCard, Rank as PsRank, Value as PsValue, Suit as PsSuit, Rankable};
+use crate::{GameState, ChipType, Agent, Position, AgentRoundInfo, Round, Action, AgentState, core::Card, rank_cards};
 
 pub struct GameRunner<'a> {
     game_state: GameState,
@@ -117,7 +116,7 @@ impl <'a> GameRunner<'a>  {
     }
 
     //returns winnings for each player and chips put in pot, net winnings winning-chips put in pot'
-    fn run_game(&mut self, cards: &[PsCard]) -> (Vec<ChipType>, Vec<ChipType>) {
+    fn run_game(&mut self, cards: &[Card]) -> (Vec<ChipType>, Vec<ChipType>) {
 
         debug!("Running game");
 
@@ -163,7 +162,7 @@ impl <'a> GameRunner<'a>  {
 
         //Return how much each player won
         let hand_ranks = self.agent_states.iter().map(|agent_state| {            
-            agent_state.cards.rank()
+            rank_cards(&agent_state.cards)
         }).collect::<Vec<_>>();
 
         let mut sorted_hand_ranks = self.agent_states.iter().enumerate().filter_map(|(agent_index, agent_state)| {
@@ -355,9 +354,7 @@ mod tests {
 
     use postflop_solver::{card_pair_to_index, card_from_str, Hand};
 
-    use crate::{PassiveCallingStation, build_range, PreFrabRanges, GameRunner};
-
-    use poker_rs::core::{Value as PsValue, Card as PsCard};
+    use crate::{Suit, CardValue};
 
     pub use super::*;
     
@@ -387,8 +384,8 @@ mod tests {
                     assert_eq!(round_info.round, Round::Preflop);
                     assert_eq!(agent_state.position, Position::Utg);
 
-                    assert_eq!(agent_state.cards[0].value, PsValue::King);
-                    assert_eq!(agent_state.cards[0].suit, PsSuit::Diamond);
+                    assert_eq!(agent_state.cards[0].value, CardValue::King);
+                    assert_eq!(agent_state.cards[0].suit, Suit::Diamond);
 
                     let range_index = agent_state.get_range_index_for_hole_cards();
                     assert_eq!(range_index, card_pair_to_index(
@@ -404,8 +401,8 @@ mod tests {
                     assert_eq!(round_info.round, Round::Preflop);
                     assert_eq!(agent_state.position, Position::HiJack);
 
-                    assert_eq!(agent_state.cards[0].value, PsValue::Ace);
-                    assert_eq!(agent_state.cards[0].suit, PsSuit::Spade);
+                    assert_eq!(agent_state.cards[0].value, CardValue::Ace);
+                    assert_eq!(agent_state.cards[0].suit, Suit::Spade);
 
                     assert_eq!(game_state.current_pot, 5);
                     
@@ -417,8 +414,8 @@ mod tests {
     
                         assert_eq!(round_info.current_amt_to_call, round_info.bb_amt * 4);
                         assert_eq!(8, round_info.current_amt_to_call);
-                        assert_eq!(agent_state.cards[0].value, PsValue::King);
-                        assert_eq!(agent_state.cards[0].suit, PsSuit::Spade);
+                        assert_eq!(agent_state.cards[0].value, CardValue::King);
+                        assert_eq!(agent_state.cards[0].suit, Suit::Spade);
 
                         assert_eq!(agent_state.already_bet, 0);
 
@@ -704,24 +701,24 @@ mod tests {
         //https://www.reddit.com/r/poker/comments/g4n0oc/minimum_reraise_in_texas_holdem/
 
         let cards = vec![
-            PsCard::try_from("Ts").unwrap(),
-            PsCard::try_from("Tc").unwrap(),
+            Card::try_from("Ts").unwrap(),
+            Card::try_from("Tc").unwrap(),
             //BB cards
-            PsCard::try_from("Ad").unwrap(),
-            PsCard::try_from("Ah").unwrap(),
-            PsCard::try_from("Kd").unwrap(),
-            PsCard::try_from("Kh").unwrap(),
+            Card::try_from("Ad").unwrap(),
+            Card::try_from("Ah").unwrap(),
+            Card::try_from("Kd").unwrap(),
+            Card::try_from("Kh").unwrap(),
             //HJ cards
-            PsCard::try_from("As").unwrap(),
-            PsCard::try_from("Ac").unwrap(),
-            PsCard::try_from("Ks").unwrap(),
-            PsCard::try_from("Kc").unwrap(),
+            Card::try_from("As").unwrap(),
+            Card::try_from("Ac").unwrap(),
+            Card::try_from("Ks").unwrap(),
+            Card::try_from("Kc").unwrap(),
 
-            PsCard::try_from("6c").unwrap(),
-            PsCard::try_from("2d").unwrap(),
-            PsCard::try_from("3d").unwrap(),
-            PsCard::try_from("8h").unwrap(),
-            PsCard::try_from("8s").unwrap(),
+            Card::try_from("6c").unwrap(),
+            Card::try_from("2d").unwrap(),
+            Card::try_from("3d").unwrap(),
+            Card::try_from("8h").unwrap(),
+            Card::try_from("8s").unwrap(),
         ];
 
         let (winnings, losses) = game_runner.run_game(&cards);

@@ -1,6 +1,6 @@
 use postflop_solver::{Hand, card_pair_to_index};
-use poker_rs::core::{Card as PsCard, Suit as PsSuit};
-use crate::{Position, ChipType};
+
+use crate::{Position, ChipType, core::Card, card_to_eval_card};
 
 #[derive(Debug)]
 pub struct AgentState {
@@ -14,7 +14,7 @@ pub struct AgentState {
     
     
     //First 2 are hole tards, then flop (3 cards), turn, river
-    pub cards: Vec<PsCard>,
+    pub cards: Vec<Card>,
 
     pub folded: bool,
 
@@ -36,27 +36,12 @@ impl Default for AgentState {
 
     
 }
-
-fn poker_rs_card_to_eval_card(card: PsCard) -> u8 {
-
-    //Use values from poker_evaluate
-    let suit = match card.suit {
-        PsSuit::Spade => 3,
-        PsSuit::Heart => 2,
-        PsSuit::Diamond => 1,
-        PsSuit::Club => 0,        
-    };
-    let value = card.value as u8;
-
-    (value << 2) | suit
-}
-
 impl AgentState {
     pub fn get_range_index_for_hole_cards(&self) -> usize {
         
         card_pair_to_index(
-            poker_rs_card_to_eval_card(self.cards[0]),
-            poker_rs_card_to_eval_card(self.cards[1]),
+            card_to_eval_card(self.cards[0]),
+            card_to_eval_card(self.cards[1]),
         )
     }
 

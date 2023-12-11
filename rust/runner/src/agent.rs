@@ -24,14 +24,14 @@ use crate::{game::Position, GameState, PassiveCallingStation, build_range, PreFr
 #[cfg(test)]
 mod tests {
     
-    use postflop_solver::Hand as Hand;
+    //use postflop_solver::Hand as Hand;
 
-    use poker_rs::core::Card as PsCard;
-    use poker_rs::{core::Deck as PsDeck, arena::HoldemSimulationBuilder, arena::game_state::Round as PsRound};
-    use poker_rs::arena::GameState as PsGameState;
+    //use poker_rs::core::Card as Card;
+    //use poker_rs::{core::Deck as PsDeck, arena::HoldemSimulationBuilder, arena::game_state::Round as PsRound};
+    //use poker_rs::arena::GameState as PsGameState;
     
 
-    use crate::{PassiveCallingStation, GameState, PreFrabRanges, build_range, Agent, Round, Action, AgentState, Position};
+    //use crate::{PassiveCallingStation, GameState, PreFrabRanges, build_range, Agent, Round, Action, AgentState, Position};
 
     
 
@@ -103,13 +103,13 @@ mod tests {
     // }
     
     // fn deal_hand_card(idx: usize, card_str: &str, deck: &mut PsDeck, game_state: &mut PsGameState) {
-    //     let c = PsCard::try_from(card_str).unwrap();
+    //     let c = Card::try_from(card_str).unwrap();
     //     assert!(deck.remove(&c));
     //     game_state.hands[idx].push(c);
     // }
 
     // fn deal_community_card(card_str: &str, deck: &mut PsDeck, game_state: &mut PsGameState) {
-    //     let c = PsCard::try_from(card_str).unwrap();
+    //     let c = Card::try_from(card_str).unwrap();
     //     assert!(deck.remove(&c));
     //     for h in &mut game_state.hands {
     //         h.push(c);

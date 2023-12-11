@@ -16,7 +16,7 @@ name = "runner"
 path = "src/bin.rs"
 
 [dependencies]
-poker_rs = { path = "../poker_rs", features=["arena"] }
+# poker_rs = { path = "../poker_rs", features=["arena"] }
 postflop-solver = {path = "../postflop-solver"}
 
 itertools = "*"

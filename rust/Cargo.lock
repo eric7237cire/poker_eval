@@ -608,7 +608,6 @@ dependencies = [
  "env_logger",
  "itertools",
  "log",
- "poker_rs",
  "postflop-solver",
 ]
 
