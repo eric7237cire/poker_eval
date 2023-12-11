@@ -6,7 +6,6 @@ use itertools::Itertools;
 // const GAMES_COUNT: i32 = 3_000_000;
 // const STARTING_HANDS: [&str; 2] = ["Adkh", "8c8s"];
 
-use postflop_solver::Card;
 use postflop_solver::Range;
 use postflop_solver::card_from_str;
 use postflop_solver::Hand;
@@ -69,20 +68,20 @@ fn main() {
 }
 
 //returns AA, AK, 76s
-fn cards_to_simple_string(card1: Card, card2: Card) -> Result<String, String> {
-    let rank1 = card1 >> 2;
-    let rank2 = card2 >> 2;
+// fn cards_to_simple_string(card1: Card, card2: Card) -> Result<String, String> {
+//     let rank1 = card1 >> 2;
+//     let rank2 = card2 >> 2;
 
-    let suit1 = card1 & 3;
-    let suit2 = card2 & 3;
+//     let suit1 = card1 & 3;
+//     let suit2 = card2 & 3;
 
-    if suit1 == suit2 {
-        return Ok(format!("{}{}s", rank_to_char(rank1)?, rank_to_char(rank2)?));
-    } else {
-        return Ok(format!("{}{}", rank_to_char(rank1)?, rank_to_char(rank2)?));
+//     if suit1 == suit2 {
+//         return Ok(format!("{}{}s", rank_to_char(rank1)?, rank_to_char(rank2)?));
+//     } else {
+//         return Ok(format!("{}{}", rank_to_char(rank1)?, rank_to_char(rank2)?));
     
-    }
-}
+//     }
+// }
 
 fn try_ranges() {
     let range1 = "QQ+,AKs".parse::<Range>().unwrap();
@@ -160,7 +159,7 @@ fn run_simul() {
     let hero_rank = get_hand_category_rank(&hand_hero);
     let hero_eval = hand_hero.evaluate_internal();
 
-    let cards_to_remove: Vec<Card> = vec![my_hand.cards[0] as u8, my_hand.cards[1] as u8, flop[0], flop[1], flop[2]];
+    let cards_to_remove: Vec<u8> = vec![my_hand.cards[0] as u8, my_hand.cards[1] as u8, flop[0], flop[1], flop[2]];
     //let cards_to_remove_usize = cards_to_remove.iter().map(|c| *c as usize).collect::<Vec<usize>>();
     let flop_card_range_indexes = get_indexes_for_cards(&cards_to_remove);
     for range in villain_ranges.iter_mut() {
@@ -270,7 +269,7 @@ fn run_simul() {
 
 }
 
-fn get_indexes_for_cards(cards: &Vec<Card>) -> Vec<usize> {
+fn get_indexes_for_cards(cards: &Vec<u8>) -> Vec<usize> {
     let mut indexes: Vec<usize> = Vec::new();
 
     for card1 in 0..=51 {

@@ -2,14 +2,13 @@ use std::cmp;
 use std::convert::TryFrom;
 use std::fmt;
 use std::mem;
-use std::str::Chars;
-
 // Adapted from https://crates.io/crates/rs-poker
 
 /// Card rank or value.
 /// This is basically the face value - 2
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, PartialOrd, Eq, Ord, Debug, Clone, Copy, Hash)]
+#[repr(u8)]
 pub enum CardValue {
     /// 2
     Two = 0,
@@ -168,6 +167,7 @@ impl From<CardValue> for char {
 /// sensical. The sorting is only there to allow sorting cards.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, PartialOrd, Eq, Ord, Debug, Clone, Copy, Hash)]
+#[repr(u8)]
 pub enum Suit {
     /// Spades
     Spade = 0,
@@ -210,28 +210,6 @@ impl Suit {
     /// ```
     pub fn from_u8(s: u8) -> Self {
         Self::from(s)
-    }
-
-    /// Given a character that represents a suit try and parse that char.
-    /// If the char can represent a suit return it.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use rs_poker::core::Suit;
-    ///
-    /// let s = Suit::from_char('s');
-    /// assert_eq!(Some(Suit::Spade), s);
-    /// ```
-    ///
-    /// ```
-    /// use rs_poker::core::Suit;
-    ///
-    /// let s = Suit::from_char('X');
-    /// assert_eq!(None, s);
-    /// ```
-    pub fn from_char(s: char) -> Option<Self> {
-        TryFrom::try_from(s).ok()
     }
 
     /// This Suit to a character.
@@ -330,6 +308,17 @@ pub fn card_to_eval_card(card: Card) -> u8 {
     let value = card.value as u8;
 
     (value << 2) | suit
+}
+
+pub fn cards_from_string(a_string: &str) -> Vec<Card> {
+    let mut cards = Vec::with_capacity(5);
+    let mut chars = a_string.chars().filter(|c| !c.is_whitespace());
+    while let Some(c) = chars.next() {
+        let value = c;
+        let suit = chars.next().unwrap();
+        cards.push(Card::new(value.into(), suit.into()));
+    }
+    cards
 }
 
 
