@@ -129,9 +129,6 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
 
 #[cfg(test)]
 mod tests {
-    //use std::cmp::Ordering;
-
-    //use poker_rs::core::{Hand, Rankable, Rank};
 
     use crate::cards_from_string;
 
