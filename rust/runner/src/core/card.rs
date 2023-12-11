@@ -119,6 +119,12 @@ impl From<u8> for CardValue {
     }
 }
 
+impl From<usize> for CardValue {
+    fn from(value: usize) -> Self {
+        VALUES[value]
+    }
+}
+
 impl Into<usize> for CardValue {
     fn into(self) -> usize {
         self as usize
@@ -126,8 +132,6 @@ impl Into<usize> for CardValue {
 }
 
 impl From<char> for CardValue {
-    
-   
     fn from(value: char) -> Self {
         match value.to_ascii_uppercase() {
             'A' => Self::Ace,
@@ -143,7 +147,7 @@ impl From<char> for CardValue {
             '4' => Self::Four,
             '3' => Self::Three,
             '2' => Self::Two,
-            _ => panic!("Unsupported char")
+            _ => panic!("Unsupported char"),
         }
     }
 }
@@ -231,14 +235,13 @@ impl From<u8> for Suit {
 }
 
 impl From<char> for Suit {
-    
     fn from(value: char) -> Self {
         match value.to_ascii_lowercase() {
             'd' => Self::Diamond,
             's' => Self::Spade,
             'h' => Self::Heart,
             'c' => Self::Club,
-            _ => panic!("Unsupported char")
+            _ => panic!("Unsupported char"),
         }
     }
 }
@@ -289,27 +292,25 @@ impl fmt::Display for Card {
 }
 
 impl From<&str> for Card {
-    
     fn from(value: &str) -> Self {
         let mut chars = value.chars();
         let value_char = chars.next().unwrap();
         let suit_char = chars.next().unwrap();
         Self {
             value: value_char.into(),
-            suit: suit_char.into()
+            suit: suit_char.into(),
         }
     }
 }
 
 //Card as in postflop-solver
 pub fn card_to_eval_card(card: Card) -> u8 {
-
     //Use values from poker_evaluate
     let suit = match card.suit {
         Suit::Spade => 3,
         Suit::Heart => 2,
         Suit::Diamond => 1,
-        Suit::Club => 0,        
+        Suit::Club => 0,
     };
     let value = card.value as u8;
 
@@ -326,7 +327,6 @@ pub fn cards_from_string(a_string: &str) -> Vec<Card> {
     }
     cards
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -1,61 +1,49 @@
-
-use crate::{game::Position, GameState, PassiveCallingStation, build_range, PreFrabRanges, Round, Agent, Action, AgentRoundInfo, ChipType};
-
-
+use crate::{
+    build_range, game::Position, Action, Agent, AgentRoundInfo, ChipType, GameState,
+    PassiveCallingStation, PreFrabRanges, Round,
+};
 
 //Preflop goes left of buttonb, bb is last
 
 //Then flop/turn/river order
 //sb, bb, .... button
 
-//button, sb, bb 
-
-
-
+//button, sb, bb
 
 //Any probabilities are handled in the agent, but they always do one thing
 
-
-
 //Once we run it, we produce a probability distribution of the hands
-
-
 
 #[cfg(test)]
 mod tests {
-    
+
     //use postflop_solver::Hand as Hand;
 
     //use poker_rs::core::Card as Card;
     //use poker_rs::{core::Deck as PsDeck, arena::HoldemSimulationBuilder, arena::game_state::Round as PsRound};
     //use poker_rs::arena::GameState as PsGameState;
-    
 
     //use crate::{PassiveCallingStation, GameState, PreFrabRanges, build_range, Agent, Round, Action, AgentState, Position};
 
-    
-
     // #[test]
     // fn test_run_game_with_split_pot() {
-        
-  
 
     //     // Start
     //     game_state.advance_round();
     //     // Preflop
     //     assert_eq!(Position::SmallBlind as usize, game_state.current_round_data().to_act_idx);
-    //     game_state.do_bet(5, true).unwrap(); 
+    //     game_state.do_bet(5, true).unwrap();
 
     //     assert_eq!(Position::BigBlind as usize, game_state.current_round_data().to_act_idx);
-    //     game_state.do_bet(10, true).unwrap(); 
+    //     game_state.do_bet(10, true).unwrap();
 
     //     //utg calls
     //     assert_eq!(Position::Utg as usize, game_state.current_round_data().to_act_idx);
-    //     game_state.do_bet(10, false).unwrap(); 
+    //     game_state.do_bet(10, false).unwrap();
 
     //     //hj raises
     //     assert_eq!(Position::HiJack as usize, game_state.current_round_data().to_act_idx);
-    //     game_state.do_bet(20, false).unwrap(); 
+    //     game_state.do_bet(20, false).unwrap();
 
     //     game_state.advance_round();
     //     assert_eq!(game_state.num_active_players(), 5);
@@ -101,7 +89,7 @@ mod tests {
     //     // assert_eq!(100, sim.game_state.stacks[3]);
     //     // assert_eq!(100, sim.game_state.stacks[4]);
     // }
-    
+
     // fn deal_hand_card(idx: usize, card_str: &str, deck: &mut PsDeck, game_state: &mut PsGameState) {
     //     let c = Card::try_from(card_str).unwrap();
     //     assert!(deck.remove(&c));

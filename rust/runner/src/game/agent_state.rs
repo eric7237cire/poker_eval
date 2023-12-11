@@ -1,18 +1,16 @@
-use postflop_solver::{Hand, card_pair_to_index};
+use postflop_solver::{card_pair_to_index, Hand};
 
-use crate::{Position, ChipType, core::Card, card_to_eval_card};
+use crate::{card_to_eval_card, core::Card, ChipType, Position};
 
 #[derive(Debug)]
 pub struct AgentState {
-    
     //Stack they had when cards dealt
     pub initial_stack: ChipType,
 
     //if stack is 0, is all in if not folded
     pub stack: ChipType,
     pub position: Position,
-    
-    
+
     //First 2 are hole tards, then flop (3 cards), turn, river
     pub cards: Vec<Card>,
 
@@ -30,15 +28,12 @@ impl Default for AgentState {
             position: Position::Button,
             cards: Vec::with_capacity(7),
             folded: false,
-            already_bet: 0
+            already_bet: 0,
         }
     }
-
-    
 }
 impl AgentState {
     pub fn get_range_index_for_hole_cards(&self) -> usize {
-        
         card_pair_to_index(
             card_to_eval_card(self.cards[0]),
             card_to_eval_card(self.cards[1]),
@@ -49,7 +44,6 @@ impl AgentState {
     //returns amount actually put in pot
     //Will bet just the delta of what they've already put up in the betting round
     pub fn handle_put_money_in_pot(&mut self, total_call_amt: ChipType) -> ChipType {
-        
         assert!(total_call_amt >= self.already_bet);
         let chips_needed_in_pot = total_call_amt - self.already_bet;
         let mut chips_put_in_pot = chips_needed_in_pot;
@@ -57,10 +51,9 @@ impl AgentState {
         if self.stack <= chips_needed_in_pot {
             //all in
             self.already_bet += self.stack;
-            
+
             chips_put_in_pot = self.stack;
             self.stack = 0;
-            
         } else {
             self.stack -= chips_needed_in_pot;
             self.already_bet += chips_put_in_pot;

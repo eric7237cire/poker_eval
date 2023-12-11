@@ -1,4 +1,4 @@
-use crate::{Round, GameState, Action, AgentState, ChipType};
+use crate::{Action, AgentState, ChipType, GameState, Round};
 
 //For convenience, also build a struct that gives agent relavant info
 
@@ -12,7 +12,7 @@ pub struct AgentRoundInfo {
     //https://www.reddit.com/r/poker/comments/oqrmyk/minimal_raise/
     pub min_raise: ChipType,
 
-    pub bb_amt : ChipType,
+    pub bb_amt: ChipType,
 
     pub round: Round,
 }
@@ -21,10 +21,9 @@ pub trait Agent {
     //Get hand cards with index_to_card_pair
     fn decide_round(
         //To be able to mutate internal state
-        &self, 
+        &self,
         round_info: &AgentRoundInfo,
-        agent_state: &AgentState, 
-        game_state: &GameState) -> Action;
-
-    
+        agent_state: &AgentState,
+        game_state: &GameState,
+    ) -> Action;
 }

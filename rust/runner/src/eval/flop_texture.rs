@@ -6,7 +6,6 @@
 // 0, 1 pair
 // Ordering ranks, what are the gaps
 
-
 //'Partial' rank / draws
 
 // Flush draws
@@ -23,10 +22,10 @@
 
 // 1gap hole interleaved
 // 8 T on board 9 J -- med   targetting 789TJ or 89TJQ
-// 8 T on board 7 9 -- low 
+// 8 T on board 7 9 -- low
 
-// 2gap Hole 
-// 8 J on board 9 T 
+// 2gap Hole
+// 8 J on board 9 T
 
 // Top pair, 2nd pair, 3rd pair, 4th pair etc.
 
@@ -34,14 +33,13 @@
 
 use std::cmp::max;
 
-use crate::{CardValue, Card, calc_cards_metrics};
+use crate::{calc_cards_metrics, Card, CardValue};
 
 pub struct BoardTexture {
-
     // Highest same suited count, 1 is a raindbow board
     pub same_suited_max_count: u8,
 
-    pub gaps: Vec<u8>,  // a flop will have 2 
+    pub gaps: Vec<u8>, // a flop will have 2
 
     pub has_trips: bool,
     pub has_pair: bool,
@@ -57,7 +55,7 @@ pub struct BoardTexture {
 pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
     let mut texture = BoardTexture {
         same_suited_max_count: 0,
-        gaps: Vec::with_capacity(cards.len()-1),
+        gaps: Vec::with_capacity(cards.len() - 1),
         has_trips: false,
         has_pair: false,
         has_two_pair: false,
@@ -74,21 +72,20 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
 
     //Gap is the difference between the values of the cards
     for i in 1..cards.len() {
-        texture.gaps.push(card_values[i].gap(card_values[i-1]));
+        texture.gaps.push(card_values[i].gap(card_values[i - 1]));
     }
 
     //If highest card is an Ace then also add the gap between it and the lowest card value
     if card_values[0] == CardValue::Ace {
-
         //2 is == 0 so the distance is the lowest value + 1
-        texture.gaps.push(card_values[cards.len()-1] as u8 + 1);
+        texture.gaps.push(card_values[cards.len() - 1] as u8 + 1);
     }
 
     //filter out 0 gaps, these don't matter for straights, then return lowest order first
 
     //T 9 -- 1
     //T 8 -- 2
-    //T 7 -- 3  // T [9 8] 7 
+    //T 7 -- 3  // T [9 8] 7
     //T 6 -- 4 // T [9 8 7] 6
 
     //The lowest gap distance we care about is 4
@@ -97,7 +94,7 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
     texture.gaps.sort_by(|a, b| a.cmp(b));
 
     for card_value in card_values.iter() {
-        if *card_value as u8 >= CardValue::Jack  as u8 {
+        if *card_value as u8 >= CardValue::Jack as u8 {
             texture.high_value_count += 1;
         } else if *card_value as u8 >= CardValue::Seven as u8 {
             texture.med_value_count += 1;
@@ -113,19 +110,16 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
 
     if cards_metrics.count_to_value[3] != 0 {
         texture.has_trips = true;
-    } 
+    }
     let pair_count = cards_metrics.count_to_value[2].count_ones();
     if pair_count >= 2 {
         texture.has_two_pair = true;
     } else if pair_count == 1 {
         texture.has_pair = true;
-    } 
-    
-    
+    }
+
     texture
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -175,7 +169,5 @@ mod tests {
         assert_eq!(texture.high_value_count, 5);
         assert_eq!(texture.med_value_count, 0);
         assert_eq!(texture.low_value_count, 0);
-        
     }
-
 }

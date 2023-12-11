@@ -98,9 +98,8 @@ type ValueSetType = BitArr!(for 13, in u32, Lsb0);
 
 #[inline]
 pub fn count_higher(value_set: ValueSetType, value: usize) -> u8 {
-    value_set[1+value..].count_ones() as u8
+    value_set[1 + value..].count_ones() as u8
 }
-
 
 pub struct BitSetCardsMetrics {
     pub value_to_count: [u8; 13],
@@ -108,7 +107,6 @@ pub struct BitSetCardsMetrics {
     pub suit_value_sets: [ValueSetType; 4],
     pub value_set: ValueSetType,
 }
-
 
 impl Default for BitSetCardsMetrics {
     fn default() -> Self {
@@ -120,12 +118,11 @@ impl Default for BitSetCardsMetrics {
             value_set: ValueSetType::default(),
         }
     }
-    
 }
 
 pub fn calc_bitset_cards_metrics(cards: &[Card]) -> BitSetCardsMetrics {
     let mut card_metrics = BitSetCardsMetrics::default();
-    
+
     for c in cards.iter() {
         let v = c.value as u8;
         let s = c.suit as u8;
@@ -136,12 +133,11 @@ pub fn calc_bitset_cards_metrics(cards: &[Card]) -> BitSetCardsMetrics {
 
     // Now rotate the value to count map.
     for (value, &count) in card_metrics.value_to_count.iter().enumerate() {
-        card_metrics.count_to_value[count as usize] |= 1 << value;
+        card_metrics.count_to_value[count as usize].set(value, true)
     }
 
     card_metrics
 }
-
 
 pub struct CardsMetrics {
     pub value_to_count: [u8; 13],
@@ -159,12 +155,11 @@ impl Default for CardsMetrics {
             value_set: 0,
         }
     }
-    
 }
 
 pub fn calc_cards_metrics(cards: &[Card]) -> CardsMetrics {
     let mut card_metrics = CardsMetrics::default();
-    
+
     for c in cards.iter() {
         let v = c.value as u8;
         let s = c.suit as u8;
@@ -182,7 +177,6 @@ pub fn calc_cards_metrics(cards: &[Card]) -> CardsMetrics {
 }
 
 pub fn rank_cards(cards: &[Card]) -> Rank {
-    
     let cards_metrics = calc_cards_metrics(cards);
 
     // Find out if there's a flush
@@ -203,7 +197,9 @@ pub fn rank_cards(cards: &[Card]) -> Rank {
         // Four of a kind.
         let high = keep_highest(cards_metrics.value_set ^ cards_metrics.count_to_value[4]);
         Rank::FourOfAKind(cards_metrics.count_to_value[4] << 13 | high)
-    } else if cards_metrics.count_to_value[3] != 0 && cards_metrics.count_to_value[3].count_ones() == 2 {
+    } else if cards_metrics.count_to_value[3] != 0
+        && cards_metrics.count_to_value[3].count_ones() == 2
+    {
         // There are two sets. So the best we can make is a full house.
         let set = keep_highest(cards_metrics.count_to_value[3]);
         let pair = cards_metrics.count_to_value[3] ^ set;

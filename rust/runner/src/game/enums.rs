@@ -10,10 +10,9 @@ pub enum Round {
     River,
 }
 
-
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
-pub enum Position {    
-    SmallBlind=0,
+pub enum Position {
+    SmallBlind = 0,
     BigBlind,
     Utg,
     HiJack,
@@ -53,7 +52,6 @@ impl Position {
     }
 }
 
-
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Action {
     Fold,
@@ -63,14 +61,12 @@ pub enum Action {
     Raise(ChipType),
 }
 
-
 pub enum PreFrabRanges {
     RangeAll,
     Range75,
     Range50,
     Range25,
 }
-
 
 pub fn build_range(range: PreFrabRanges) -> Range {
     match range {
