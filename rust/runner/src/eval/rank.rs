@@ -1,5 +1,5 @@
 use crate::core::Card;
-
+use bitvec::prelude::*;
 
 /// All the different possible hand ranks.
 /// For each hand rank the u32 corresponds to
@@ -93,6 +93,55 @@ fn keep_n(rank: u32, to_keep: u32) -> u32 {
 fn find_flush(suit_value_sets: &[u32]) -> Option<usize> {
     suit_value_sets.iter().position(|sv| sv.count_ones() >= 5)
 }
+
+type ValueSetType = BitArr!(for 13, in u32, Lsb0);
+
+#[inline]
+pub fn count_higher(value_set: ValueSetType, value: usize) -> u8 {
+    value_set[1+value..].count_ones() as u8
+}
+
+
+pub struct BitSetCardsMetrics {
+    pub value_to_count: [u8; 13],
+    pub count_to_value: [ValueSetType; 5],
+    pub suit_value_sets: [ValueSetType; 4],
+    pub value_set: ValueSetType,
+}
+
+
+impl Default for BitSetCardsMetrics {
+    fn default() -> Self {
+        BitSetCardsMetrics {
+            value_to_count: [0; 13],
+            //so count_to_value[2] is a bitset of all the values that have 2 cards (paired)
+            count_to_value: [ValueSetType::default(); 5],
+            suit_value_sets: [ValueSetType::default(); 4],
+            value_set: ValueSetType::default(),
+        }
+    }
+    
+}
+
+pub fn calc_bitset_cards_metrics(cards: &[Card]) -> BitSetCardsMetrics {
+    let mut card_metrics = BitSetCardsMetrics::default();
+    
+    for c in cards.iter() {
+        let v = c.value as u8;
+        let s = c.suit as u8;
+        card_metrics.value_set.set(v as usize, true);
+        card_metrics.value_to_count[v as usize] += 1;
+        card_metrics.suit_value_sets[s as usize].set(v as usize, true);
+    }
+
+    // Now rotate the value to count map.
+    for (value, &count) in card_metrics.value_to_count.iter().enumerate() {
+        card_metrics.count_to_value[count as usize] |= 1 << value;
+    }
+
+    card_metrics
+}
+
 
 pub struct CardsMetrics {
     pub value_to_count: [u8; 13],

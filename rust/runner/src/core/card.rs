@@ -119,6 +119,12 @@ impl From<u8> for CardValue {
     }
 }
 
+impl Into<usize> for CardValue {
+    fn into(self) -> usize {
+        self as usize
+    }
+}
+
 impl From<char> for CardValue {
     
    
