@@ -98,7 +98,17 @@ pub type ValueSetType = BitArr!(for 13, in u32, Lsb0);
 
 #[inline]
 pub fn count_higher(value_set: ValueSetType, value: usize) -> u8 {
+    if value == 12 {
+        return 0;
+    }
     value_set[1 + value..].count_ones() as u8
+}
+#[inline]
+pub fn count_lower(value_set: ValueSetType, value: usize) -> u8 {
+    if value == 0 {
+        return 0;
+    }
+    value_set[0..value].count_ones() as u8
 }
 
 pub struct BitSetCardsMetrics {
@@ -138,7 +148,6 @@ pub fn calc_bitset_cards_metrics(cards: &[Card]) -> BitSetCardsMetrics {
 
     card_metrics
 }
-
 
 pub struct CardsMetrics {
     pub value_to_count: [u8; 13],

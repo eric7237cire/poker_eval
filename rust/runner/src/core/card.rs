@@ -128,7 +128,6 @@ impl CardValue {
             CardValue::from(self as u8 - 1)
         }
     }
-
 }
 
 impl From<u8> for CardValue {
