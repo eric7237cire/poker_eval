@@ -111,6 +111,24 @@ impl CardValue {
         let max = cmp::max(self as u8, other as u8);
         max - min
     }
+
+    pub fn next_card(self) -> Self {
+        let next = self as u8 + 1;
+        if next > 12 {
+            CardValue::Two
+        } else {
+            CardValue::from(next)
+        }
+    }
+
+    pub fn prev_card(self) -> Self {
+        if self == CardValue::Two {
+            CardValue::Ace
+        } else {
+            CardValue::from(self as u8 - 1)
+        }
+    }
+
 }
 
 impl From<u8> for CardValue {

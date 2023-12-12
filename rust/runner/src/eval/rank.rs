@@ -1,4 +1,4 @@
-use crate::core::Card;
+use crate::{core::Card, CardValue};
 use bitvec::prelude::*;
 
 /// All the different possible hand ranks.
@@ -37,7 +37,7 @@ const WHEEL: u32 = 0b1_0000_0000_1111;
 ///
 /// Returns None if the hand ranks represented don't correspond
 /// to a straight.
-fn rank_straight(value_set: u32) -> Option<u32> {
+pub fn rank_straight(value_set: u32) -> Option<u32> {
     // Example of something with a straight:
     //       0000111111100
     //       0001111111000
@@ -94,7 +94,7 @@ fn find_flush(suit_value_sets: &[u32]) -> Option<usize> {
     suit_value_sets.iter().position(|sv| sv.count_ones() >= 5)
 }
 
-type ValueSetType = BitArr!(for 13, in u32, Lsb0);
+pub type ValueSetType = BitArr!(for 13, in u32, Lsb0);
 
 #[inline]
 pub fn count_higher(value_set: ValueSetType, value: usize) -> u8 {
@@ -138,6 +138,7 @@ pub fn calc_bitset_cards_metrics(cards: &[Card]) -> BitSetCardsMetrics {
 
     card_metrics
 }
+
 
 pub struct CardsMetrics {
     pub value_to_count: [u8; 13],
