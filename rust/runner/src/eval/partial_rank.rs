@@ -113,66 +113,93 @@ pub fn partial_rank_cards(hole_cards: &[Card], board: &[Card]) -> PartialRankCon
 
     //draws
 
-    //we can have a draw with both our hole cards, or just one
-
-    //for both our hole cards
-
+    //To know how good our draw is
     //take the board and calculate all the possible straight draws and gut shot draws
 
-    //for gut shot, any 2 card values 2 3 4 5 6 that are 4 apart is a gut shot draw
-    //store the highest value
+    //an open ended draw is when we have a block of 4 consecutive values
+    //with a lower and higher one possible
+    let mut open_ended_draws: Vec<CardValue> = Vec::new();
+
+    //So we do a rolling count of 1s in a row on the value set
+    //Note though there are some cases
+    // [0] 1 1 1 1 [0] is the normal one
+    // [0] 1 1 1 1 [1] means there are no open ended draws, since we have a straight
+    // [1] 1 1 1 1 [0] means there are no open ended draws, since we have a straight
+    // But we do have a gut shot draw to a higher straight in the 3rd case
+
+    // The value of the draw is the highest value in the draw, so for
+    // [0] 1 1 1 (1) ([0]) is the 2 values we add are in ()
+
+    //First one as either 2 3 4 5
+    let mut rolling_one_count = board_metrics.value_set[CardValue::Two as usize..=CardValue::Five as usize].count_ones();
+
+    for range_end in CardValue::Six as usize..=CardValue::Ace as usize {
+        // [0] 1 1 1 1 [range_end] 
+
+        //the wheel
+        let range_begin = if range_end == CardValue::Six as usize {
+            CardValue::Ace as usize
+        } else {
+            range_end - 5
+        };
+
+        assert!(rolling_one_count <= 4);
+
+        //Basically we need to use at least one max 2 of the hole cards
+        //So if the board already has the entire block set, there is no draw here
+        if rolling_one_count >= 2 && rolling_one_count < 4 && board_metrics.value_set[range_end] && board_metrics.value_set[range_begin] {
+            open_ended_draws.push(range_end.into());
+        } 
+
+        rolling_one_count += if board_metrics.value_set[range_end] {1} else {0};
+        rolling_one_count -= if board_metrics.value_set[range_begin] {1} else {0};
+    }
 
     let mut gut_shot_draws: Vec<CardValue> = Vec::new();
-    let mut open_ended_draws: Vec<CardValue> = Vec::new();
-    //start with wheel so any 1 value in A2345
+    
+    //A gut shot is to a specific draw, so we look at all blocks of 5
+    //and if the board has at least 2, but <= 3 (since we need a hole card to make it a draw)
+    //If we had 4 on the board, then the 5th card would make a straight on the board without hole cards
 
-    //count 2 to 4 first and Ace
+    //start with wheel
     let mut rolling_one_count = board_metrics.value_set[CardValue::Two as usize..=CardValue::Five as usize].count_ones();
     rolling_one_count += if board_metrics.value_set[CardValue::Ace as usize] {1} else {0};
 
-    //cant have open draw on the wheel
-    //Also discount made straights
-    if rolling_one_count >= 2 && rolling_one_count < 5{
+    if rolling_one_count >= 2 && rolling_one_count < 4 {
         gut_shot_draws.push(CardValue::Five);
     } 
 
     //take off the ace 
     rolling_one_count -= if board_metrics.value_set[CardValue::Ace as usize] {1} else {0};
 
-    for straight_value in CardValue::Six as usize..=CardValue::Ace as usize {
-        //add the next value
-        rolling_one_count += if board_metrics.value_set[straight_value] {1} else {0};
+    //Add the 6
+    rolling_one_count += if board_metrics.value_set[CardValue::Six as usize] {1} else {0};
 
-        //if we have 2 there is always a gut shot potential
-        //as long as the gap isn't 3 we have an open ended potential
+    for range_end in CardValue::Six as usize..=CardValue::Ace as usize {
+        //range_end is already counted
+        let range_begin = range_end - 5;
 
-        if rolling_one_count >= 2 && rolling_one_count <= 4 {
-            gut_shot_draws.push(straight_value.into());
-        
-            if rolling_one_count == 2 && board_metrics.value_set[straight_value - 4] && board_metrics.value_set[straight_value]  {
-                //gap is to big, no open ended draw   
-            } else {
-                //no open ended with A high
-                if straight_value != CardValue::Ace as usize {
-                    open_ended_draws.push(straight_value.into());
-                }
-            }
-        }
+        assert!(rolling_one_count <= 5);
 
-        //if we have 5 in a row, we have an open ended draw
-        if rolling_one_count >= 5 {
-            open_ended_draws.push(CardValue::from(straight_value));
-        }
+        //Basically we need to use at least one max 2 of the hole cards
+        //So if the board already has the entire block set, there is no draw here
+        if rolling_one_count >= 2 && rolling_one_count < 4  {
+            gut_shot_draws.push(range_end.into());
+        } 
 
-        
-        //subtract the first value
-        rolling_one_count -= if board_metrics.value_set[straight_value - 4] {1} else {0};
+        rolling_one_count += if board_metrics.value_set[range_end] {1} else {0};
+        rolling_one_count -= if board_metrics.value_set[range_begin] {1} else {0};
     }
+
+
+    //Ok, now we need to figure out, do *we* have a draw
 
 
 
     partial_ranks
 }
+
+
 
 #[cfg(test)]
 mod tests {
