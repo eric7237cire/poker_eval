@@ -90,7 +90,7 @@ export const useStore = defineStore("app", {
     navView: "solver" as NavView,
     sideView: "about" as SideView,
     headers: {
-      about: ["Welcome to WASM Postflop!"],
+      about: ["Welcome to WASM Postflop! 123"],
       "oop-range": ["OOP Range"],
       "ip-range": ["IP Range"],
       board: ["Board"],
