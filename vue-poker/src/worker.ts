@@ -5,15 +5,17 @@ type Mod = typeof import("../rsw-hello/pkg/rsw_hello");
 
 const createHandler = (mod: Mod) => {
   return {
-    //game: mod.GameManager.new(),
+    game: mod.GameManager.new(),
 
     init(player: string) {
         return mod.hello(" huh");
     },
-    sayHello(player: string) : string {
+    sayHello(player: string)  {
       return mod.hello("from the worker");
     },
-
+    sayGameHello(player: string)  {
+        return this.game.get_a_string();
+    }
     
 
     

@@ -22,6 +22,7 @@ export default {
     await init(3);
     this.whatup='Start...';
     this.whatup +=  await handler!.sayHello("42.73");
+    this.whatup +=  await handler!.sayGameHello(" boo")
     this.count += 17;
     
   }
