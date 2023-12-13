@@ -1,14 +1,38 @@
-<script setup lang="ts">
-defineProps<{
-  msg: string
-}>()
+<script lang="ts">
+
+//import init, {greet, hello, initSync} from "rsw-hello";
+import { ref } from "vue";
+import { init, handler } from "../global-worker";
+
+
+export default {
+  setup() {
+    const count = ref(0)
+    const whatup = ref('oeu');
+    // expose to template and other options API hooks
+    return {
+      count,
+      whatup
+    }
+  },
+
+  async mounted() {
+    console.log(this.count); // 0
+    console.log(`the component is now mounted.`);
+    await init(3);
+    this.whatup='Start...';
+    this.whatup +=  await handler!.sayHello("42.73");
+    this.count += 17;
+    
+  }
+}
 </script>
 
 <template>
   <div class="greetings">
-    <h1 class="green">{{ msg }}</h1>
+    <h1 class="green">whut{{ whatup }}</h1>
     <h3>
-      You’ve successfully created a project with
+      You’ve successfully created a project with whatup Hello Eugenia
       <a href="https://vitejs.dev/" target="_blank" rel="noopener">Vite</a> +
       <a href="https://vuejs.org/" target="_blank" rel="noopener">Vue 3</a>.
     </h3>

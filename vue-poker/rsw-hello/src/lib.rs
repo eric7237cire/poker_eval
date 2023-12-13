@@ -9,10 +9,10 @@ extern "C" {
 
 #[wasm_bindgen]
 pub fn greet() {
-    alert("Hello, rsw-he333llo!");
+    alert("He999llo, rsw-he333llo!");
 }
 
 #[wasm_bindgen]
 pub fn hello(name: &str) -> JsValue {
-    JsValue::from_str(&format!("H f 983 rust, {}!  RRRRR<--", name))
+    JsValue::from_str(&format!("R..42 9 {}...R", name))
 }

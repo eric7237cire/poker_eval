@@ -36,3 +36,6 @@ Yarn
 
  ~/git/poker_eval/vue-poker/rsw-hello/pkg$ sudo npm link
 
+
+
+Looks like wasm-build is better than rsw

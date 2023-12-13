@@ -1,11 +1,12 @@
 {
-  "files": [],
-  "references": [
-    {
-      "path": "./tsconfig.node.json"
+    "compilerOptions": {
+      "target": "esnext",
+      "module": "esnext",
+      "strict": true,
+      "moduleResolution": "node",
+      "forceConsistentCasingInFileNames": true,
+      "jsx": "preserve"
     },
-    {
-      "path": "./tsconfig.app.json"
-    }
-  ]
-}
+    "include": ["src/**/*.ts", "src/**/*.vue"]
+  }
+  
