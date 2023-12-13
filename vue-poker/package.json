@@ -14,7 +14,7 @@
     "r-dev": "concurrently \"rsw watch\" \"vite\"",
     "r-build": "rsw build",
     "rsw": "rsw",
-    "wasm:hello": "wasm-pack build --out-dir pkg rsw-hello"
+    "wasm:hello": "wasm-pack build --target web --out-dir pkg rsw-hello"
   },
   "dependencies": {
     "comlink": "^4.4.1",

@@ -39,7 +39,7 @@ const initHandler = async (num_threads: number) => {
 //   }
 
   mod = await import("../rsw-hello/pkg/rsw_hello");
-  //await mod.default();
+  await mod.default();
 
   return Comlink.proxy(createHandler(mod));
 };

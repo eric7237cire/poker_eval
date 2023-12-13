@@ -14,5 +14,24 @@ pub fn greet() {
 
 #[wasm_bindgen]
 pub fn hello(name: &str) -> JsValue {
-    JsValue::from_str(&format!("R..42 9 {}...R", name))
+    JsValue::from_str(&format!("R..dat shit ChangeThis 9 {}...R", name))
+}
+
+#[wasm_bindgen]
+pub struct GameManager {
+    //game: PostFlopGame,
+}
+
+#[wasm_bindgen]
+impl GameManager {
+    pub fn new() -> Self 
+    {  
+        Self {
+
+        }
+    }
+
+    pub fn get_a_string(&self) -> String {
+        "A!Hello from Rust!".to_string()
+    }
 }
