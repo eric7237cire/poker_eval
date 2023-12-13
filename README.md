@@ -30,3 +30,6 @@ record flop situation
 simulate hero betting
 
 
+# Build
+
+Rust docker container builds wasms
