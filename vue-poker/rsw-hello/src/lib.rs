@@ -14,7 +14,7 @@ pub fn greet() {
 
 #[wasm_bindgen]
 pub fn hello(name: &str) -> JsValue {
-    JsValue::from_str(&format!("R..dat shit ChangeThis 9 {}...R", name))
+    JsValue::from_str(&format!("R..dt00 shit ChangeThis 9 {}...R", name))
 }
 
 #[wasm_bindgen]

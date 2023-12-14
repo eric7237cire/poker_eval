@@ -38,4 +38,9 @@ Yarn
 
 
 
-Looks like wasm-build is better than rsw
+rsw works just fine without the vite/rsw plugin
+
+Next is tailwindcss
+
+npm install -D tailwindcss@latest postcss@latest autoprefixer@latest
+npx tailwindcss init -p
