@@ -44,3 +44,15 @@ Next is tailwindcss
 
 npm install -D tailwindcss@latest postcss@latest autoprefixer@latest
 npx tailwindcss init -p
+
+
+
+
+Install rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+
+go to ui
+wasm-pack build --out-dir ../../pkg/range rust/range
+npm run wasm:hello
