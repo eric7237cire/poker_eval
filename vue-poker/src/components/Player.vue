@@ -5,7 +5,7 @@ or select a range
 
 <template>
   Profile Name: {{ playerId }} buh
-  <div @click="handleRangeClick()">Range: {{ playerStore.playerDataForId(playerId).rangeStr }}</div>
+  <div @click="handleRangeClick()">Range %: {{ formatNumber(100*playerStore.playerDataForId(playerId).percHands) }}</div>
   <button>Disabl</button>
   ps {{ playerStore.currentPlayer }}
 </template>
@@ -13,7 +13,6 @@ or select a range
 <script lang="ts">
 import { computed, defineComponent, watch } from 'vue';
 import { CurrentPage, useNavStore } from '../stores/navigation';
-import { useRangeStore } from '../stores/ranges';
 import { usePlayerStore } from '../stores/player';
 import { Store, PiniaCustomStateProperties, storeToRefs } from 'pinia';
 
@@ -27,7 +26,6 @@ export default defineComponent({
 
   setup(props) {
     const navStore = useNavStore();
-    const rangeStore = useRangeStore();
     const playerStore = usePlayerStore();
 
     const handleRangeClick = () => {
@@ -36,12 +34,19 @@ export default defineComponent({
       playerStore.setCurrentPlayer(props.playerId);
     };
 
+    const formatNumber = (num: number) => {
+      return num.toLocaleString(undefined, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 1
+      });
+    };
+
     return {
       playerId: props.playerId,
       handleRangeClick,
-      rangeStore,
       playerStore,
-      currentPlayer: playerStore.currentPlayer
+      currentPlayer: playerStore.currentPlayer,
+      formatNumber
     };
   }
 });

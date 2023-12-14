@@ -117,7 +117,7 @@ import { defineComponent, reactive, ref, watch } from 'vue';
 import { usePlayerStore } from '../stores/player';
 import { ranks, rankPat } from '../utils';
 import { RangeManager } from '../../../ui/pkg/range/range';
-import { useRangeStore } from '../stores/ranges';
+
 import { CurrentPage, useNavStore } from '../stores/navigation';
 
 import DbItemPicker from './DbItemPicker.vue';

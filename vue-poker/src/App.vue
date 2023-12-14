@@ -64,7 +64,7 @@ import Player from './components/Player.vue';
 import RangeEditor from './components/RangeEditor.vue';
 import { defineComponent } from 'vue';
 import { useNavStore, CurrentPage } from './stores/navigation';
-import { useRangeStore } from './stores/ranges';
+
 import { PlayerIds, usePlayerStore } from './stores/player';
 
 export default defineComponent({
@@ -87,13 +87,11 @@ export default defineComponent({
       { id: 4, class: 'player4' }
     ];
 
-    const rangeStore = useRangeStore();
-
-    playerStore.players[PlayerIds.HERO].rangeStr = 'TT+';
-    playerStore.players[PlayerIds.WEST].rangeStr = '22+';
-    playerStore.players[PlayerIds.NORTH_WEST].rangeStr = '22+, 72+';
-    playerStore.players[PlayerIds.NORTH_EAST].rangeStr = 'A2o+, Q3o+';
-
+    playerStore.updateRangeStrForPlayer(PlayerIds.HERO, 'TT+');
+    playerStore.updateRangeStrForPlayer(PlayerIds.WEST, '83+');
+    playerStore.updateRangeStrForPlayer(PlayerIds.NORTH_WEST, '22+, 72+');
+    playerStore.updateRangeStrForPlayer(PlayerIds.NORTH_EAST, 'A2o+, Q3o+');
+    
     return {
       navStore,
       CurrentPage,

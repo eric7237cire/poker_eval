@@ -9,40 +9,35 @@ export const enum PlayerIds {
 export interface Player {
   id: PlayerIds;
   rangeStr: string;
+  percHands: number;
 }
 
 // stores/counter.js
 import { defineStore } from 'pinia';
+import { RangeManager } from '../../../ui/pkg/range/range';
 
-function initializePlayers() {
-  const players: { [key: number]: Player } = {};
 
-  for (let i = 0; i < 5; i++) {
-    players[i] = {
-      id: i,
-      rangeStr: ''
-    };
-  }
-
-  return players;
-}
-function initializePlayers2(): Array<Player> {
+function initializePlayers(): Array<Player> {
   const players: Array<Player> = [];
 
   for (let i = 0; i < 5; i++) {
     players.push({
       id: i,
-      rangeStr: ''
+      rangeStr: '',
+      percHands: 0
     });
   }
   return players;
 }
 
+//private local to update some stats
+const range = RangeManager.new();
+
 export const usePlayerStore = defineStore('player', {
   state: () => {
     return {
       currentPlayer: PlayerIds.HERO,
-      players: initializePlayers2()
+      players: initializePlayers()
     };
   },
   getters: {
@@ -55,7 +50,17 @@ export const usePlayerStore = defineStore('player', {
       this.currentPlayer = newCurrentPlayer;
     },
     updateRangeStr(newRangeStr: string) {
-        this.players[this.currentPlayer].rangeStr = newRangeStr;
+        this.updateRangeStrForPlayer(this.currentPlayer, newRangeStr);
+    },
+    updateRangeStrForPlayer(playerId: PlayerIds, newRangeStr: string) {
+        console.log('updateRangeStrForPlayer', playerId, newRangeStr);
+        this.players[playerId].rangeStr = newRangeStr;
+
+        //update stats
+        range.from_string(newRangeStr);
+        const rawData = range.raw_data();
+        const numCombos = rawData.reduce((acc, cur) => acc + cur, 0);
+        this.players[playerId].percHands = numCombos / (52*51/2);
     }
   }
 });
