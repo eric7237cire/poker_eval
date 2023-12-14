@@ -36,11 +36,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue'
-import { useBoardStore } from '../stores/board'
-import { cardText, parseCardString } from '../utils'
+import { defineComponent, ref } from 'vue';
+import { useBoardStore } from '../stores/board';
+import { cardText, parseCardString } from '../utils';
 
-import BoardSelectorCard from './BoardSelectorCard.vue'
+import BoardSelectorCard from './BoardSelectorCard.vue';
 
 export default defineComponent({
   components: {
@@ -48,23 +48,23 @@ export default defineComponent({
   },
 
   setup() {
-    const config = useBoardStore()
-    const boardText = ref('')
+    const config = useBoardStore();
+    const boardText = ref('');
 
     const toggleCard = (cardId: number, updateText = true) => {
       if (config.board.includes(cardId)) {
-        config.board = config.board.filter((card) => card !== cardId)
+        config.board = config.board.filter((card) => card !== cardId);
       } else if (config.board.length < 5) {
-        config.board.push(cardId)
+        config.board.push(cardId);
         if (config.board.length <= 3) {
-          config.board.sort((a, b) => b - a)
+          config.board.sort((a, b) => b - a);
         }
       }
 
       if (updateText) {
-        setBoardTextFromButtons()
+        setBoardTextFromButtons();
       }
-    }
+    };
 
     const setBoardTextFromButtons = () => {
       boardText.value = config.board
@@ -72,11 +72,11 @@ export default defineComponent({
         .map(({ rank, suitLetter }) => rank + suitLetter)
         .join(', ');
 
-        console.log('boardText.value', boardText.value);
-    }
+      console.log('boardText.value', boardText.value);
+    };
 
     const onBoardTextChange = () => {
-      config.board = []
+      config.board = [];
 
       const cardIds = boardText.value
         // Allow pasting in things like [Ah Kd Qc], by reformatting to Ah,Kd,Qc
@@ -85,30 +85,30 @@ export default defineComponent({
         .replace(/\s+/g, ',')
         .split(',')
         .map(parseCardString)
-        .filter((cardId): cardId is number => cardId !== null)
+        .filter((cardId): cardId is number => cardId !== null);
 
-      new Set(cardIds).forEach((cardId) => toggleCard(cardId, false))
-      setBoardTextFromButtons()
-    }
+      new Set(cardIds).forEach((cardId) => toggleCard(cardId, false));
+      setBoardTextFromButtons();
+    };
 
     const clearBoard = () => {
-      config.board = []
-      setBoardTextFromButtons()
-    }
+      config.board = [];
+      setBoardTextFromButtons();
+    };
 
     const generateRandomBoard = () => {
-      config.board = []
+      config.board = [];
 
       while (config.board.length < 3) {
-        const randomCard = Math.floor(Math.random() * 52)
+        const randomCard = Math.floor(Math.random() * 52);
         if (!config.board.includes(randomCard)) {
-          config.board.push(randomCard)
+          config.board.push(randomCard);
         }
       }
 
-      config.board.sort((a, b) => b - a)
-      setBoardTextFromButtons()
-    }
+      config.board.sort((a, b) => b - a);
+      setBoardTextFromButtons();
+    };
 
     return {
       config,
@@ -117,7 +117,7 @@ export default defineComponent({
       onBoardTextChange,
       clearBoard,
       generateRandomBoard
-    }
+    };
   }
-})
+});
 </script>

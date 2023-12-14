@@ -1,31 +1,31 @@
-import * as Comlink from 'comlink'
+import * as Comlink from 'comlink';
 //import { detect } from "detect-browser";
 
-type Mod = typeof import('../rsw-hello/pkg/rsw_hello')
+type Mod = typeof import('../rsw-hello/pkg/rsw_hello');
 
 const createHandler = (mod: Mod) => {
   return {
     game: mod.GameManager.new(),
 
     init(player: string) {
-      return mod.hello(' huh')
+      return mod.hello(' huh');
     },
     sayHello(player: string) {
-      return mod.hello('from the worker')
+      return mod.hello('from the worker');
     },
     sayGameHello(player: string) {
-      return this.game.get_a_string()
+      return this.game.get_a_string();
     }
-  }
-}
+  };
+};
 
 // const isMTSupported = () => {
 //   const browser = detect();
 //   return !(browser && (browser.name === "safari" || browser.os === "iOS"));
 // };
 
-let mod: Mod | null = null
-export type Handler = ReturnType<typeof createHandler>
+let mod: Mod | null = null;
+export type Handler = ReturnType<typeof createHandler>;
 
 const initHandler = async (num_threads: number) => {
   //   if (isMTSupported()) {
@@ -37,21 +37,21 @@ const initHandler = async (num_threads: number) => {
   //     await mod.default();
   //   }
 
-  mod = await import('../rsw-hello/pkg/rsw_hello')
-  await mod.default()
+  mod = await import('../rsw-hello/pkg/rsw_hello');
+  await mod.default();
 
-  return Comlink.proxy(createHandler(mod))
-}
+  return Comlink.proxy(createHandler(mod));
+};
 
 const beforeTerminate = async () => {
   //   if (isMTSupported()) {
   //     await (mod as ModMT).exitThreadPool();
   //   }
-}
+};
 
 export interface WorkerApi {
-  initHandler: typeof initHandler
-  beforeTerminate: typeof beforeTerminate
+  initHandler: typeof initHandler;
+  beforeTerminate: typeof beforeTerminate;
 }
 
-Comlink.expose({ initHandler, beforeTerminate })
+Comlink.expose({ initHandler, beforeTerminate });

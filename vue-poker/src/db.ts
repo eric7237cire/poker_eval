@@ -1,4 +1,4 @@
-import Dexie, { Table } from "dexie";
+import Dexie, { Table } from 'dexie';
 
 export type DbItem = {
   id?: number;
@@ -24,37 +24,35 @@ class WASMPostflopDB extends Dexie {
   public configurations!: Table<DbItem | DbGroup, number>;
 
   public constructor() {
-    super("WASMPostflopDB");
+    super('WASMPostflopDB');
 
-    
-    this.version(1)
-      .stores({
-        ranges: "++id, [name0+name1+name2+name3+isGroup]",
-        configurations: "++id, [name0+name1+name2+name3+isGroup]",
-      })
-        }
+    this.version(1).stores({
+      ranges: '++id, [name0+name1+name2+name3+isGroup]',
+      configurations: '++id, [name0+name1+name2+name3+isGroup]'
+    });
+  }
 }
 
 const db = new WASMPostflopDB();
 
 const makeParent = (item: DbItem | DbGroup) => {
-  if (item.name3 !== "") {
-    return { ...item, name3: "", isGroup: 1 };
-  } else if (item.name2 !== "") {
-    return { ...item, name2: "", isGroup: 1 };
-  } else if (item.name1 !== "") {
-    return { ...item, name1: "", isGroup: 1 };
+  if (item.name3 !== '') {
+    return { ...item, name3: '', isGroup: 1 };
+  } else if (item.name2 !== '') {
+    return { ...item, name2: '', isGroup: 1 };
+  } else if (item.name1 !== '') {
+    return { ...item, name1: '', isGroup: 1 };
   } else {
-    throw new Error("Cannot make parent of top-level item");
+    throw new Error('Cannot make parent of top-level item');
   }
 };
 
 const makeRenamed = (item: DbItem | DbGroup, newName: string) => {
-  if (item.name3 !== "") {
+  if (item.name3 !== '') {
     return { ...item, name3: newName };
-  } else if (item.name2 !== "") {
+  } else if (item.name2 !== '') {
     return { ...item, name2: newName };
-  } else if (item.name1 !== "") {
+  } else if (item.name1 !== '') {
     return { ...item, name1: newName };
   } else {
     return { ...item, name0: newName };
@@ -69,10 +67,10 @@ export const addItem = async (store: string, item: DbItem) => {
   try {
     const table = db.table(store);
 
-    return await db.transaction("rw", table, async () => {
+    return await db.transaction('rw', table, async () => {
       // duplicate check
       const count = await table
-        .where("[name0+name1+name2+name3]")
+        .where('[name0+name1+name2+name3]')
         .equals([item.name0, item.name1, item.name2, item.name3])
         .count();
       if (count > 0) {
@@ -80,10 +78,10 @@ export const addItem = async (store: string, item: DbItem) => {
       }
 
       // parent check
-      if (item.name1 !== "") {
+      if (item.name1 !== '') {
         const parent = makeParent(item);
         const count = await table
-          .where("[name0+name1+name2+name3+isGroup]")
+          .where('[name0+name1+name2+name3+isGroup]')
           .equals([parent.name0, parent.name1, parent.name2, parent.name3, 1])
           .count();
         if (count !== 1) {
@@ -105,10 +103,10 @@ export const overwriteItem = async (store: string, item: DbItem) => {
   try {
     const table = db.table(store);
 
-    return await db.transaction("rw", table, async () => {
+    return await db.transaction('rw', table, async () => {
       // get collection
       const collection = table
-        .where("[name0+name1+name2+name3+isGroup]")
+        .where('[name0+name1+name2+name3+isGroup]')
         .equals([item.name0, item.name1, item.name2, item.name3, 0]);
 
       // check if exists
@@ -124,20 +122,16 @@ export const overwriteItem = async (store: string, item: DbItem) => {
   }
 };
 
-export const renameItem = async (
-  store: string,
-  item: DbItem | DbGroup,
-  newName: string
-) => {
+export const renameItem = async (store: string, item: DbItem | DbGroup, newName: string) => {
   try {
     const table = db.table(store);
 
-    return await db.transaction("rw", table, async () => {
+    return await db.transaction('rw', table, async () => {
       const renamed = makeRenamed(item, newName);
 
       // duplicate check
       const count = await table
-        .where("[name0+name1+name2+name3]")
+        .where('[name0+name1+name2+name3]')
         .equals([renamed.name0, renamed.name1, renamed.name2, renamed.name3])
         .count();
       if (count > 0) {
@@ -145,21 +139,17 @@ export const renameItem = async (
       }
 
       const [index, key, modifier] =
-        item.name3 !== ""
+        item.name3 !== ''
           ? [
-              "[name0+name1+name2+name3]",
+              '[name0+name1+name2+name3]',
               [item.name0, item.name1, item.name2, item.name3],
-              { name3: newName },
+              { name3: newName }
             ]
-          : item.name2 !== ""
-          ? [
-              "[name0+name1+name2]",
-              [item.name0, item.name1, item.name2],
-              { name2: newName },
-            ]
-          : item.name1 !== ""
-          ? ["[name0+name1]", [item.name0, item.name1], { name1: newName }]
-          : ["name0", item.name0, { name0: newName }];
+          : item.name2 !== ''
+            ? ['[name0+name1+name2]', [item.name0, item.name1, item.name2], { name2: newName }]
+            : item.name1 !== ''
+              ? ['[name0+name1]', [item.name0, item.name1], { name1: newName }]
+              : ['name0', item.name0, { name0: newName }];
 
       // update
       return (await table.where(index).equals(key).modify(modifier)) > 0;
@@ -170,17 +160,17 @@ export const renameItem = async (
 };
 
 export const addGroup = async (store: string, group: DbGroup) => {
-  if (group.name3 !== "") {
+  if (group.name3 !== '') {
     return false;
   }
 
   try {
     const table = db.table(store);
 
-    return await db.transaction("rw", table, async () => {
+    return await db.transaction('rw', table, async () => {
       // duplicate check
       const count = await table
-        .where("[name0+name1+name2+name3]")
+        .where('[name0+name1+name2+name3]')
         .equals([group.name0, group.name1, group.name2, group.name3])
         .count();
       if (count > 0) {
@@ -188,10 +178,10 @@ export const addGroup = async (store: string, group: DbGroup) => {
       }
 
       // parent check
-      if (group.name1 !== "") {
+      if (group.name1 !== '') {
         const parent = makeParent(group);
         const count = await table
-          .where("[name0+name1+name2+name3+isGroup]")
+          .where('[name0+name1+name2+name3+isGroup]')
           .equals([parent.name0, parent.name1, parent.name2, parent.name3, 1])
           .count();
         if (count !== 1) {
@@ -213,11 +203,11 @@ export const deleteItem = async (store: string, item: DbItem | DbGroup) => {
   try {
     const table = db.table(store);
 
-    return await db.transaction("rw", table, async () => {
+    return await db.transaction('rw', table, async () => {
       if (item.isGroup) {
         // check if exists
         const count = await table
-          .where("[name0+name1+name2+name3+isGroup]")
+          .where('[name0+name1+name2+name3+isGroup]')
           .equals([item.name0, item.name1, item.name2, item.name3, 1])
           .count();
         if (count !== 1) {
@@ -225,18 +215,18 @@ export const deleteItem = async (store: string, item: DbItem | DbGroup) => {
         }
 
         const [index, key] =
-          item.name2 !== ""
-            ? ["[name0+name1+name2]", [item.name0, item.name1, item.name2]]
-            : item.name1 !== ""
-            ? ["[name0+name1]", [item.name0, item.name1]]
-            : ["name0", item.name0];
+          item.name2 !== ''
+            ? ['[name0+name1+name2]', [item.name0, item.name1, item.name2]]
+            : item.name1 !== ''
+              ? ['[name0+name1]', [item.name0, item.name1]]
+              : ['name0', item.name0];
 
         // delete
         return (await table.where(index).equals(key).delete()) > 0;
       } else {
         // get collection
         const collection = table
-          .where("[name0+name1+name2+name3+isGroup]")
+          .where('[name0+name1+name2+name3+isGroup]')
           .equals([item.name0, item.name1, item.name2, item.name3, 0]);
 
         // check if exists
@@ -257,7 +247,7 @@ export const bulkAdd = async (store: string, items: (DbItem | DbGroup)[]) => {
   try {
     const table = db.table(store);
 
-    return await db.transaction("rw", table, async () => {
+    return await db.transaction('rw', table, async () => {
       // insert
       await table.bulkAdd(items);
 

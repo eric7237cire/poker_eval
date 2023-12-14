@@ -21,7 +21,7 @@
                 class="absolute w-full h-full left-0 top-0 bg-bottom bg-no-repeat"
                 :style="{
                   'background-image': `linear-gradient(${yellow500} 0% 100%)`,
-                  'background-size': `100% ${cellValue(row, col)}%`,
+                  'background-size': `100% ${cellValue(row, col)}%`
                 }"
               ></div>
             </div>
@@ -33,13 +33,11 @@
             >
               {{ cellText(row, col) }}
             </div>
-            <div
-              class="absolute bottom-px right-1 z-10 text-sm text-shadow text-white"
-            >
+            <div class="absolute bottom-px right-1 z-10 text-sm text-shadow text-white">
               {{
                 cellValue(row, col) > 0 && cellValue(row, col) < 100
                   ? cellValue(row, col).toFixed(1)
-                  : ""
+                  : ''
               }}
             </div>
           </td>
@@ -59,17 +57,11 @@
             @change="onRangeTextChange"
           />
 
-          <button class="button-base button-blue" @click="clearRange">
-            Clear
-          </button>
-          <button class="button-base button-blue" @click="handleDone">
-            Done
-          </button>
+          <button class="button-base button-blue" @click="clearRange">Clear</button>
+          <button class="ml-3 button-base button-blue" @click="handleDone">Done</button>
         </div>
 
-        <div v-if="rangeTextError" class="mt-1 text-red-500">
-          Error: {{ rangeTextError }}
-        </div>
+        <div v-if="rangeTextError" class="mt-1 text-red-500">Error: {{ rangeTextError }}</div>
       </div>
 
       <div class="flex mt-3.5 items-center">
@@ -120,57 +112,86 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from "vue";
+import { defineComponent, reactive, ref, watch } from 'vue';
 //import { useConfigStore } from "../store";
-import { usePlayerStore } from "../stores/player";
-import { ranks, rankPat } from "../utils";
-import { RangeManager } from "../../../ui/pkg/range/range";
-import { useRangeStore } from "../stores/ranges";
-import { CurrentPage, useNavStore } from "../stores/navigation";
+import { usePlayerStore } from '../stores/player';
+import { ranks, rankPat } from '../utils';
+import { RangeManager } from '../../../ui/pkg/range/range';
+import { useRangeStore } from '../stores/ranges';
+import { CurrentPage, useNavStore } from '../stores/navigation';
 
-import DbItemPicker from "./DbItemPicker.vue";
+import DbItemPicker from './DbItemPicker.vue';
+import { Store, PiniaCustomStateProperties, storeToRefs } from 'pinia';
 
-const yellow500 = "#eab308";
+const yellow500 = '#eab308';
 
 const comboPat = `(?:(?:${rankPat}{2}[os]?)|(?:(?:${rankPat}[cdhs]){2}))`;
-const weightPat = "(?:(?:[01](\\.\\d*)?)|(?:\\.\\d+))";
+const weightPat = '(?:(?:[01](\\.\\d*)?)|(?:\\.\\d+))';
 const trimRegex = /\s*([-:,])\s*/g;
 const rangeRegex = new RegExp(
   `^(?<range>${comboPat}(?:\\+|(?:-${comboPat}))?)(?::(?<weight>${weightPat}))?$`
 );
 
-type DraggingMode = "none" | "enabling" | "disabling";
+type DraggingMode = 'none' | 'enabling' | 'disabling';
 
 export default defineComponent({
   components: {
-    DbItemPicker,
+    DbItemPicker
   },
-
 
   setup() {
     //const config = useConfigStore();
-    const rangeStore = useRangeStore();
+    //const rangeStore = useRangeStore();
     const playerStore = usePlayerStore();
     const navStore = useNavStore();
 
     const range = RangeManager.new();
     //const rangeStore = config.range[props.player];
     //const rangeStoreRaw = config.rangeRaw[props.player];
-    const rangeText = ref("");
-    const rangeTextError = ref("");
+    const rangeText = ref('');
+    const rangeTextError = ref('');
+    //const rangeStore = ref(new Array(13 * 13).fill(0));
+    const rangeStore = reactive(new Array(13 * 13).fill(0));
+    let rangeStoreRaw = new Float32Array();
     const weight = ref(100);
     const numCombos = ref(0);
 
-    const playerIndex = playerStore.currentPlayer.valueOf();
+    const { currentPlayer } = storeToRefs(playerStore);
+
+    watch(currentPlayer, (newValue, oldValue) => {
+      console.log(`The re cp changed from ${oldValue} to ${newValue}`);
+      const playerIndex = currentPlayer.value.valueOf();
+      const p = playerStore.curPlayerData;
+      console.log(`p is ${JSON.stringify(p)}`);
+      console.log(`range text is set to [ ${p.rangeStr} ]`);
+      rangeText.value = p.rangeStr;
+      onRangeTextChange();
+      //rangeStore = range.
+      //rangeText.value = rangeStore.getRangeStr(playerIndex);
+    });
+
+    // const { getRangeStr } = storeToRefs(rangeStore);
+
+    // watch(getRangeStr, (newValue, oldValue) => {
+    //   console.log(`The re range changed from ${oldValue} to ${newValue}`);
+    //   const playerIndex = currentPlayer.value.valueOf();
+    //   rangeText.value = rangeStore.getRangeStr(playerIndex);
+    // })
+
+    const playerIndex = currentPlayer.value.valueOf();
+    // rangeText.value = rangeStore.getRangeStr(playerIndex);
+
+    // const { rangeStrs } = storeToRefs(rangeStore);
 
     console.log(`Setting up range editor for player ${playerIndex}`);
+    console.log(`rangeText.value is ${rangeText.value}`);
 
-    let draggingMode: DraggingMode = "none";
+    let draggingMode: DraggingMode = 'none';
 
     const cellText = (row: number, col: number) => {
       const r1 = 13 - Math.min(row, col);
       const r2 = 13 - Math.max(row, col);
-      return ranks[r1] + ranks[r2] + ["s", "", "o"][Math.sign(row - col) + 1];
+      return ranks[r1] + ranks[r2] + ['s', '', 'o'][Math.sign(row - col) + 1];
     };
 
     const cellIndex = (row: number, col: number) => {
@@ -178,38 +199,37 @@ export default defineComponent({
     };
 
     const cellValue = (row: number, col: number) => {
-      return rangeStore.getRangeValue(playerStore.currentPlayer.valueOf(), cellIndex(row, col));
+      return rangeStore[cellIndex(row, col)];
     };
 
     const onUpdate = () => {
-        const playerIndex = playerStore.currentPlayer.valueOf();
-      rangeStore.setRangeRaw(playerIndex, range.raw_data());
+      const rawData = range.raw_data();
+      rangeStoreRaw = rawData;
+      //rangeStoreRaw.set();
       rangeText.value = range.to_string();
-      rangeTextError.value = "";
-      numCombos.value = rangeStore.rangeRaw[playerIndex].reduce((acc, cur) => acc + cur, 0);
+      playerStore.updateRangeStr(rangeText.value);
+      rangeTextError.value = '';
+      numCombos.value = rawData.reduce((acc, cur) => acc + cur, 0);
     };
 
     const update = (row: number, col: number, weight: number) => {
-        const playerIndex = playerStore.currentPlayer.valueOf();
       const idx = 13 * (row - 1) + col - 1;
       range.update(row, col, weight / 100);
-      rangeStore.range[playerIndex][idx] = weight;
+      rangeStore[idx] = weight;
       onUpdate();
     };
 
     const onRangeTextChange = () => {
-      const trimmed = rangeText.value.replace(trimRegex, "$1").trim();
-      const ranges = trimmed.split(",");
+      const trimmed = rangeText.value.replace(trimRegex, '$1').trim();
+      const ranges = trimmed.split(',');
 
-      if (ranges[ranges.length - 1] === "") {
+      if (ranges[ranges.length - 1] === '') {
         ranges.pop();
       }
 
       for (const range of ranges) {
         if (!rangeRegex.test(range)) {
-          rangeTextError.value = `Failed to parse range: ${
-            range || "(empty string)"
-          }`;
+          rangeTextError.value = `Failed to parse range: ${range || '(empty string)'}`;
           return;
         }
       }
@@ -220,9 +240,8 @@ export default defineComponent({
         rangeTextError.value = errorString;
       } else {
         const weights = range.get_weights();
-        const playerIndex = playerStore.currentPlayer.valueOf();
         for (let i = 0; i < 13 * 13; ++i) {
-          rangeStore.range[playerIndex][i] = weights[i] * 100;
+          rangeStore[i] = weights[i] * 100;
         }
         onUpdate();
       }
@@ -230,25 +249,24 @@ export default defineComponent({
 
     const dragStart = (row: number, col: number) => {
       const idx = 13 * (row - 1) + col - 1;
-      
-          
-      if (rangeStore.range[playerIndex][idx] !== weight.value) {
-        draggingMode = "enabling";
+
+      if (rangeStore[idx] !== weight.value) {
+        draggingMode = 'enabling';
         update(row, col, weight.value);
       } else {
-        draggingMode = "disabling";
+        draggingMode = 'disabling';
         update(row, col, 0);
       }
     };
 
     const dragEnd = () => {
-      draggingMode = "none";
+      draggingMode = 'none';
     };
 
     const mouseEnter = (row: number, col: number) => {
-      if (draggingMode === "enabling") {
+      if (draggingMode === 'enabling') {
         update(row, col, weight.value);
-      } else if (draggingMode === "disabling") {
+      } else if (draggingMode === 'disabling') {
         update(row, col, 0);
       }
     };
@@ -259,12 +277,13 @@ export default defineComponent({
 
     const clearRange = () => {
       range.clear();
-      rangeStore.range[playerIndex].fill(0);
-      rangeStore.rangeRaw[playerIndex].fill(0);
-      rangeText.value = "";
-      rangeTextError.value = "";
+      rangeStore.fill(0);
+      rangeStoreRaw.fill(0);
+      rangeText.value = '';
+      rangeTextError.value = '';
       weight.value = 100;
       numCombos.value = 0;
+      playerStore.updateRangeStr("");
     };
 
     const loadRange = (rangeStr: unknown) => {
@@ -273,7 +292,7 @@ export default defineComponent({
     };
 
     const handleDone = () => {
-        navStore.currentPage = CurrentPage.MAIN;
+      navStore.currentPage = CurrentPage.MAIN;
     };
 
     return {
@@ -293,8 +312,8 @@ export default defineComponent({
       onWeightChange,
       clearRange,
       loadRange,
-      handleDone,
+      handleDone
     };
-  },
+  }
 });
 </script>

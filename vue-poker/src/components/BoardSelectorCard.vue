@@ -34,8 +34,8 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
-import { cardText } from '../utils'
+import { defineComponent } from 'vue';
+import { cardText } from '../utils';
 
 export default defineComponent({
   props: {
@@ -58,8 +58,8 @@ export default defineComponent({
   },
 
   setup(props) {
-    const { rank, suit, colorClass } = cardText(props.cardId)
-    return { rank, suit, colorClass }
+    const { rank, suit, colorClass } = cardText(props.cardId);
+    return { rank, suit, colorClass };
   }
-})
+});
 </script>

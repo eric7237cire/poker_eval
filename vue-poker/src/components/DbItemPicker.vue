@@ -11,17 +11,10 @@
     </div>
 
     <!-- Depth 0 -->
-    <div
-      v-for="item0 in data"
-      :key="item0.pathStr"
-      :class="{ 'item-toplevel': !item0.isGroup }"
-    >
+    <div v-for="item0 in data" :key="item0.pathStr" :class="{ 'item-toplevel': !item0.isGroup }">
       <template v-if="item0.isGroup">
         <!-- Open/Close button -->
-        <button
-          :class="item0.opened ? 'bottom-arrow' : 'right-arrow'"
-          @click="toggleGroup(item0)"
-        >
+        <button :class="item0.opened ? 'bottom-arrow' : 'right-arrow'" @click="toggleGroup(item0)">
           &nbsp;
         </button>
 
@@ -92,9 +85,7 @@
                 ref="nameInput"
                 v-model="editingName"
                 type="text"
-                :class="
-                  'px-1 py-0 text-sm ' + (!isNameValid ? 'input-error' : '')
-                "
+                :class="'px-1 py-0 text-sm ' + (!isNameValid ? 'input-error' : '')"
                 style="width: calc(100% - 1.25rem)"
                 @blur="tryRename(item1)"
                 @keydown.enter="tryRename(item1)"
@@ -128,7 +119,7 @@
                 v-if="item1.opened"
                 class="group"
                 :style="{
-                  '--guide-decrease': guideDecrease(item1),
+                  '--guide-decrease': guideDecrease(item1)
                 }"
               >
                 <!-- Empty group -->
@@ -157,10 +148,7 @@
                       ref="nameInput"
                       v-model="editingName"
                       type="text"
-                      :class="
-                        'px-1 py-0 text-sm ' +
-                        (!isNameValid ? 'input-error' : '')
-                      "
+                      :class="'px-1 py-0 text-sm ' + (!isNameValid ? 'input-error' : '')"
                       style="width: calc(100% - 1.25rem)"
                       @blur="tryRename(item2)"
                       @keydown.enter="tryRename(item2)"
@@ -194,7 +182,7 @@
                       v-if="item2.opened"
                       class="group"
                       :style="{
-                        '--guide-decrease': guideDecrease(item2),
+                        '--guide-decrease': guideDecrease(item2)
                       }"
                     >
                       <!-- Empty group -->
@@ -203,21 +191,14 @@
                       </div>
 
                       <!-- Depth 3 -->
-                      <div
-                        v-for="item3 in item2.items"
-                        :key="item3.pathStr"
-                        class="item-inside"
-                      >
+                      <div v-for="item3 in item2.items" :key="item3.pathStr" class="item-inside">
                         <!-- Name edit -->
                         <input
                           v-if="item3.isEditing"
                           ref="nameInput"
                           v-model="editingName"
                           type="text"
-                          :class="
-                            'px-1 py-0 w-full text-sm ' +
-                            (!isNameValid ? 'input-error' : '')
-                          "
+                          :class="'px-1 py-0 w-full text-sm ' + (!isNameValid ? 'input-error' : '')"
                           @blur="tryRename(item3)"
                           @keydown.enter="tryRename(item3)"
                           @keydown.escape="cancelRename(item3)"
@@ -255,10 +236,7 @@
                       ref="nameInput"
                       v-model="editingName"
                       type="text"
-                      :class="
-                        'px-1 py-0 w-full text-sm ' +
-                        (!isNameValid ? 'input-error' : '')
-                      "
+                      :class="'px-1 py-0 w-full text-sm ' + (!isNameValid ? 'input-error' : '')"
                       @blur="tryRename(item2)"
                       @keydown.enter="tryRename(item2)"
                       @keydown.escape="cancelRename(item2)"
@@ -297,10 +275,7 @@
                 ref="nameInput"
                 v-model="editingName"
                 type="text"
-                :class="
-                  'px-1 py-0 w-full text-sm ' +
-                  (!isNameValid ? 'input-error' : '')
-                "
+                :class="'px-1 py-0 w-full text-sm ' + (!isNameValid ? 'input-error' : '')"
                 @blur="tryRename(item1)"
                 @keydown.enter="tryRename(item1)"
                 @keydown.escape="cancelRename(item1)"
@@ -308,12 +283,7 @@
               />
 
               <!-- Item name -->
-              <label
-                v-else
-                class="inline-block"
-                @dblclick="loadItem()"
-                @keydown.enter="loadItem()"
-              >
+              <label v-else class="inline-block" @dblclick="loadItem()" @keydown.enter="loadItem()">
                 <input
                   v-model="selectedValue"
                   type="radio"
@@ -339,9 +309,7 @@
           ref="nameInput"
           v-model="editingName"
           type="text"
-          :class="
-            'px-1 py-0 w-full text-sm ' + (!isNameValid ? 'input-error' : '')
-          "
+          :class="'px-1 py-0 w-full text-sm ' + (!isNameValid ? 'input-error' : '')"
           @blur="tryRename(item0)"
           @keydown.enter="tryRename(item0)"
           @keydown.escape="cancelRename(item0)"
@@ -349,12 +317,7 @@
         />
 
         <!-- Item name -->
-        <label
-          v-else
-          class="inline-block"
-          @dblclick="loadItem()"
-          @keydown.enter="loadItem()"
-        >
+        <label v-else class="inline-block" @dblclick="loadItem()" @keydown.enter="loadItem()">
           <input
             v-model="selectedValue"
             type="radio"
@@ -391,7 +354,7 @@
         :disabled="errorOccured || !allowSave || isEditing"
         @click="addOrOverwriteItem()"
       >
-        {{ selectedItem?.item?.isGroup === false ? "Overwrite" : "Save" }}
+        {{ selectedItem?.item?.isGroup === false ? 'Overwrite' : 'Save' }}
       </button>
 
       <button
@@ -409,9 +372,7 @@
         :disabled="
           errorOccured ||
           (selectedItem !== null &&
-            selectedItem.item.path.length +
-              (selectedItem.item.isGroup ? 1 : 0) >=
-              4)
+            selectedItem.item.path.length + (selectedItem.item.isGroup ? 1 : 0) >= 4)
         "
         @click="addGroup()"
       >
@@ -426,13 +387,7 @@
         Delete
       </button>
 
-      <input
-        ref="importJsonInput"
-        type="file"
-        class="hidden"
-        accept=".json"
-        @change="importJson"
-      />
+      <input ref="importJsonInput" type="file" class="hidden" accept=".json" @change="importJson" />
       <button
         class="button-base button-green button-overrides"
         :disabled="errorOccured || isEditing"
@@ -475,10 +430,10 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, nextTick, ref } from "vue";
-import * as Db from "../db";
+import { computed, defineComponent, nextTick, ref } from 'vue';
+import * as Db from '../db';
 
-import { XMarkIcon } from "@heroicons/vue/20/solid";
+import { XMarkIcon } from '@heroicons/vue/20/solid';
 
 type Item = {
   isGroup: false;
@@ -498,14 +453,14 @@ type Group = {
 };
 
 const isEqual = (lhs: unknown, rhs: unknown) => {
-  if (lhs === null || typeof lhs !== "object") return lhs === rhs;
+  if (lhs === null || typeof lhs !== 'object') return lhs === rhs;
   if (Array.isArray(lhs)) {
     if (!Array.isArray(rhs) || lhs.length !== rhs.length) return false;
     for (let i = 0; i < lhs.length; ++i) {
       if (!isEqual(lhs[i], rhs[i])) return false;
     }
   } else {
-    if (rhs === null || typeof rhs !== "object") return false;
+    if (rhs === null || typeof rhs !== 'object') return false;
     const lhsEntries = Object.entries(lhs);
     const rhsEntries = Object.entries(rhs);
     if (lhsEntries.length !== rhsEntries.length) return false;
@@ -520,61 +475,61 @@ const isEqual = (lhs: unknown, rhs: unknown) => {
 };
 
 const clone = (value: unknown) => {
-  if (value === null || typeof value !== "object") return value;
+  if (value === null || typeof value !== 'object') return value;
   if (Array.isArray(value)) return [...value];
   return { ...value };
 };
 
 const groupToDbGroup = (group: Group): Db.DbGroup => ({
   name0: group.path[0],
-  name1: group.path[1] ?? "",
-  name2: group.path[2] ?? "",
-  name3: group.path[3] ?? "",
-  isGroup: 1,
+  name1: group.path[1] ?? '',
+  name2: group.path[2] ?? '',
+  name3: group.path[3] ?? '',
+  isGroup: 1
 });
 
 const itemToDbItem = (item: Item): Db.DbItem => ({
   name0: item.path[0],
-  name1: item.path[1] ?? "",
-  name2: item.path[2] ?? "",
-  name3: item.path[3] ?? "",
+  name1: item.path[1] ?? '',
+  name2: item.path[2] ?? '',
+  name3: item.path[3] ?? '',
   isGroup: 0,
-  value: clone(item.value),
+  value: clone(item.value)
 });
 
 const toDbItemOrGroup = (itemOrGroup: Item | Group): Db.DbItem | Db.DbGroup =>
   itemOrGroup.isGroup ? groupToDbGroup(itemOrGroup) : itemToDbItem(itemOrGroup);
 
 type AddItemMessage = {
-  type: "addItem";
+  type: 'addItem';
   path: string[];
   value: unknown;
 };
 
 type OverwriteItemMessage = {
-  type: "overwriteItem";
+  type: 'overwriteItem';
   path: string[];
   value: unknown;
 };
 
 type RenameItemMessage = {
-  type: "renameItem";
+  type: 'renameItem';
   path: string[];
   newName: string;
 };
 
 type AddGroupMessage = {
-  type: "addGroup";
+  type: 'addGroup';
   path: string[];
 };
 
 type DeleteItemMessage = {
-  type: "deleteItem";
+  type: 'deleteItem';
   path: string[];
 };
 
 type ImportJsonMessage = {
-  type: "importJson";
+  type: 'importJson';
 };
 
 type Message =
@@ -587,30 +542,30 @@ type Message =
 
 export default defineComponent({
   components: {
-    XMarkIcon,
+    XMarkIcon
   },
 
   props: {
     storeName: {
       type: String,
-      required: true,
+      required: true
     },
     index: {
       type: Number,
-      default: 0,
+      default: 0
     },
     value: {
       type: null,
-      required: true,
+      required: true
     },
     allowSave: {
       type: Boolean,
-      required: true,
-    },
+      required: true
+    }
   },
 
   emits: {
-    "load-item": (_value: unknown) => true,
+    'load-item': (_value: unknown) => true
   },
 
   setup(props, context) {
@@ -641,9 +596,9 @@ export default defineComponent({
 
       masterData.sort(
         (a, b) =>
-          Number(b.name1 === "") - Number(a.name1 === "") ||
-          Number(b.name2 === "") - Number(a.name2 === "") ||
-          Number(b.name3 === "") - Number(a.name3 === "") ||
+          Number(b.name1 === '') - Number(a.name1 === '') ||
+          Number(b.name2 === '') - Number(a.name2 === '') ||
+          Number(b.name3 === '') - Number(a.name3 === '') ||
           b.isGroup - a.isGroup ||
           a.name0.localeCompare(b.name0, undefined, { numeric: true }) ||
           a.name1.localeCompare(b.name1, undefined, { numeric: true }) ||
@@ -660,13 +615,8 @@ export default defineComponent({
 
       for (const masterItem of masterData) {
         if (masterItem.isGroup) {
-          const path = [
-            masterItem.name0,
-            masterItem.name1,
-            masterItem.name2,
-            "",
-          ];
-          const depth = path.findIndex((name) => name === "");
+          const path = [masterItem.name0, masterItem.name1, masterItem.name2, ''];
+          const depth = path.findIndex((name) => name === '');
           path.length = depth;
           const pathStr = JSON.stringify(path);
           const parent = path.slice(0, -1);
@@ -680,7 +630,7 @@ export default defineComponent({
               pathStr,
               opened: depth === 1,
               isEditing: false,
-              items,
+              items
             };
             parentItems.push(group);
             dataMap.set(pathStr, group);
@@ -690,14 +640,8 @@ export default defineComponent({
             return;
           }
         } else {
-          const path = [
-            masterItem.name0,
-            masterItem.name1,
-            masterItem.name2,
-            masterItem.name3,
-            "",
-          ];
-          const depth = path.findIndex((name) => name === "");
+          const path = [masterItem.name0, masterItem.name1, masterItem.name2, masterItem.name3, ''];
+          const depth = path.findIndex((name) => name === '');
           path.splice(depth);
           const pathStr = JSON.stringify(path);
           const parent = path.slice(0, -1);
@@ -709,7 +653,7 @@ export default defineComponent({
               path,
               pathStr,
               value: masterItem.value,
-              isEditing: false,
+              isEditing: false
             };
             parentItems.push(item);
             dataMap.set(pathStr, item);
@@ -730,10 +674,9 @@ export default defineComponent({
       if (errorOccured.value) return;
 
       const message = event.data;
-      const pathStr =
-        message.type === "importJson" ? "" : JSON.stringify(message.path);
+      const pathStr = message.type === 'importJson' ? '' : JSON.stringify(message.path);
 
-      if (message.type === "addItem") {
+      if (message.type === 'addItem') {
         // add item
         if (message.path.length > 1) {
           selectedValue.value = JSON.stringify(message.path.slice(0, -1));
@@ -745,11 +688,8 @@ export default defineComponent({
         } else {
           selectedValue.value = false;
         }
-        await addOrOverwriteItem(
-          message.value,
-          message.path[message.path.length - 1]
-        );
-      } else if (message.type === "overwriteItem") {
+        await addOrOverwriteItem(message.value, message.path[message.path.length - 1]);
+      } else if (message.type === 'overwriteItem') {
         // overwrite item
         selectedValue.value = pathStr;
         if (selectedItem.value === null) {
@@ -758,7 +698,7 @@ export default defineComponent({
           return;
         }
         await addOrOverwriteItem(message.value);
-      } else if (message.type === "renameItem") {
+      } else if (message.type === 'renameItem') {
         // rename item
         selectedValue.value = pathStr;
         if (selectedItem.value === null) {
@@ -767,7 +707,7 @@ export default defineComponent({
           return;
         }
         await tryRename(selectedItem.value.item, message.newName);
-      } else if (message.type === "addGroup") {
+      } else if (message.type === 'addGroup') {
         // add group
         if (message.path.length > 1) {
           selectedValue.value = JSON.stringify(message.path.slice(0, -1));
@@ -780,7 +720,7 @@ export default defineComponent({
           selectedValue.value = false;
         }
         await addGroup(message.path[message.path.length - 1]);
-      } else if (message.type === "deleteItem") {
+      } else if (message.type === 'deleteItem') {
         // delete item
         selectedValue.value = pathStr;
         if (selectedItem.value === null) {
@@ -789,20 +729,20 @@ export default defineComponent({
           return;
         }
         await deleteItem(false);
-      } else if (message.type === "importJson") {
+      } else if (message.type === 'importJson') {
         // import JSON
         await loadData();
       }
     };
 
     const isEditing = ref(false);
-    const editingName = ref("");
+    const editingName = ref('');
     const duplicateName = ref([] as string[]);
     const nameInput = ref(null as HTMLInputElement[] | null);
 
     const unselect = (ev: MouseEvent) => {
       const target = ev.target as HTMLElement;
-      if (target.tagName === "DIV") {
+      if (target.tagName === 'DIV') {
         selectedValue.value = false;
       }
     };
@@ -849,7 +789,7 @@ export default defineComponent({
     const loadItem = () => {
       if (!selectedItem.value) return;
       if (selectedItem.value.item.isGroup === false) {
-        context.emit("load-item", selectedItem.value.item.value);
+        context.emit('load-item', selectedItem.value.item.value);
       }
       selectedValue.value = false;
     };
@@ -868,9 +808,9 @@ export default defineComponent({
             itemToDbItem(selectedItem.value.item)
           ));
           channel.postMessage({
-            type: "overwriteItem",
+            type: 'overwriteItem',
             path: [...selectedItem.value.item.path],
-            value: clone(props.value),
+            value: clone(props.value)
           } as OverwriteItemMessage);
         }
 
@@ -878,8 +818,8 @@ export default defineComponent({
       } else {
         // add
         const path = selectedItem.value?.item
-          ? [...selectedItem.value.item.path, name ?? ""]
-          : [name ?? ""];
+          ? [...selectedItem.value.item.path, name ?? '']
+          : [name ?? ''];
         const pathStr = JSON.stringify(path);
         const parentItems = selectedItem.value?.item?.items ?? data.value;
         parentItems.push({
@@ -887,7 +827,7 @@ export default defineComponent({
           path,
           pathStr,
           value: value ?? props.value,
-          isEditing: false,
+          isEditing: false
         });
 
         if (name === undefined) {
@@ -905,7 +845,7 @@ export default defineComponent({
             (a, b) =>
               Number(b.isGroup) - Number(a.isGroup) ||
               a.path[depth].localeCompare(b.path[depth], undefined, {
-                numeric: true,
+                numeric: true
               })
           );
         }
@@ -914,7 +854,7 @@ export default defineComponent({
 
     const isNameValid = computed(() => {
       const name = editingName.value.trim();
-      return name !== "" && !duplicateName.value.includes(name);
+      return name !== '' && !duplicateName.value.includes(name);
     });
 
     const renameItem = async () => {
@@ -926,10 +866,8 @@ export default defineComponent({
       duplicateName.value = selectedItem.value.parentItems
         .map((item) => item.path[item.path.length - 1])
         .filter((name) => name !== editingName.value);
-      const defaultName = item.isGroup
-        ? "New group"
-        : `New ${props.storeName.slice(0, -1)}`; // remove "s" hack
-      if (editingName.value === "") {
+      const defaultName = item.isGroup ? 'New group' : `New ${props.storeName.slice(0, -1)}`; // remove "s" hack
+      if (editingName.value === '') {
         let i = 2;
         let newName = defaultName;
         while (duplicateName.value.includes(newName)) {
@@ -941,7 +879,7 @@ export default defineComponent({
       await nextTick();
       if (nameInput.value) {
         nameInput.value[0].select();
-        nameInput.value[0].scrollIntoView({ block: "nearest" });
+        nameInput.value[0].scrollIntoView({ block: 'nearest' });
       }
     };
 
@@ -961,21 +899,21 @@ export default defineComponent({
         isEditing.value = false;
 
         if (!isNameValid.value) {
-          editingName.value = "";
-          if (item.path[item.path.length - 1] === "") {
+          editingName.value = '';
+          if (item.path[item.path.length - 1] === '') {
             await deleteItem(false);
           }
           return;
         }
 
         newName = editingName.value.trim();
-        editingName.value = "";
+        editingName.value = '';
       }
 
       if (errorOccured.value) return;
 
       const depth = item.path.length - 1;
-      const isNewItem = item.path[depth] === "";
+      const isNewItem = item.path[depth] === '';
       const prevPath = [...item.path];
 
       if (item.path[depth] === newName) {
@@ -983,9 +921,7 @@ export default defineComponent({
           // give focus
           await nextTick();
           const name = `item-picker-${props.storeName}-${props.index}`;
-          const checked = document.querySelector(
-            `input[name="${name}"]:checked`
-          );
+          const checked = document.querySelector(`input[name="${name}"]:checked`);
           if (checked) {
             (checked as HTMLInputElement).focus();
           }
@@ -1007,7 +943,7 @@ export default defineComponent({
           (a, b) =>
             Number(b.isGroup) - Number(a.isGroup) ||
             a.path[depth].localeCompare(b.path[depth], undefined, {
-              numeric: true,
+              numeric: true
             })
         );
       }
@@ -1018,24 +954,18 @@ export default defineComponent({
           // add
           if (!item.isGroup) {
             // item
-            errorOccured.value ||= !(await Db.addItem(
-              props.storeName,
-              itemToDbItem(item)
-            ));
+            errorOccured.value ||= !(await Db.addItem(props.storeName, itemToDbItem(item)));
             channel.postMessage({
-              type: "addItem",
+              type: 'addItem',
               path: [...item.path],
-              value: clone(item.value),
+              value: clone(item.value)
             } as AddItemMessage);
           } else {
             // group
-            errorOccured.value ||= !(await Db.addGroup(
-              props.storeName,
-              groupToDbGroup(item)
-            ));
+            errorOccured.value ||= !(await Db.addGroup(props.storeName, groupToDbGroup(item)));
             channel.postMessage({
-              type: "addGroup",
-              path: [...item.path],
+              type: 'addGroup',
+              path: [...item.path]
             } as AddGroupMessage);
           }
         } else {
@@ -1046,9 +976,9 @@ export default defineComponent({
             newName
           ));
           channel.postMessage({
-            type: "renameItem",
+            type: 'renameItem',
             path: prevPath,
-            newName: newName,
+            newName: newName
           } as RenameItemMessage);
         }
 
@@ -1077,8 +1007,8 @@ export default defineComponent({
     const cancelRename = async (item: Item | Group) => {
       item.isEditing = false;
       isEditing.value = false;
-      editingName.value = "";
-      if (item.path[item.path.length - 1] === "") {
+      editingName.value = '';
+      if (item.path[item.path.length - 1] === '') {
         selectedValue.value = item.pathStr;
         await deleteItem(false);
       }
@@ -1089,9 +1019,9 @@ export default defineComponent({
 
       const path = selectedItem.value
         ? selectedItem.value.item.isGroup
-          ? [...selectedItem.value.item.path, name ?? ""]
-          : [...selectedItem.value.item.path.slice(0, -1), name ?? ""]
-        : [name ?? ""];
+          ? [...selectedItem.value.item.path, name ?? '']
+          : [...selectedItem.value.item.path.slice(0, -1), name ?? '']
+        : [name ?? ''];
       if (path.length > 3) return;
       const pathStr = JSON.stringify(path);
       const parentItems = selectedItem.value
@@ -1105,7 +1035,7 @@ export default defineComponent({
         pathStr,
         opened: false,
         isEditing: false,
-        items: [],
+        items: []
       });
 
       if (name === undefined) {
@@ -1123,7 +1053,7 @@ export default defineComponent({
           (a, b) =>
             Number(b.isGroup) - Number(a.isGroup) ||
             a.path[depth].localeCompare(b.path[depth], undefined, {
-              numeric: true,
+              numeric: true
             })
         );
       }
@@ -1143,13 +1073,13 @@ export default defineComponent({
         // save and broadcast
         errorOccured.value ||= !(await Db.deleteItem(props.storeName, dbItem));
         channel.postMessage({
-          type: "deleteItem",
-          path,
+          type: 'deleteItem',
+          path
         } as DeleteItemMessage);
       }
     };
 
-    const importError = ref("");
+    const importError = ref('');
     const importJsonInput = ref<HTMLInputElement | null>(null);
     const exportJsonButton = ref<HTMLAnchorElement | null>(null);
 
@@ -1162,19 +1092,19 @@ export default defineComponent({
     const checkJson = (array: JsonItem[]) => {
       if (!Array.isArray(array)) return false;
 
-      let valueType = "";
-      if (props.storeName === "ranges") valueType = "string";
-      if (props.storeName === "configurations") valueType = "object";
-      if (valueType === "") return false;
+      let valueType = '';
+      if (props.storeName === 'ranges') valueType = 'string';
+      if (props.storeName === 'configurations') valueType = 'object';
+      if (valueType === '') return false;
 
       const map = new Map<string, boolean>();
       map.set(JSON.stringify([]), true);
 
       for (const item of array) {
         if (
-          typeof item.isGroup !== "boolean" ||
+          typeof item.isGroup !== 'boolean' ||
           !Array.isArray(item.path) ||
-          item.path.some((x) => typeof x !== "string") ||
+          item.path.some((x) => typeof x !== 'string') ||
           item.path.length > (item.isGroup ? 3 : 4) ||
           (!item.isGroup && typeof item.value !== valueType)
         ) {
@@ -1184,7 +1114,7 @@ export default defineComponent({
         item.path = item.path.map((x) => x.trim());
 
         if (
-          item.path.some((x) => x === "") ||
+          item.path.some((x) => x === '') ||
           !map.get(JSON.stringify(item.path.slice(0, -1))) ||
           map.has(JSON.stringify(item.path))
         ) {
@@ -1201,8 +1131,8 @@ export default defineComponent({
       const masterData = await Db.getArray(props.storeName);
       const masterMap = new Map<string, Db.DbItem | Db.DbGroup>();
       for (const item of masterData) {
-        const path = [item.name0, item.name1, item.name2, item.name3, ""];
-        path.length = path.findIndex((x) => x === "");
+        const path = [item.name0, item.name1, item.name2, item.name3, ''];
+        path.length = path.findIndex((x) => x === '');
         masterMap.set(JSON.stringify(path), item);
       }
 
@@ -1219,19 +1149,16 @@ export default defineComponent({
           if (!master) {
             ret.push({
               name0: item.path[0],
-              name1: item.path[1] ?? "",
-              name2: item.path[2] ?? "",
-              name3: item.path[3] ?? "",
-              isGroup: 1,
+              name1: item.path[1] ?? '',
+              name2: item.path[2] ?? '',
+              name3: item.path[3] ?? '',
+              isGroup: 1
             });
           }
         } else {
           let i = 2;
           let master = masterMap.get(pathStr);
-          while (
-            master &&
-            (master.isGroup === 1 || !isEqual(master.value, item.value))
-          ) {
+          while (master && (master.isGroup === 1 || !isEqual(master.value, item.value))) {
             item.path[depth - 1] = `${name} (${i++})`;
             pathStr = JSON.stringify(item.path);
             master = masterMap.get(pathStr);
@@ -1239,11 +1166,11 @@ export default defineComponent({
           if (!master) {
             ret.push({
               name0: item.path[0],
-              name1: item.path[1] ?? "",
-              name2: item.path[2] ?? "",
-              name3: item.path[3] ?? "",
+              name1: item.path[1] ?? '',
+              name2: item.path[2] ?? '',
+              name3: item.path[3] ?? '',
               isGroup: 0,
-              value: item.value,
+              value: item.value
             });
           }
         }
@@ -1260,41 +1187,41 @@ export default defineComponent({
       const file = importJsonInput.value.files?.[0];
       if (!file) return;
 
-      importError.value = "";
-      importJsonInput.value.value = "";
+      importError.value = '';
+      importJsonInput.value.value = '';
 
       const text = await file.text();
       let obj: { version: number; name: string; data: JsonItem[] };
       try {
         obj = JSON.parse(text);
       } catch (e) {
-        importError.value = "Parse error (invalid JSON)";
+        importError.value = 'Parse error (invalid JSON)';
         return;
       }
 
       if (obj.name !== props.storeName) {
-        importError.value = "Data type mismatch";
+        importError.value = 'Data type mismatch';
         return;
       }
 
       if (obj.version !== 2) {
-        importError.value = "Version mismatch";
+        importError.value = 'Version mismatch';
         return;
       }
 
       if (!checkJson(obj.data)) {
-        importError.value = "Invalid data";
+        importError.value = 'Invalid data';
         return;
       }
 
       const itemsToAdd = await getItemsToAdd(obj.data);
-      if (typeof itemsToAdd === "string") {
+      if (typeof itemsToAdd === 'string') {
         importError.value = `Cannot create group "${itemsToAdd}" because the item already exists`;
         return;
       }
 
       errorOccured.value ||= !(await Db.bulkAdd(props.storeName, itemsToAdd));
-      channel.postMessage({ type: "importJson" });
+      channel.postMessage({ type: 'importJson' });
       await loadData();
     };
 
@@ -1302,7 +1229,7 @@ export default defineComponent({
       array.push({
         path: item.path,
         isGroup: item.isGroup,
-        value: item.isGroup ? undefined : item.value,
+        value: item.isGroup ? undefined : item.value
       });
       if (item.isGroup) {
         for (const child of item.items) {
@@ -1324,7 +1251,7 @@ export default defineComponent({
       const obj = { version: 2, name: props.storeName, data: array };
       const jsonStr = JSON.stringify(obj, undefined, 2);
 
-      const blob = new Blob([jsonStr], { type: "application/json" });
+      const blob = new Blob([jsonStr], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       exportJsonButton.value.href = url;
     };
@@ -1352,9 +1279,9 @@ export default defineComponent({
       importJsonInput,
       exportJsonButton,
       importJson,
-      exportJson,
+      exportJson
     };
-  },
+  }
 });
 </script>
 
@@ -1368,7 +1295,7 @@ input.input-error {
 }
 
 .group::before {
-  content: "";
+  content: '';
   height: calc(100% - 1.4rem * var(--guide-decrease) - 0.825rem);
   @apply absolute top-0.5 left-2.5 border-l border-dotted border-gray-500;
 }
@@ -1378,7 +1305,7 @@ input.input-error {
 }
 
 .group-inside::before {
-  content: "";
+  content: '';
   @apply absolute top-[0.7rem] -left-[0.5625rem] w-2.5 border-t border-dotted border-gray-500;
 }
 
@@ -1387,7 +1314,7 @@ input.input-error {
 }
 
 .item-toplevel::before {
-  content: "";
+  content: '';
   @apply absolute top-1/2 left-[0.0625rem] w-2.5 border-t border-dotted border-gray-500;
 }
 
@@ -1396,7 +1323,7 @@ input.input-error {
 }
 
 .item-inside::before {
-  content: "";
+  content: '';
   @apply absolute top-1/2 -left-[0.5625rem] w-5 border-t border-dotted border-gray-500;
 }
 
@@ -1406,12 +1333,12 @@ input.input-error {
 }
 
 .right-arrow::before {
-  content: "";
+  content: '';
   @apply absolute w-1.5 h-1.5 -mt-0.5 top-1/2 left-1.5 border-t-2 border-r-2 border-gray-500 rotate-45;
 }
 
 .bottom-arrow::before {
-  content: "";
+  content: '';
   @apply absolute w-1.5 h-1.5 -mt-[0.1875rem] top-1/2 left-[0.4375rem] border-r-2 border-b-2 border-gray-500 rotate-45;
 }
 

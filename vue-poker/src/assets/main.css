@@ -15,7 +15,7 @@
 body {
   @apply bg-gray-50;
   background-color: black;
-  font-family: system-ui, "Noto Sans", "Open Sans", Roboto, sans-serif;
+  font-family: system-ui, 'Noto Sans', 'Open Sans', Roboto, sans-serif;
 }
 
 .button-base {
@@ -44,36 +44,37 @@ input.input-error {
 }
 
 .players {
-    display: block;
-    height: 300px;
-    width: 700px;
-    position: relative;
+  display: block;
+  margin-left: 30px;
+  height: 300px;
+  width: 600px;
+  position: relative;
 
-    .player {
-        position: absolute;
-        width: 150px;
-        border: 1px solid red;
-    }
-    .player0 {
-        bottom: 0px;
-        left: 50%;
-    }
-    .player1 {
-        left: 0px;
-        top: 150px;
-    }
-    .player2 {
-        top: 0px;
-        left: 50px;
-    }
-    .player3 {
-        top: 0px;
-        right: 50px;
-    }
-    .player4 {
-        right: 0px;
-        top: 150px;
-    }
+  .player {
+    position: absolute;
+    width: 150px;
+    border: 1px solid red;
+  }
+  .player0 {
+    bottom: 0px;
+    left: 225px;
+  }
+  .player1 {
+    left: 0px;
+    top: 150px;
+  }
+  .player2 {
+    top: 0px;
+    left: 75px;
+  }
+  .player3 {
+    top: 0px;
+    right: 75px;
+  }
+  .player4 {
+    right: 0px;
+    top: 150px;
+  }
 }
 
 .spinner {
@@ -94,7 +95,7 @@ input.input-error {
   position: absolute;
   top: 0;
   left: 0;
-  content: "";
+  content: '';
 }
 
 .spinner::after {
@@ -102,7 +103,7 @@ input.input-error {
   width: 75%;
   height: 75%;
   border-radius: 50%;
-  content: "";
+  content: '';
   margin: auto;
   position: absolute;
   top: 0;
