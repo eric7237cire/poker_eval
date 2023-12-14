@@ -52,7 +52,7 @@
             v-model="rangeText"
             type="text"
             :class="
-              'flex-grow mr-6 px-2 py-1 rounded-lg text-sm ' +
+              'flex-grow mr-6 px-2 py-1 rounded-lg text-sm text-black ' +
               (rangeTextError ? 'input-error' : '')
             "
             @focus="($event.target as HTMLInputElement).select()"
@@ -61,6 +61,9 @@
 
           <button class="button-base button-blue" @click="clearRange">
             Clear
+          </button>
+          <button class="button-base button-blue" @click="handleDone">
+            Done
           </button>
         </div>
 
@@ -85,7 +88,7 @@
             v-model="weight"
             type="number"
             :class="
-              'w-20 ml-4 px-2 py-1 rounded-lg text-sm text-center ' +
+              'w-20 ml-4 px-2 py-1 rounded-lg text-sm text-center text-black' +
               (weight < 0 || weight > 100 ? 'input-error' : '')
             "
             min="0"
@@ -123,6 +126,7 @@ import { usePlayerStore } from "../stores/player";
 import { ranks, rankPat } from "../utils";
 import { RangeManager } from "../../../ui/pkg/range/range";
 import { useRangeStore } from "../stores/ranges";
+import { CurrentPage, useNavStore } from "../stores/navigation";
 
 import DbItemPicker from "./DbItemPicker.vue";
 
@@ -147,6 +151,7 @@ export default defineComponent({
     //const config = useConfigStore();
     const rangeStore = useRangeStore();
     const playerStore = usePlayerStore();
+    const navStore = useNavStore();
 
     const range = RangeManager.new();
     //const rangeStore = config.range[props.player];
@@ -267,6 +272,10 @@ export default defineComponent({
       onRangeTextChange();
     };
 
+    const handleDone = () => {
+        navStore.currentPage = CurrentPage.MAIN;
+    };
+
     return {
       yellow500,
       cellText,
@@ -284,6 +293,7 @@ export default defineComponent({
       onWeightChange,
       clearRange,
       loadRange,
+      handleDone,
     };
   },
 });

@@ -13,20 +13,11 @@
    
 
   <!--Show 'players'-->
-  <!-- <div class="players">
-    <div class="player player1">
-      <Player/>
+  <div class="players">
+    <div v-for="player in players" :key="player.id" :class="['player', player.class]">
+    <Player :playerId="player.id"/>
     </div>
-    <div class="player player2">
-      <Player/>
-    </div>
-    <div class="player player3">
-      <Player/>
-    </div>
-    <div class="player player4">
-      <Player/>
-    </div>
-  </div> -->
+  </div>
 
   <div class="flex-grow my-4 px-6 pt-2 overflow-y-auto" style="height: calc(100% - 2rem)">
     board23
@@ -86,9 +77,18 @@ import { useNavStore, CurrentPage } from './stores/navigation';
   setup() {
     const navStore = useNavStore();
 
+    const players= [
+        { id: 0, class: 'player0' },
+        { id: 1, class: 'player1' },
+        { id: 2, class: 'player2' },
+        { id: 3, class: 'player3' },
+        { id: 4, class: 'player4' }
+      ]
+
     return {
         navStore,
-        CurrentPage
+        CurrentPage,
+        players
     };
   },
 });

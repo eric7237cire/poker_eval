@@ -46,14 +46,32 @@ input.input-error {
 .players {
     display: block;
     height: 300px;
-    width: 400px;
+    width: 700px;
     position: relative;
 
     .player {
         position: absolute;
+        width: 150px;
+        border: 1px solid red;
+    }
+    .player0 {
+        bottom: 0px;
+        left: 50%;
     }
     .player1 {
         left: 0px;
+        top: 150px;
+    }
+    .player2 {
+        top: 0px;
+        left: 50px;
+    }
+    .player3 {
+        top: 0px;
+        right: 50px;
+    }
+    .player4 {
+        right: 0px;
         top: 150px;
     }
 }
