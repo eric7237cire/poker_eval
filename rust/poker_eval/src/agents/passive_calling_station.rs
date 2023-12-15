@@ -11,7 +11,7 @@ impl Agent for PassiveCallingStation {
         &self,
         round_info: &AgentRoundInfo,
         agent_state: &AgentState,
-        game_state: &GameState,
+        _game_state: &GameState,
     ) -> Action {
         match round_info.round {
             Round::Preflop => {

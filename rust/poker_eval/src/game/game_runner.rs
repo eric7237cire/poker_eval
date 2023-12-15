@@ -116,7 +116,7 @@ impl<'a> GameRunner<'a> {
             }
 
             //End condition is to_act==last_to_act and all players have called or folded
-            let agent_state = &self.agent_states[to_act as usize];
+            let _agent_state = &self.agent_states[to_act as usize];
             agent_round_info.agents_left_to_act -= 1;
 
             if agent_round_info.agents_left_to_act == 0 {
@@ -386,7 +386,7 @@ fn handle_player_action(
 mod tests {
     use std::cell::RefCell;
 
-    use postflop_solver::{card_from_str, card_pair_to_index, Hand};
+    use postflop_solver::{card_from_str, card_pair_to_index};
 
     use crate::{CardValue, Suit};
 

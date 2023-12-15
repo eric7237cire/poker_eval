@@ -1,6 +1,6 @@
-use postflop_solver::{Card, Hand};
 
-use crate::{AgentState, ChipType};
+
+use crate::{ChipType};
 
 pub struct GameState {
     //pot from prev. betting rounds
@@ -14,7 +14,7 @@ impl Default for GameState {
 }
 
 impl GameState {
-    pub fn new(num_players: u8) -> Self {
+    pub fn new(_num_players: u8) -> Self {
         GameState { current_pot: 0 }
     }
 }

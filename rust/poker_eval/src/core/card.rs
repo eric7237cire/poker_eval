@@ -411,9 +411,9 @@ pub fn range_string_to_set(range_str: &str) -> InRangeType {
 
 #[cfg(test)]
 mod tests {
-    use postflop_solver::{Range, card_from_str, card_pair_to_index};
+    use postflop_solver::{card_from_str};
 
-    use crate::PreFrabRanges;
+    
 
     use super::*;
     use std::mem;

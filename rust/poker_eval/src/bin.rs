@@ -8,7 +8,7 @@ use postflop_solver::card_from_str;
 use postflop_solver::card_pair_to_index;
 use postflop_solver::card_to_string;
 use postflop_solver::flop_from_str;
-use postflop_solver::rank_to_char;
+
 use postflop_solver::Hand;
 use postflop_solver::Range;
 

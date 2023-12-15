@@ -6,7 +6,7 @@ use std::{
 use log::{debug, trace};
 
 use crate::{
-    calc_bitset_cards_metrics, calc_cards_metrics, count_higher, count_lower, rank_straight,
+    calc_bitset_cards_metrics, count_higher, count_lower, rank_straight,
     value_set_iterator, BitSetCardsMetrics, Card, CardValue, ValueSetType,
 };
 
@@ -150,7 +150,7 @@ impl PartialRankContainer {
 
     fn handle_flush_draws(
         &mut self,
-        hole_cards: &[Card],
+        _hole_cards: &[Card],
         hole_metrics: &BitSetCardsMetrics,
         board_metrics: &BitSetCardsMetrics,
         board_length: usize,
@@ -197,7 +197,7 @@ impl PartialRankContainer {
 
     fn handle_str8_draws(
         &mut self,
-        hole_cards: &[Card],
+        _hole_cards: &[Card],
         hole_metrics: &BitSetCardsMetrics,
         board_metrics: &BitSetCardsMetrics,
     ) {

@@ -1,4 +1,4 @@
-use postflop_solver::{card_pair_to_index, Hand};
+use postflop_solver::{card_pair_to_index};
 
 use crate::{card_to_eval_card, core::Card, ChipType, Position};
 

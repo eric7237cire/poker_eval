@@ -1,4 +1,4 @@
-use itertools::Itertools;
+
 use rand::{thread_rng, seq::SliceRandom};
 
 use crate::{Card, InRangeType, add_cards_from_string, range_string_to_set, CardUsedType, rank_cards, core_cards_to_range_index, cards_from_string, Rank};
@@ -89,7 +89,7 @@ impl FlopAnalyzer {
         self.player_cards[player_idx] = None;
     }
 
-    pub fn reset(&mut self, num_players: usize, player_ranges: Vec<String>) {
+    pub fn reset(&mut self, _num_players: usize, player_ranges: Vec<String>) {
         self.cards.clear();
         self.player_range_strings.clear();
         self.player_range_sets.clear();
