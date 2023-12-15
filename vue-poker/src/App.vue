@@ -13,16 +13,15 @@
     </div>
 
     <!--Show 'players'-->
-    <div class="players">
+    <div class="players ">
       <div v-for="player in players" :key="player.id" :class="['player', player.class]">
         <Player :playerId="player.id" />
       </div>
     </div>
 
     <div class="flex-grow my-4 px-6 pt-2 overflow-y-auto" style="height: calc(100% - 2rem)">
-      board23
+      
       <BoardSelector />
-      the board
     </div>
   </div>
 </template>
@@ -87,10 +86,10 @@ export default defineComponent({
       { id: 4, class: 'player4' }
     ];
 
-    playerStore.updateRangeStrForPlayer(PlayerIds.HERO, 'TT+');
-    playerStore.updateRangeStrForPlayer(PlayerIds.WEST, '83+');
-    playerStore.updateRangeStrForPlayer(PlayerIds.NORTH_WEST, '22+, 72+');
-    playerStore.updateRangeStrForPlayer(PlayerIds.NORTH_EAST, 'A2o+, Q3o+');
+    // playerStore.updateRangeStrForPlayer(PlayerIds.HERO, 'TT+');
+    // playerStore.updateRangeStrForPlayer(PlayerIds.WEST, '83+');
+    // playerStore.updateRangeStrForPlayer(PlayerIds.NORTH_WEST, '22+, 72+');
+    // playerStore.updateRangeStrForPlayer(PlayerIds.NORTH_EAST, 'A2o+, Q3o+');
     
     return {
       navStore,
