@@ -276,6 +276,15 @@ impl Card {
         assert!(ret < 52);
         ret
     }
+
+    pub fn from_range_index_part(index: usize) -> Self {
+        let value = index >> 2;
+        let suit = index & 0x3;
+        Self {
+            value: CardValue::from(value as u8),
+            suit: Suit::from(suit as u8),
+        }
+    }
 }
 
 impl fmt::Debug for Card {
@@ -369,6 +378,8 @@ pub fn core_cards_to_range_index(card1: Card, card2: Card) -> usize {
 
 pub type InRangeType = BitArr!(for 52*52, in u64, Lsb0);
 
+pub type CardUsedType = BitArr!(for 52, in u64, Lsb0);
+
 pub fn range_string_to_set(range_str: &str) -> InRangeType {
     let range: Range = range_str.parse().unwrap();
     let mut set = InRangeType::default();
@@ -392,6 +403,10 @@ pub fn range_string_to_set(range_str: &str) -> InRangeType {
     }
 
     set
+}
+
+pub fn get_random_unused_card(cards_used: &CardUsedType) -> Card {
+    let num = rand::thread_rng().gen_range(0..52);
 }
 
 #[cfg(test)]
