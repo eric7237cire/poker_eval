@@ -405,9 +405,9 @@ pub fn range_string_to_set(range_str: &str) -> InRangeType {
     set
 }
 
-pub fn get_random_unused_card(cards_used: &CardUsedType) -> Card {
-    let num = rand::thread_rng().gen_range(0..52);
-}
+// pub fn get_random_unused_card(cards_used: &CardUsedType) -> Card {
+//     let num = rand::thread_rng().gen_range(0..52);
+// }
 
 #[cfg(test)]
 mod tests {

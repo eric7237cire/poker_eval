@@ -484,6 +484,7 @@ dependencies = [
  "log",
  "postflop-solver",
  "rand",
+ "wasm-bindgen",
 ]
 
 [[package]]
