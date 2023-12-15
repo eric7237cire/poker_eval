@@ -2,8 +2,8 @@ use itertools::Itertools;
 use rand::{thread_rng, seq::SliceRandom};
 
 use crate::{Card, InRangeType, add_cards_from_string, range_string_to_set, CardUsedType, rank_cards, core_cards_to_range_index, cards_from_string, Rank};
-
-extern crate wasm_bindgen;
+use wasm_bindgen::prelude::wasm_bindgen;
+//extern crate wasm_bindgen;
 
 type ResultType = u32;
 
