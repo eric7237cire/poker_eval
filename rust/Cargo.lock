@@ -483,6 +483,7 @@ dependencies = [
  "itertools",
  "log",
  "postflop-solver",
+ "rand",
 ]
 
 [[package]]
