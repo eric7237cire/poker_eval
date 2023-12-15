@@ -2,8 +2,8 @@ use itertools::Itertools;
 use rand::{thread_rng, seq::SliceRandom};
 
 use crate::{Card, InRangeType, add_cards_from_string, range_string_to_set, CardUsedType, rank_cards, core_cards_to_range_index, cards_from_string, Rank};
-
-extern crate wasm_bindgen;
+use wasm_bindgen::prelude::wasm_bindgen;
+//extern crate wasm_bindgen;
 
 type ResultType = u32;
 
@@ -111,13 +111,13 @@ impl FlopAnalyzer {
         for _ in 0..num_iterations {
             let mut cards_used = CardUsedType::default();
             for c in self.cards.iter() {
-                cards_used[c.to_range_index_part()] = true;
+                cards_used.set(c.to_range_index_part(),  true);
             }
 
             for p_idx in 0..n_players {
                 if let Some(hole_cards) = self.player_cards[p_idx] {
-                    cards_used[hole_cards[0].to_range_index_part()] = true;
-                    cards_used[hole_cards[1].to_range_index_part()] = true;
+                    cards_used.set(hole_cards[0].to_range_index_part(), true);
+                    cards_used.set(hole_cards[1].to_range_index_part(), true);
                 }
             }
 
@@ -146,7 +146,7 @@ impl FlopAnalyzer {
                     self.cards.push(player_cards[2+2 * p_idx + 1]);
                 }
 
-                let mut results = &mut self.player_results[p_idx];
+                let results = &mut self.player_results[p_idx];
                 results.num_iterations += 1;
 
                 //Did the player fold?
