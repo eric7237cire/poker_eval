@@ -1,0 +1,25 @@
+[package]
+name = "poker_eval"
+version = "0.2.0"
+keywords = ["cards", "poker"]
+authors = [ "Eric Gröning <eric7237cire@hotmail.fr>", "Wataru Inariba", "Elliott Clark <eclark@apache.org>"]
+categories = ["games"]
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+edition = "2021"
+
+[lib]
+name = "poker_eval"
+path = "src/lib.rs"
+
+[[bin]]
+name = "runner"
+path = "src/bin.rs"
+
+[dependencies]
+# poker_rs = { path = "../poker_rs", features=["arena"] }
+postflop-solver = {path = "../postflop-solver"}
+bitvec = "1"
+itertools = "*"
+log = "*"
+env_logger = "*"
