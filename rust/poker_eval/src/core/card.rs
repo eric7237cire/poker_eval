@@ -474,6 +474,36 @@ pub fn get_possible_hole_cards(range_set: &InRangeType, used_card_set: CardUsedT
     vec
 }
 
+pub fn get_filtered_range_set(range_set: &InRangeType, used_card_set: CardUsedType) -> InRangeType  {
+    //let range: Range = range_str.parse().unwrap();
+    let mut filtered_range_set = range_set.clone();
+    
+
+    for card1 in 0..52 {
+        
+
+        for card2 in card1 + 1..52 {
+            //let core_card2 = card2.into();
+
+            let range_index = card_pair_to_index(card1 as u8, card2 as u8);
+
+            if !range_set[range_index] {
+                continue;
+            }
+
+            if !used_card_set[card2] && !used_card_set[card1] {
+                continue;
+            }
+
+            filtered_range_set.set(range_index, false);
+
+            
+        }
+    }
+
+    filtered_range_set
+}
+
 
 
 // pub fn get_random_unused_card(cards_used: &CardUsedType) -> Card {
@@ -676,5 +706,10 @@ mod tests {
 
         assert_eq!(990, total);
         assert_eq!(373, in_range);
+
+        let dbg_fs = get_filtered_range_set(&range_set, used_cards);
+        assert_eq!(373, dbg_fs.count_ones());
+
+        assert_eq!(11029519011840, used_cards.data[0]);
     }
 }

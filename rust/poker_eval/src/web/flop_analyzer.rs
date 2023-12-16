@@ -6,7 +6,7 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{
     range_string_to_set,
-    rank_cards, Card, CardUsedType, InRangeType, Rank,
+    rank_cards, Card, CardUsedType, InRangeType, Rank, get_filtered_range_set,
 };
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 //extern crate wasm_bindgen;
@@ -208,7 +208,13 @@ impl flop_analyzer {
         let n_players = self.player_info.len();
         let mut rng = StdRng::seed_from_u64(42);
 
-        
+        let n_active_players = self
+            .player_info
+            .iter()
+            .filter(|p| p.state != PlayerPreFlopState::Disabled)
+            .count();
+
+        //let mut dist_count = [0; 52*51/2];
 
         for _it_num in 0..num_iterations {
             //debug!("simulate_flop: iteration {}", it_num);
@@ -219,6 +225,12 @@ impl flop_analyzer {
             let mut eval_cards = Vec::with_capacity(7);
             let mut used_cards = self.init_cards_used(&mut eval_cards)?;
 
+            assert_eq!(3, self.board_cards.len());
+            
+            // assert_eq!(7, used_cards.count_ones());
+            // assert_eq!(11029519011840, used_cards.data[0]);
+            // let dbg_fs = get_filtered_range_set(&self.player_info[2].range_set, used_cards);
+            // assert_eq!(373, dbg_fs.count_ones());
             //Even if we set some cards for players, for simplicity get enough for everyone ( 2 * n_players ) + turn & river
             //let (shuffled_cards, _) = deck.partial_shuffle(&mut rng, 2 + 2 * n_players);
 
@@ -226,6 +238,14 @@ impl flop_analyzer {
 
             //First we choose hole cards for players that are using a range
             self.set_cards_from_ranges(&mut rng, &mut used_cards)?;
+
+            //debugging
+            // let p2_ridx = card_pair_to_index(self.player_info[2].hole_cards[0].into(),
+            //     self.player_info[2].hole_cards[1].into());
+            // dist_count[p2_ridx] += 1;
+            //end debugging
+
+            assert_eq!(self.board_cards.len()+2*n_active_players, used_cards.count_ones());
 
             //Do just river for now
             assert_eq!(3, eval_cards.len());
@@ -240,6 +260,7 @@ impl flop_analyzer {
                 &mut used_cards,
             )?;
             
+            assert_eq!(5+2*n_active_players, used_cards.count_ones());
             assert_eq!(5, eval_cards.len());
             
             for p_idx in 0..n_players {
@@ -321,6 +342,14 @@ impl flop_analyzer {
             assert_eq!(3, eval_cards.len());
         }
 
+        // let non_zero_count = dist_count.iter().filter(|&&x| x > 0).count();
+        // assert_eq!(non_zero_count, 373);
+        // for i in 0..52*51/2 {
+        //     if dist_count[i] > 0 {
+        //         debug!("{} = {} / {} = {:.3}", i, dist_count[i], num_iterations, 100.0*dist_count[i] as f64 / num_iterations as f64);
+        //     }
+        // }
+
         Ok(())
     }
 
@@ -395,14 +424,7 @@ impl flop_analyzer {
             let mut card2_index ;
 
             loop {
-                card1_index = get_unused_card(rng, cards_used).unwrap();
-                card2_index = get_unused_card(rng, cards_used).unwrap();
-
-                if card1_index == card2_index {
-                    continue;
-                }
-
-                let range_index = card_pair_to_index(card1_index as u8, card2_index as u8);
+                
 
                 attempts += 1;
 
@@ -414,6 +436,14 @@ impl flop_analyzer {
                     ));
                 }
 
+                card1_index = get_unused_card(rng, cards_used).unwrap();
+                card2_index = get_unused_card(rng, cards_used).unwrap();
+
+                if card1_index == card2_index {
+                    continue;
+                }
+
+                let range_index = card_pair_to_index(card1_index as u8, card2_index as u8);
                 
 
                 if !self.player_info[p_idx].range_set[range_index] {
@@ -424,13 +454,10 @@ impl flop_analyzer {
             }
 
             //we set their cards
-            self.player_info[p_idx].hole_cards.clear();
-            self.player_info[p_idx]
-                .hole_cards
-                .push(Card::from_range_index_part(card1_index));
-            self.player_info[p_idx]
-                .hole_cards
-                .push(Card::from_range_index_part(card2_index));
+            let hc = &mut self.player_info[p_idx].hole_cards;
+            hc.clear();
+            hc.push(Card::from_range_index_part(card1_index));
+            hc.push(Card::from_range_index_part(card2_index));
             let count_before = cards_used.count_ones();
             cards_used.set(card1_index, true);
             cards_used.set(card2_index, true);
@@ -530,6 +557,7 @@ mod tests {
     fn test_heads_up_both_with_hole_cards() {
         let mut analyzer = super::flop_analyzer::new();
         analyzer.reset();
+        let tolerance = 0.1;
 
         analyzer.set_player_state(0, PlayerPreFlopState::UseHoleCards as u8);
         analyzer.set_player_state(3, PlayerPreFlopState::UseHoleCards as u8);
@@ -551,7 +579,7 @@ mod tests {
         assert_equity(
             100.0 * results[0].win_eq / not_folded as f64,
             21.92,
-            0.7,
+            tolerance,
         );
 
         assert_eq!(results[3].num_iterations, num_it);
@@ -560,7 +588,7 @@ mod tests {
         assert_equity(
             100.0 * results[3].win_eq / not_folded as f64,
             78.08,
-            0.7,
+            tolerance,
         );
     }
 
@@ -575,7 +603,7 @@ mod tests {
 
         analyzer.set_player_cards(0, card_u8s_from_string("8d 7s").as_slice());
 
-        analyzer.set_player_cards(3, card_u8s_from_string("Qd 5s").as_slice());
+        analyzer.set_player_cards(3, card_u8s_from_string("Qd 5c").as_slice());
 
         analyzer.set_player_range(
             2,
@@ -584,9 +612,9 @@ mod tests {
 
         analyzer.set_board_cards(card_u8s_from_string("Qs Ts 7c").as_slice());
 
-        let num_it = 4_000_000;
+        let num_it = 400_000;
 
-        let tolerance = 0.5;
+        let tolerance = 0.1;
 
         analyzer.simulate_flop(num_it).unwrap();
 
@@ -597,7 +625,7 @@ mod tests {
         assert_equity(
             100.0 * results[0].win_eq / results[0].num_iterations as f64,
             21.03,
-            1.0,
+            tolerance,
         );
         assert_equity(
             100.0 * results[0].tie_eq / results[0].num_iterations as f64,
@@ -615,12 +643,12 @@ mod tests {
         assert_equity(
             100.0 * results[3].win_eq / results[3].num_iterations as f64,
             50.93,
-            1.00,
+            tolerance,
         );
         assert_equity(
             100.0 * results[3].tie_eq / results[3].num_iterations as f64,
             0.82,
-            1.05,
+            tolerance,
         );
 
         assert_eq!(results[2].num_iterations, num_it);
@@ -629,14 +657,13 @@ mod tests {
         assert_equity(
             100.0 * results[2].win_eq / results[2].num_iterations as f64,
             26.14,
-            1.0,
+            tolerance,
         );
         assert_equity(
             100.0 * results[2].tie_eq / results[2].num_iterations as f64,
             0.95,
-            0.75,
+            tolerance,
         );
 
-        assert_eq!(1, 2);
     }
 }
