@@ -1,10 +1,11 @@
 use std::{cmp, fmt::Display, mem};
 
 use log::{debug, error, info, trace, warn};
-use rand::{rngs::StdRng, seq::SliceRandom, thread_rng, Rng, SeedableRng};
+use postflop_solver::card_pair_to_index;
+use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{
-    add_cards_from_string, cards_from_string, core_cards_to_range_index, range_string_to_set,
+    range_string_to_set,
     rank_cards, Card, CardUsedType, InRangeType, Rank,
 };
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
@@ -19,7 +20,10 @@ pub struct Results {
     pub num_iterations: ResultType,
 
     //win = 1, tie = 1 / num players in tie, loss = 0
-    pub eq_not_folded: f64,
+    pub win_eq: f64,
+    pub tie_eq: f64,
+
+    //total is win+tie
 
     //count made hands
     num_hi_card: u32,
@@ -43,7 +47,7 @@ pub struct Results {
 }
 
 #[derive(Debug)]
-struct MyError {
+pub struct MyError {
     details: String,
 }
 
@@ -204,13 +208,16 @@ impl flop_analyzer {
         let n_players = self.player_info.len();
         let mut rng = StdRng::seed_from_u64(42);
 
-        for it_num in 0..num_iterations {
+        
+
+        for _it_num in 0..num_iterations {
             //debug!("simulate_flop: iteration {}", it_num);
 
             //let mut deck = self.prepare_deck();
 
             //with flop, players with hole cards
-            let mut used_cards = self.init_cards_used()?;
+            let mut eval_cards = Vec::with_capacity(7);
+            let mut used_cards = self.init_cards_used(&mut eval_cards)?;
 
             //Even if we set some cards for players, for simplicity get enough for everyone ( 2 * n_players ) + turn & river
             //let (shuffled_cards, _) = deck.partial_shuffle(&mut rng, 2 + 2 * n_players);
@@ -221,13 +228,20 @@ impl flop_analyzer {
             self.set_cards_from_ranges(&mut rng, &mut used_cards)?;
 
             //Do just river for now
-            self.board_cards.push(Card::from_range_index_part(
+            assert_eq!(3, eval_cards.len());
+            self.add_board_card(
                 get_unused_card(&mut rng, &mut used_cards).unwrap(),
-            ));
-            self.board_cards.push(Card::from_range_index_part(
+                &mut eval_cards,
+                &mut used_cards,
+            )?;
+            self.add_board_card(
                 get_unused_card(&mut rng, &mut used_cards).unwrap(),
-            ));
-
+                &mut eval_cards,
+                &mut used_cards,
+            )?;
+            
+            assert_eq!(5, eval_cards.len());
+            
             for p_idx in 0..n_players {
                 if self.player_info[p_idx].state == PlayerPreFlopState::Disabled {
                     continue;
@@ -237,14 +251,14 @@ impl flop_analyzer {
 
                 //if self.player_info[p_idx].state == PlayerPreFlopState::UseHoleCards {
                 if 2 != self.player_info[p_idx].hole_cards.len() {
-                    warn!(
+                    return Err(MyError::from_string(format!(
                         "simulate_flop: player {} has {} hole cards",
                         p_idx,
                         self.player_info[p_idx].hole_cards.len()
-                    );
-                    panic!("huh");
+                    )));
+                    
                 }
-                self.board_cards
+                eval_cards
                     .extend(self.player_info[p_idx].hole_cards.iter());
                 // } else {
                 //     self.board_cards.push(shuffled_cards[2 + 2 * p_idx]);
@@ -274,44 +288,66 @@ impl flop_analyzer {
                 //     }
                 // }
 
-                let rank = rank_cards(&self.board_cards);
+                let rank = rank_cards(&eval_cards);
 
                 let results = &mut self.player_info[p_idx].results;
                 update_results_from_rank(results, rank);
 
                 hand_evals[p_idx] = Some(rank);
 
-                self.board_cards.pop();
-                self.board_cards.pop();
+                eval_cards.pop();
+                eval_cards.pop();
+
+                assert_eq!(5, eval_cards.len());
             }
 
             let (winner_indexes, _num_non_folded) = indices_of_max_values(&hand_evals);
 
+            assert!(winner_indexes.len() > 0);
+
             for winner_idx in winner_indexes.iter() {
                 let results = &mut self.player_info[*winner_idx].results;
-                results.eq_not_folded += 1.0 / winner_indexes.len() as f64;
+                if winner_indexes.len() == 1 {
+                    results.win_eq += 1.0;
+                } else {
+                    results.tie_eq += 1.0 / winner_indexes.len() as f64;
+                }
             }
 
             //pop turn & river
-            self.board_cards.pop();
-            self.board_cards.pop();
+            eval_cards.pop();
+            eval_cards.pop();
+
+            assert_eq!(3, eval_cards.len());
         }
 
         Ok(())
     }
 
-    fn init_cards_used(&self) -> Result<CardUsedType, MyError> {
+    fn add_board_card(
+        &self,
+        c_index: usize,
+        eval_cards: &mut Vec<Card>,
+        cards_used: &mut CardUsedType,
+    ) -> Result<(), MyError> {
+        let count_before = cards_used.count_ones();
+        cards_used.set(c_index, true);
+        let count_after = cards_used.count_ones();
+
+        if count_before + 1 != count_after {
+            return Err(MyError::from_string(
+                format!("Card already used {} in board", Card::from(c_index).to_string())));
+        }
+
+        eval_cards.push(Card::from(c_index));
+
+        Ok(())
+    }
+
+    fn init_cards_used(&self, eval_cards: &mut Vec<Card>,) -> Result<CardUsedType, MyError> {
         let mut cards_used = CardUsedType::default();
         for c in self.board_cards.iter() {
-            let count_before = cards_used.count_ones();
-            cards_used.set(c.to_range_index_part(), true);
-            let count_after = cards_used.count_ones();
-
-            if count_before + 1 != count_after {
-                return Err(MyError::from_str(
-                    format!("Card already used {} in board", c.to_string()).as_str(),
-                ));
-            }
+            self.add_board_card((*c).into(), eval_cards, &mut cards_used)?;
         }
 
         for p_idx in 0..self.player_info.len() {
@@ -355,14 +391,18 @@ impl flop_analyzer {
             }
 
             let mut attempts = 0;
-            let mut card1_index = 0;
-            let mut card2_index = 0;
+            let mut card1_index ;
+            let mut card2_index ;
 
             loop {
                 card1_index = get_unused_card(rng, cards_used).unwrap();
                 card2_index = get_unused_card(rng, cards_used).unwrap();
 
-                let range_index = card1_index * 52 + card2_index;
+                if card1_index == card2_index {
+                    continue;
+                }
+
+                let range_index = card_pair_to_index(card1_index as u8, card2_index as u8);
 
                 attempts += 1;
 
@@ -374,9 +414,7 @@ impl flop_analyzer {
                     ));
                 }
 
-                if card1_index == card2_index {
-                    continue;
-                }
+                
 
                 if !self.player_info[p_idx].range_set[range_index] {
                     continue;
@@ -464,6 +502,7 @@ fn get_unused_card(rng: &mut StdRng, cards_used: &CardUsedType) -> Option<usize>
     let mut attempts = 0;
     loop {
         let rand_int: usize = rng.gen_range(0..52);
+        assert!(rand_int < 52);
         //let card = Card::from(rand_int);
         if !cards_used[rand_int] {
             return Some(rand_int);
@@ -477,7 +516,7 @@ fn get_unused_card(rng: &mut StdRng, cards_used: &CardUsedType) -> Option<usize>
 
 #[cfg(test)]
 mod tests {
-    use crate::{card_u8s_from_string, cards_from_string, web::flop_analyzer::PlayerPreFlopState};
+    use crate::{card_u8s_from_string, web::flop_analyzer::PlayerPreFlopState};
 
     fn assert_equity(equity: f64, target: f64, tolerance: f64) {
         let passed = (equity - target).abs() < tolerance;
@@ -502,7 +541,7 @@ mod tests {
         analyzer.set_board_cards(card_u8s_from_string("Qs Ts 7c").as_slice());
 
         let num_it = 10_000;
-        analyzer.simulate_flop(num_it);
+        analyzer.simulate_flop(num_it).unwrap();
 
         let results = analyzer.get_results();
 
@@ -510,7 +549,7 @@ mod tests {
         let not_folded = results[0].num_iterations;
 
         assert_equity(
-            100.0 * results[0].eq_not_folded / not_folded as f64,
+            100.0 * results[0].win_eq / not_folded as f64,
             21.92,
             0.7,
         );
@@ -519,7 +558,7 @@ mod tests {
         let not_folded = results[3].num_iterations;
 
         assert_equity(
-            100.0 * results[3].eq_not_folded / not_folded as f64,
+            100.0 * results[3].win_eq / not_folded as f64,
             78.08,
             0.7,
         );
@@ -545,36 +584,59 @@ mod tests {
 
         analyzer.set_board_cards(card_u8s_from_string("Qs Ts 7c").as_slice());
 
-        let num_it = 10_000;
+        let num_it = 4_000_000;
+
+        let tolerance = 0.5;
+
         analyzer.simulate_flop(num_it).unwrap();
 
         let results = analyzer.get_results();
 
         assert_eq!(results[0].num_iterations, num_it);
-        let not_folded = results[0].num_iterations;
 
         assert_equity(
-            100.0 * results[0].eq_not_folded / not_folded as f64,
-            21.03 + 0.12,
-            0.7,
+            100.0 * results[0].win_eq / results[0].num_iterations as f64,
+            21.03,
+            1.0,
+        );
+        assert_equity(
+            100.0 * results[0].tie_eq / results[0].num_iterations as f64,
+            0.12,
+            0.05,
         );
 
         assert_eq!(results[3].num_iterations, num_it);
-        let not_folded = results[3].num_iterations;
 
+        // assert_equity(
+        //     100.0 * results[3].eq_not_folded / not_folded as f64,
+        //     50.93 + 0.82,
+        //     0.7,
+        // );
         assert_equity(
-            100.0 * results[3].eq_not_folded / not_folded as f64,
-            50.93 + 0.82,
-            0.7,
+            100.0 * results[3].win_eq / results[3].num_iterations as f64,
+            50.93,
+            1.00,
+        );
+        assert_equity(
+            100.0 * results[3].tie_eq / results[3].num_iterations as f64,
+            0.82,
+            1.05,
         );
 
         assert_eq!(results[2].num_iterations, num_it);
-        let not_folded = results[3].num_iterations;
+        //let not_folded = results[3].num_iterations;
 
         assert_equity(
-            100.0 * results[2].eq_not_folded / not_folded as f64,
-            26.14 + 0.95,
-            0.7,
+            100.0 * results[2].win_eq / results[2].num_iterations as f64,
+            26.14,
+            1.0,
         );
+        assert_equity(
+            100.0 * results[2].tie_eq / results[2].num_iterations as f64,
+            0.95,
+            0.75,
+        );
+
+        assert_eq!(1, 2);
     }
 }

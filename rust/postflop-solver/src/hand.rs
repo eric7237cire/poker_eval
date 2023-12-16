@@ -63,6 +63,8 @@ impl Hand {
     }
 
     pub fn evaluate_internal(&self) -> i32 {
+        assert_eq!(7, self.num_cards);
+        
         let mut rankset = 0i32;
         let mut rankset_suit = [0i32; 4];
         let mut rankset_of_count = [0i32; 5];

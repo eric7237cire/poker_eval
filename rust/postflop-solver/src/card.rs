@@ -86,9 +86,13 @@ type IsomorphismData = (
 /// Examples: 2d2c => `0`, 2h2c => `1`, 2s2c => `2`, ..., AsAh => `1325`
 #[inline]
 pub fn card_pair_to_index(mut card1: Card, mut card2: Card) -> usize {
+    assert!(card1 < 52);
+    assert!(card2 < 52);
+    assert!(card1 != card2);
     if card1 > card2 {
         mem::swap(&mut card1, &mut card2);
     }
+    //card2 > card1
     card1 as usize * (101 - card1 as usize) / 2 + card2 as usize - 1
 }
 

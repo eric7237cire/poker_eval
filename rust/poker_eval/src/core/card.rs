@@ -1,5 +1,6 @@
 use bitvec::prelude::*;
 use log::debug;
+use log::info;
 use postflop_solver::card_pair_to_index;
 use postflop_solver::Range;
 use std::cmp;
@@ -90,6 +91,7 @@ impl CardValue {
 
     /// Convert this Value to a char.
     pub fn to_char(self) -> char {
+        //info!("to_char: {:?}", self);
         char::from(self)
     }
 
@@ -323,11 +325,26 @@ impl Into<u8> for Card {
     }
 }
 
+impl Into<usize> for Card {
+    fn into(self) -> usize {
+        (self.value as usize) << 2 | self.suit as usize
+    }
+}
+
 impl From<u8> for Card {
     fn from(value: u8) -> Self {
         Self {
             value: CardValue::from_u8(value >> 2),
             suit: Suit::from_u8(value & 0x3),
+        }
+    }
+}
+
+impl From<usize> for Card {
+    fn from(value: usize) -> Self {
+        Self {
+            value: CardValue::from_u8((value >> 2) as u8),
+            suit: Suit::from_u8((value & 0x3) as u8),
         }
     }
 }
@@ -360,14 +377,9 @@ pub fn add_cards_from_string(cards: &mut Vec<Card>, a_string: &str) -> () {
     }
 }
 
-pub fn core_cards_to_range_index(card1: Card, card2: Card) -> usize {
-    let card1_index = card1.to_range_index_part();
-    let card2_index = card2.to_range_index_part();
 
-    return card1_index * 52 + card2_index;
-}
-
-pub type InRangeType = BitArr!(for 52*52, in usize, Lsb0);
+//52 * 51 / 2
+pub type InRangeType = BitArr!(for 1326, in usize, Lsb0);
 
 pub type CardUsedType = BitArr!(for 52, in usize, Lsb0);
 
@@ -376,22 +388,93 @@ pub fn range_string_to_set(range_str: &str) -> InRangeType {
     let mut set = InRangeType::default();
 
     for card1 in 0..52 {
-        let core_card1 = card1.into();
+        //let core_card1 = card1.into();
 
         for card2 in card1 + 1..52 {
-            let core_card2 = card2.into();
+            //let core_card2 = card2.into();
 
             let range_index = card_pair_to_index(card1, card2);
 
             let in_range = range.data[range_index] > 0.0;
 
-            set.set(core_cards_to_range_index(core_card1, core_card2), in_range);
-            set.set(core_cards_to_range_index(core_card2, core_card1), in_range);
+            set.set(range_index, in_range);
         }
     }
 
     set
 }
+
+//returns in range / total
+pub fn get_possible_hole_cards_count(range_set: &InRangeType, used_card_set: CardUsedType) -> (u16, u16)  {
+    //let range: Range = range_str.parse().unwrap();
+    //let mut vec = Vec::new();
+    let mut in_range_count = 0;
+    let mut total = 0;
+
+    for card1 in 0..52 {
+        if used_card_set[card1] {
+            continue;
+        }
+
+        for card2 in card1 + 1..52 {
+            //let core_card2 = card2.into();
+
+            if used_card_set[card2] {
+                continue;
+            }
+
+            total+=1;
+
+            let range_index = card_pair_to_index(card1 as u8, card2 as u8);
+
+            let in_range = range_set[range_index];
+
+            if in_range {
+                //vec.push((card1, card2));
+                in_range_count+=1;
+            }
+
+            
+        }
+    }
+
+    (in_range_count, total)
+}
+
+
+pub fn get_possible_hole_cards(range_set: &InRangeType, used_card_set: CardUsedType) -> Vec<(Card, Card)>  {
+    //let range: Range = range_str.parse().unwrap();
+    let mut vec = Vec::new();
+    
+
+    for card1 in 0..52 {
+        if used_card_set[card1] {
+            continue;
+        }
+
+        for card2 in card1 + 1..52 {
+            //let core_card2 = card2.into();
+
+            if used_card_set[card2] {
+                continue;
+            }
+
+            let range_index = card_pair_to_index(card1 as u8, card2 as u8);
+
+            let in_range = range_set[range_index];
+
+            if in_range {
+                vec.push((Card::from(card1), Card::from(card2)));
+            }
+
+            
+        }
+    }
+
+    vec
+}
+
+
 
 // pub fn get_random_unused_card(cards_used: &CardUsedType) -> Card {
 //     let num = rand::thread_rng().gen_range(0..52);
@@ -399,7 +482,7 @@ pub fn range_string_to_set(range_str: &str) -> InRangeType {
 
 #[cfg(test)]
 mod tests {
-    use postflop_solver::card_from_str;
+    use postflop_solver::{card_from_str, index_to_card_pair};
 
     use super::*;
     use std::mem;
@@ -540,24 +623,58 @@ mod tests {
 
         let set = range_string_to_set(range_str);
 
-        assert!(!set[core_cards_to_range_index(Card::from("Qs"), Card::from("3h"))]);
-        assert!(set[core_cards_to_range_index(Card::from("Qs"), Card::from("4h"))]);
-        assert!(set[core_cards_to_range_index(Card::from("5s"), Card::from("Qc"))]);
-        assert!(!set[core_cards_to_range_index(Card::from("Qs"), Card::from("Qc"))]);
-        assert!(!set[core_cards_to_range_index(Card::from("Qs"), Card::from("Kc"))]);
-        assert!(set[core_cards_to_range_index(Card::from("Js"), Card::from("Qc"))]);
+        assert!(!set[card_pair_to_index(Card::from("Qs").into(), Card::from("3h").into())]);
+        assert!(set[card_pair_to_index(Card::from("Qs").into(), Card::from("4h").into())]);
+        assert!(set[card_pair_to_index(Card::from("5s").into(), Card::from("Qc").into())]);
+        assert!(!set[card_pair_to_index(Card::from("Qs").into(), Card::from("Qc").into())]);
+        assert!(!set[card_pair_to_index(Card::from("Qs").into(), Card::from("Kc").into())]);
+        assert!(set[card_pair_to_index(Card::from("Js").into(), Card::from("Qc").into())]);
+
 
         let range_str = "22+";
         //let range: Range = Range::from_sanitized_str(rangeStr).unwrap();
 
         let set = range_string_to_set(range_str);
 
-        assert_eq!(set.count_ones(), 13 * 2 * 6);
+        assert_eq!(set.count_ones(), 13 * 6);
 
         let range_str = "22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32";
 
         let set = range_string_to_set(range_str);
 
-        assert_eq!(set.count_ones(), 52 * 51);
+        assert_eq!(set.count_ones(), 52 * 51 / 2);
+    }
+
+    #[test]
+    fn test_card_pair_to_index() {
+        for card1 in 0..52 {
+            for card2 in card1 + 1..52 {
+                let index = card_pair_to_index(card1, card2);
+                let (c1, c2) = index_to_card_pair(index);
+                assert_eq!(card1, c1);
+                assert_eq!(card2, c2);
+                
+            }
+        }
+
+    }
+    
+
+    #[test]
+    fn test_get_possible_hole_cards() {
+        let range_str = "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o";
+        let range_set = range_string_to_set(range_str);
+
+        let mut used_cards = CardUsedType::default();
+        let cards = cards_from_string("8d 7s Qd 5c Qs Ts 7c");
+
+        for card in cards.iter() {
+            used_cards.set((*card).into(), true);
+        }
+
+        let (in_range, total) = get_possible_hole_cards_count(&range_set, used_cards);
+
+        assert_eq!(990, total);
+        assert_eq!(373, in_range);
     }
 }

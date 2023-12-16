@@ -187,6 +187,7 @@ pub fn calc_cards_metrics(cards: &[Card]) -> CardsMetrics {
 }
 
 pub fn rank_cards(cards: &[Card]) -> Rank {
+    assert!(cards.len() <= 7);
     let cards_metrics = calc_cards_metrics(cards);
 
     // Find out if there's a flush
@@ -247,4 +248,267 @@ pub fn rank_cards(cards: &[Card]) -> Rank {
         let low = keep_n(cards_metrics.value_set ^ cards_metrics.count_to_value[2], 3);
         Rank::OnePair(pair << 13 | low)
     }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use log::info;
+    use postflop_solver::Hand;
+
+    use crate::{range_string_to_set, cards_from_string, CardUsedType, get_possible_hole_cards, rank_cards, Rank};
+
+
+    #[test]
+    fn test_flop_rank() {
+        let range_str = "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o";
+        let range_set = range_string_to_set(range_str);
+
+        let mut used_cards = CardUsedType::default();
+        let flop = cards_from_string("Qs Ts 7c");
+        let other_cards = cards_from_string("8d 7s Qd 5c");
+
+        for card in flop.iter() {
+            used_cards.set((*card).into(), true);
+        }
+        for card in other_cards.iter() {
+            used_cards.set((*card).into(), true);
+        }
+
+        let possible = get_possible_hole_cards(&range_set, used_cards);
+
+        assert_eq!(373, possible.len());
+
+        let mut num_trips  = 0;
+        let mut num_two_pair = 0;
+        let mut num_pair = 0;
+        let mut num_high_card = 0;
+
+        /*let mut over_pocket_pair = 0;
+        let mut ace_high = 0;
+        let mut king_high = 0;*/
+
+        let mut eval_cards = flop.clone();
+
+        for hole_cards in possible.iter() {
+            eval_cards.push(hole_cards.0);
+            eval_cards.push(hole_cards.1);
+
+            let rank = rank_cards(&eval_cards);
+            match rank {
+                Rank::HighCard(_) => {
+                    num_high_card += 1;
+                }
+                Rank::OnePair(_) => {
+                    num_pair += 1;
+                }
+                Rank::TwoPair(_) => {
+                    num_two_pair += 1;
+                }
+                Rank::ThreeOfAKind(_) => {
+                    num_trips += 1;
+                }
+                _ => {}
+            }
+
+            eval_cards.pop();
+            eval_cards.pop();
+        }
+
+        assert_eq!(num_trips, 5);
+        assert_eq!(num_two_pair, 3);
+        let check_ace_high = 136;
+        let check_king_high = 63;
+        
+        
+        let check_top_pair = 37;
+        let check_middle_pair = 36;
+        let check_low_pair = 24;
+        
+        let check_low_pocket_pair =36;
+        let check_second_pocket_pair = 6;
+        let check_over_pocket_pair = 12;
+
+        let check_num_pairs = check_top_pair+check_middle_pair+check_low_pocket_pair+check_second_pocket_pair+check_over_pocket_pair+check_low_pair;
+        
+        assert_eq!(num_pair, check_num_pairs);
+
+        let check_one_overcard = 183;
+        let check_two_overcards = 16;
+        let check_nothing = 15;
+
+        let check_highcard = check_one_overcard+check_two_overcards+check_nothing;
+
+        assert_eq!(num_high_card, check_highcard);
+        assert_eq!(check_ace_high+check_king_high, check_one_overcard+check_two_overcards);
+
+        assert_eq!(0, 373-num_trips-num_two_pair-num_high_card-check_num_pairs);
+
+    }
+
+    fn assert_equity(equity: f64, target: f64, tolerance: f64) {
+        let passed = (equity - target).abs() < tolerance;
+        if !passed {
+            println!("assert_equity failed: {} != {}", equity, target);
+        }
+        assert!(passed);
+    }
+    
+    #[test]
+    fn test_enumerate_all_equity() {
+        let range_str = "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o";
+        let range_set = range_string_to_set(range_str);
+
+        let mut used_cards = CardUsedType::default();
+        let flop = cards_from_string("Qs Ts 7c");
+
+        let flop_hand = Hand::new();
+        let flop_hand = flop_hand.add_card(flop[0].into());
+        let flop_hand = flop_hand.add_card(flop[1].into());
+        let flop_hand = flop_hand.add_card(flop[2].into());
+
+        let p1_hole_cards = cards_from_string("8d 7s");
+        let p2_hole_cards = cards_from_string("Qd 5c");
+
+        for card in flop.iter() {
+            used_cards.set((*card).into(), true);
+        }
+        for card in p1_hole_cards.iter() {
+            used_cards.set((*card).into(), true);
+        }
+        for card in p2_hole_cards.iter() {
+            used_cards.set((*card).into(), true);
+        }
+        assert_eq!(used_cards.count_ones(), 7);
+
+        let possible = get_possible_hole_cards(&range_set, used_cards);
+
+        assert_eq!(373, possible.len());
+
+        let mut win_equity = vec![0.0; 3];
+        let mut tie_equity = vec![0.0; 3];
+
+        let mut total_showdowns = 0;
+
+        //enumerate everything
+        for p in possible.iter() {
+            used_cards.set(p.0.into(), true);
+            used_cards.set(p.1.into(), true);
+            assert_eq!(used_cards.count_ones(), 9);
+            let check_showndown = total_showdowns;
+            for turn_card in 0..52 {
+                if used_cards[turn_card] {
+                    continue;
+                }
+                used_cards.set(turn_card, true);
+                for river_card in turn_card+1..52 {
+                    if used_cards[river_card] {
+                        continue;
+                    }
+
+                    total_showdowns += 1;
+                    
+
+                    let mut p1_cards = flop.clone();
+                    p1_cards.push(p1_hole_cards[0]);
+                    p1_cards.push(p1_hole_cards[1]);
+                    p1_cards.push(turn_card.into());
+                    p1_cards.push(river_card.into());
+
+                    let mut p2_cards = flop.clone();
+                    p2_cards.push(p2_hole_cards[0]);
+                    p2_cards.push(p2_hole_cards[1]);
+                    p2_cards.push(turn_card.into());
+                    p2_cards.push(river_card.into());
+
+                    let mut p3_cards = flop.clone();
+                    p3_cards.push(p.0);
+                    p3_cards.push(p.1);
+                    p3_cards.push(turn_card.into());
+                    p3_cards.push(river_card.into());
+
+                    let p1_hand = flop_hand.add_card(p1_hole_cards[0].into());
+                    let p1_hand = p1_hand.add_card(p1_hole_cards[1].into());
+                    let p1_hand = p1_hand.add_card(turn_card.into());
+                    let p1_hand = p1_hand.add_card(river_card.into());
+
+                    let p2_hand = flop_hand.add_card(p2_hole_cards[0].into());
+                    let p2_hand = p2_hand.add_card(p2_hole_cards[1].into());
+                    let p2_hand = p2_hand.add_card(turn_card.into());
+                    let p2_hand = p2_hand.add_card(river_card.into());
+
+                    let p3_hand = flop_hand.add_card(p.0.into());
+                    let p3_hand = p3_hand.add_card(p.1.into());
+                    let p3_hand = p3_hand.add_card(turn_card.into());
+                    let p3_hand = p3_hand.add_card(river_card.into());
+
+                    let p1_rank = rank_cards(&p1_cards);
+                    let p2_rank = rank_cards(&p2_cards);
+                    let p3_rank = rank_cards(&p3_cards);
+
+                    let p1_eval = p1_hand.evaluate_internal();
+                    let p2_eval = p2_hand.evaluate_internal();
+                    let p3_eval = p3_hand.evaluate_internal();
+
+                    if p1_rank == p2_rank && p2_rank == p3_rank {
+                        assert_eq!(p1_eval, p2_eval);
+                        assert_eq!(p1_eval, p3_eval);
+                        tie_equity[0] += 1.0/3.0;
+                        tie_equity[1] += 1.0/3.0;
+                        tie_equity[2] += 1.0/3.0;
+                    } else if p1_rank == p2_rank && p1_rank > p3_rank{
+                        assert_eq!(p1_eval, p2_eval);
+                        tie_equity[0] += 1.0/2.0;
+                        tie_equity[1] += 1.0/2.0;
+                    } else if p1_rank == p3_rank && p1_rank > p2_rank{ 
+                        assert_eq!(p1_eval, p3_eval);
+                        tie_equity[0] += 1.0/2.0;
+                        tie_equity[2] += 1.0/2.0;
+                    } else if p2_rank == p3_rank && p2_rank > p1_rank {
+                        assert_eq!(p2_eval, p3_eval);
+                        tie_equity[1] += 1.0/2.0;
+                        tie_equity[2] += 1.0/2.0;
+                    } else {
+                        let mut ranks = vec![p1_rank, p2_rank, p3_rank];
+                        ranks.sort();
+                        if ranks[2] == p1_rank {
+                            assert!(p1_eval > p2_eval);
+                            assert!(p1_eval > p3_eval);
+                            win_equity[0] += 1.0;
+                        } else if ranks[2] == p2_rank {
+                            assert!(p2_eval > p1_eval);
+                            assert!(p2_eval > p3_eval);
+                            win_equity[1] += 1.0;
+                        } else {
+                            assert!(p3_eval > p1_eval);
+                            assert!(p3_eval > p2_eval);
+                            win_equity[2] += 1.0;
+                        }
+                    }
+
+                    //used_cards.set(river_card, false);
+                }
+
+                used_cards.set(turn_card, false);
+            }
+        
+            used_cards.set(p.0.into(), false);
+            used_cards.set(p.1.into(), false);
+            assert_eq!(used_cards.count_ones(), 7);
+            //we used 9 cards, so there should be 43*42/2 showdowns total
+            assert_eq!(total_showdowns-check_showndown, 43*42/2);
+        }
+
+        //Values for Equilab
+        assert_equity(100.0 * tie_equity[0] / total_showdowns as f64, 0.12, 0.005);
+        assert_equity(100.0 * win_equity[0] / total_showdowns as f64, 21.03, 0.005);
+
+        assert_equity(100.0 * tie_equity[1] / total_showdowns as f64, 0.82, 0.005);
+        assert_equity(100.0 * win_equity[1] / total_showdowns as f64, 50.93, 0.005);
+
+        assert_equity(100.0 * tie_equity[2] / total_showdowns as f64, 0.95, 0.005);
+        assert_equity(100.0 * win_equity[2] / total_showdowns as f64, 26.14, 0.005);
+        
+    }
+
 }
