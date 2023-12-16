@@ -1,2 +1,2 @@
-mod flop_analyzer;
-pub use flop_analyzer::*;
+mod analyzer;
+pub use analyzer::*;

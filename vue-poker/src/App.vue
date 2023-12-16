@@ -8,6 +8,11 @@
   <button @click="go" class="button-base button-blue" style="position: relative; left: 400px">
     Go
   </button>
+  <button @click="stop" class="button-base button-red" style="position: relative; left: 400px">
+    Stop
+  </button>
+  <div>{{ num_iterations }} Iterations</div>
+  
 
   <div class="ml-10">
     <div v-show="navStore.currentPage === CurrentPage.RANGE_EDITOR">
@@ -34,7 +39,7 @@ import BoardSelector from './components/BoardSelector.vue';
 import Player from './components/Player.vue';
 import RangeEditor from './components/RangeEditor.vue';
 import ResultTable from './components/ResultTable.vue';
-import { computed, defineComponent, onMounted } from 'vue';
+import { Ref, computed, defineComponent, onMounted, ref } from 'vue';
 import { useNavStore, CurrentPage } from './stores/navigation';
 import { init, handler } from './worker/global-worker';
 import { PlayerIds, PlayerState, usePlayerStore } from './stores/player';
@@ -46,6 +51,9 @@ const navStore = useNavStore();
 const playerStore = usePlayerStore();
 const boardStore = useBoardStore();
 const resultsStore = useResultsStore();
+
+const iterationsPerTick = 1_000;
+const maxIterations = 10_000_000;
 
 boardStore.$subscribe((board) => {
   console.log('boardStore.$subscribe', board);
@@ -71,6 +79,10 @@ const players = [
   { id: 4, class: 'player4' }
 ];
 
+const num_iterations = ref(0);
+const setTimeoutReturn: Ref<NodeJS.Timeout | null> = ref(null);
+let stopping = false;
+
 async function go() {
   if (!handler) {
     console.log('handler is not ready');
@@ -94,8 +106,19 @@ async function go() {
     await handler.setPlayerRange(i, player.rangeStr);
     await handler.setPlayerState(i, player.state.valueOf());
   }
+  num_iterations.value = 0;
+  setTimeoutReturn.value = setTimeout(tick, 100);
+  stopping = false;
+}
 
-  await handler.simulateFlop(200);
+async function tick() {
+
+  if (!handler) {
+    console.log('handler is not ready');
+    return;
+  }
+  num_iterations.value = num_iterations.value + iterationsPerTick;
+  await handler.simulateFlop(iterationsPerTick);
 
   const resultList = await handler.getResults();
 
@@ -106,6 +129,14 @@ async function go() {
 
   resultsStore.results = resultList;
 
+  //resultList[0].equity = num_iterations.value / maxIterations;
+
+  if (stopping) {
+    return;
+  }
+
+  setTimeoutReturn.value = setTimeout(tick, 100);
+
   // for(let i = 0; i < playerStore.players.length; i++) {
   //   const result = await handler.getResult(i);
   //   console.log(`player ${i}`, result);
@@ -115,6 +146,23 @@ async function go() {
   // for(const r of result) {
   //   console.log(r);
   // }
+}
+
+async function stop() {
+  if (!handler) {
+    console.log('handler is not ready');
+    return;
+  }
+
+  stopping = true;  
+
+  if (setTimeoutReturn.value) {
+    console.info('clearTimeout');
+    clearTimeout(setTimeoutReturn.value);
+    setTimeoutReturn.value = null;
+  } else {
+    console.warn('Timeout is null');
+  }
 }
 
 // playerStore.updateRangeStrForPlayer(PlayerIds.HERO, 'TT+');
