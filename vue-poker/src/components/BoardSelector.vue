@@ -1,129 +1,158 @@
 <template>
-  <div v-for="suit in 4" :key="suit" class="flex">
+  <template v-if="!isEditing && cardList">
     <BoardSelectorCard
-      v-for="rank in 13"
-      :key="rank"
+      v-for="card in cardList.cards"
+      :key="card"
       class="m-1"
-      :card-id="56 - 4 * rank - suit"
-      :is-selected="config.board.includes(56 - 4 * rank - suit)"
-      @click="toggleCard(56 - 4 * rank - suit)"
+      :card-id="card"
+      @click="startEditing"
     />
-  </div>
+    <button @click="startEditing" v-if="cardList.cards.length == 0">Edit</button>
+  </template>
+  <template v-if="isEditing && cardList">
+    <div class="editor">
+      <div v-for="suit in 4" :key="suit" class="flex">
+        <BoardSelectorCard
+          v-for="rank in 13"
+          :key="rank"
+          class="m-1"
+          :card-id="56 - 4 * rank - suit"
+          :is-selected="modelValue.cards.includes(56 - 4 * rank - suit)"
+          @click="toggleCard(56 - 4 * rank - suit)"
+        />
+      </div>
 
-  <div class="flex mt-4 mx-1 gap-3">
-    <input
-      v-model="boardText"
-      type="text"
-      class="w-40 px-2 py-1 rounded-lg text-sm text-black"
-      @focus="($event.target as HTMLInputElement).select()"
-      @change="onBoardTextChange"
-    />
-    <button class="button-base button-blue" @click="clearBoard">Clear</button>
-    <button class="button-base button-blue" @click="generateRandomBoard">Random Flop</button>
-  </div>
+      <div class="flex mt-4 mx-1 gap-3">
+        <input
+          v-model="modelValue.cardText"
+          type="text"
+          class="w-40 px-2 py-1 rounded-lg text-sm text-black"
+          @focus="($event.target as HTMLInputElement).select()"
+          @change="onBoardTextChange"
+        />
+        <button class="button-base button-blue" @click="clearBoard">Clear</button>
+        <button class="button-base button-blue" @click="generateRandomBoard">Random Flop</button>
+        <button class="button-base button-blue" @click="editDone">Ok</button>
+      </div>
 
-  <div
-    v-if="
-      config.board.length >= 3 &&
-      config.expectedBoardLength > 0 &&
-      config.board.length !== config.expectedBoardLength
-    "
-    class="mt-5 text-orange-500 font-semibold"
-  >
-    <span class="underline">Warning:</span>
-    The edited tree assumes a {{ config.expectedBoardLength }}-card board.
-  </div>
+      <div
+        v-if="props.expected_length > 0 && props.modelValue.cards.length !== props.expected_length"
+        class="mt-5 text-orange-500 font-semibold"
+      >
+        <span class="underline">Warning:</span>
+        Expecting {{ props.expected_length }} Cards
+      </div>
+    </div>
+  </template>
 </template>
 
-<script lang="ts">
+<style lang="postcss" scoped>
+.editor {
+  z-index: 10;
+  position: relative;
+  opacity: 1;
+  background-color: rgb(20,20,20);
+  padding: 20px;
+  border: 1px solid green;
+}
+</style>
+
+<script setup lang="ts">
 import { defineComponent, ref } from 'vue';
-import { useBoardStore } from '../stores/board';
+import { CardList, useBoardStore } from '../stores/board';
 import { cardText, parseCardString } from '../utils';
 
 import BoardSelectorCard from './BoardSelectorCard.vue';
 
-export default defineComponent({
-  components: {
-    BoardSelectorCard
-  },
+interface Props {
+  expected_length: number;
+  //min_cards: number,
+  modelValue: CardList;
+}
 
-  setup() {
-    const boardStore = useBoardStore();
-    const boardText = ref('');
+const props = defineProps<Props>();
 
-    boardText.value = boardStore.boardText;
+const emit = defineEmits<{
+  updateModelValue: [value: CardList];
+}>();
 
-    const toggleCard = (cardId: number, updateText = true) => {
-      if (boardStore.board.includes(cardId)) {
-        boardStore.board = boardStore.board.filter((card) => card !== cardId);
-      } else if (boardStore.board.length < 5) {
-        boardStore.board.push(cardId);
-        if (boardStore.board.length <= 3) {
-          boardStore.board.sort((a, b) => b - a);
-        }
-      }
+const cardList = props.modelValue;
 
-      if (updateText) {
-        setBoardTextFromButtons();
-      }
-    };
+if (cardList && !Array.isArray(cardList.cards)) {
+  cardList.cards = [];
+}
 
-    const setBoardTextFromButtons = () => {
-      boardText.value = boardStore.board
-        .map(cardText)
-        .map(({ rank, suitLetter }) => rank + suitLetter)
-        .join(', ');
+const isEditing = ref(false);
 
-      console.log('boardText.value', boardText.value);
-      boardStore.boardText = boardText.value;
-    };
+// //Initialize
+// onBoardTextChange();
 
-    const onBoardTextChange = () => {
-      boardStore.board = [];
-
-      const cardIds = boardText.value
-        // Allow pasting in things like [Ah Kd Qc], by reformatting to Ah,Kd,Qc
-        .trim()
-        .replace(/[^A-Za-z0-9\s,]/g, '')
-        .replace(/\s+/g, ',')
-        .split(',')
-        .map(parseCardString)
-        .filter((cardId): cardId is number => cardId !== null);
-
-      new Set(cardIds).forEach((cardId) => toggleCard(cardId, false));
-      setBoardTextFromButtons();
-    };
-
-    const clearBoard = () => {
-      boardStore.board = [];
-      setBoardTextFromButtons();
-    };
-
-    const generateRandomBoard = () => {
-      boardStore.board = [];
-
-      while (boardStore.board.length < 3) {
-        const randomCard = Math.floor(Math.random() * 52);
-        if (!boardStore.board.includes(randomCard)) {
-          boardStore.board.push(randomCard);
-        }
-      }
-
-      boardStore.board.sort((a, b) => b - a);
-      setBoardTextFromButtons();
-    };
-
-    //Initialize
-    onBoardTextChange();
-
-    return {
-      config: boardStore,
-      boardText,
-      toggleCard,
-      onBoardTextChange,
-      clearBoard,
-      generateRandomBoard
-    };
+function toggleCard(cardId: number, updateText = true) {
+  if (cardList.cards.includes(cardId)) {
+    cardList.cards = cardList.cards.filter((card) => card !== cardId);
+  } else if (cardList.cards.length < 5) {
+    cardList.cards.push(cardId);
+    if (cardList.cards.length <= 3) {
+      cardList.cards.sort((a, b) => b - a);
+    }
   }
-});
+
+  if (updateText) {
+    setBoardTextFromButtons();
+  }
+}
+
+function setBoardTextFromButtons() {
+  cardList.cardText = cardList.cards
+    .map(cardText)
+    .map(({ rank, suitLetter }) => rank + suitLetter)
+    .join(', ');
+
+  console.log('boardText.value', cardList.cardText);
+  //TODO update
+  //cardList.cardsText = boardText.value;
+}
+
+function editDone() {
+  isEditing.value = false;
+}
+
+function startEditing() {
+  isEditing.value = true;
+}
+
+function onBoardTextChange() {
+  cardList.cards = [];
+
+  const cardIds = cardList.cardText
+    // Allow pasting in things like [Ah Kd Qc], by reformatting to Ah,Kd,Qc
+    .trim()
+    .replace(/[^A-Za-z0-9\s,]/g, '')
+    .replace(/\s+/g, ',')
+    .split(',')
+    .map(parseCardString)
+    .filter((cardId): cardId is number => cardId !== null);
+
+  new Set(cardIds).forEach((cardId) => toggleCard(cardId, false));
+  setBoardTextFromButtons();
+}
+
+function clearBoard() {
+  cardList.cards = [];
+  setBoardTextFromButtons();
+}
+
+function generateRandomBoard() {
+  cardList.cards = [];
+
+  while (cardList.cards.length < props.expected_length) {
+    const randomCard = Math.floor(Math.random() * 52);
+    if (!cardList.cards.includes(randomCard)) {
+      cardList.cards.push(randomCard);
+    }
+  }
+
+  cardList.cards.sort((a, b) => b - a);
+  setBoardTextFromButtons();
+}
 </script>

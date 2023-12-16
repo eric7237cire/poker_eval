@@ -17,7 +17,7 @@ export interface Player {
   id: PlayerIds;
 
   state: PlayerState;
-  holeCards: string;
+  holeCards: CardList;
   rangeStr: string;
   percHands: number;
 
@@ -29,6 +29,7 @@ export interface Player {
 import { defineStore } from 'pinia';
 import { RangeManager } from '../../../ui/pkg/range/range';
 import { useLocalStorage } from '@vueuse/core';
+import { CardList } from './board';
 
 function initializePlayers(): Array<Player> {
   const players: Array<Player> = [];
@@ -37,7 +38,10 @@ function initializePlayers(): Array<Player> {
     players.push({
       id: i,
       rangeStr: '',
-      holeCards: '',
+      holeCards: {
+        cardText: '',
+        cards: []
+      },
       percHands: 0,
       range: [],
       state: PlayerState.USE_RANGE

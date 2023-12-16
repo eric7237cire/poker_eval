@@ -18,7 +18,7 @@
     </div>
 
     <div class="flex-grow my-4 px-6 pt-2 overflow-y-auto" style="height: calc(100% - 2rem)">
-      <BoardSelector />
+      <BoardSelector v-model="boardStore.board" :expected_length="3" />
     </div>
   </div>
 </template>
@@ -106,59 +106,42 @@ header {
 }
 </style>
 
-<script lang="ts">
+<script setup lang="ts">
 import BoardSelector from './components/BoardSelector.vue';
 import Player from './components/Player.vue';
 import RangeEditor from './components/RangeEditor.vue';
 import ResultTable from './components/ResultTable.vue';
-import { defineComponent } from 'vue';
+import { defineComponent, onMounted } from 'vue';
 import { useNavStore, CurrentPage } from './stores/navigation';
 import { init, handler } from './global-worker';
 import { PlayerIds, usePlayerStore } from './stores/player';
 import { useBoardStore } from './stores/board';
 
-export default defineComponent({
-  components: {
-    BoardSelector,
-    Player,
-    RangeEditor,
-    ResultTable
-  },
+const navStore = useNavStore();
+const playerStore = usePlayerStore();
+const boardStore = useBoardStore();
 
-  async mounted() {
-    console.log(`the component is now mounted.`);
-    await init(1);
-    await handler!.reset(0, []);
-  },
-
-  setup() {
-    const navStore = useNavStore();
-    const playerStore = usePlayerStore();
-    const boardStore = useBoardStore();
-
-    boardStore.$subscribe((board) => {
-      console.log('boardStore.$subscribe', board);
-      //handler!.reset(0, board);
-    });
-
-    const players = [
-      { id: 0, class: 'player0' },
-      { id: 1, class: 'player1' },
-      { id: 2, class: 'player2' },
-      { id: 3, class: 'player3' },
-      { id: 4, class: 'player4' }
-    ];
-
-    // playerStore.updateRangeStrForPlayer(PlayerIds.HERO, 'TT+');
-    // playerStore.updateRangeStrForPlayer(PlayerIds.WEST, '83+');
-    // playerStore.updateRangeStrForPlayer(PlayerIds.NORTH_WEST, '22+, 72+');
-    // playerStore.updateRangeStrForPlayer(PlayerIds.NORTH_EAST, 'A2o+, Q3o+');
-
-    return {
-      navStore,
-      CurrentPage,
-      players
-    };
-  }
+boardStore.$subscribe((board) => {
+  console.log('boardStore.$subscribe', board);
+  //handler!.reset(0, board);
 });
+
+onMounted(async () => {
+  console.log(`the component is now mounted.`);
+  await init(1);
+  await handler!.reset(0, []);
+});
+
+const players = [
+  { id: 0, class: 'player0' },
+  { id: 1, class: 'player1' },
+  { id: 2, class: 'player2' },
+  { id: 3, class: 'player3' },
+  { id: 4, class: 'player4' }
+];
+
+// playerStore.updateRangeStrForPlayer(PlayerIds.HERO, 'TT+');
+// playerStore.updateRangeStrForPlayer(PlayerIds.WEST, '83+');
+// playerStore.updateRangeStrForPlayer(PlayerIds.NORTH_WEST, '22+, 72+');
+// playerStore.updateRangeStrForPlayer(PlayerIds.NORTH_EAST, 'A2o+, Q3o+');
 </script>
