@@ -359,19 +359,24 @@ impl flop_analyzer {
             if self.board_cards.len() < 4 {
                 //choose one
                 add_eval_card(
-                    get_unused_card(&mut rng, &mut used_cards).unwrap(),
+                    get_unused_card(&mut rng, &used_cards).unwrap(),
                     &mut eval_cards,
                     &mut used_cards,
                 )?;
+
+                assert_eq!(3, self.board_cards.len());
+                assert_eq!(4 + 2 * active_players.len(), used_cards.count_ones());
             } else {
                 //Just do a simple push since we already added it to used cards
                 let turn_card_index: usize = self.board_cards[3].into();
                 assert!(used_cards[turn_card_index]);
                 eval_cards.push(self.board_cards[3].into());
+
+                assert_eq!(self.board_cards.len() + 2 * active_players.len(), used_cards.count_ones());
             }
 
             assert_eq!(4, eval_cards.len());
-            assert_eq!(self.board_cards.len() + 2 * active_players.len(), used_cards.count_ones());
+            
 
             //self.eval_current_draws(&mut eval_cards, &mut flop_results.turn_draws)?;
             eval_current(
@@ -390,15 +395,19 @@ impl flop_analyzer {
                     &mut eval_cards,
                     &mut used_cards,
                 )?;
+                
+                assert_eq!(5 + 2 * active_players.len(), used_cards.count_ones());
             } else {
                 //Just do a simple push since we already added it to used cards
                 let river_card_index: usize = self.board_cards[4].into();
                 assert!(used_cards[river_card_index]);
                 eval_cards.push(self.board_cards[4]);
+                
+                assert_eq!(5 + 2 * active_players.len(), used_cards.count_ones());
             }
 
             assert_eq!(5, eval_cards.len());
-            assert_eq!(5 + 2 * active_players.len(), used_cards.count_ones());
+            
 
             eval_current(
                 &active_players,
