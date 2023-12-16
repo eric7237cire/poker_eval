@@ -1,20 +1,27 @@
 import * as Comlink from 'comlink';
+import { Results } from '../pkg/poker_eval';
 //import { detect } from "detect-browser";
 
 type Mod = typeof import('../pkg/poker_eval');
 
 const createHandler = (mod: Mod) => {
   return {
-    flop_analyzer: mod.FlopAnalyzer.new(),
+    flop_analyzer: mod.flop_analyzer.new(),
 
-    reset(num_players: number, player_ranges: string[]) {
-      this.flop_analyzer.reset(num_players, player_ranges);
+    reset() {
+      this.flop_analyzer.reset();
     },
-    setBoardCards(card_str: string) {
-      this.flop_analyzer.set_board_cards(card_str);
+    setBoardCards(cards: Uint8Array) {
+      this.flop_analyzer.set_board_cards(cards);
     },
-    setPlayerCards(player_idx: number, card_str: string) {
-      this.flop_analyzer.set_player_cards(player_idx, card_str);
+    setPlayerCards(player_idx: number, cards: Uint8Array) {
+      this.flop_analyzer.set_player_cards(player_idx, cards);
+    },
+    setPlayerRange(player_idx: number, range_str: string) {
+      this.flop_analyzer.set_player_range(player_idx, range_str);
+    },
+    setPlayerState(player_idx: number, state: number) {
+      this.flop_analyzer.set_player_state(player_idx, state);
     },
     clearPlayerCards(player_idx: number) {
       this.flop_analyzer.clear_player_cards(player_idx);
@@ -22,7 +29,12 @@ const createHandler = (mod: Mod) => {
     simulateFlop(num_iterations: number) {
       this.flop_analyzer.simulate_flop(num_iterations);
     },
-    getResults() {}
+    getResults(): Array<Results> {
+      return this.flop_analyzer.get_results();
+    },
+    getResult(player_idx: number): Results {
+      return this.flop_analyzer.get_result(player_idx);
+    }
   };
 };
 

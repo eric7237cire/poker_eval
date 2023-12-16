@@ -3,6 +3,7 @@ use std::convert::TryFrom;
 use std::fmt;
 use std::mem;
 use bitvec::prelude::*;
+use log::debug;
 use postflop_solver::Range;
 use postflop_solver::card_pair_to_index;
 

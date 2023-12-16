@@ -5,6 +5,8 @@
 
   <ResultTable />
 
+  <button @click="go" class="button-base button-blue" style="position: relative; left: 400px;" >Go</button>
+
   <div class="ml-10">
     <div v-show="navStore.currentPage === CurrentPage.RANGE_EDITOR">
       <RangeEditor />
@@ -23,87 +25,8 @@
   </div>
 </template>
 
-<style scoped>
-header {
-  line-height: 1.5;
-}
+<style scoped src="./assets/App.css">
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-}
-
-.players {
-  display: grid;
-  grid-gap: 10;
-  grid-template-columns: repeat(8, minmax(75px, 90px));
-  grid-template-rows: repeat(4, minmax(110px, 120px));
-  /*display: block;*/
-  margin-left: 30px;
-  /*height: 300px;
-  width: 600px;*/
-  position: relative;
-
-  .player {
-    /*position: absolute;
-    width: 150px;*/
-    width: 150px;
-    border: 1px solid red;
-    display: inline-grid;
-    margin: 10px;
-  }
-  .player0 {
-    /*grid-column: 3 / 5;*/
-    grid-column-start: 4;
-    grid-column-end: 6;
-    /*grid-row: 3 / 5;*/
-    grid-row-start: 3;
-    grid-row-end: 5;
-    /*bottom: 0px;
-    left: 225px;*/
-  }
-  .player1 {
-    grid-column-start: 1;
-    grid-column-end: 3;
-    grid-row-start: 2;
-    grid-row-end: 4;
-  }
-  .player2 {
-    grid-column-start: 3;
-    grid-column-end: 5;
-    grid-row: 1 / 3;
-  }
-  .player3 {
-    /*grid-column: 4 / 6;*/
-    grid-column-start: 5;
-    grid-column-end: 7;
-    grid-row: 1 / 3;
-  }
-  .player4 {
-    /*grid-column: 6 / 8;*/
-    grid-column-start: 7;
-    grid-column-end: 9;
-    grid-row: 2 / 4;
-  }
-}
 </style>
 
 <script setup lang="ts">
@@ -114,7 +37,7 @@ import ResultTable from './components/ResultTable.vue';
 import { defineComponent, onMounted } from 'vue';
 import { useNavStore, CurrentPage } from './stores/navigation';
 import { init, handler } from './global-worker';
-import { PlayerIds, usePlayerStore } from './stores/player';
+import { PlayerIds, PlayerState, usePlayerStore } from './stores/player';
 import { useBoardStore } from './stores/board';
 
 const navStore = useNavStore();
@@ -139,6 +62,41 @@ const players = [
   { id: 3, class: 'player3' },
   { id: 4, class: 'player4' }
 ];
+
+async function go() {
+  if (!handler) {
+    console.log('handler is not ready');
+    return;
+  }
+
+  await handler.reset();
+  await handler.setBoardCards(Uint8Array.from(boardStore.board.cards));
+  for(let i = 0; i < playerStore.players.length; i++) {
+    const player = playerStore.players[i];
+    if (player.state == PlayerState.USE_HOLE && Array.isArray(player.holeCards.cards) && player.holeCards.cards.length === 2) {
+      await handler.setPlayerCards(i, Uint8Array.from(player.holeCards.cards));
+    }
+    if (player.state == PlayerState.USE_RANGE) {
+      await handler.setPlayerRange(i, player.rangeStr);
+    }
+    await handler.setPlayerRange(i, player.rangeStr);
+    await handler.setPlayerState(i, player.state.valueOf());
+  }
+
+  await handler.simulateFlop(200);
+
+  //const result = await handler.getResults();
+  for(let i = 0; i < playerStore.players.length; i++) {
+    const result = await handler.getResult(i);
+    console.log(`player ${i}`, result);
+    console.log(`player ${i} win rate`, result.num_iterations);
+  }
+
+  // for(const r of result) {
+  //   console.log(r);
+  // }
+}
+
 
 // playerStore.updateRangeStrForPlayer(PlayerIds.HERO, 'TT+');
 // playerStore.updateRangeStrForPlayer(PlayerIds.WEST, '83+');
