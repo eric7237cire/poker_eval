@@ -2,12 +2,10 @@
   <div class="ml-10">
     <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-    </div>
+    
   </div>
 
-  <ResultTable :selected-spot="selectedSpot"/>
+  <ResultTable />
 
   <div class="ml-10">
     <div v-show="navStore.currentPage === CurrentPage.RANGE_EDITOR">
@@ -58,24 +56,29 @@ header {
 </style>
 
 <script lang="ts">
-//import BoardSelectorCard from './components/BoardSelectorCard.vue'
-import HelloWorld from './components/HelloWorld.vue';
 import BoardSelector from './components/BoardSelector.vue';
 import Player from './components/Player.vue';
 import RangeEditor from './components/RangeEditor.vue';
 import ResultTable from './components/ResultTable.vue';
 import { defineComponent } from 'vue';
 import { useNavStore, CurrentPage } from './stores/navigation';
-
+import { init, handler } from './global-worker';
 import { PlayerIds, usePlayerStore } from './stores/player';
 
 export default defineComponent({
   components: {
-    HelloWorld,
     BoardSelector,
     Player,
     RangeEditor,
     ResultTable
+  },
+
+  async mounted() {
+    
+    console.log(`the component is now mounted.`);
+    await init(1);
+     await handler!.reset(0, []);
+    
   },
 
   setup() {

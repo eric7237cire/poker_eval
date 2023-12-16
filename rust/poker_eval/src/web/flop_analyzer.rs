@@ -1,4 +1,7 @@
 
+use std::f32::consts::E;
+
+use log::{info, error, trace, warn, debug};
 use rand::{thread_rng, seq::SliceRandom};
 
 use crate::{Card, InRangeType, add_cards_from_string, range_string_to_set, CardUsedType, rank_cards, core_cards_to_range_index, cards_from_string, Rank};
@@ -8,7 +11,7 @@ use wasm_bindgen::prelude::wasm_bindgen;
 type ResultType = u32;
 
 #[wasm_bindgen]
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Results {
     num_iterations: ResultType,
     folded: ResultType,
@@ -60,6 +63,14 @@ const MAX_PLAYERS: usize = 5;
 #[wasm_bindgen]
 impl FlopAnalyzer {
     pub fn new() -> Self {
+        wasm_logger::init(wasm_logger::Config::default());
+
+        info!("FlopAnalyzer::new()"	);
+        debug!("debug");
+        warn!("warn");
+        trace!("trace");
+        error!("error");
+
         Self {
             cards: Vec::with_capacity(7),
             player_range_strings: Vec::with_capacity(MAX_PLAYERS),
@@ -101,6 +112,10 @@ impl FlopAnalyzer {
             self.player_range_sets.push(range_string_to_set(&ply_range));
             self.player_results.push(Results::default());
         }
+    }
+
+    pub fn get_results(&self) -> Vec<Results> {
+        self.player_results.clone()
     }
 
     pub fn simulate_flop(&mut self, num_iterations: u32) {

@@ -27,3 +27,4 @@ env_logger = "*"
 getrandom = { version = "0.2", features = ["js"] }
 rand="0.8"
 wasm-bindgen = "0.2.89"
+wasm-logger = "0.2.0"

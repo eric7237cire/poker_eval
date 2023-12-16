@@ -1,20 +1,29 @@
 import * as Comlink from 'comlink';
 //import { detect } from "detect-browser";
 
-type Mod = typeof import('../rsw-hello/pkg/rsw_hello');
+type Mod = typeof import('../pkg/poker_eval');
 
 const createHandler = (mod: Mod) => {
   return {
-    game: mod.GameManager.new(),
+    flop_analyzer: mod.FlopAnalyzer.new(),
 
-    init(player: string) {
-      return mod.hello(' huh');
+    reset(num_players: number, player_ranges: string[]) {
+      this.flop_analyzer.reset(num_players, player_ranges);
     },
-    sayHello(player: string) {
-      return mod.hello('from the worker');
+    setBoardCards(card_str: string) {
+      this.flop_analyzer.set_board_cards(card_str);
     },
-    sayGameHello(player: string) {
-      return this.game.get_a_string();
+    setPlayerCards(player_idx: number, card_str: string) {
+      this.flop_analyzer.set_player_cards(player_idx, card_str);
+    },
+    clearPlayerCards(player_idx: number) {
+      this.flop_analyzer.clear_player_cards(player_idx);
+    },
+    simulateFlop(num_iterations: number) {
+      this.flop_analyzer.simulate_flop(num_iterations);
+    },
+    getResults() {
+
     }
   };
 };
@@ -37,7 +46,7 @@ const initHandler = async (num_threads: number) => {
   //     await mod.default();
   //   }
 
-  mod = await import('../rsw-hello/pkg/rsw_hello');
+  mod = await import('../pkg/poker_eval');
   await mod.default();
 
   return Comlink.proxy(createHandler(mod));

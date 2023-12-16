@@ -8,4 +8,4 @@ cd "$SCRIPT_DIR"
 echo "Running cargo watch in $SCRIPT_DIR"
 
 # -dev added for dev build
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --dev --target web --out-dir pkg poker_eval"
+cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --dev --target web --out-dir ../../vue-poker/pkg poker_eval"
