@@ -2,7 +2,6 @@
 resolver = "2"
 
 members = [
-	"poker_rs",
     "postflop-solver",
     "poker_eval"
 ]

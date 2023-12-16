@@ -186,13 +186,13 @@ impl From<CardValue> for char {
 #[repr(u8)]
 pub enum Suit {
     /// Spades
-    Spade = 0,
+    Spade = 3,
     /// Clubs
-    Club = 1,
+    Club = 0,
     /// Hearts
     Heart = 2,
     /// Diamonds
-    Diamond = 3,
+    Diamond = 1,
 }
 
 /// All of the `Suit`'s. This is what `Suit::suits()` returns.
@@ -224,7 +224,7 @@ impl Suit {
 
 impl From<u8> for Suit {
     fn from(value: u8) -> Self {
-        unsafe { mem::transmute(cmp::min(value, Self::Diamond as u8)) }
+        unsafe { mem::transmute(cmp::min(value, Self::Spade as u8)) }
     }
 }
 
@@ -316,38 +316,21 @@ impl From<&str> for Card {
     }
 }
 
-//Card as in postflop-solver
-pub fn card_to_eval_card(card: Card) -> u8 {
-    //Use values from poker_evaluate
-    let suit = match card.suit {
-        Suit::Spade => 3,
-        Suit::Heart => 2,
-        Suit::Diamond => 1,
-        Suit::Club => 0,
-    };
-    let value = card.value as u8;
-
-    (value << 2) | suit
-}
-
-pub fn eval_card_to_card(card: u8) -> Card {
-
-    let suit = card & 0x3;
-    let value = card >> 2;
-
-    //Use values from poker_evaluate
-    let suit = match suit {
-        3 =>Suit::Spade,
-        2 => Suit::Heart,
-        1 => Suit::Diamond,
-        0 => Suit::Club,
-        _ => panic!("Invalid suit"),
-    };
-    Card {
-        value: CardValue::from(value),
-        suit,
+impl Into<u8> for Card {
+    fn into(self) -> u8 {
+        (self.value as u8) << 2 | self.suit as u8
     }
 }
+
+impl From<u8> for Card {
+    fn from(value: u8) -> Self {
+        Self {
+            value: CardValue::from_u8(value >> 2),
+            suit: Suit::from_u8(value & 0x3),
+        }
+    }
+}
+
 
 pub fn cards_from_string(a_string: &str) -> Vec<Card> {
     let mut cards = Vec::with_capacity(5);
@@ -385,10 +368,10 @@ pub fn range_string_to_set(range_str: &str) -> InRangeType {
     let mut set = InRangeType::default();  
 
     for card1 in 0..52 {
-        let core_card1 = eval_card_to_card(card1);
+        let core_card1 = card1.into();
         
         for card2 in card1 + 1..52 {
-            let core_card2 = eval_card_to_card(card2);
+            let core_card2 = card2.into();
 
             let range_index = card_pair_to_index(card1, card2);
 
@@ -411,7 +394,7 @@ pub fn range_string_to_set(range_str: &str) -> InRangeType {
 
 #[cfg(test)]
 mod tests {
-    use postflop_solver::{card_from_str};
+    use postflop_solver::card_from_str;
 
     
 
@@ -468,7 +451,7 @@ mod tests {
         assert!(c1 < c2);
         assert!(c2 > c1);
         // Make sure that suit is used.
-        assert!(c3 > c2);
+        assert!(c3 < c2);
     }
 
     #[test]
@@ -523,31 +506,32 @@ mod tests {
     fn test_conversions() {
         let ps_solver_card = card_from_str("7c").unwrap();
 
-        let card = eval_card_to_card(ps_solver_card);
+        let card = Card::try_from("7c").unwrap();
 
-        assert_eq!(card, Card::try_from("7c").unwrap());
+        assert_eq!(ps_solver_card, card.into());
+        
         assert_eq!(card.suit, Suit::Club);
         assert_eq!(card.value, CardValue::Seven);
-        assert_eq!(card_to_eval_card(card), ps_solver_card);
 
 
         let ps_solver_card = card_from_str("Ad").unwrap();
+        let card = Card::try_from("Ad").unwrap();
 
-        let card = eval_card_to_card(ps_solver_card);
-
-        assert_eq!(card, Card::try_from("Ad").unwrap());
         assert_eq!(card.suit, Suit::Diamond);
         assert_eq!(card.value, CardValue::Ace);
-        assert_eq!(card_to_eval_card(card), ps_solver_card);
-        
-        let ps_solver_card = card_from_str("2h").unwrap();
-        let card = eval_card_to_card(ps_solver_card);
 
-        assert_eq!(card, Card::try_from("2h").unwrap());
+        assert_eq!(ps_solver_card, card.into());
+        
+
+        let ps_solver_card = card_from_str("2h").unwrap();
+        let card = Card::try_from("2h").unwrap();
+
         assert_eq!(card.suit, Suit::Heart);
         assert_eq!(card.value, CardValue::Two);
 
-        assert_eq!(card_to_eval_card(card), ps_solver_card);
+        assert_eq!(ps_solver_card, card.into());
+
+        
     }
     
     #[test]

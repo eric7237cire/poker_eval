@@ -50,6 +50,60 @@ header {
     flex-wrap: wrap;
   }
 }
+
+.players {
+  display: grid;
+  grid-gap: 10;
+  grid-template-columns: repeat(8, minmax(75px, 90px));
+  grid-template-rows: repeat(4, minmax(110px, 120px));
+  /*display: block;*/
+  margin-left: 30px;
+  /*height: 300px;
+  width: 600px;*/
+  position: relative;
+
+  .player {
+    /*position: absolute;
+    width: 150px;*/
+    width: 150px;
+    border: 1px solid red;
+    display: inline-grid;
+    margin: 10px;
+  }
+  .player0 {
+    /*grid-column: 3 / 5;*/
+    grid-column-start: 4;
+    grid-column-end: 6;
+    /*grid-row: 3 / 5;*/
+    grid-row-start: 3;
+    grid-row-end: 5;
+    /*bottom: 0px;
+    left: 225px;*/
+  }
+  .player1 {
+    grid-column-start: 1;
+    grid-column-end: 3;
+    grid-row-start: 2;
+    grid-row-end: 4;
+  }
+  .player2 {
+    grid-column-start: 3;
+    grid-column-end: 5;
+    grid-row: 1 / 3;
+  }
+  .player3 {
+    /*grid-column: 4 / 6;*/
+    grid-column-start: 5;
+    grid-column-end: 7;
+    grid-row: 1 / 3;
+  }
+  .player4 {
+    /*grid-column: 6 / 8;*/
+    grid-column-start: 7;
+    grid-column-end: 9;
+    grid-row: 2 / 4;
+  }
+}
 </style>
 
 <script lang="ts">
@@ -61,6 +115,7 @@ import { defineComponent } from 'vue';
 import { useNavStore, CurrentPage } from './stores/navigation';
 import { init, handler } from './global-worker';
 import { PlayerIds, usePlayerStore } from './stores/player';
+import { useBoardStore } from './stores/board';
 
 export default defineComponent({
   components: {
@@ -79,6 +134,12 @@ export default defineComponent({
   setup() {
     const navStore = useNavStore();
     const playerStore = usePlayerStore();
+    const boardStore = useBoardStore();
+
+    boardStore.$subscribe((board) => {
+      console.log('boardStore.$subscribe', board);
+      //handler!.reset(0, board);
+    });
 
     const players = [
       { id: 0, class: 'player0' },

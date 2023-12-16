@@ -1,6 +1,6 @@
 use postflop_solver::{card_pair_to_index};
 
-use crate::{card_to_eval_card, core::Card, ChipType, Position};
+use crate::{core::Card, ChipType, Position};
 
 #[derive(Debug)]
 pub struct AgentState {
@@ -35,8 +35,8 @@ impl Default for AgentState {
 impl AgentState {
     pub fn get_range_index_for_hole_cards(&self) -> usize {
         card_pair_to_index(
-            card_to_eval_card(self.cards[0]),
-            card_to_eval_card(self.cards[1]),
+            self.cards[0].into(),
+            self.cards[1].into(),
         )
     }
 

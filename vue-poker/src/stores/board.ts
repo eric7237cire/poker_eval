@@ -1,9 +1,13 @@
 // stores/counter.js
+import { useLocalStorage } from '@vueuse/core';
 import { defineStore } from 'pinia';
 
 export const useBoardStore = defineStore('board', {
   state: () => {
-    return { board: [] as number[] };
+    return {
+      board: [] as number[],
+      boardText: useLocalStorage('boardText', '')
+    };
   },
   getters: {
     expectedBoardLength: (state) => 3

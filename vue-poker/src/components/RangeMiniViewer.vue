@@ -40,11 +40,11 @@ export default defineComponent({
 
     const cellValue = (row: number, col: number) => {
       const cellIndex = (row - 1) * 13 + (col - 1);
-      console.log(
-        `Player ${props.playerId} cell ${cellIndex} --> ${
-          playerStore.playerDataForId(props.playerId).range[cellIndex]
-        }`
-      );
+      // console.log(
+      //   `Player ${props.playerId} cell ${cellIndex} --> ${
+      //     playerStore.playerDataForId(props.playerId).range[cellIndex]
+      //   }`
+      // );
       return playerStore.playerDataForId(props.playerId).range[cellIndex];
     };
 

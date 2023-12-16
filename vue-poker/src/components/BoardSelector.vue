@@ -48,16 +48,18 @@ export default defineComponent({
   },
 
   setup() {
-    const config = useBoardStore();
+    const boardStore = useBoardStore();
     const boardText = ref('');
 
+    boardText.value = boardStore.boardText;
+
     const toggleCard = (cardId: number, updateText = true) => {
-      if (config.board.includes(cardId)) {
-        config.board = config.board.filter((card) => card !== cardId);
-      } else if (config.board.length < 5) {
-        config.board.push(cardId);
-        if (config.board.length <= 3) {
-          config.board.sort((a, b) => b - a);
+      if (boardStore.board.includes(cardId)) {
+        boardStore.board = boardStore.board.filter((card) => card !== cardId);
+      } else if (boardStore.board.length < 5) {
+        boardStore.board.push(cardId);
+        if (boardStore.board.length <= 3) {
+          boardStore.board.sort((a, b) => b - a);
         }
       }
 
@@ -67,16 +69,17 @@ export default defineComponent({
     };
 
     const setBoardTextFromButtons = () => {
-      boardText.value = config.board
+      boardText.value = boardStore.board
         .map(cardText)
         .map(({ rank, suitLetter }) => rank + suitLetter)
         .join(', ');
 
       console.log('boardText.value', boardText.value);
+      boardStore.boardText = boardText.value;
     };
 
     const onBoardTextChange = () => {
-      config.board = [];
+      boardStore.board = [];
 
       const cardIds = boardText.value
         // Allow pasting in things like [Ah Kd Qc], by reformatting to Ah,Kd,Qc
@@ -92,26 +95,29 @@ export default defineComponent({
     };
 
     const clearBoard = () => {
-      config.board = [];
+      boardStore.board = [];
       setBoardTextFromButtons();
     };
 
     const generateRandomBoard = () => {
-      config.board = [];
+      boardStore.board = [];
 
-      while (config.board.length < 3) {
+      while (boardStore.board.length < 3) {
         const randomCard = Math.floor(Math.random() * 52);
-        if (!config.board.includes(randomCard)) {
-          config.board.push(randomCard);
+        if (!boardStore.board.includes(randomCard)) {
+          boardStore.board.push(randomCard);
         }
       }
 
-      config.board.sort((a, b) => b - a);
+      boardStore.board.sort((a, b) => b - a);
       setBoardTextFromButtons();
     };
 
+    //Initialize
+    onBoardTextChange();
+
     return {
-      config,
+      config: boardStore,
       boardText,
       toggleCard,
       onBoardTextChange,

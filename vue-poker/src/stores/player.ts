@@ -6,10 +6,21 @@ export const enum PlayerIds {
   EAST = 4
 }
 
+export enum PlayerState {
+  DISABLED = 0,
+  //We are setting the cards
+  USE_HOLE = 1,
+  USE_RANGE = 2
+}
+
 export interface Player {
   id: PlayerIds;
+
+  state: PlayerState;
+  holeCards: string;
   rangeStr: string;
   percHands: number;
+
   //13 * 13 array with 0 to 100%
   range: Array<number>;
 }
@@ -26,8 +37,10 @@ function initializePlayers(): Array<Player> {
     players.push({
       id: i,
       rangeStr: '',
+      holeCards: '',
       percHands: 0,
-      range: []
+      range: [],
+      state: PlayerState.USE_RANGE
     });
   }
   return players;
