@@ -34,7 +34,7 @@
             :class="'relative ' + 'bg-gray-50'"
             style="height: calc(1.9rem + 1px)"
           >
-            <td>Player {{ index }}</td>
+            <td>Player {{ item.player_index }}</td>
             <td>
               <Percentage :perc="item.equity" />
             </td>

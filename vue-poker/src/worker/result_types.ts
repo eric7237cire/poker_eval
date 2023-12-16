@@ -4,6 +4,7 @@ export interface PercOrBetter {
 }
 
 export interface ResultsInterface {
+  player_index: number;
   equity: number;
   rank_family_count: Array<PercOrBetter>;
 }

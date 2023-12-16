@@ -35,7 +35,7 @@ pub struct PlayerFlopResults {
     */
     //pub num_iterations: ResultType,
 
-    player_index: usize,
+    pub player_index: usize,
 
     //hand rankings as of the flop
     //3 of them, flop turn river
@@ -48,9 +48,25 @@ pub struct PlayerFlopResults {
 #[wasm_bindgen]
 impl PlayerFlopResults {
     pub fn new() -> Self {
-        let mut d = Self::default();
+        let d = Self::default();
         //d.num_iterations = 0;
         d
+    }
+
+    pub fn get_perc_family(&self, street_index: usize, family_index: usize) -> f64 {
+        let r = &self.street_rank_results[street_index];
+        r.rank_family_count[family_index] as f64 / r.num_iterations as f64
+    }
+    pub fn get_perc_family_or_better(&self, street_index: usize, family_index: usize) -> f64 {
+        let mut total = 0.0;
+        for i in family_index..NUM_RANK_FAMILIES {
+            total += self.get_perc_family(street_index, i)
+        }
+        total
+    }
+    pub fn get_equity(&self, street_index: usize) -> f64 {
+        let r = &self.street_rank_results[street_index];
+        (r.win_eq + r.tie_eq) / r.num_iterations as f64
     }
 }
 
@@ -81,7 +97,7 @@ impl PlayerFlopResults {
 // }
 
 #[wasm_bindgen]
-#[derive(Default, Serialize, Clone)]
+#[derive(Default)]
 pub struct Draws {
     pub gut_shot: ResultType,
     pub str8_draw: ResultType,
@@ -105,22 +121,7 @@ impl Draws {
     }
 }
 
-#[wasm_bindgen]
-impl RankResults {
-    pub fn get_perc_family(&self, family_index: usize) -> f64 {
-        self.rank_family_count[family_index] as f64 / self.num_iterations as f64
-    }
-    pub fn get_perc_family_or_better(&self, family_index: usize) -> f64 {
-        let mut total = 0.0;
-        for i in family_index..NUM_RANK_FAMILIES {
-            total += self.get_perc_family(i)
-        }
-        total
-    }
-    pub fn get_equity(&self) -> f64 {
-        (self.win_eq + self.tie_eq) / self.num_iterations as f64
-    }
-}
+
 
 #[derive(Debug)]
 pub struct MyError {
@@ -311,11 +312,19 @@ impl flop_analyzer {
             )));
         }
 
-        let n_hole_cards_players = self
-            .player_info
-            .iter()
-            .filter(|p| p.state == PlayerPreFlopState::UseHoleCards)
-            .count();
+        if flop_results.len() != active_players.len() {
+            return Err(MyError::from_string(format!(
+                "simulate_flop: flop_results.len() {} != active_players.len() {}",
+                flop_results.len(),
+                active_players.len()
+            )));
+        }
+
+        // let n_hole_cards_players = self
+        //     .player_info
+        //     .iter()
+        //     .filter(|p| p.state == PlayerPreFlopState::UseHoleCards)
+        //     .count();
 
         //let mut dist_count = [0; 52*51/2];
 

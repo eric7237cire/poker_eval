@@ -1,5 +1,5 @@
 import * as Comlink from 'comlink';
-import { Results } from '@pkg/poker_eval';
+import { PlayerFlopResults } from '@pkg/poker_eval';
 import { PercOrBetter, ResultsInterface } from './result_types';
 //import { detect } from "detect-browser";
 
@@ -8,8 +8,11 @@ type Mod = typeof import('@pkg/poker_eval');
 let rankIndexes = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
 const createHandler = (mod: Mod) => {
+
   return {
     flop_analyzer: mod.flop_analyzer.new(),
+    player_flop_results: [] as Array<PlayerFlopResults>,
+    //player_flop_results: Array<PlayerFlopResults> = [],
 
     reset() {
       this.flop_analyzer.reset();
@@ -29,23 +32,29 @@ const createHandler = (mod: Mod) => {
     clearPlayerCards(player_idx: number) {
       this.flop_analyzer.clear_player_cards(player_idx);
     },
+    initResults() {
+      this.player_flop_results = this.flop_analyzer.build_results();
+      console.log(`initResults ${this.player_flop_results.length  }`);
+    },
     simulateFlop(num_iterations: number) {
-      this.flop_analyzer.simulate_flop(num_iterations);
+      this.player_flop_results = this.flop_analyzer.simulate_flop(num_iterations, this.player_flop_results );
     },
     getResults(): Array<ResultsInterface> {
       console.log('getResults');
-      const r = this.flop_analyzer.get_results();
-      console.log(`getResults ${r[0].num_iterations} ${r[0].get_perc_family_or_better(1)}`);
+      //const r = this.flop_analyzer.get_results();
+      const r = this.player_flop_results;
+      //console.log(`getResults ${r[0].num_iterations} ${r[0].get_perc_family_or_better(1)}`);
       const ri = r.map((r) => {
         return {
-          equity: r.get_equity(),
+          player_index: r.player_index,
+          equity: r.get_equity(2),
           rank_family_count: rankIndexes.map((ri) => {
             return {
-              perc: r.get_perc_family(ri),
-              better: r.get_perc_family_or_better(ri)
+              perc: r.get_perc_family(2, ri),
+              better: r.get_perc_family_or_better(2, ri)
             } as PercOrBetter;
           })
-        };
+        } as ResultsInterface;
       });
       return ri;
     }

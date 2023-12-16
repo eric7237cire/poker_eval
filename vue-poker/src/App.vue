@@ -44,7 +44,6 @@ import { useNavStore, CurrentPage } from './stores/navigation';
 import { init, handler } from './worker/global-worker';
 import { PlayerIds, PlayerState, usePlayerStore } from './stores/player';
 import { useBoardStore } from './stores/board';
-import { Results } from '../pkg/poker_eval';
 import { useResultsStore } from './stores/results';
 
 const navStore = useNavStore();
@@ -103,10 +102,13 @@ async function go() {
     if (player.state == PlayerState.USE_RANGE) {
       await handler.setPlayerRange(i, player.rangeStr);
     }
-    await handler.setPlayerRange(i, player.rangeStr);
+    //await handler.setPlayerRange(i, player.rangeStr);
     await handler.setPlayerState(i, player.state.valueOf());
   }
   num_iterations.value = 0;
+
+  await handler.initResults();
+
   setTimeoutReturn.value = setTimeout(tick, 100);
   stopping = false;
 }
