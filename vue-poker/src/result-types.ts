@@ -1,5 +1,5 @@
 export type Results = {
-  currentPlayer: "oop" | "ip" | "chance" | "terminal";
+  currentPlayer: 'oop' | 'ip' | 'chance' | 'terminal';
   numActions: number;
   isEmpty: number;
   eqrBase: number[];
@@ -13,7 +13,7 @@ export type Results = {
 };
 
 export type ChanceReports = {
-  currentPlayer: "oop" | "ip" | "terminal";
+  currentPlayer: 'oop' | 'ip' | 'terminal';
   numActions: number;
   status: number[];
   combos: number[][];
@@ -24,9 +24,9 @@ export type ChanceReports = {
 };
 
 export type SpotRoot = {
-  type: "root";
+  type: 'root';
   index: 0;
-  player: "flop" | "turn" | "river";
+  player: 'flop' | 'turn' | 'river';
   selectedIndex: -1;
   board: number[];
   pot: number;
@@ -34,11 +34,11 @@ export type SpotRoot = {
 };
 
 export type SpotChance = {
-  type: "chance";
+  type: 'chance';
   index: number;
-  player: "turn" | "river";
+  player: 'turn' | 'river';
   selectedIndex: number;
-  prevPlayer: "oop" | "ip";
+  prevPlayer: 'oop' | 'ip';
   cards: {
     card: number;
     isSelected: boolean;
@@ -49,9 +49,9 @@ export type SpotChance = {
 };
 
 export type SpotPlayer = {
-  type: "player";
+  type: 'player';
   index: number;
-  player: "oop" | "ip";
+  player: 'oop' | 'ip';
   selectedIndex: number;
   actions: {
     index: number;
@@ -63,11 +63,11 @@ export type SpotPlayer = {
 };
 
 export type SpotTerminal = {
-  type: "terminal";
+  type: 'terminal';
   index: number;
-  player: "end";
+  player: 'end';
   selectedIndex: -1;
-  prevPlayer: "oop" | "ip";
+  prevPlayer: 'oop' | 'ip';
   equityOop: number;
   pot: number;
 };
@@ -75,29 +75,23 @@ export type SpotTerminal = {
 export type Spot = SpotRoot | SpotChance | SpotPlayer | SpotTerminal;
 
 export const displayModeList = [
-  "basics",
-  "graphs",
+  'basics',
+  'graphs',
   // "scatter",
-  "compare",
-  "chance",
+  'compare',
+  'chance'
 ] as const;
 
 export type DisplayMode = (typeof displayModeList)[number];
 
-export const playerBasicsList = ["auto", "oop", "ip"] as const;
-export const playerChanceList = ["auto", "oop", "ip"] as const;
-export const barHeightList = ["normalized", "absolute", "full"] as const;
-export const suitList = ["grouped", "individual"] as const;
-export const strategyList = ["show", "none"] as const;
-export const contentBasicsList = ["default", "eq", "ev", "eqr"] as const;
-export const contentGraphsList = ["eq", "ev", "eqr"] as const;
-export const chartChanceList = [
-  "strategy-combos",
-  "strategy",
-  "eq",
-  "ev",
-  "eqr",
-] as const;
+export const playerBasicsList = ['auto', 'oop', 'ip'] as const;
+export const playerChanceList = ['auto', 'oop', 'ip'] as const;
+export const barHeightList = ['normalized', 'absolute', 'full'] as const;
+export const suitList = ['grouped', 'individual'] as const;
+export const strategyList = ['show', 'none'] as const;
+export const contentBasicsList = ['default', 'eq', 'ev', 'eqr'] as const;
+export const contentGraphsList = ['eq', 'ev', 'eqr'] as const;
+export const chartChanceList = ['strategy-combos', 'strategy', 'eq', 'ev', 'eqr'] as const;
 
 export type DisplayOptions = {
   playerBasics: (typeof playerBasicsList)[number];
@@ -115,4 +109,4 @@ export type HoverContent = {
   indices: number[];
 };
 
-export type TableMode = "basics" | "graphs" | "chance";
+export type TableMode = 'basics' | 'graphs' | 'chance';

@@ -1,10 +1,6 @@
 <template>
   <div class="flex flex-col w-full border-l border-gray-500 overflow-x-auto">
-    
-    <div
-      ref="tableDiv"
-      class="flex-grow overflow-y-scroll will-change-scroll"
-    >
+    <div ref="tableDiv" class="flex-grow overflow-y-scroll will-change-scroll">
       <table class="w-full h-full text-sm text-center align-middle">
         <thead class="sticky top-0 z-30 bg-gray-100 shadow">
           <tr style="height: calc(1.9rem + 1px)">
@@ -12,20 +8,12 @@
               v-for="column in columns"
               :key="column.label"
               scope="col"
-              :class="
-                'whitespace-nowrap select-none ' 
-              "
+              :class="'whitespace-nowrap select-none '"
               :style="{
                 'min-width':
-                  (column.type === 'card'
-                    ? '4'
-                    : column.type === 'bar'
-                    ? '6'
-                    : '3.5') + 'rem',
+                  (column.type === 'card' ? '4' : column.type === 'bar' ? '6' : '3.5') + 'rem'
               }"
-             
             >
-              
               <span>{{ column.label }}</span>
             </th>
           </tr>
@@ -35,36 +23,20 @@
               v-for="column in columns"
               :key="column.label"
               scope="col"
-              :class="                'header-divider ' ">
-              
-
-
-              
-            </th>
+              :class="'header-divider '"
+            ></th>
           </tr>
         </thead>
 
         <tbody>
-          
-
           <!-- Body -->
           <tr
             v-for="item in resultsRendered"
             :key="item[0]"
-            :class="
-              'relative ' + 'bg-gray-50'
-            "
+            :class="'relative ' + 'bg-gray-50'"
             style="height: calc(1.9rem + 1px)"
           >
-            <td
-              v-for="column in columns"
-              :key="column.label">
-              
-
-              
-
-             
-            </td>
+            <td v-for="column in columns" :key="column.label"></td>
           </tr>
 
           <!-- No results -->
@@ -73,12 +45,8 @@
               class="relative bg-gray-50 row-divider"
               style="height: calc(1.9rem + 1px)"
               :colspan="columns.length"
-            >
-              
-            </td>
+            ></td>
           </tr>
-
-         
 
           <!-- Spacer -->
           <tr>
@@ -91,7 +59,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, reactive, ref, toRefs, watch } from "vue";
+import { computed, defineComponent, reactive, ref, toRefs, watch } from 'vue';
 
 import {
   ranks,
@@ -101,8 +69,8 @@ import {
   toFixed1,
   toFixed,
   toFixedAdaptive,
-  capitalize,
-} from "../utils";
+  capitalize
+} from '../utils';
 
 import {
   Results,
@@ -111,59 +79,59 @@ import {
   SpotPlayer,
   contentGraphsList,
   HoverContent,
-  TableMode,
-} from "../result-types";
+  TableMode
+} from '../result-types';
 
-import { Tippy } from "vue-tippy";
-import { ArrowTopRightOnSquareIcon } from "@heroicons/vue/24/solid";
+import { Tippy } from 'vue-tippy';
+import { ArrowTopRightOnSquareIcon } from '@heroicons/vue/24/solid';
 
-const barWidthListBasics = ["normalized", "absolute", "full"] as const;
-const contentListBasics = ["percentage", "ev"] as const;
+const barWidthListBasics = ['normalized', 'absolute', 'full'] as const;
+const contentListBasics = ['percentage', 'ev'] as const;
 type DisplayOptionsBasics = {
   barWidth: (typeof barWidthListBasics)[number];
   content: (typeof contentListBasics)[number];
 };
 
-const barWidthListChance = ["normalized", "full"] as const;
+const barWidthListChance = ['normalized', 'full'] as const;
 type DisplayOptionsChance = {
   barWidth: (typeof barWidthListChance)[number];
 };
 
 type ColumnCard = {
   label: string;
-  type: "card";
+  type: 'card';
 };
 
 type ColumnBar = {
   label: string;
-  type: "bar";
+  type: 'bar';
 };
 
 type ColumnWeight = {
   label: string;
-  type: "weight";
+  type: 'weight';
 };
 
 type ColumnPercentage = {
   label: string;
-  type: "percentage";
+  type: 'percentage';
   index: number;
 };
 
 type ColumnEv = {
   label: string;
-  type: "ev";
+  type: 'ev';
 };
 
 type ColumnAction = {
   label: string;
-  type: "action";
+  type: 'action';
   index: number;
 };
 
 type ColumnActionEV = {
   label: string;
-  type: "action-ev";
+  type: 'action-ev';
   index: number;
 };
 
@@ -186,25 +154,25 @@ const INDEX_STRATEGY_BASE = 6;
 
 const columnIndex = (column: Column) => {
   switch (column.type) {
-    case "card":
+    case 'card':
       return INDEX_CARD_PAIR;
-    case "bar":
+    case 'bar':
       return -1;
-    case "weight":
+    case 'weight':
       return INDEX_WEIGHT;
-    case "percentage":
+    case 'percentage':
       return column.index;
-    case "ev":
+    case 'ev':
       return INDEX_EV;
-    case "action":
+    case 'action':
       return INDEX_STRATEGY_BASE + column.index * 2;
-    case "action-ev":
+    case 'action-ev':
       return INDEX_STRATEGY_BASE + column.index * 2 + 1;
   }
 };
 
-const yellow500 = "#eab308";
-const neutral800 = "#262626";
+const yellow500 = '#eab308';
+const neutral800 = '#262626';
 
 const cardStr = (card: number) => {
   const rank = ranks[card >>> 2];
@@ -215,7 +183,7 @@ const cardStr = (card: number) => {
 export default defineComponent({
   components: {
     Tippy,
-    ArrowTopRightOnSquareIcon,
+    ArrowTopRightOnSquareIcon
   },
 
   props: {
@@ -473,15 +441,15 @@ export default defineComponent({
     // });
 
     const columns: Array<Column> = [
-      { label: "Hand", type: "card" },
-      { label: "Strategy", type: "bar" },
-      { label: "Weight", type: "weight" },
-      { label: "EQ", type: "percentage", index: INDEX_EQUITY },
-      { label: "EV", type: "ev" },
-      { label: "EQR", type: "percentage", index: INDEX_EQR },
-      { label: "Fold", type: "action", index: 0 },
-      { label: "Call", type: "action", index: 1 },
-      { label: "Raise", type: "action", index: 2 },
+      { label: 'Hand', type: 'card' },
+      { label: 'Strategy', type: 'bar' },
+      { label: 'Weight', type: 'weight' },
+      { label: 'EQ', type: 'percentage', index: INDEX_EQUITY },
+      { label: 'EV', type: 'ev' },
+      { label: 'EQR', type: 'percentage', index: INDEX_EQR },
+      { label: 'Fold', type: 'action', index: 0 },
+      { label: 'Call', type: 'action', index: 1 },
+      { label: 'Raise', type: 'action', index: 2 }
     ];
 
     const resultsFiltered = [];
@@ -840,7 +808,7 @@ export default defineComponent({
       // sortBy,
       // evDigits,
       columns,
-     // onTableScroll,
+      // onTableScroll,
       resultsRendered,
       // emptyBufferTop,
       // emptyBufferBottom,
@@ -850,20 +818,20 @@ export default defineComponent({
       // actionBarBg,
       // exportSummaryButton,
       // exportSummary,
-      strTmp: "",
+      strTmp: ''
     };
-  },
+  }
 });
 </script>
 
 <style scoped>
 .header-divider::before {
-  content: "";
+  content: '';
   @apply absolute left-0 -bottom-px w-full border-b border-gray-300;
 }
 
 .row-divider::before {
-  content: "";
+  content: '';
   @apply absolute left-0 top-0 w-full border-t border-gray-300;
 }
 </style>

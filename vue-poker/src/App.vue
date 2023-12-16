@@ -1,8 +1,6 @@
 <template>
   <div class="ml-10">
     <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
-
-    
   </div>
 
   <ResultTable />
@@ -13,14 +11,13 @@
     </div>
 
     <!--Show 'players'-->
-    <div class="players ">
+    <div class="players">
       <div v-for="player in players" :key="player.id" :class="['player', player.class]">
         <Player :playerId="player.id" />
       </div>
     </div>
 
     <div class="flex-grow my-4 px-6 pt-2 overflow-y-auto" style="height: calc(100% - 2rem)">
-      
       <BoardSelector />
     </div>
   </div>
@@ -74,11 +71,9 @@ export default defineComponent({
   },
 
   async mounted() {
-    
     console.log(`the component is now mounted.`);
     await init(1);
-     await handler!.reset(0, []);
-    
+    await handler!.reset(0, []);
   },
 
   setup() {
@@ -97,7 +92,7 @@ export default defineComponent({
     // playerStore.updateRangeStrForPlayer(PlayerIds.WEST, '83+');
     // playerStore.updateRangeStrForPlayer(PlayerIds.NORTH_WEST, '22+, 72+');
     // playerStore.updateRangeStrForPlayer(PlayerIds.NORTH_EAST, 'A2o+, Q3o+');
-    
+
     return {
       navStore,
       CurrentPage,

@@ -72,7 +72,7 @@ input.input-error {
     /*bottom: 0px;
     left: 225px;*/
   }
-  .player1 {    
+  .player1 {
     grid-column-start: 1;
     grid-column-end: 3;
     grid-row-start: 2;

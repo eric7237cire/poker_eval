@@ -283,7 +283,7 @@ export default defineComponent({
       rangeTextError.value = '';
       weight.value = 100;
       numCombos.value = 0;
-      playerStore.updateRangeStr("");
+      playerStore.updateRangeStr('');
     };
 
     const loadRange = (rangeStr: unknown) => {

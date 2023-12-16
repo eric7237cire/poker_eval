@@ -19,7 +19,6 @@ import { defineStore } from 'pinia';
 import { RangeManager } from '../../../ui/pkg/range/range';
 import { useLocalStorage } from '@vueuse/core';
 
-
 function initializePlayers(): Array<Player> {
   const players: Array<Player> = [];
 
@@ -54,21 +53,21 @@ export const usePlayerStore = defineStore('player', {
       this.currentPlayer = newCurrentPlayer;
     },
     updateRangeStr(newRangeStr: string) {
-        this.updateRangeStrForPlayer(this.currentPlayer, newRangeStr);
+      this.updateRangeStrForPlayer(this.currentPlayer, newRangeStr);
     },
     updateRangeStrForPlayer(playerId: PlayerIds, newRangeStr: string) {
-        console.log('updateRangeStrForPlayer', playerId, newRangeStr);
-        this.players[playerId].rangeStr = newRangeStr;
+      console.log('updateRangeStrForPlayer', playerId, newRangeStr);
+      this.players[playerId].rangeStr = newRangeStr;
 
-        //update stats
-        range.from_string(newRangeStr);
-        const rawData = range.raw_data();
-        const numCombos = rawData.reduce((acc, cur) => acc + cur, 0);
-        this.players[playerId].percHands = numCombos / (52*51/2);
-        const weights = range.get_weights();
-        for (let i = 0; i < 13 * 13; ++i) {
-          this.players[playerId].range[i] = weights[i] * 100;
-        }
+      //update stats
+      range.from_string(newRangeStr);
+      const rawData = range.raw_data();
+      const numCombos = rawData.reduce((acc, cur) => acc + cur, 0);
+      this.players[playerId].percHands = numCombos / ((52 * 51) / 2);
+      const weights = range.get_weights();
+      for (let i = 0; i < 13 * 13; ++i) {
+        this.players[playerId].range[i] = weights[i] * 100;
+      }
     }
   }
 });

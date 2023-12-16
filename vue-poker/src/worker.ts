@@ -22,9 +22,7 @@ const createHandler = (mod: Mod) => {
     simulateFlop(num_iterations: number) {
       this.flop_analyzer.simulate_flop(num_iterations);
     },
-    getResults() {
-
-    }
+    getResults() {}
   };
 };
 
