@@ -123,7 +123,7 @@ impl PlayerFlopResults {
 #[wasm_bindgen]
 #[derive(Default, Serialize)]
 pub struct Draws {
-    num_iterations: ResultType,
+    pub num_iterations: ResultType,
 
     pub gut_shot: ResultType,
     pub str8_draw: ResultType,
@@ -601,8 +601,6 @@ pub fn eval_current_draws(
 
         //For players with ranges we already chose their cards
 
-        flop_results[active_index].street_draws[draw_index].num_iterations += 1;
-
         let prc = partial_rank_cards(
             &[player_cards[active_index].0, player_cards[active_index].1], 
             &eval_cards);
@@ -746,6 +744,9 @@ fn update_results_from_rank(results: &mut RankResults, rank: Rank) {
 }
 
 fn update_draw(results: &mut Draws, prc: PartialRankContainer) {
+
+    results.num_iterations += 1;
+
     if let Some(sd) = prc.straight_draw {
         match sd.straight_draw_type {
             StraightDrawType::GutShot(_cv) => results.gut_shot += 1,
