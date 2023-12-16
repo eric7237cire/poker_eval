@@ -27,7 +27,17 @@ env_logger = "*"
 getrandom = { version = "0.2", features = ["js"] }
 rand="0.8"
 wasm-bindgen = "0.2.89"
+
+# redirect logs to console
 wasm-logger = "0.2.0"
+
+# show rust stack trace
 console_error_panic_hook = "*"
 serde = { version = "1.0", features = ["derive"] }
+
+# To return jsvalue
 serde-wasm-bindgen = "0.6"
+
+# error object
+js-sys = "0.3"
+

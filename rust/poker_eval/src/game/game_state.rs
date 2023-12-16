@@ -1,6 +1,4 @@
-
-
-use crate::{ChipType};
+use crate::ChipType;
 
 pub struct GameState {
     //pot from prev. betting rounds

@@ -271,6 +271,7 @@ dependencies = [
  "env_logger",
  "getrandom",
  "itertools",
+ "js-sys",
  "log",
  "postflop-solver",
  "rand",

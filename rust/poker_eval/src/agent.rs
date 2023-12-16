@@ -1,5 +1,3 @@
-
-
 //Preflop goes left of buttonb, bb is last
 
 //Then flop/turn/river order

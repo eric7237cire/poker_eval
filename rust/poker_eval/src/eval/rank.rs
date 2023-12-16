@@ -1,4 +1,4 @@
-use crate::{core::Card};
+use crate::core::Card;
 use bitvec::prelude::*;
 
 /// All the different possible hand ranks.

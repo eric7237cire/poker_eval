@@ -6,8 +6,8 @@ use std::{
 use log::{debug, trace};
 
 use crate::{
-    calc_bitset_cards_metrics, count_higher, count_lower, rank_straight,
-    value_set_iterator, BitSetCardsMetrics, Card, CardValue, ValueSetType,
+    calc_bitset_cards_metrics, count_higher, count_lower, rank_straight, value_set_iterator,
+    BitSetCardsMetrics, Card, CardValue, ValueSetType,
 };
 
 //for pairs, 2 pair, sets, quads, full houses
@@ -155,7 +155,6 @@ impl PartialRankContainer {
         board_metrics: &BitSetCardsMetrics,
         board_length: usize,
     ) {
-
         if board_length == 5 || board_length < 3 {
             return;
         }
@@ -175,21 +174,21 @@ impl PartialRankContainer {
             if hole_count + board_count >= 5 {
                 continue;
             }
-            
 
             if hole_count + board_count == 4 {
                 let hole_card_value = hole_metrics.suit_value_sets[suit].last_one().unwrap();
                 self.flush_draw = Some(FlushDraw {
                     hole_card_value: CardValue::from(hole_card_value),
-                    flush_draw_type: FlushDrawType::FlushDraw
+                    flush_draw_type: FlushDrawType::FlushDraw,
                 });
-            } else if hole_count + board_count == 3 && board_length == 3 //we need 2 more cards to go
+            } else if hole_count + board_count == 3 && board_length == 3
+            //we need 2 more cards to go
             {
                 let hole_card_value = hole_metrics.suit_value_sets[suit].last_one().unwrap();
-                
-                self.flush_draw= Some(FlushDraw {
+
+                self.flush_draw = Some(FlushDraw {
                     hole_card_value: CardValue::from(hole_card_value),
-                    flush_draw_type: FlushDrawType::BackdoorFlushDraw
+                    flush_draw_type: FlushDrawType::BackdoorFlushDraw,
                 });
             }
         }
@@ -471,7 +470,6 @@ pub fn partial_rank_cards(hole_cards: &[Card], board: &[Card]) -> PartialRankCon
             let mut p = partial_ranks.lo_pair.take().unwrap();
             p.number_above -= 1;
             partial_ranks.lo_pair.replace(p);
-
         }
     }
 
@@ -496,7 +494,6 @@ mod tests {
     fn test_pairs() {
         init();
 
-        
         //Normal 2 pair
         let hole_cards = cards_from_string("6c 8h");
         let board_cards = cards_from_string("6s 8c 2d 9h");
@@ -597,13 +594,15 @@ mod tests {
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.flush_draw, None);
-        assert_eq!(prc.straight_draw, Some(
-            StraightDraw {
+        assert_eq!(
+            prc.straight_draw,
+            Some(StraightDraw {
                 straight_draw_type: StraightDrawType::GutShot(CardValue::Six),
                 //T J Q [K] [A]
                 //[4] [5] 6 7 8
                 number_above: 2
-            }));
+            })
+        );
         assert_eq!(
             prc.pocket_pair,
             Some(PairInfo {
@@ -618,12 +617,10 @@ mod tests {
         assert_eq!(prc.lo_pair, None);
         assert_eq!(prc.hi_card, None);
         assert_eq!(prc.low_card, None);
-
     }
 
     #[test]
     fn test_straights() {
-
         let hole_cards = cards_from_string("Ac 2h");
         let board_cards = cards_from_string("3c 7s 5s Td Ac");
         let prc = partial_rank_cards(&hole_cards, &board_cards);
@@ -796,7 +793,6 @@ mod tests {
         assert_eq!(prc.lo_pair, None);
         assert_eq!(prc.hi_card, None);
         assert_eq!(prc.low_card, None);
-
     }
 
     #[test]
@@ -805,11 +801,14 @@ mod tests {
         let board_cards = cards_from_string("4c 9c 2s");
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
-        assert_eq!(prc.flush_draw, Some(FlushDraw {
-            hole_card_value: CardValue::Eight,
-            flush_draw_type: FlushDrawType::FlushDraw
-        }));
-        
+        assert_eq!(
+            prc.flush_draw,
+            Some(FlushDraw {
+                hole_card_value: CardValue::Eight,
+                flush_draw_type: FlushDrawType::FlushDraw
+            })
+        );
+
         let hole_cards = cards_from_string("6c 8c");
         let board_cards = cards_from_string("4c 9c 2s Ac");
         let prc = partial_rank_cards(&hole_cards, &board_cards);
@@ -821,26 +820,30 @@ mod tests {
         let board_cards = cards_from_string("4c 9c 2s");
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
-        assert_eq!(prc.flush_draw, Some(FlushDraw {
-            hole_card_value: CardValue::Ace,
-            flush_draw_type: FlushDrawType::BackdoorFlushDraw
-        }));
+        assert_eq!(
+            prc.flush_draw,
+            Some(FlushDraw {
+                hole_card_value: CardValue::Ace,
+                flush_draw_type: FlushDrawType::BackdoorFlushDraw
+            })
+        );
 
         let hole_cards = cards_from_string("Ac 8h");
         let board_cards = cards_from_string("4c 9c 2s 3c");
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
-        assert_eq!(prc.flush_draw, Some(FlushDraw {
-            hole_card_value: CardValue::Ace,
-            flush_draw_type: FlushDrawType::FlushDraw
-        }));
-        
+        assert_eq!(
+            prc.flush_draw,
+            Some(FlushDraw {
+                hole_card_value: CardValue::Ace,
+                flush_draw_type: FlushDrawType::FlushDraw
+            })
+        );
+
         let hole_cards = cards_from_string("Ah 8h");
         let board_cards = cards_from_string("4c 9c 2s 3c");
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.flush_draw, None);
-        
-
     }
 }

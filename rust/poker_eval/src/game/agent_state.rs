@@ -1,4 +1,4 @@
-use postflop_solver::{card_pair_to_index};
+use postflop_solver::card_pair_to_index;
 
 use crate::{core::Card, ChipType, Position};
 
@@ -34,10 +34,7 @@ impl Default for AgentState {
 }
 impl AgentState {
     pub fn get_range_index_for_hole_cards(&self) -> usize {
-        card_pair_to_index(
-            self.cards[0].into(),
-            self.cards[1].into(),
-        )
+        card_pair_to_index(self.cards[0].into(), self.cards[1].into())
     }
 
     //Used for sb, bb as well, handles if puts them all in

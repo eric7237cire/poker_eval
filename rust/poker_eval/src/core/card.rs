@@ -1,11 +1,11 @@
+use bitvec::prelude::*;
+use log::debug;
+use postflop_solver::card_pair_to_index;
+use postflop_solver::Range;
 use std::cmp;
 use std::convert::TryFrom;
 use std::fmt;
 use std::mem;
-use bitvec::prelude::*;
-use log::debug;
-use postflop_solver::Range;
-use postflop_solver::card_pair_to_index;
 
 //use bitvec::BitArr;
 // Adapted from https://crates.io/crates/rs-poker
@@ -65,7 +65,7 @@ const VALUES: [CardValue; 13] = [
 impl CardValue {
     /// Take a u32 and convert it to a value.
     ///
-    
+
     pub fn from_u8(v: u8) -> Self {
         Self::from(v)
     }
@@ -83,7 +83,7 @@ impl CardValue {
     ///
     /// @returns None if there's no valid value there. Otherwise a Value enum
     ///
-   
+
     pub fn from_char(c: char) -> Option<Self> {
         Self::try_from(c).ok()
     }
@@ -95,7 +95,7 @@ impl CardValue {
 
     /// How card ranks seperate the two values.
     ///
-    
+
     pub fn gap(self, other: Self) -> u8 {
         let min = cmp::min(self as u8, other as u8);
         let max = cmp::max(self as u8, other as u8);
@@ -212,7 +212,7 @@ impl Suit {
     /// Translate a Suit from a u8. If the u8 is above the expected value
     /// then Diamond will be the result.
     ///
-    
+
     pub fn from_u8(s: u8) -> Self {
         Self::from(s)
     }
@@ -332,7 +332,6 @@ impl From<u8> for Card {
     }
 }
 
-
 pub fn cards_from_string(a_string: &str) -> Vec<Card> {
     let mut cards = Vec::with_capacity(5);
     let mut chars = a_string.chars().filter(|c| !c.is_whitespace());
@@ -343,8 +342,16 @@ pub fn cards_from_string(a_string: &str) -> Vec<Card> {
     }
     cards
 }
+pub fn card_u8s_from_string(a_string: &str) -> Vec<u8> {
+    let mut cards = Vec::with_capacity(5);
+    let mut card_obs = cards_from_string(a_string);
+    for card in card_obs.drain(..) {
+        cards.push(card.into());
+    }
+    cards
+}
 
-pub fn add_cards_from_string(cards: &mut Vec<Card>, a_string: &str) -> ()  {
+pub fn add_cards_from_string(cards: &mut Vec<Card>, a_string: &str) -> () {
     let mut chars = a_string.chars().filter(|c| !c.is_whitespace());
     while let Some(c) = chars.next() {
         let value = c;
@@ -366,11 +373,11 @@ pub type CardUsedType = BitArr!(for 52, in usize, Lsb0);
 
 pub fn range_string_to_set(range_str: &str) -> InRangeType {
     let range: Range = range_str.parse().unwrap();
-    let mut set = InRangeType::default();  
+    let mut set = InRangeType::default();
 
     for card1 in 0..52 {
         let core_card1 = card1.into();
-        
+
         for card2 in card1 + 1..52 {
             let core_card2 = card2.into();
 
@@ -378,11 +385,8 @@ pub fn range_string_to_set(range_str: &str) -> InRangeType {
 
             let in_range = range.data[range_index] > 0.0;
 
-            
-            set.set(core_cards_to_range_index(core_card1, core_card2) , in_range);
+            set.set(core_cards_to_range_index(core_card1, core_card2), in_range);
             set.set(core_cards_to_range_index(core_card2, core_card1), in_range);
-
-            
         }
     }
 
@@ -396,8 +400,6 @@ pub fn range_string_to_set(range_str: &str) -> InRangeType {
 #[cfg(test)]
 mod tests {
     use postflop_solver::card_from_str;
-
-    
 
     use super::*;
     use std::mem;
@@ -510,10 +512,9 @@ mod tests {
         let card = Card::try_from("7c").unwrap();
 
         assert_eq!(ps_solver_card, card.into());
-        
+
         assert_eq!(card.suit, Suit::Club);
         assert_eq!(card.value, CardValue::Seven);
-
 
         let ps_solver_card = card_from_str("Ad").unwrap();
         let card = Card::try_from("Ad").unwrap();
@@ -522,7 +523,6 @@ mod tests {
         assert_eq!(card.value, CardValue::Ace);
 
         assert_eq!(ps_solver_card, card.into());
-        
 
         let ps_solver_card = card_from_str("2h").unwrap();
         let card = Card::try_from("2h").unwrap();
@@ -531,17 +531,14 @@ mod tests {
         assert_eq!(card.value, CardValue::Two);
 
         assert_eq!(ps_solver_card, card.into());
-
-        
     }
-    
+
     #[test]
     fn test_range_to_set() {
-        
         let range_str = "Q4o+";
         //let range: Range = Range::from_sanitized_str(rangeStr).unwrap();
 
-        let set = range_string_to_set(range_str);     
+        let set = range_string_to_set(range_str);
 
         assert!(!set[core_cards_to_range_index(Card::from("Qs"), Card::from("3h"))]);
         assert!(set[core_cards_to_range_index(Card::from("Qs"), Card::from("4h"))]);
@@ -553,15 +550,14 @@ mod tests {
         let range_str = "22+";
         //let range: Range = Range::from_sanitized_str(rangeStr).unwrap();
 
-        let set = range_string_to_set(range_str); 
+        let set = range_string_to_set(range_str);
 
-        assert_eq!(set.count_ones(), 13*2*6);
+        assert_eq!(set.count_ones(), 13 * 2 * 6);
 
         let range_str = "22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32";
 
-        let set = range_string_to_set(range_str); 
+        let set = range_string_to_set(range_str);
 
-        assert_eq!(set.count_ones(), 52*51);
+        assert_eq!(set.count_ones(), 52 * 51);
     }
 }
-

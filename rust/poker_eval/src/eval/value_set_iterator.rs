@@ -1,6 +1,5 @@
 use crate::{CardValue, ValueSetType};
 
-
 pub struct ValueSetWindowIterator {
     value_set: ValueSetType,
 
