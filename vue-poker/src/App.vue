@@ -3,7 +3,7 @@
     <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
   </div>
 
-  <ResultTable />
+  <!-- <ResultTable /> -->
 
   <button @click="go" class="button-base button-blue" style="position: relative; left: 400px;" >Go</button>
 
@@ -36,9 +36,10 @@ import RangeEditor from './components/RangeEditor.vue';
 import ResultTable from './components/ResultTable.vue';
 import { defineComponent, onMounted } from 'vue';
 import { useNavStore, CurrentPage } from './stores/navigation';
-import { init, handler } from './global-worker';
+import { init, handler } from './worker/global-worker';
 import { PlayerIds, PlayerState, usePlayerStore } from './stores/player';
 import { useBoardStore } from './stores/board';
+import { Results } from '../pkg/poker_eval';
 
 const navStore = useNavStore();
 const playerStore = usePlayerStore();
@@ -52,7 +53,6 @@ boardStore.$subscribe((board) => {
 onMounted(async () => {
   console.log(`the component is now mounted.`);
   await init(1);
-  await handler!.reset(0, []);
 });
 
 const players = [
@@ -85,12 +85,18 @@ async function go() {
 
   await handler.simulateFlop(200);
 
-  //const result = await handler.getResults();
-  for(let i = 0; i < playerStore.players.length; i++) {
-    const result = await handler.getResult(i);
-    console.log(`player ${i}`, result);
-    console.log(`player ${i} win rate`, result.num_iterations);
+  const resultList = await handler.getResults();
+
+  for(const [rIdx, r] of resultList.entries()) {
+    console.log(r.rank_family_count);
+    console.log(r);
   }
+
+  // for(let i = 0; i < playerStore.players.length; i++) {
+  //   const result = await handler.getResult(i);
+  //   console.log(`player ${i}`, result);
+  //   console.log(`player ${i} win rate`, result.win_eq);
+  // }
 
   // for(const r of result) {
   //   console.log(r);

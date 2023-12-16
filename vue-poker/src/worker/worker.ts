@@ -1,8 +1,11 @@
 import * as Comlink from 'comlink';
-import { Results } from '../pkg/poker_eval';
+import { Results } from '@pkg/poker_eval';
+import { PercOrBetter, ResultsInterface } from './result_types';
 //import { detect } from "detect-browser";
 
-type Mod = typeof import('../pkg/poker_eval');
+type Mod = typeof import('@pkg/poker_eval');
+
+let rankIndexes = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
 const createHandler = (mod: Mod) => {
   return {
@@ -29,12 +32,25 @@ const createHandler = (mod: Mod) => {
     simulateFlop(num_iterations: number) {
       this.flop_analyzer.simulate_flop(num_iterations);
     },
-    getResults(): Array<Results> {
-      return this.flop_analyzer.get_results();
+    getResults(): Array<ResultsInterface> {
+      console.log('getResults');
+      const r = this.flop_analyzer.get_results();
+      console.log(`getResults ${r[0].num_iterations} ${r[0].get_perc_family_or_better(1)}`);
+      const ri = r.map(r => {
+        return {
+          equity: r.get_equity(),
+          rank_family_count: rankIndexes.map((ri) => 
+            {
+              return {
+              perc: r.get_perc_family(ri),
+              better: r.get_perc_family_or_better(ri)
+            } as PercOrBetter;
+          })
+        }
+      });
+      return ri;
     },
-    getResult(player_idx: number): Results {
-      return this.flop_analyzer.get_result(player_idx);
-    }
+    
   };
 };
 
@@ -56,7 +72,7 @@ const initHandler = async (num_threads: number) => {
   //     await mod.default();
   //   }
 
-  mod = await import('../pkg/poker_eval');
+  mod = await import('../../pkg/poker_eval');
   await mod.default();
 
   return Comlink.proxy(createHandler(mod));

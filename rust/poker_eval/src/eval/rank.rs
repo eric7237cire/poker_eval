@@ -29,6 +29,24 @@ pub enum Rank {
     StraightFlush(u32),
 }
 
+pub const NUM_RANK_FAMILIES: usize = 9;
+
+impl Rank {
+    pub fn get_family_index(&self) -> usize {
+        match self {
+            Rank::HighCard(_) => 0,
+            Rank::OnePair(_) => 1,
+            Rank::TwoPair(_) => 2,
+            Rank::ThreeOfAKind(_) => 3,
+            Rank::Straight(_) => 4,
+            Rank::Flush(_) => 5,
+            Rank::FullHouse(_) => 6,
+            Rank::FourOfAKind(_) => 7,
+            Rank::StraightFlush(_) => 8,
+        }
+    }
+}
+
 /// Bit mask for the wheel (Ace, two, three, four, five)
 const WHEEL: u32 = 0b1_0000_0000_1111;
 /// Given a bitset of hand ranks. This method
@@ -250,14 +268,15 @@ pub fn rank_cards(cards: &[Card]) -> Rank {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use log::info;
     use postflop_solver::Hand;
 
-    use crate::{range_string_to_set, cards_from_string, CardUsedType, get_possible_hole_cards, rank_cards, Rank};
-
+    use crate::{
+        cards_from_string, get_possible_hole_cards, range_string_to_set, rank_cards, CardUsedType,
+        Rank,
+    };
 
     #[test]
     fn test_flop_rank() {
@@ -279,7 +298,7 @@ mod tests {
 
         assert_eq!(373, possible.len());
 
-        let mut num_trips  = 0;
+        let mut num_trips = 0;
         let mut num_two_pair = 0;
         let mut num_pair = 0;
         let mut num_high_card = 0;
@@ -319,31 +338,40 @@ mod tests {
         assert_eq!(num_two_pair, 3);
         let check_ace_high = 136;
         let check_king_high = 63;
-        
-        
+
         let check_top_pair = 37;
         let check_middle_pair = 36;
         let check_low_pair = 24;
-        
-        let check_low_pocket_pair =36;
+
+        let check_low_pocket_pair = 36;
         let check_second_pocket_pair = 6;
         let check_over_pocket_pair = 12;
 
-        let check_num_pairs = check_top_pair+check_middle_pair+check_low_pocket_pair+check_second_pocket_pair+check_over_pocket_pair+check_low_pair;
-        
+        let check_num_pairs = check_top_pair
+            + check_middle_pair
+            + check_low_pocket_pair
+            + check_second_pocket_pair
+            + check_over_pocket_pair
+            + check_low_pair;
+
         assert_eq!(num_pair, check_num_pairs);
 
         let check_one_overcard = 183;
         let check_two_overcards = 16;
         let check_nothing = 15;
 
-        let check_highcard = check_one_overcard+check_two_overcards+check_nothing;
+        let check_highcard = check_one_overcard + check_two_overcards + check_nothing;
 
         assert_eq!(num_high_card, check_highcard);
-        assert_eq!(check_ace_high+check_king_high, check_one_overcard+check_two_overcards);
+        assert_eq!(
+            check_ace_high + check_king_high,
+            check_one_overcard + check_two_overcards
+        );
 
-        assert_eq!(0, 373-num_trips-num_two_pair-num_high_card-check_num_pairs);
-
+        assert_eq!(
+            0,
+            373 - num_trips - num_two_pair - num_high_card - check_num_pairs
+        );
     }
 
     fn assert_equity(equity: f64, target: f64, tolerance: f64) {
@@ -353,7 +381,7 @@ mod tests {
         }
         assert!(passed);
     }
-    
+
     #[test]
     fn test_enumerate_all_equity() {
         let range_str = "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o";
@@ -401,13 +429,12 @@ mod tests {
                     continue;
                 }
                 used_cards.set(turn_card, true);
-                for river_card in turn_card+1..52 {
+                for river_card in turn_card + 1..52 {
                     if used_cards[river_card] {
                         continue;
                     }
 
                     total_showdowns += 1;
-                    
 
                     let mut p1_cards = flop.clone();
                     p1_cards.push(p1_hole_cards[0]);
@@ -453,21 +480,21 @@ mod tests {
                     if p1_rank == p2_rank && p2_rank == p3_rank {
                         assert_eq!(p1_eval, p2_eval);
                         assert_eq!(p1_eval, p3_eval);
-                        tie_equity[0] += 1.0/3.0;
-                        tie_equity[1] += 1.0/3.0;
-                        tie_equity[2] += 1.0/3.0;
-                    } else if p1_rank == p2_rank && p1_rank > p3_rank{
+                        tie_equity[0] += 1.0 / 3.0;
+                        tie_equity[1] += 1.0 / 3.0;
+                        tie_equity[2] += 1.0 / 3.0;
+                    } else if p1_rank == p2_rank && p1_rank > p3_rank {
                         assert_eq!(p1_eval, p2_eval);
-                        tie_equity[0] += 1.0/2.0;
-                        tie_equity[1] += 1.0/2.0;
-                    } else if p1_rank == p3_rank && p1_rank > p2_rank{ 
+                        tie_equity[0] += 1.0 / 2.0;
+                        tie_equity[1] += 1.0 / 2.0;
+                    } else if p1_rank == p3_rank && p1_rank > p2_rank {
                         assert_eq!(p1_eval, p3_eval);
-                        tie_equity[0] += 1.0/2.0;
-                        tie_equity[2] += 1.0/2.0;
+                        tie_equity[0] += 1.0 / 2.0;
+                        tie_equity[2] += 1.0 / 2.0;
                     } else if p2_rank == p3_rank && p2_rank > p1_rank {
                         assert_eq!(p2_eval, p3_eval);
-                        tie_equity[1] += 1.0/2.0;
-                        tie_equity[2] += 1.0/2.0;
+                        tie_equity[1] += 1.0 / 2.0;
+                        tie_equity[2] += 1.0 / 2.0;
                     } else {
                         let mut ranks = vec![p1_rank, p2_rank, p3_rank];
                         ranks.sort();
@@ -491,12 +518,12 @@ mod tests {
 
                 used_cards.set(turn_card, false);
             }
-        
+
             used_cards.set(p.0.into(), false);
             used_cards.set(p.1.into(), false);
             assert_eq!(used_cards.count_ones(), 7);
             //we used 9 cards, so there should be 43*42/2 showdowns total
-            assert_eq!(total_showdowns-check_showndown, 43*42/2);
+            assert_eq!(total_showdowns - check_showndown, 43 * 42 / 2);
         }
 
         //Values for Equilab
@@ -508,7 +535,5 @@ mod tests {
 
         assert_equity(100.0 * tie_equity[2] / total_showdowns as f64, 0.95, 0.005);
         assert_equity(100.0 * win_equity[2] / total_showdowns as f64, 26.14, 0.005);
-        
     }
-
 }

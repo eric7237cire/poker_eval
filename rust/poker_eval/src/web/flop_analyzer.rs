@@ -5,8 +5,7 @@ use postflop_solver::card_pair_to_index;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{
-    range_string_to_set,
-    rank_cards, Card, CardUsedType, InRangeType, Rank, get_filtered_range_set,
+    get_filtered_range_set, range_string_to_set, rank_cards, Card, CardUsedType, InRangeType, Rank, NUM_RANK_FAMILIES,
 };
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 //extern crate wasm_bindgen;
@@ -15,19 +14,17 @@ type ResultType = u32;
 use serde::Serialize;
 
 #[wasm_bindgen]
-#[derive(Default, Clone, Serialize)]
+#[derive(Default, Serialize, Clone)]
 pub struct Results {
     pub num_iterations: ResultType,
 
     //win = 1, tie = 1 / num players in tie, loss = 0
-    pub win_eq: f64,
-    pub tie_eq: f64,
+    win_eq: f64,
+    tie_eq: f64,
 
     //total is win+tie
 
     //count made hands
-    num_hi_card: u32,
-
     num_gut_shots: ResultType,
 
     //2 cards to straight
@@ -36,14 +33,24 @@ pub struct Results {
     num_flush_draw: ResultType,
     num_top_pair: ResultType,
 
-    pub num_pair: ResultType,
-    pub num_two_pair: ResultType,
-    pub num_trips: ResultType,
-    pub num_str8: ResultType,
-    pub num_flush: ResultType,
-    pub num_full_house: ResultType,
-    pub num_quads: ResultType,
-    pub num_str8_flush: ResultType,
+    rank_family_count: [ResultType; 9],
+}
+
+#[wasm_bindgen]
+impl Results {
+    pub fn get_perc_family(&self, family_index: usize) -> f64 {
+        self.rank_family_count[family_index] as f64 / self.num_iterations as f64
+    }
+    pub fn get_perc_family_or_better(&self, family_index: usize) -> f64 {
+        let mut total=0.0;
+        for i in family_index..NUM_RANK_FAMILIES {
+            total+=self.get_perc_family(i)
+        }
+        total
+    }
+    pub fn get_equity(&self) -> f64 {
+        self.win_eq + self.tie_eq
+    }
 }
 
 #[derive(Debug)]
@@ -95,7 +102,7 @@ impl Default for PlayerPreFlopState {
 }
 
 #[wasm_bindgen]
-#[derive(Default, Clone)]
+#[derive(Default)]
 pub struct PreflopPlayerInfo {
     range_string: String,
     results: Results,
@@ -197,7 +204,9 @@ impl flop_analyzer {
         self.player_info.clear();
         info!("reset to {} players", MAX_PLAYERS);
         for _ in 0..MAX_PLAYERS {
-            self.player_info.push(PreflopPlayerInfo::default());
+            let p_info = PreflopPlayerInfo::default();
+            //p_info.results.rank_family_count = vec![0; 9];
+            self.player_info.push(p_info);
         }
         self.villian_results = Results::default();
 
@@ -226,7 +235,7 @@ impl flop_analyzer {
             let mut used_cards = self.init_cards_used(&mut eval_cards)?;
 
             assert_eq!(3, self.board_cards.len());
-            
+
             // assert_eq!(7, used_cards.count_ones());
             // assert_eq!(11029519011840, used_cards.data[0]);
             // let dbg_fs = get_filtered_range_set(&self.player_info[2].range_set, used_cards);
@@ -245,7 +254,10 @@ impl flop_analyzer {
             // dist_count[p2_ridx] += 1;
             //end debugging
 
-            assert_eq!(self.board_cards.len()+2*n_active_players, used_cards.count_ones());
+            assert_eq!(
+                self.board_cards.len() + 2 * n_active_players,
+                used_cards.count_ones()
+            );
 
             //Do just river for now
             assert_eq!(3, eval_cards.len());
@@ -259,10 +271,10 @@ impl flop_analyzer {
                 &mut eval_cards,
                 &mut used_cards,
             )?;
-            
-            assert_eq!(5+2*n_active_players, used_cards.count_ones());
+
+            assert_eq!(5 + 2 * n_active_players, used_cards.count_ones());
             assert_eq!(5, eval_cards.len());
-            
+
             for p_idx in 0..n_players {
                 if self.player_info[p_idx].state == PlayerPreFlopState::Disabled {
                     continue;
@@ -277,10 +289,8 @@ impl flop_analyzer {
                         p_idx,
                         self.player_info[p_idx].hole_cards.len()
                     )));
-                    
                 }
-                eval_cards
-                    .extend(self.player_info[p_idx].hole_cards.iter());
+                eval_cards.extend(self.player_info[p_idx].hole_cards.iter());
                 // } else {
                 //     self.board_cards.push(shuffled_cards[2 + 2 * p_idx]);
                 //     self.board_cards.push(shuffled_cards[2 + 2 * p_idx + 1]);
@@ -364,8 +374,10 @@ impl flop_analyzer {
         let count_after = cards_used.count_ones();
 
         if count_before + 1 != count_after {
-            return Err(MyError::from_string(
-                format!("Card already used {} in board", Card::from(c_index).to_string())));
+            return Err(MyError::from_string(format!(
+                "Card already used {} in board",
+                Card::from(c_index).to_string()
+            )));
         }
 
         eval_cards.push(Card::from(c_index));
@@ -373,7 +385,7 @@ impl flop_analyzer {
         Ok(())
     }
 
-    fn init_cards_used(&self, eval_cards: &mut Vec<Card>,) -> Result<CardUsedType, MyError> {
+    fn init_cards_used(&self, eval_cards: &mut Vec<Card>) -> Result<CardUsedType, MyError> {
         let mut cards_used = CardUsedType::default();
         for c in self.board_cards.iter() {
             self.add_board_card((*c).into(), eval_cards, &mut cards_used)?;
@@ -420,12 +432,10 @@ impl flop_analyzer {
             }
 
             let mut attempts = 0;
-            let mut card1_index ;
-            let mut card2_index ;
+            let mut card1_index;
+            let mut card2_index;
 
             loop {
-                
-
                 attempts += 1;
 
                 if attempts > MAX_RAND_NUMBER_ATTEMPS {
@@ -444,7 +454,6 @@ impl flop_analyzer {
                 }
 
                 let range_index = card_pair_to_index(card1_index as u8, card2_index as u8);
-                
 
                 if !self.player_info[p_idx].range_set[range_index] {
                     continue;
@@ -490,17 +499,7 @@ impl flop_analyzer {
 }
 
 fn update_results_from_rank(results: &mut Results, rank: Rank) {
-    match rank {
-        Rank::HighCard(_) => results.num_hi_card += 1,
-        Rank::OnePair(_) => results.num_pair += 1,
-        Rank::TwoPair(_) => results.num_two_pair += 1,
-        Rank::ThreeOfAKind(_) => results.num_trips += 1,
-        Rank::Straight(_) => results.num_str8 += 1,
-        Rank::Flush(_) => results.num_flush += 1,
-        Rank::FullHouse(_) => results.num_full_house += 1,
-        Rank::FourOfAKind(_) => results.num_quads += 1,
-        Rank::StraightFlush(_) => results.num_str8_flush += 1,
-    }
+    results.rank_family_count[rank.get_family_index()] += 1;
 }
 
 //returns winners and how many players were considered (non None rank)
@@ -543,6 +542,8 @@ fn get_unused_card(rng: &mut StdRng, cards_used: &CardUsedType) -> Option<usize>
 
 #[cfg(test)]
 mod tests {
+    use itertools::Itertools;
+
     use crate::{card_u8s_from_string, web::flop_analyzer::PlayerPreFlopState};
 
     fn assert_equity(equity: f64, target: f64, tolerance: f64) {
@@ -571,7 +572,11 @@ mod tests {
         let num_it = 10_000;
         analyzer.simulate_flop(num_it).unwrap();
 
-        let results = analyzer.get_results();
+        let results = analyzer
+            .player_info
+            .iter()
+            .map(|p| &p.results)
+            .collect_vec();
 
         assert_eq!(results[0].num_iterations, num_it);
         let not_folded = results[0].num_iterations;
@@ -664,6 +669,5 @@ mod tests {
             0.95,
             tolerance,
         );
-
     }
 }

@@ -377,7 +377,6 @@ pub fn add_cards_from_string(cards: &mut Vec<Card>, a_string: &str) -> () {
     }
 }
 
-
 //52 * 51 / 2
 pub type InRangeType = BitArr!(for 1326, in usize, Lsb0);
 
@@ -405,7 +404,10 @@ pub fn range_string_to_set(range_str: &str) -> InRangeType {
 }
 
 //returns in range / total
-pub fn get_possible_hole_cards_count(range_set: &InRangeType, used_card_set: CardUsedType) -> (u16, u16)  {
+pub fn get_possible_hole_cards_count(
+    range_set: &InRangeType,
+    used_card_set: CardUsedType,
+) -> (u16, u16) {
     //let range: Range = range_str.parse().unwrap();
     //let mut vec = Vec::new();
     let mut in_range_count = 0;
@@ -423,7 +425,7 @@ pub fn get_possible_hole_cards_count(range_set: &InRangeType, used_card_set: Car
                 continue;
             }
 
-            total+=1;
+            total += 1;
 
             let range_index = card_pair_to_index(card1 as u8, card2 as u8);
 
@@ -431,21 +433,20 @@ pub fn get_possible_hole_cards_count(range_set: &InRangeType, used_card_set: Car
 
             if in_range {
                 //vec.push((card1, card2));
-                in_range_count+=1;
+                in_range_count += 1;
             }
-
-            
         }
     }
 
     (in_range_count, total)
 }
 
-
-pub fn get_possible_hole_cards(range_set: &InRangeType, used_card_set: CardUsedType) -> Vec<(Card, Card)>  {
+pub fn get_possible_hole_cards(
+    range_set: &InRangeType,
+    used_card_set: CardUsedType,
+) -> Vec<(Card, Card)> {
     //let range: Range = range_str.parse().unwrap();
     let mut vec = Vec::new();
-    
 
     for card1 in 0..52 {
         if used_card_set[card1] {
@@ -466,22 +467,17 @@ pub fn get_possible_hole_cards(range_set: &InRangeType, used_card_set: CardUsedT
             if in_range {
                 vec.push((Card::from(card1), Card::from(card2)));
             }
-
-            
         }
     }
 
     vec
 }
 
-pub fn get_filtered_range_set(range_set: &InRangeType, used_card_set: CardUsedType) -> InRangeType  {
+pub fn get_filtered_range_set(range_set: &InRangeType, used_card_set: CardUsedType) -> InRangeType {
     //let range: Range = range_str.parse().unwrap();
     let mut filtered_range_set = range_set.clone();
-    
 
     for card1 in 0..52 {
-        
-
         for card2 in card1 + 1..52 {
             //let core_card2 = card2.into();
 
@@ -496,15 +492,11 @@ pub fn get_filtered_range_set(range_set: &InRangeType, used_card_set: CardUsedTy
             }
 
             filtered_range_set.set(range_index, false);
-
-            
         }
     }
 
     filtered_range_set
 }
-
-
 
 // pub fn get_random_unused_card(cards_used: &CardUsedType) -> Card {
 //     let num = rand::thread_rng().gen_range(0..52);
@@ -660,7 +652,6 @@ mod tests {
         assert!(!set[card_pair_to_index(Card::from("Qs").into(), Card::from("Kc").into())]);
         assert!(set[card_pair_to_index(Card::from("Js").into(), Card::from("Qc").into())]);
 
-
         let range_str = "22+";
         //let range: Range = Range::from_sanitized_str(rangeStr).unwrap();
 
@@ -683,12 +674,9 @@ mod tests {
                 let (c1, c2) = index_to_card_pair(index);
                 assert_eq!(card1, c1);
                 assert_eq!(card2, c2);
-                
             }
         }
-
     }
-    
 
     #[test]
     fn test_get_possible_hole_cards() {
