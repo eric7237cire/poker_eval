@@ -34,7 +34,6 @@ pub struct PlayerFlopResults {
     This is when evaluating the flop vs the players
     */
     //pub num_iterations: ResultType,
-
     pub player_index: usize,
 
     //hand rankings as of the flop
@@ -120,8 +119,6 @@ impl Draws {
         }
     }
 }
-
-
 
 #[derive(Debug)]
 pub struct MyError {
@@ -343,9 +340,8 @@ impl flop_analyzer {
             let mut hand_evals: Vec<Option<Rank>> = vec![None; active_players.len()];
 
             //First we choose hole cards for players that are using a range
-            let player_cards = get_all_player_hole_cards(
-                &active_players,
-                &mut rng, &mut used_cards)?;
+            let player_cards =
+                get_all_player_hole_cards(&active_players, &mut rng, &mut used_cards)?;
 
             assert_eq!(player_cards.len(), active_players.len());
 
@@ -513,7 +509,10 @@ pub fn eval_current(
 
         let rank = rank_cards(&eval_cards);
 
-        update_results_from_rank(&mut flop_results[active_index].street_rank_results[street_index], rank);
+        update_results_from_rank(
+            &mut flop_results[active_index].street_rank_results[street_index],
+            rank,
+        );
 
         hand_evals.push(rank);
 
@@ -802,12 +801,14 @@ mod tests {
         assert_eq!(results[0].player_index, 0);
 
         assert_equity(
-            100.0 * results[0].street_rank_results[2].win_eq / results[0].street_rank_results[2].num_iterations as f64,
+            100.0 * results[0].street_rank_results[2].win_eq
+                / results[0].street_rank_results[2].num_iterations as f64,
             21.03,
             tolerance,
         );
         assert_equity(
-            100.0 * results[0].street_rank_results[2].tie_eq / results[0].street_rank_results[2].num_iterations as f64,
+            100.0 * results[0].street_rank_results[2].tie_eq
+                / results[0].street_rank_results[2].num_iterations as f64,
             0.12,
             0.05,
         );

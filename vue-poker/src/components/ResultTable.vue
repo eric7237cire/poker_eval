@@ -39,10 +39,10 @@
               <Percentage :perc="item.equity" />
             </td>
             <td v-for="index in 9" :key="index">
-               <!-- {{item.rank_family_count}}  -->
-               <!-- {{ index }} -->
+              <!-- {{item.rank_family_count}}  -->
+              <!-- {{ index }} -->
               <!-- {{item.rank_family_count[index-1].perc}} -->
-              <Percentage :perc="item.rank_family_count[index-1].perc" />
+              <Percentage :perc="item.rank_family_count[index - 1].perc" />
             </td>
           </tr>
 

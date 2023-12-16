@@ -22,10 +22,10 @@ import { PercOrBetter } from '@src/worker/result_types';
 import { computed, defineComponent, watch } from 'vue';
 
 const props = defineProps<{
-  perc: number
+  perc: number;
 }>();
 
 const strTmp = computed(() => {
-  return toFixed1(100*props.perc);
+  return toFixed1(100 * props.perc);
 });
 </script>

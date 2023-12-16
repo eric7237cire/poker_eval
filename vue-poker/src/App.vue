@@ -12,7 +12,6 @@
     Stop
   </button>
   <div>{{ num_iterations }} Iterations</div>
-  
 
   <div class="ml-10">
     <div v-show="navStore.currentPage === CurrentPage.RANGE_EDITOR">
@@ -114,7 +113,6 @@ async function go() {
 }
 
 async function tick() {
-
   if (!handler) {
     console.log('handler is not ready');
     return;
@@ -156,7 +154,7 @@ async function stop() {
     return;
   }
 
-  stopping = true;  
+  stopping = true;
 
   if (setTimeoutReturn.value) {
     console.info('clearTimeout');

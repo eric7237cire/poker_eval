@@ -8,7 +8,6 @@ type Mod = typeof import('@pkg/poker_eval');
 let rankIndexes = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
 const createHandler = (mod: Mod) => {
-
   return {
     flop_analyzer: mod.flop_analyzer.new(),
     player_flop_results: [] as Array<PlayerFlopResults>,
@@ -34,10 +33,13 @@ const createHandler = (mod: Mod) => {
     },
     initResults() {
       this.player_flop_results = this.flop_analyzer.build_results();
-      console.log(`initResults ${this.player_flop_results.length  }`);
+      console.log(`initResults ${this.player_flop_results.length}`);
     },
     simulateFlop(num_iterations: number) {
-      this.player_flop_results = this.flop_analyzer.simulate_flop(num_iterations, this.player_flop_results );
+      this.player_flop_results = this.flop_analyzer.simulate_flop(
+        num_iterations,
+        this.player_flop_results
+      );
     },
     getResults(): Array<ResultsInterface> {
       console.log('getResults');

@@ -18,7 +18,7 @@ export const RANK_FAMILY_NAMES = [
   'Flush',
   'Full House',
   'Four of a Kind',
-  'Straight Flush',
+  'Straight Flush'
 ];
 export function getRankFamilyName(rank_family_index: number) {
   return RANK_FAMILY_NAMES[rank_family_index];
