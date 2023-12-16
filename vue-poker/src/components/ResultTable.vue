@@ -29,22 +29,27 @@
 
         <tbody>
           <!-- Body -->
-          <tr
-            v-for="(item, index) in results"
-            :class="'relative ' + 'bg-gray-50'"
-            style="height: calc(1.9rem + 1px)"
-          >
-            <td>Player {{ item.player_index }}</td>
-            <td>
-              <Percentage :perc="item.equity" />
-            </td>
-            <td v-for="index in 9" :key="index">
-              <!-- {{item.rank_family_count}}  -->
-              <!-- {{ index }} -->
-              <!-- {{item.rank_family_count[index-1].perc}} -->
-              <Percentage :perc="item.rank_family_count[index - 1].perc" />
-            </td>
-          </tr>
+          <!--3 rows per flop result -->
+          <template v-for="item in results" :key="item.player_index">
+            <template v-for="street_index in 3" :key="street_index">
+              <tr 
+                :class="'relative ' + 'bg-gray-50'"
+                style="height: calc(1.9rem + 1px)"
+              >
+                <td>Player {{ item.player_index }}</td>
+                <td>{{ getStreetName(street_index) }}</td>
+                <td>
+                  <Percentage :perc="item.street_results[street_index-1].equity" />
+                </td>
+                <td v-for="index in 9" :key="index">
+                  <!-- {{item.rank_family_count}}  -->
+                  <!-- {{ index }} -->
+                  <!-- {{item.rank_family_count[index-1].perc}} -->
+                  <Percentage :perc="item.street_results[street_index-1].rank_family_count[index - 1].perc" />
+                </td>
+              </tr>
+            </template>
+          </template>
 
           <!-- No results -->
           <tr v-if="results.length === 0">
@@ -74,9 +79,24 @@ const props = defineProps<{
   results: Array<ResultsInterface>;
 }>();
 
-const columnNames = ['Player Id', 'Equity', ...RANK_FAMILY_NAMES];
+const columnNames = ['Player Id', 'Street', 'Equity', ...RANK_FAMILY_NAMES];
 
 const results = computed(() => props.results);
+
+
+function getStreetName(street_index: number) {
+  switch (street_index) {
+    case 1:
+      return 'Flop';
+    case 2:
+      return 'Turn';
+    case 3:
+      return 'River';
+    default:
+      return 'Unknown';
+  }
+}
+
 </script>
 
 <style scoped>

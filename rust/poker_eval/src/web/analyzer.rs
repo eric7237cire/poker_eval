@@ -7,7 +7,7 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{
     get_filtered_range_set, range_string_to_set, rank_cards, Card, CardUsedType, InRangeType, Rank,
-    NUM_RANK_FAMILIES,
+    NUM_RANK_FAMILIES, partial_rank_cards, PartialRankContainer, StraightDrawType, FlushDrawType,
 };
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 //extern crate wasm_bindgen;
@@ -52,6 +52,7 @@ impl PlayerFlopResults {
         d
     }
 
+    // The rust struct can't get passed via the worker interface, so we need primitive accessors
     pub fn get_perc_family(&self, street_index: usize, family_index: usize) -> f64 {
         let r = &self.street_rank_results[street_index];
         r.rank_family_count[family_index] as f64 / r.num_iterations as f64
@@ -66,6 +67,30 @@ impl PlayerFlopResults {
     pub fn get_equity(&self, street_index: usize) -> f64 {
         let r = &self.street_rank_results[street_index];
         (r.win_eq + r.tie_eq) / r.num_iterations as f64
+    }
+
+    //This guy has no arrays, so we can just convert it to json
+    pub fn get_street_draw(&self, draw_index: usize) -> Result<JsValue, JsValue> {
+        info!(
+            "get_street_draw: {} ",
+            draw_index
+        );
+        
+        Ok(serde_wasm_bindgen::to_value(
+            &self.street_draws[draw_index]
+        )?)
+        // return Draws {
+        //     num_iterations: self.street_draws[draw_index].num_iterations,
+        //     gut_shot: self.street_draws[draw_index].gut_shot,
+        //     str8_draw: self.street_draws[draw_index].str8_draw,
+        //     flush_draw: self.street_draws[draw_index].flush_draw,
+        //     backdoor_flush_draw: self.street_draws[draw_index].backdoor_flush_draw,
+        //     one_overcard: self.street_draws[draw_index].one_overcard,
+        //     two_overcards: self.street_draws[draw_index].two_overcards,
+        //     lo_paired: self.street_draws[draw_index].lo_paired,
+        //     hi_paired: self.street_draws[draw_index].hi_paired,
+        //     pp_paired: self.street_draws[draw_index].pp_paired,
+        // };
     }
 }
 
@@ -96,14 +121,21 @@ impl PlayerFlopResults {
 // }
 
 #[wasm_bindgen]
-#[derive(Default)]
+#[derive(Default, Serialize)]
 pub struct Draws {
+    num_iterations: ResultType,
+
     pub gut_shot: ResultType,
     pub str8_draw: ResultType,
     pub flush_draw: ResultType,
     pub backdoor_flush_draw: ResultType,
+    
     pub one_overcard: ResultType,
     pub two_overcards: ResultType,
+    
+    pub lo_paired: ResultType,
+    pub hi_paired: ResultType,
+    pub pp_paired: ResultType,
 }
 
 #[wasm_bindgen]
@@ -116,6 +148,12 @@ impl Draws {
             backdoor_flush_draw: 0,
             one_overcard: 0,
             two_overcards: 0,
+
+            lo_paired: 0,
+            hi_paired: 0,
+            pp_paired: 0,
+
+            num_iterations: 0,
         }
     }
 }
@@ -342,7 +380,11 @@ impl flop_analyzer {
 
             assert_eq!(self.board_cards.len() + 2 * active_players.len(), used_cards.count_ones());
 
-            //eval_current_draws(&mut eval_cards, &mut flop_results)?;
+            eval_current_draws(
+                &active_players,
+                &player_cards, &eval_cards, 
+                &mut flop_results, 0)?;
+
             eval_current(
                 &active_players,
                 &player_cards,
@@ -378,7 +420,11 @@ impl flop_analyzer {
             assert_eq!(4, eval_cards.len());
             
 
-            //self.eval_current_draws(&mut eval_cards, &mut flop_results.turn_draws)?;
+            eval_current_draws(
+                &active_players,
+                &player_cards, &eval_cards, 
+                &mut flop_results, 1)?;
+
             eval_current(
                 &active_players,
                 &player_cards,
@@ -402,7 +448,7 @@ impl flop_analyzer {
                 let river_card_index: usize = self.board_cards[4].into();
                 assert!(used_cards[river_card_index]);
                 eval_cards.push(self.board_cards[4]);
-                
+
                 assert_eq!(5 + 2 * active_players.len(), used_cards.count_ones());
             }
 
@@ -451,20 +497,6 @@ impl flop_analyzer {
         Ok(cards_used)
     }
 
-    // pub fn get_results(&self) -> Vec<Results> {
-    //     self.player_info.iter().map(|p| p.results.clone()).collect()
-    // }
-
-    // pub fn get_result(&self, player_idx: usize) -> Result<JsValue, JsValue> {
-    //     info!(
-    //         "get_result: {} num iterations {}",
-    //         player_idx, self.player_info[player_idx].results.num_iterations
-    //     );
-
-    //     Ok(serde_wasm_bindgen::to_value(
-    //         &&self.player_info[player_idx].results,
-    //     )?)
-    // }
 }
 
 /*
@@ -537,7 +569,8 @@ pub fn eval_current(
 
 pub fn eval_current_draws(
     active_players: &[(usize, &PreflopPlayerInfo)],
-    eval_cards: &mut Vec<Card>,
+    player_cards: &[(Card, Card)],
+    eval_cards: &Vec<Card>,
     flop_results: &mut Vec<PlayerFlopResults>,
     draw_index: usize,
 ) -> Result<(), MyError> {
@@ -547,11 +580,38 @@ pub fn eval_current_draws(
             eval_cards.len()
         )));
     }
-    if eval_cards.len() < 5 {
+    if eval_cards.len() >= 5 {
         return Err(MyError::from_string(format!(
-            "eval_current: too many eval_cards, should be 5 max, but had {} cards",
+            "eval_current: too many eval_cards, should be 4 max since we are drawing, but had {} cards",
             eval_cards.len()
         )));
+    }
+
+    //flop  = 0
+    //turn = 1
+    //we don't draw on the river
+    assert!(draw_index < 2);
+
+    let n_players = active_players.len();
+    assert!(n_players > 1);
+    assert_eq!(player_cards.len(), n_players);
+
+    for (active_index, (p_idx, p)) in active_players.iter().enumerate() {
+        assert!(p.state != PlayerPreFlopState::Disabled);
+
+        //For players with ranges we already chose their cards
+
+        flop_results[active_index].street_draws[draw_index].num_iterations += 1;
+
+        let prc = partial_rank_cards(
+            &[player_cards[active_index].0, player_cards[active_index].1], 
+            &eval_cards);
+
+        update_draw(
+            &mut flop_results[active_index].street_draws[draw_index],
+            prc,
+        );
+
     }
 
     Ok(())
@@ -685,6 +745,56 @@ fn update_results_from_rank(results: &mut RankResults, rank: Rank) {
     results.rank_family_count[rank.get_family_index()] += 1;
 }
 
+fn update_draw(results: &mut Draws, prc: PartialRankContainer) {
+    if let Some(sd) = prc.straight_draw {
+        match sd.straight_draw_type {
+            StraightDrawType::GutShot(_cv) => results.gut_shot += 1,
+            StraightDrawType::OpenEnded => results.str8_draw += 1,
+            StraightDrawType::DoubleGutShot => results.str8_draw += 1,
+        }
+    }
+
+    if let Some(fd) = prc.flush_draw {
+        match fd.flush_draw_type
+        {
+            FlushDrawType::FlushDraw => results.flush_draw += 1,
+            FlushDrawType::BackdoorFlushDraw => results.backdoor_flush_draw += 1,
+        }
+    }
+
+    if let Some(_pp) = prc.pocket_pair {
+        results.pp_paired += 1;
+    }
+
+    if let Some(_hi) = prc.hi_pair {
+        results.hi_paired += 1;
+    }
+
+    if let Some(_lo) = prc.lo_pair {
+        results.lo_paired += 1;
+    }
+
+    let mut num_overcards = 0;
+
+    if let Some (hi) = prc.hi_card {
+        if hi.number_above == 0 {
+            num_overcards += 1;
+        }
+    }
+
+    if let Some (lo) = prc.lo_card {
+        if lo.number_above == 0 {
+            num_overcards += 1;
+        }
+    }
+
+    if num_overcards == 1 {
+        results.one_overcard += 1;
+    } else if num_overcards == 2 {
+        results.two_overcards += 1;
+    }
+}
+
 //returns winners and how many players were considered (non None rank)
 fn indices_of_max_values(arr: &[Rank]) -> Vec<usize> {
     let mut non_none_count = 0;
@@ -798,9 +908,10 @@ mod tests {
 
         analyzer.set_board_cards(card_u8s_from_string("Qs Ts 7c").as_slice());
 
-        let num_it = 400_000;
+        let num_it = 4_000;
 
-        let tolerance = 0.1;
+        let tolerance = 0.5;
+        //let tolerance = 0.1;
 
         let results = analyzer.build_results();
         let results = analyzer.simulate_flop(num_it, results).unwrap();

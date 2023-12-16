@@ -1,6 +1,6 @@
 import * as Comlink from 'comlink';
-import { PlayerFlopResults } from '@pkg/poker_eval';
-import { PercOrBetter, ResultsInterface } from './result_types';
+import { Draws, PlayerFlopResults } from '@pkg/poker_eval';
+import { PercOrBetter, ResultsInterface, StreetResults } from './result_types';
 //import { detect } from "detect-browser";
 
 type Mod = typeof import('@pkg/poker_eval');
@@ -47,15 +47,30 @@ const createHandler = (mod: Mod) => {
       const r = this.player_flop_results;
       //console.log(`getResults ${r[0].num_iterations} ${r[0].get_perc_family_or_better(1)}`);
       const ri = r.map((r) => {
+
+        const street_results: Array<StreetResults> = [];
+        const draw_results: Array<Draws> = [];
+
+        for (let i = 0; i < 3; i++) {
+          street_results.push({
+            equity: r.get_equity(i),
+            rank_family_count: rankIndexes.map((ri) => {
+              return {
+                perc: r.get_perc_family(i, ri),
+                better: r.get_perc_family_or_better(i, ri)
+              } as PercOrBetter;
+            })
+          } as StreetResults);
+        }
+
+        for(let i = 0; i < 2; ++i) {
+          draw_results.push(r.get_street_draw(i));
+        }
+
         return {
           player_index: r.player_index,
-          equity: r.get_equity(2),
-          rank_family_count: rankIndexes.map((ri) => {
-            return {
-              perc: r.get_perc_family(2, ri),
-              better: r.get_perc_family_or_better(2, ri)
-            } as PercOrBetter;
-          })
+          street_results,
+          draw_results
         } as ResultsInterface;
       });
       return ri;

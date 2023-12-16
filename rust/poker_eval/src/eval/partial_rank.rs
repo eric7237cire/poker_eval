@@ -69,23 +69,23 @@ pub struct PairInfo {
 //Tracking basically what our hole cards are doing
 //Meant to be combined with rank to make decisions
 pub struct PartialRankContainer {
-    flush_draw: Option<FlushDraw>,
-    straight_draw: Option<StraightDraw>,
+    pub flush_draw: Option<FlushDraw>,
+    pub straight_draw: Option<StraightDraw>,
 
-    pocket_pair: Option<PairInfo>,
+    pub pocket_pair: Option<PairInfo>,
 
     //Did my higher card pair or better on the board
-    hi_pair: Option<PairInfo>,
+    pub hi_pair: Option<PairInfo>,
 
     //Did my lower card pair
-    lo_pair: Option<PairInfo>,
+    pub lo_pair: Option<PairInfo>,
 
     //set: Option<PairFamilyRank>,
     //Don't track full house because it's really a set with a pair on the board
     //full_house: Option<PairFamilyRank>,
     //quads: Option<PairFamilyRank>,
-    hi_card: Option<PairFamilyRank>,
-    low_card: Option<PairFamilyRank>,
+    pub hi_card: Option<PairFamilyRank>,
+    pub lo_card: Option<PairFamilyRank>,
 }
 
 impl Default for PartialRankContainer {
@@ -98,7 +98,7 @@ impl Default for PartialRankContainer {
             lo_pair: None,
 
             hi_card: None,
-            low_card: None,
+            lo_card: None,
         }
     }
 }
@@ -206,7 +206,7 @@ impl PartialRankContainer {
                 return;
             }
         }
-        debug!("Handle draws");
+        //debug!("Handle draws");
 
         //To know how good our draw is
         //take the board and calculate all the possible straight draws
@@ -271,9 +271,9 @@ impl PartialRankContainer {
         //Stores the card that would actually make the straight
         let mut hero_card_needed = ValueSetType::default();
 
-        debug_print_value_set("Hero cards", hole_metrics.value_set);
-        debug_print_value_set("Board cards", board_metrics.value_set);
-        debug_print_value_set("Combined cards", combined_value_set);
+        //debug_print_value_set("Hero cards", hole_metrics.value_set);
+        //debug_print_value_set("Board cards", board_metrics.value_set);
+        //debug_print_value_set("Combined cards", combined_value_set);
 
         for (vs_it, bh_it) in
             value_set_iterator(board_metrics.value_set, 5, CardValue::Ace, CardValue::Ace).zip(
@@ -292,11 +292,11 @@ impl PartialRankContainer {
 
                 if !combined_value_set[bh_it.window_start as usize] {
                     let card_needed = bh_it.window_start;
-                    trace!(
-                        "To make a straight to {:?} we need a {:?}, first card in st8",
-                        bh_it.window_stop as CardValue,
-                        CardValue::from(card_needed)
-                    );
+                    // trace!(
+                    //     "To make a straight to {:?} we need a {:?}, first card in st8",
+                    //     bh_it.window_stop as CardValue,
+                    //     CardValue::from(card_needed)
+                    // );
                     hero_card_needed.set(card_needed.into(), true);
                 } else {
                     let first_zero = combined_value_set
@@ -306,11 +306,11 @@ impl PartialRankContainer {
 
                     //need to add
                     let card_needed = bh_it.window_start.next_card() as usize + first_zero;
-                    trace!(
-                        "To make a straight to {:?} we need a {:?}",
-                        bh_it.window_stop as CardValue,
-                        CardValue::from(card_needed)
-                    );
+                    // trace!(
+                    //     "To make a straight to {:?} we need a {:?}",
+                    //     bh_it.window_stop as CardValue,
+                    //     CardValue::from(card_needed)
+                    // );
                     hero_card_needed.set(card_needed, true);
                 }
                 // self.straight_draw = Some(StraightDraw {
@@ -323,17 +323,17 @@ impl PartialRankContainer {
         let num_gut_shots = hero_card_needed.count_ones();
         assert!(num_gut_shots <= 2);
 
-        debug_print_value_set("Hero draw values", hero_draws);
+        //debug_print_value_set("Hero draw values", hero_draws);
 
         if num_gut_shots == 1 {
             //If 1 card makes 2 straights, we want the best one
             let hi = hero_draws.last_one().unwrap();
             let card_needed = hero_card_needed.first_one().unwrap();
-            trace!(
-                "A gut shot that needs {:?} to make a straight to {:?}",
-                CardValue::from(card_needed),
-                CardValue::from(hi)
-            );
+            // trace!(
+            //     "A gut shot that needs {:?} to make a straight to {:?}",
+            //     CardValue::from(card_needed),
+            //     CardValue::from(hi)
+            // );
             self.straight_draw = Some(StraightDraw {
                 straight_draw_type: StraightDrawType::GutShot(card_needed.into()),
                 number_above: count_higher(all_draws, hi),
@@ -409,9 +409,9 @@ impl PartialRankContainer {
         if made_set {
             return Some(PairInfo {
                 number_above: pairs_above + singles_above,
-                number_below: unique_pairs_on_board - 1 - pairs_above + unique_singles_on_board
-                    - 1
-                    - singles_above,
+                number_below: unique_pairs_on_board + unique_singles_on_board
+                    - 1 //our pair we just turned into a set
+                    - singles_above - pairs_above,
                 made_set: true,
                 made_quads: false,
             });
@@ -420,9 +420,9 @@ impl PartialRankContainer {
         if made_quads {
             return Some(PairInfo {
                 number_above: pairs_above + trips_above,
-                number_below: unique_pairs_on_board - 1 - pairs_above + unique_trips_on_board
+                number_below: unique_pairs_on_board + unique_trips_on_board
                     - 1
-                    - trips_above,
+                    - trips_above - pairs_above,
                 made_set: false,
                 made_quads: true,
             });
@@ -460,7 +460,13 @@ pub fn partial_rank_cards(hole_cards: &[Card], board: &[Card]) -> PartialRankCon
         partial_ranks.lo_pair =
             partial_ranks.get_pair_info_for_single_hole_card(lo_card, &board_metrics);
 
-        if partial_ranks.hi_pair.is_some() && partial_ranks.lo_pair.is_some() {
+        //special case if we have 2 matching pairs we need to tweak the above/below
+        if partial_ranks.hi_pair.is_some() && partial_ranks.lo_pair.is_some() 
+            && !partial_ranks.hi_pair.as_ref().unwrap().made_set 
+            && !partial_ranks.hi_pair.as_ref().unwrap().made_quads
+            && !partial_ranks.lo_pair.as_ref().unwrap().made_set
+            && !partial_ranks.lo_pair.as_ref().unwrap().made_quads
+        {
             //the paired lower card doesn't count
             let mut p = partial_ranks.hi_pair.take().unwrap();
             p.number_below -= 1;
@@ -468,6 +474,15 @@ pub fn partial_rank_cards(hole_cards: &[Card], board: &[Card]) -> PartialRankCon
             //partial_ranks.hi_card.map(|mut p| { p.number_below -= 1; p });
 
             let mut p = partial_ranks.lo_pair.take().unwrap();
+            if p.number_above == 0 {
+                for b in board {
+                    debug!("Board card: {:?}", b);	
+                }
+                for h in hole_cards {
+                    debug!("Hole card: {:?}", h);
+                }
+            }
+            assert!(p.number_above > 0);
             p.number_above -= 1;
             partial_ranks.lo_pair.replace(p);
         }
@@ -521,7 +536,7 @@ mod tests {
             })
         );
         assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.low_card, None);
+        assert_eq!(prc.lo_card, None);
     }
 
     #[test]
@@ -545,7 +560,7 @@ mod tests {
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
         assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.low_card, None);
+        assert_eq!(prc.lo_card, None);
 
         let hole_cards = cards_from_string("2c 2h");
         let board_cards = cards_from_string("3c 2s As 3d Ac");
@@ -566,7 +581,7 @@ mod tests {
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
         assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.low_card, None);
+        assert_eq!(prc.lo_card, None);
 
         let hole_cards = cards_from_string("7c 7h");
         let board_cards = cards_from_string("3c 7s Ks 7d Ac");
@@ -587,7 +602,7 @@ mod tests {
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
         assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.low_card, None);
+        assert_eq!(prc.lo_card, None);
 
         let hole_cards = cards_from_string("7c 7h");
         let board_cards = cards_from_string("3c 4s Ks 5d Ac");
@@ -616,7 +631,7 @@ mod tests {
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
         assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.low_card, None);
+        assert_eq!(prc.lo_card, None);
     }
 
     #[test]
@@ -653,7 +668,7 @@ mod tests {
         );
         assert_eq!(prc.lo_pair, None);
         assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.low_card, None);
+        assert_eq!(prc.lo_card, None);
 
         let hole_cards = cards_from_string("2c 6h");
         let board_cards = cards_from_string("3c 4s 7d Ac");
@@ -678,7 +693,7 @@ mod tests {
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
         assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.low_card, None);
+        assert_eq!(prc.lo_card, None);
 
         //Not a straight draw ?  hmmm
         let hole_cards = cards_from_string("7c 8h");
@@ -691,7 +706,7 @@ mod tests {
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
         assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.low_card, None);
+        assert_eq!(prc.lo_card, None);
 
         let hole_cards = cards_from_string("7c 8h");
         let board_cards = cards_from_string("2c Ts Kd Qc Jd");
@@ -714,7 +729,7 @@ mod tests {
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
         assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.low_card, None);
+        assert_eq!(prc.lo_card, None);
 
         let hole_cards = cards_from_string("Kc Jh");
         let board_cards = cards_from_string("Ts Qc 8d");
@@ -733,7 +748,7 @@ mod tests {
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
         assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.low_card, None);
+        assert_eq!(prc.lo_card, None);
 
         let hole_cards = cards_from_string("6c 8h");
         let board_cards = cards_from_string("7s 9c 2d");
@@ -753,7 +768,7 @@ mod tests {
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
         assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.low_card, None);
+        assert_eq!(prc.lo_card, None);
 
         let hole_cards = cards_from_string("7c Kh");
         let board_cards = cards_from_string("9s Jc Td");
@@ -772,7 +787,7 @@ mod tests {
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
         assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.low_card, None);
+        assert_eq!(prc.lo_card, None);
 
         let hole_cards = cards_from_string("8c 6h");
         let board_cards = cards_from_string("4s Td 7c");
@@ -792,7 +807,7 @@ mod tests {
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
         assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.low_card, None);
+        assert_eq!(prc.lo_card, None);
     }
 
     #[test]

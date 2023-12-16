@@ -14,9 +14,14 @@
   <div>{{ num_iterations }} Iterations</div>
 
   <div class="ml-10">
-    <div v-show="navStore.currentPage === CurrentPage.RANGE_EDITOR">
-      <RangeEditor />
+
+    <div class="flex-grow my-4 px-6 pt-2 overflow-y-auto" style="height: calc(100% - 2rem)">
+      <BoardSelector v-model="boardStore.board" :expected_length="3" />
     </div>
+
+    <!-- <div v-show="navStore.currentPage === CurrentPage.RANGE_EDITOR">
+      <RangeEditor />
+    </div> -->
 
     <!--Show 'players'-->
     <div class="players">
@@ -25,9 +30,7 @@
       </div>
     </div>
 
-    <div class="flex-grow my-4 px-6 pt-2 overflow-y-auto" style="height: calc(100% - 2rem)">
-      <BoardSelector v-model="boardStore.board" :expected_length="3" />
-    </div>
+    
   </div>
 </template>
 
@@ -130,7 +133,7 @@ async function tick() {
   const resultList = await handler.getResults();
 
   for (const [rIdx, r] of resultList.entries()) {
-    console.log(r.rank_family_count);
+    //console.log(r.rank_family_count);
     console.log(r);
   }
 
