@@ -51,7 +51,7 @@
   z-index: 10;
   position: relative;
   opacity: 1;
-  background-color: rgb(20,20,20);
+  background-color: rgb(20, 20, 20);
   padding: 20px;
   border: 1px solid green;
 }

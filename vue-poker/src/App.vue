@@ -3,9 +3,11 @@
     <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
   </div>
 
-  <!-- <ResultTable /> -->
+  <ResultTable :results="myResultsList" />
 
-  <button @click="go" class="button-base button-blue" style="position: relative; left: 400px;" >Go</button>
+  <button @click="go" class="button-base button-blue" style="position: relative; left: 400px">
+    Go
+  </button>
 
   <div class="ml-10">
     <div v-show="navStore.currentPage === CurrentPage.RANGE_EDITOR">
@@ -25,30 +27,36 @@
   </div>
 </template>
 
-<style scoped src="./assets/App.css">
-
-</style>
+<style scoped src="./assets/App.css"></style>
 
 <script setup lang="ts">
 import BoardSelector from './components/BoardSelector.vue';
 import Player from './components/Player.vue';
 import RangeEditor from './components/RangeEditor.vue';
 import ResultTable from './components/ResultTable.vue';
-import { defineComponent, onMounted } from 'vue';
+import { computed, defineComponent, onMounted } from 'vue';
 import { useNavStore, CurrentPage } from './stores/navigation';
 import { init, handler } from './worker/global-worker';
 import { PlayerIds, PlayerState, usePlayerStore } from './stores/player';
 import { useBoardStore } from './stores/board';
 import { Results } from '../pkg/poker_eval';
+import { useResultsStore } from './stores/results';
 
 const navStore = useNavStore();
 const playerStore = usePlayerStore();
 const boardStore = useBoardStore();
+const resultsStore = useResultsStore();
 
 boardStore.$subscribe((board) => {
   console.log('boardStore.$subscribe', board);
   //handler!.reset(0, board);
 });
+
+resultsStore.$subscribe((results) => {
+  console.log('resultsStore.$subscribe', results);
+});
+
+const myResultsList = computed(() => resultsStore.results);
 
 onMounted(async () => {
   console.log(`the component is now mounted.`);
@@ -71,9 +79,13 @@ async function go() {
 
   await handler.reset();
   await handler.setBoardCards(Uint8Array.from(boardStore.board.cards));
-  for(let i = 0; i < playerStore.players.length; i++) {
+  for (let i = 0; i < playerStore.players.length; i++) {
     const player = playerStore.players[i];
-    if (player.state == PlayerState.USE_HOLE && Array.isArray(player.holeCards.cards) && player.holeCards.cards.length === 2) {
+    if (
+      player.state == PlayerState.USE_HOLE &&
+      Array.isArray(player.holeCards.cards) &&
+      player.holeCards.cards.length === 2
+    ) {
       await handler.setPlayerCards(i, Uint8Array.from(player.holeCards.cards));
     }
     if (player.state == PlayerState.USE_RANGE) {
@@ -87,10 +99,12 @@ async function go() {
 
   const resultList = await handler.getResults();
 
-  for(const [rIdx, r] of resultList.entries()) {
+  for (const [rIdx, r] of resultList.entries()) {
     console.log(r.rank_family_count);
     console.log(r);
   }
+
+  resultsStore.results = resultList;
 
   // for(let i = 0; i < playerStore.players.length; i++) {
   //   const result = await handler.getResult(i);
@@ -102,7 +116,6 @@ async function go() {
   //   console.log(r);
   // }
 }
-
 
 // playerStore.updateRangeStrForPlayer(PlayerIds.HERO, 'TT+');
 // playerStore.updateRangeStrForPlayer(PlayerIds.WEST, '83+');

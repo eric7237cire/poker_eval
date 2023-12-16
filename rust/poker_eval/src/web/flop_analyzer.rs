@@ -49,7 +49,7 @@ impl Results {
         total
     }
     pub fn get_equity(&self) -> f64 {
-        self.win_eq + self.tie_eq
+        (self.win_eq + self.tie_eq) / self.num_iterations as f64
     }
 }
 

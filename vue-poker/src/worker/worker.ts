@@ -36,21 +36,19 @@ const createHandler = (mod: Mod) => {
       console.log('getResults');
       const r = this.flop_analyzer.get_results();
       console.log(`getResults ${r[0].num_iterations} ${r[0].get_perc_family_or_better(1)}`);
-      const ri = r.map(r => {
+      const ri = r.map((r) => {
         return {
           equity: r.get_equity(),
-          rank_family_count: rankIndexes.map((ri) => 
-            {
-              return {
+          rank_family_count: rankIndexes.map((ri) => {
+            return {
               perc: r.get_perc_family(ri),
               better: r.get_perc_family_or_better(ri)
             } as PercOrBetter;
           })
-        }
+        };
       });
       return ri;
-    },
-    
+    }
   };
 };
 

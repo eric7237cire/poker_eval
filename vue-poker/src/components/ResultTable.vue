@@ -5,23 +5,22 @@
         <thead class="sticky top-0 z-30 bg-gray-100 shadow">
           <tr style="height: calc(1.9rem + 1px)">
             <th
-              v-for="column in columns"
-              :key="column.label"
+              v-for="columnLabel in columnNames"
+              :key="columnLabel"
               scope="col"
               :class="'whitespace-nowrap select-none '"
               :style="{
-                'min-width':
-                  (column.type === 'card' ? '4' : column.type === 'bar' ? '6' : '3.5') + 'rem'
+                'min-width': '3.5rem'
               }"
             >
-              <span>{{ column.label }}</span>
+              <span>{{ columnLabel }}</span>
             </th>
           </tr>
 
           <tr style="height: calc(1.9rem + 1px)">
             <th
-              v-for="column in columns"
-              :key="column.label"
+              v-for="columnLabel in columnNames"
+              :key="columnLabel"
               scope="col"
               :class="'header-divider '"
             ></th>
@@ -31,26 +30,34 @@
         <tbody>
           <!-- Body -->
           <tr
-            v-for="item in resultsRendered"
-            :key="item[0]"
+            v-for="(item, index) in results"
             :class="'relative ' + 'bg-gray-50'"
             style="height: calc(1.9rem + 1px)"
           >
-            <td v-for="column in columns" :key="column.label"></td>
+            <td>Player {{ index }}</td>
+            <td>
+              <Percentage :perc="item.equity" />
+            </td>
+            <td v-for="index in 9" :key="index">
+               <!-- {{item.rank_family_count}}  -->
+               <!-- {{ index }} -->
+              <!-- {{item.rank_family_count[index-1].perc}} -->
+              <Percentage :perc="item.rank_family_count[index-1].perc" />
+            </td>
           </tr>
 
           <!-- No results -->
-          <tr v-if="resultsRendered.length === 0">
+          <tr v-if="results.length === 0">
             <td
               class="relative bg-gray-50 row-divider"
               style="height: calc(1.9rem + 1px)"
-              :colspan="columns.length"
+              :colspan="columnNames.length"
             ></td>
           </tr>
 
           <!-- Spacer -->
           <tr>
-            <td :colspan="columns.length" class="relative row-divider"></td>
+            <td :colspan="columnNames.length" class="relative row-divider"></td>
           </tr>
         </tbody>
       </table>
@@ -60,72 +67,16 @@
 
 <script setup lang="ts">
 import { computed, defineComponent, reactive, ref, toRefs, watch } from 'vue';
-
-import {
-  ranks,
-  suitLetters,
-  cardText,
-  cardPairOrder,
-  toFixed1,
-  toFixed,
-  toFixedAdaptive,
-  capitalize
-} from '../utils';
-
-
-import { Tippy } from 'vue-tippy';
-import { ArrowTopRightOnSquareIcon } from '@heroicons/vue/24/solid';
-import { Results } from '../../pkg/poker_eval';
-
-
-interface ExpandedResults extends Results {
-  player_id: number;
-  equity: number;
-
-  ranks: PercOrBetter[];
-}
+import { RANK_FAMILY_NAMES, ResultsInterface } from '@src/worker/result_types';
+import Percentage from '@src/components/result/Percentage.vue';
 
 const props = defineProps<{
-  results: Array<Results>
+  results: Array<ResultsInterface>;
 }>();
 
+const columnNames = ['Player Id', 'Equity', ...RANK_FAMILY_NAMES];
 
-  const columnNames = [
-    'equity'
-
-  ]
-    const flopResults = Array.from(props.results.entries()).map(([rIdx, r])=>{
-
-      const equity = (r.win_eq + r.tie_eq) / r.num_iterations;
-
-      const hiCard: PercOrBetter = {
-        perc: r.num_hi_card / r.num_iterations,
-        better: r.num_hi_card / r.num_iterations
-      };
-
-      const pair: PercOrBetter = {
-        perc: r.num_pair / r.num_iterations,
-        better: r.num_pair / r.num_iterations 
-      };
-
-      const twoPair: PercOrBetter = {
-        perc: r.num_two_pair / r.num_iterations,
-        better: r.num_two_pair / r.num_iterations
-      };
-
-      return {
-        player_id: rIdx,
-        equity: equity,
-        ranks: [hiCard]
-      }
-    })
-
-    
-
-
-    const resultsRendered = resultsSorted;
-
-    
+const results = computed(() => props.results);
 </script>
 
 <style scoped>

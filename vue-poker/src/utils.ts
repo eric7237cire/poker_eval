@@ -73,7 +73,7 @@ export const average = (values: number[], weights: number[]): number => {
   return sum / totalWeight;
 };
 
-export const toFixed1 = (value: number) => {
+export function toFixed1(value: number) : string {
   if (!isFinite(value)) return (value < 0 ? '-' : '') + '∞';
   if (-0.05 < value && value < 0.05) return '0.0';
   return value.toFixed(1);
