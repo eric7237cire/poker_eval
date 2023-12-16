@@ -11,6 +11,7 @@ edition = "2021"
 [lib]
 name = "poker_eval"
 path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
 
 [[bin]]
 name = "runner"
@@ -23,5 +24,6 @@ bitvec = "1"
 itertools = "*"
 log = "*"
 env_logger = "*"
+getrandom = { version = "0.2", features = ["js"] }
 rand="0.8"
 wasm-bindgen = "0.2.89"

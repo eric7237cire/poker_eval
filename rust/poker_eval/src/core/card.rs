@@ -376,13 +376,13 @@ pub fn core_cards_to_range_index(card1: Card, card2: Card) -> usize {
     return card1_index * 52 + card2_index;
 }
 
-pub type InRangeType = BitArr!(for 52*52, in u64, Lsb0);
+pub type InRangeType = BitArr!(for 52*52, in usize, Lsb0);
 
-pub type CardUsedType = BitArr!(for 52, in u64, Lsb0);
+pub type CardUsedType = BitArr!(for 52, in usize, Lsb0);
 
 pub fn range_string_to_set(range_str: &str) -> InRangeType {
     let range: Range = range_str.parse().unwrap();
-    let mut set = InRangeType::default();
+    let mut set = InRangeType::default();  
 
     for card1 in 0..52 {
         let core_card1 = eval_card_to_card(card1);

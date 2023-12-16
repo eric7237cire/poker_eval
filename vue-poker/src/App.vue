@@ -7,6 +7,8 @@
     </div>
   </div>
 
+  <ResultTable :selected-spot="selectedSpot"/>
+
   <div class="ml-10">
     <div v-show="navStore.currentPage === CurrentPage.RANGE_EDITOR">
       <RangeEditor />
@@ -61,6 +63,7 @@ import HelloWorld from './components/HelloWorld.vue';
 import BoardSelector from './components/BoardSelector.vue';
 import Player from './components/Player.vue';
 import RangeEditor from './components/RangeEditor.vue';
+import ResultTable from './components/ResultTable.vue';
 import { defineComponent } from 'vue';
 import { useNavStore, CurrentPage } from './stores/navigation';
 
@@ -71,7 +74,8 @@ export default defineComponent({
     HelloWorld,
     BoardSelector,
     Player,
-    RangeEditor
+    RangeEditor,
+    ResultTable
   },
 
   setup() {

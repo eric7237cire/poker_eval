@@ -56,3 +56,7 @@ curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 go to ui
 wasm-pack build --out-dir ../../pkg/range rust/range
 npm run wasm:hello
+
+
+cargo install cargo-watch
+
