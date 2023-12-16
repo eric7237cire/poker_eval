@@ -18,6 +18,7 @@
           class="m-1"
           :card-id="56 - 4 * rank - suit"
           :is-selected="modelValue.cards.includes(56 - 4 * rank - suit)"
+          :is-used="usedCards.includes(56 - 4 * rank - suit)"
           @click="toggleCard(56 - 4 * rank - suit)"
         />
       </div>
@@ -58,20 +59,23 @@
 </style>
 
 <script setup lang="ts">
-import { defineComponent, ref } from 'vue';
+import { computed, defineComponent, ref } from 'vue';
 import { CardList, useBoardStore } from '../stores/board';
 import { cardText, parseCardString } from '../utils';
 
 import BoardSelectorCard from './BoardSelectorCard.vue';
+import { PlayerState, usePlayerStore } from '@src/stores/player';
 
 interface Props {
   expected_length: number;
-  //min_cards: number,
+  
+  //Part of v-model
   modelValue: CardList;
 }
 
 const props = defineProps<Props>();
 
+//The update part of v-model
 const emit = defineEmits<{
   updateModelValue: [value: CardList];
 }>();
@@ -84,13 +88,41 @@ if (cardList && !Array.isArray(cardList.cards)) {
 
 const isEditing = ref(false);
 
+//Listen to the board and player stores in order to know what cards are used
+const boardStore = useBoardStore();
+const playerStore = usePlayerStore();
+
+const usedCards = computed(() => {
+  let uc = [] as Array<number>;
+
+    for (const player of playerStore.players) {
+      if (player.state === PlayerState.USE_HOLE) {
+        uc = uc.concat(player.holeCards.cards);
+      }
+    }
+
+    uc = uc.concat(boardStore.board.cards);
+    return uc;
+})
+
 // //Initialize
 // onBoardTextChange();
 
 function toggleCard(cardId: number, updateText = true) {
+
+  
   if (cardList.cards.includes(cardId)) {
+    //removes the card
     cardList.cards = cardList.cards.filter((card) => card !== cardId);
   } else if (cardList.cards.length < 5) {
+    //adds the card
+
+    //Unless it's used
+    if (usedCards.value.includes(cardId)) {
+      console.log(`Card is used: ${cardId}`);
+      return;
+    }
+
     cardList.cards.push(cardId);
     if (cardList.cards.length <= 3) {
       cardList.cards.sort((a, b) => b - a);

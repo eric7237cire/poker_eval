@@ -51,7 +51,7 @@ const boardStore = useBoardStore();
 const resultsStore = useResultsStore();
 
 const iterationsPerTick = 1_000;
-const maxIterations = 10_000_000;
+const maxIterations = 50_000;
 
 boardStore.$subscribe((board) => {
   console.log('boardStore.$subscribe', board);
@@ -118,6 +118,13 @@ async function tick() {
     return;
   }
   num_iterations.value = num_iterations.value + iterationsPerTick;
+
+  if (num_iterations.value >= maxIterations) {
+    console.log(`max iterations reached ${maxIterations} > ${num_iterations.value}`);
+    stopping = true;
+    return;
+  }
+
   await handler.simulateFlop(iterationsPerTick);
 
   const resultList = await handler.getResults();

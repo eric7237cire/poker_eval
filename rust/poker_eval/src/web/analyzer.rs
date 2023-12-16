@@ -317,13 +317,7 @@ impl flop_analyzer {
             )));
         }
 
-        // let n_hole_cards_players = self
-        //     .player_info
-        //     .iter()
-        //     .filter(|p| p.state == PlayerPreFlopState::UseHoleCards)
-        //     .count();
-
-        //let mut dist_count = [0; 52*51/2];
+        info!("simulate_flop: num_iterations {} for {} players", num_iterations, active_players.len());
 
         for _it_num in 0..num_iterations {
             //debug!("simulate_flop: iteration {}", it_num);
@@ -334,10 +328,11 @@ impl flop_analyzer {
             let mut eval_cards = Vec::with_capacity(15);
             let mut used_cards = self.init_cards_used(&mut eval_cards, 3)?;
 
-            assert_eq!(used_cards.count_ones(), 3);
+            //even though we are doing the flop, if we have turn/river cards specified, we add them too
+            assert_eq!(used_cards.count_ones(), self.board_cards.len());
+            assert!(self.board_cards.len() >= 3);
+            
             assert_eq!(3, eval_cards.len());
-
-            let mut hand_evals: Vec<Option<Rank>> = vec![None; active_players.len()];
 
             //First we choose hole cards for players that are using a range
             let player_cards =
@@ -345,7 +340,7 @@ impl flop_analyzer {
 
             assert_eq!(player_cards.len(), active_players.len());
 
-            assert_eq!(3 + 2 * active_players.len(), used_cards.count_ones());
+            assert_eq!(self.board_cards.len() + 2 * active_players.len(), used_cards.count_ones());
 
             //eval_current_draws(&mut eval_cards, &mut flop_results)?;
             eval_current(
@@ -369,11 +364,14 @@ impl flop_analyzer {
                     &mut used_cards,
                 )?;
             } else {
-                add_eval_card(self.board_cards[3].into(), &mut eval_cards, &mut used_cards)?;
+                //Just do a simple push since we already added it to used cards
+                let turn_card_index: usize = self.board_cards[3].into();
+                assert!(used_cards[turn_card_index]);
+                eval_cards.push(self.board_cards[3].into());
             }
 
             assert_eq!(4, eval_cards.len());
-            assert_eq!(4 + 2 * active_players.len(), used_cards.count_ones());
+            assert_eq!(self.board_cards.len() + 2 * active_players.len(), used_cards.count_ones());
 
             //self.eval_current_draws(&mut eval_cards, &mut flop_results.turn_draws)?;
             eval_current(
@@ -393,7 +391,10 @@ impl flop_analyzer {
                     &mut used_cards,
                 )?;
             } else {
-                add_eval_card(self.board_cards[4].into(), &mut eval_cards, &mut used_cards)?;
+                //Just do a simple push since we already added it to used cards
+                let river_card_index: usize = self.board_cards[4].into();
+                assert!(used_cards[river_card_index]);
+                eval_cards.push(self.board_cards[4]);
             }
 
             assert_eq!(5, eval_cards.len());
@@ -418,36 +419,25 @@ impl flop_analyzer {
     ) -> Result<CardUsedType, MyError> {
         let mut cards_used = CardUsedType::default();
 
-        if self.board_cards.len() != num_board_cards {
+        if self.board_cards.len() < num_board_cards {
             return Err(MyError::from_string(format!(
-                "init_cards_used: board_cards.len() {} != num_board_cards {}",
+                "init_cards_used: not enough board cards.  board_cards.len() {}, needed num_board_cards {}",
                 self.board_cards.len(),
                 num_board_cards
             )));
         }
 
-        for c in self.board_cards.iter().take(num_board_cards) {
-            add_eval_card((*c).into(), eval_cards, &mut cards_used)?;
+        //We add all the board cards to used so they don't get selected again
+        //But only add the num we need to eval
+        for (c_idx, c) in self.board_cards.iter().enumerate() {
+            set_used_card((*c).into(), &mut cards_used)?;
+            
+            if c_idx < num_board_cards {
+                eval_cards.push(*c);
+            }
+            
         }
 
-        // //Also add any explicit hole cards
-        // for p_idx in 0..self.player_info.len() {
-        //     if self.player_info[p_idx].state != PlayerPreFlopState::UseHoleCards {
-        //         continue;
-        //     }
-
-        //     for c in self.player_info[p_idx].hole_cards.iter() {
-        //         let count_before = cards_used.count_ones();
-        //         cards_used.set(c.to_range_index_part(), true);
-        //         let count_after = cards_used.count_ones();
-
-        //         if count_before + 1 != count_after {
-        //             return Err(MyError::from_str(
-        //                 format!("Card already used {} in pidx {}", c.to_string(), p_idx).as_str(),
-        //             ));
-        //         }
-        //     }
-        // }
 
         Ok(cards_used)
     }
@@ -652,9 +642,8 @@ fn get_all_player_hole_cards(
     Ok(player_cards)
 }
 
-fn add_eval_card(
-    c_index: usize,
-    eval_cards: &mut Vec<Card>,
+fn set_used_card(
+    c_index: usize, 
     cards_used: &mut CardUsedType,
 ) -> Result<(), MyError> {
     let count_before = cards_used.count_ones();
@@ -667,6 +656,16 @@ fn add_eval_card(
             Card::from(c_index).to_string()
         )));
     }
+
+    Ok(())
+}
+
+fn add_eval_card(
+    c_index: usize,
+    eval_cards: &mut Vec<Card>,
+    cards_used: &mut CardUsedType,
+) -> Result<(), MyError> {
+    set_used_card(c_index, cards_used)?;
 
     eval_cards.push(Card::from(c_index));
 

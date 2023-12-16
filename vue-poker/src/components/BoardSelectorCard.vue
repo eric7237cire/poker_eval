@@ -1,9 +1,7 @@
 <template>
   <button
-    :class="
-      'relative rounded-lg border select-none enabled:shadow ' +
-      (isSelected ? 'bg-yellow-300 ring-1 ring-red-600 border-red-600' : 'bg-white border-black')
-    "
+    :class="buttonClassNames"
+
     :style="{
       '--width': width,
       '--font-size': fontSize,
@@ -33,17 +31,34 @@
   </button>
 </template>
 
-<script lang="ts">
-import { defineComponent } from 'vue';
+<script setup lang="ts">
+import { computed, defineComponent } from 'vue';
 import { cardText } from '../utils';
 
-export default defineComponent({
-  props: {
+const buttonClassNames = computed(() => {
+      const baseClasses = 'relative rounded-lg border select-none enabled:shadow';
+
+      if (props.isSelected) {
+        return baseClasses + ' bg-yellow-300 ring-1 ring-red-600 border-red-600';
+      }
+      if (props.isUsed) {
+        return baseClasses + ' bg-gray-10 border-gray-400';
+      }
+      
+      return baseClasses + ' bg-white border-black';
+    });
+
+const props = defineProps(
+  {
     cardId: {
       type: Number,
       required: true
     },
     isSelected: {
+      type: Boolean,
+      default: false
+    },
+    isUsed: {
       type: Boolean,
       default: false
     },
@@ -55,11 +70,10 @@ export default defineComponent({
       type: String,
       default: '1rem'
     }
-  },
+  });
 
-  setup(props) {
-    const { rank, suit, colorClass } = cardText(props.cardId);
-    return { rank, suit, colorClass };
-  }
-});
+  
+  const { rank, suit, colorClass } = cardText(props.cardId);
+
+
 </script>
