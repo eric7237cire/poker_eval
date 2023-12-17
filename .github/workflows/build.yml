@@ -50,4 +50,4 @@ jobs:
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: vue-poker/disk # The folder the action should deploy
+          folder: vue-poker/dist # The folder the action should deploy
