@@ -6,6 +6,8 @@ To use:
 
 Add the flop cards, optionally a turn & river card, then for each player, each choose a range or specific cards.
 
+Created the 'draw' analysis classes to calculate if player has a draw or not
+
 ## Tech Stack
 
 * ![Rust](http://rust-lang.org/logos/rust-logo-32x32.png) Rust
