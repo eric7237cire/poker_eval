@@ -60,3 +60,13 @@ npm run wasm:hello
 
 cargo install cargo-watch
 
+
+
+Running prod static server
+
+```
+sudo npm install -g serve
+serve -s dist
+```
+
+http://localhost:3000
