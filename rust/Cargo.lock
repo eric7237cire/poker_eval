@@ -273,7 +273,7 @@ dependencies = [
  "itertools",
  "js-sys",
  "log",
- "postflop-solver",
+ "postflop-solver 0.1.0",
  "rand",
  "serde",
  "serde-wasm-bindgen",
@@ -290,6 +290,15 @@ dependencies = [
  "rayon",
  "regex",
  "zstd",
+]
+
+[[package]]
+name = "postflop-solver"
+version = "0.1.0"
+source = "git+https://github.com/b-inary/postflop-solver#9d1509fe5077d019825f833eed04b16d342dfda1"
+dependencies = [
+ "once_cell",
+ "regex",
 ]
 
 [[package]]
@@ -350,6 +359,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
  "getrandom",
+]
+
+[[package]]
+name = "range"
+version = "0.2.7"
+dependencies = [
+ "postflop-solver 0.1.0 (git+https://github.com/b-inary/postflop-solver)",
+ "wasm-bindgen",
 ]
 
 [[package]]

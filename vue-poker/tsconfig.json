@@ -1,11 +1,10 @@
 {
     "compilerOptions": {
-      "target": "esnext",
-      "module": "esnext",
+      "target": "es2022",
+      "module": "es2022",
       "strict": true,
       "moduleResolution": "node",
       "forceConsistentCasingInFileNames": true,
-      "jsx": "preserve",
       "baseUrl": ".",
       "paths": {
         "@src/*": ["./src/*"],

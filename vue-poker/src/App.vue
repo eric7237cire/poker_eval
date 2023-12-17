@@ -103,13 +103,17 @@ resultsStore.$subscribe((results) => {
 
 const myResultsList = computed(() => resultsStore.results);
 
-onMounted(async () => {
+onMounted(() => {
   console.log(`the component is now mounted.`);
   //init the worker
-  await init(1);
+  init(1).then(() => {
+    console.log("worker initialized");
+  });
 
   //fetch the ranges
-  await rangeStore.init_ranges();
+  rangeStore.init_ranges().then(() => {
+    console.log("ranges fetched");
+  });
 });
 
 const players = [

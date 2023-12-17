@@ -3,5 +3,6 @@ resolver = "2"
 
 members = [
     "postflop-solver",
-    "poker_eval"
+    "poker_eval",
+    "range",
 ]

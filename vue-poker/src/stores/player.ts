@@ -27,7 +27,7 @@ export interface Player {
 
 // stores/counter.js
 import { defineStore } from 'pinia';
-import { RangeManager } from '../../../ui/pkg/range/range';
+import { RangeManager } from '@pkg/range';
 import { useLocalStorage } from '@vueuse/core';
 import { CardList } from './board';
 

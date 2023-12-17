@@ -141,7 +141,7 @@ import { computed, defineComponent, reactive, ref, watch } from 'vue';
 //import { useConfigStore } from "../store";
 import { usePlayerStore } from '../stores/player';
 import { ranks, rankPat } from '../utils';
-import { RangeManager } from '../../../ui/pkg/range/range';
+import { RangeManager } from '@pkg/range';
 
 import { CurrentPage, useNavStore } from '../stores/navigation';
 
