@@ -21,12 +21,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd vue-app
+          cd vue-poker
           npm install
 
       - name: Build Vue.js app
         run: |
-          cd vue-app
+          cd vue-poker
           npm run build
 
       - name: Setup Rust
@@ -37,6 +37,5 @@ jobs:
 
       - name: Build Rust Wasm
         run: |
-          cd rust-wasm-app
-          cargo build --target wasm32-unknown-unknown --release
-          wasm-bindgen target/wasm32-unknown-unknown/release/rust_wasm_app.wasm --out-dir ./pkg
+          cd rust
+          wasm-pack build --dev --target web --out-dir ../../vue-poker/pkg poker_eval

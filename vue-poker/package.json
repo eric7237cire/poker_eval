@@ -13,8 +13,7 @@
     "format": "prettier --write src/",
     "r-dev": "concurrently \"../rust/run_watch.sh\" \"vite\"",
     "r-build": "rsw build",
-    "rsw": "rsw",
-    "wasm:hello": "wasm-pack build --target web --out-dir pkg rsw-hello"
+    "rsw": "rsw"
   },
   "dependencies": {
     "@heroicons/vue": "^2.0.18",
