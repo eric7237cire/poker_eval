@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - eval3
+      - fixes
 
 jobs:
   build-and-deploy:
@@ -46,3 +46,8 @@ jobs:
         run: |
           cd vue-poker
           npm run build2
+
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: vue-poker/disk # The folder the action should deploy
