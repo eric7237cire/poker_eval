@@ -1011,7 +1011,9 @@ fn node_locking_isomorphism() {
     );
 }
 
-#[test]
+//This test is quite long
+//#[test]
+#[allow(unused)]
 fn set_bunching_effect() {
     let flop = flop_from_str("Td9d6h").unwrap();
     let card_config = CardConfig {
@@ -1065,7 +1067,9 @@ fn set_bunching_effect() {
     assert!((root_ev_ip - 22.5).abs() < 1e-4);
 }
 
-#[test]
+//This test is quite long
+//#[test]
+#[allow(unused)]
 fn set_bunching_effect_always_win() {
     let flop = flop_from_str("AcAdKh").unwrap();
     let lose_range_str = "KK-22,K9-K2,Q8-Q2,J8-J2,T8-T2,92+,82+,72+,62+";

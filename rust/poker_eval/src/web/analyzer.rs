@@ -94,31 +94,6 @@ impl PlayerFlopResults {
     }
 }
 
-// #[wasm_bindgen]
-// #[derive(Default, Serialize, Clone)]
-// pub struct TurnResults {
-//     /*
-//     This is when evaluating the flop vs the players
-//     */
-//     pub num_iterations: ResultType,
-
-//     turn_results: RankResults,
-//     river_results: RankResults,
-
-//     turn_draws: Draws,
-// }
-
-// #[wasm_bindgen]
-// #[derive(Default, Serialize, Clone)]
-// pub struct RiverResults {
-//     /*
-//     This is when evaluating the river vs the players
-//     */
-//     pub num_iterations: ResultType,
-
-//     river_results: RankResults,
-
-// }
 
 #[wasm_bindgen]
 #[derive(Default, Serialize)]
