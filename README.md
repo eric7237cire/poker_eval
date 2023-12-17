@@ -2,7 +2,7 @@
 
 ![Github Actions](https://github.com/eric7237cire/poker_eval/actions/workflows/build.yml/badge.svg)
 
-Equity and Draw Analysis.  Try it out on [Github pages](https://eric7237cire.github.io/poker-eval)
+Equity and Draw Analysis.  Try it out on [Github pages](https://eric7237cire.github.io/poker_eval)
 
 ## Tech Stack
 
