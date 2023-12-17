@@ -1,4 +1,5 @@
 <template>
+  <div>
   <template v-if="!isEditing && cardList">
     <div class="not_editing">
       <BoardSelectorCard
@@ -53,6 +54,7 @@
       </div>
     </div>
   </template>
+</div>
 </template>
 
 <style lang="postcss" scoped>

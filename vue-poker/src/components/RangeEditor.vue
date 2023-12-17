@@ -163,8 +163,7 @@ type DraggingMode = 'none' | 'enabling' | 'disabling';
 const playerStore = usePlayerStore();
 const navStore = useNavStore();
 
-//web assembly reference
-const range = RangeManager.new();
+
 const rangeText = ref('');
 const rangeTextError = ref('');
 const rangeArray = reactive(new Array(13 * 13).fill(0));
@@ -175,6 +174,8 @@ const numCombos = ref(0);
 
 const rangeStore = useRangesStore();
 const { currentPlayer } = storeToRefs(playerStore);
+
+
 
 //update when player changes
 //tried to replace with comptude but didn't work...
@@ -198,7 +199,25 @@ watch(currentPlayer, (newValue, oldValue) => {
 
 let draggingMode: DraggingMode = 'none';
 
+
+//private local to update some stats
+
+//web assembly reference
+let range: RangeManager|null = null;
+
+
+initRangeManager().then(() => {
+  console.log("Range initialized")
+});
+
 //below are functions only
+
+async function initRangeManager() {
+  let mod = await import('@pkg/range');
+  await mod.default();
+
+  range = RangeManager.new();
+}
 
 const cellText = (row: number, col: number) => {
   const r1 = 13 - Math.min(row, col);

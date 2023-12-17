@@ -51,7 +51,18 @@ function initializePlayers(): Array<Player> {
 }
 
 //private local to update some stats
-const range = RangeManager.new();
+let range: RangeManager|null = null;
+
+async function initRangeManager() {
+  let mod = await import('@pkg/range');
+  await mod.default();
+
+  range = RangeManager.new();
+}
+
+initRangeManager().then(() => {
+  console.log("Range initialized")
+});
 
 export const usePlayerStore = defineStore('player', {
   state: () => {
@@ -73,6 +84,11 @@ export const usePlayerStore = defineStore('player', {
       this.updateRangeStrForPlayer(this.currentPlayer, newRangeStr);
     },
     updateRangeStrForPlayer(playerId: PlayerIds, newRangeStr: string) {
+
+      if (range == null) {
+        console.log("Range not initialized yet")
+        return;
+      }
       console.log('updateRangeStrForPlayer', playerId, newRangeStr);
       this.players[playerId].rangeStr = newRangeStr;
 
