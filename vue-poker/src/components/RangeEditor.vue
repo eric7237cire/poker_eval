@@ -66,6 +66,32 @@
 
       <div class="flex mt-3.5 items-center">
         <div>
+          Range
+          <input
+            v-model="percRange"
+            type="range"
+            class="ml-3 w-40 align-middle"
+            min="0"
+            max="100"
+            step="1"
+            @change="onPercRangeChange"
+          />
+          <input
+            v-model="percRange"
+            type="number"
+            :class="
+              'w-20 ml-4 px-2 py-1 rounded-lg text-sm text-center text-black' +
+              (percRange < 0 || percRange > 100 ? 'input-error' : '')
+            "
+            min="0"
+            max="100"
+            step="5"
+            @change="onPercRangeChange"
+          />
+          %
+        </div>
+
+        <!-- <div>
           Weight:
           <input
             v-model="weight"
@@ -89,7 +115,7 @@
             @change="onWeightChange"
           />
           %
-        </div>
+        </div> -->
 
         <span class="inline-block ml-auto">
           {{ numCombos.toFixed(1) }} combos ({{
@@ -102,7 +128,6 @@
     <div class="flex-grow max-w-[18rem] ml-6">
       <DbItemPicker
         store-name="ranges"
-        :index="playerIndex"
         :value="rangeText"
         :allow-save="rangeText !== '' && rangeTextError === ''"
         @load-item="loadRange"
@@ -111,8 +136,8 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, reactive, ref, watch } from 'vue';
+<script setup lang="ts">
+import { computed, defineComponent, reactive, ref, watch } from 'vue';
 //import { useConfigStore } from "../store";
 import { usePlayerStore } from '../stores/player';
 import { ranks, rankPat } from '../utils';
@@ -122,6 +147,7 @@ import { CurrentPage, useNavStore } from '../stores/navigation';
 
 import DbItemPicker from './DbItemPicker.vue';
 import { Store, PiniaCustomStateProperties, storeToRefs } from 'pinia';
+import { useRangesStore } from '@src/stores/ranges';
 
 const yellow500 = '#eab308';
 
@@ -134,186 +160,173 @@ const rangeRegex = new RegExp(
 
 type DraggingMode = 'none' | 'enabling' | 'disabling';
 
-export default defineComponent({
-  components: {
-    DbItemPicker
-  },
+const playerStore = usePlayerStore();
+const navStore = useNavStore();
 
-  setup() {
-    //const config = useConfigStore();
-    //const rangeStore = useRangeStore();
-    const playerStore = usePlayerStore();
-    const navStore = useNavStore();
+//web assembly reference
+const range = RangeManager.new();
+const rangeText = ref('');
+const rangeTextError = ref('');
+const rangeArray = reactive(new Array(13 * 13).fill(0));
+let rangeArrayRaw = new Float32Array();
+const weight = ref(100);
+const percRange = ref(100);
+const numCombos = ref(0);
 
-    const range = RangeManager.new();
-    //const rangeStore = config.range[props.player];
-    //const rangeStoreRaw = config.rangeRaw[props.player];
-    const rangeText = ref('');
-    const rangeTextError = ref('');
-    //const rangeStore = ref(new Array(13 * 13).fill(0));
-    const rangeStore = reactive(new Array(13 * 13).fill(0));
-    let rangeStoreRaw = new Float32Array();
-    const weight = ref(100);
-    const numCombos = ref(0);
+const rangeStore = useRangesStore();
+const { currentPlayer } = storeToRefs(playerStore);
 
-    const { currentPlayer } = storeToRefs(playerStore);
-
-    watch(currentPlayer, (newValue, oldValue) => {
-      console.log(`The re cp changed from ${oldValue} to ${newValue}`);
-      const playerIndex = currentPlayer.value.valueOf();
-      const p = playerStore.curPlayerData;
-      console.log(`p is ${JSON.stringify(p)}`);
-      console.log(`range text is set to [ ${p.rangeStr} ]`);
-      rangeText.value = p.rangeStr;
-      onRangeTextChange();
-      //rangeStore = range.
-      //rangeText.value = rangeStore.getRangeStr(playerIndex);
-    });
-
-    // const { getRangeStr } = storeToRefs(rangeStore);
-
-    // watch(getRangeStr, (newValue, oldValue) => {
-    //   console.log(`The re range changed from ${oldValue} to ${newValue}`);
-    //   const playerIndex = currentPlayer.value.valueOf();
-    //   rangeText.value = rangeStore.getRangeStr(playerIndex);
-    // })
-
-    const playerIndex = currentPlayer.value.valueOf();
-    // rangeText.value = rangeStore.getRangeStr(playerIndex);
-
-    // const { rangeStrs } = storeToRefs(rangeStore);
-
-    console.log(`Setting up range editor for player ${playerIndex}`);
-    console.log(`rangeText.value is ${rangeText.value}`);
-
-    let draggingMode: DraggingMode = 'none';
-
-    const cellText = (row: number, col: number) => {
-      const r1 = 13 - Math.min(row, col);
-      const r2 = 13 - Math.max(row, col);
-      return ranks[r1] + ranks[r2] + ['s', '', 'o'][Math.sign(row - col) + 1];
-    };
-
-    const cellIndex = (row: number, col: number) => {
-      return 13 * (row - 1) + col - 1;
-    };
-
-    const cellValue = (row: number, col: number) => {
-      return rangeStore[cellIndex(row, col)];
-    };
-
-    const onUpdate = () => {
-      const rawData = range.raw_data();
-      rangeStoreRaw = rawData;
-      //rangeStoreRaw.set();
-      rangeText.value = range.to_string();
-      playerStore.updateRangeStr(rangeText.value);
-      rangeTextError.value = '';
-      numCombos.value = rawData.reduce((acc, cur) => acc + cur, 0);
-    };
-
-    const update = (row: number, col: number, weight: number) => {
-      const idx = 13 * (row - 1) + col - 1;
-      range.update(row, col, weight / 100);
-      rangeStore[idx] = weight;
-      onUpdate();
-    };
-
-    const onRangeTextChange = () => {
-      const trimmed = rangeText.value.replace(trimRegex, '$1').trim();
-      const ranges = trimmed.split(',');
-
-      if (ranges[ranges.length - 1] === '') {
-        ranges.pop();
-      }
-
-      for (const range of ranges) {
-        if (!rangeRegex.test(range)) {
-          rangeTextError.value = `Failed to parse range: ${range || '(empty string)'}`;
-          return;
-        }
-      }
-
-      const errorString = range.from_string(trimmed);
-
-      if (errorString) {
-        rangeTextError.value = errorString;
-      } else {
-        const weights = range.get_weights();
-        for (let i = 0; i < 13 * 13; ++i) {
-          rangeStore[i] = weights[i] * 100;
-        }
-        onUpdate();
-      }
-    };
-
-    const dragStart = (row: number, col: number) => {
-      const idx = 13 * (row - 1) + col - 1;
-
-      if (rangeStore[idx] !== weight.value) {
-        draggingMode = 'enabling';
-        update(row, col, weight.value);
-      } else {
-        draggingMode = 'disabling';
-        update(row, col, 0);
-      }
-    };
-
-    const dragEnd = () => {
-      draggingMode = 'none';
-    };
-
-    const mouseEnter = (row: number, col: number) => {
-      if (draggingMode === 'enabling') {
-        update(row, col, weight.value);
-      } else if (draggingMode === 'disabling') {
-        update(row, col, 0);
-      }
-    };
-
-    const onWeightChange = () => {
-      weight.value = Math.round(Math.max(0, Math.min(100, weight.value)));
-    };
-
-    const clearRange = () => {
-      range.clear();
-      rangeStore.fill(0);
-      rangeStoreRaw.fill(0);
-      rangeText.value = '';
-      rangeTextError.value = '';
-      weight.value = 100;
-      numCombos.value = 0;
-      playerStore.updateRangeStr('');
-    };
-
-    const loadRange = (rangeStr: unknown) => {
-      rangeText.value = String(rangeStr);
-      onRangeTextChange();
-    };
-
-    const handleDone = () => {
-      navStore.currentPage = CurrentPage.MAIN;
-    };
-
-    return {
-      yellow500,
-      cellText,
-      cellValue,
-      rangeStore,
-      playerIndex,
-      rangeText,
-      rangeTextError,
-      weight,
-      numCombos,
-      onRangeTextChange,
-      dragStart,
-      dragEnd,
-      mouseEnter,
-      onWeightChange,
-      clearRange,
-      loadRange,
-      handleDone
-    };
-  }
+//update when player changes
+//tried to replace with comptude but didn't work...
+ watch(currentPlayer, (newValue, oldValue) => {
+  console.log(`The re cp changed from ${oldValue} to ${newValue}`);
+  //const playerIndex = currentPlayer.value.valueOf();
+  const p = playerStore.curPlayerData;
+  console.log(`p is ${JSON.stringify(p)}`);
+  console.log(`range text is set to [ ${p.rangeStr} ]`);
+  rangeText.value = p.rangeStr;
+  onRangeTextChange();
 });
+
+//  const currentPlayerComputed = computed(() => {
+//   rangeText.value = playerStore.curPlayerData.rangeStr;
+//   console.log(`range text is set to [ ${rangeText.value} ]`);
+//   onRangeTextChange();
+
+//   return playerStore.currentPlayer;
+// });
+
+
+let draggingMode: DraggingMode = 'none';
+
+//below are functions only
+
+const cellText = (row: number, col: number) => {
+  const r1 = 13 - Math.min(row, col);
+  const r2 = 13 - Math.max(row, col);
+  return ranks[r1] + ranks[r2] + ['s', '', 'o'][Math.sign(row - col) + 1];
+};
+
+const cellIndex = (row: number, col: number) => {
+  return 13 * (row - 1) + col - 1;
+};
+
+const cellValue = (row: number, col: number) => {
+  return rangeArray[cellIndex(row, col)];
+};
+
+const onUpdate = () => {
+  const rawData = range.raw_data();
+  rangeArrayRaw = rawData;
+  //rangeStoreRaw.set();
+  rangeText.value = range.to_string();
+  playerStore.updateRangeStr(rangeText.value);
+  rangeTextError.value = '';
+  numCombos.value = rawData.reduce((acc, cur) => acc + cur, 0);
+
+  percRange.value = Math.round((numCombos.value / ((52 * 51) / 2)) * 100);
+};
+
+const update = (row: number, col: number, weight: number) => {
+  const idx = 13 * (row - 1) + col - 1;
+  range.update(row, col, weight / 100);
+  rangeArray[idx] = weight;
+  onUpdate();
+};
+
+const onRangeTextChange = () => {
+  const trimmed = rangeText.value.replace(trimRegex, '$1').trim();
+  const ranges = trimmed.split(',');
+
+  if (ranges[ranges.length - 1] === '') {
+    ranges.pop();
+  }
+
+  for (const range of ranges) {
+    if (!rangeRegex.test(range)) {
+      rangeTextError.value = `Failed to parse range: ${range || '(empty string)'}`;
+      return;
+    }
+  }
+
+  const errorString = range.from_string(trimmed);
+
+  if (errorString) {
+    rangeTextError.value = errorString;
+  } else {
+    const weights = range.get_weights();
+    for (let i = 0; i < 13 * 13; ++i) {
+      rangeArray[i] = weights[i] * 100;
+    }
+    onUpdate();
+  }
+};
+
+const dragStart = (row: number, col: number) => {
+  const idx = 13 * (row - 1) + col - 1;
+
+  if (rangeArray[idx] !== weight.value) {
+    draggingMode = 'enabling';
+    update(row, col, weight.value);
+  } else {
+    draggingMode = 'disabling';
+    update(row, col, 0);
+  }
+};
+
+const dragEnd = () => {
+  draggingMode = 'none';
+};
+
+const mouseEnter = (row: number, col: number) => {
+  if (draggingMode === 'enabling') {
+    update(row, col, weight.value);
+  } else if (draggingMode === 'disabling') {
+    update(row, col, 0);
+  }
+};
+
+const onWeightChange = () => {
+  weight.value = Math.round(Math.max(0, Math.min(100, weight.value)));
+};
+
+function onPercRangeChange() {
+  percRange.value = Math.round(Math.max(0, Math.min(100, percRange.value)));
+
+  const mwRanks = rangeStore.multiway_ranges;
+  let takeN = Math.round(percRange.value * mwRanks.length / 100);
+
+  console.log(`takeN is ${takeN}`);
+
+  const rStrParts = [];
+  for (let i = 0; i < takeN; i++) {
+    rStrParts.push(mwRanks[i]);
+  }
+
+  const rStr = rStrParts.join(', ');
+
+  rangeText.value = rStr;
+  onRangeTextChange(); 
+}
+
+const clearRange = () => {
+  range.clear();
+  rangeArray.fill(0);
+  rangeArrayRaw.fill(0);
+  rangeText.value = '';
+  rangeTextError.value = '';
+  weight.value = 100;
+  numCombos.value = 0;
+  percRange.value = 0;
+  playerStore.updateRangeStr('');
+};
+
+const loadRange = (rangeStr: unknown) => {
+  rangeText.value = String(rangeStr);
+  onRangeTextChange();
+};
+
+const handleDone = () => {
+  navStore.currentPage = CurrentPage.MAIN;
+};
 </script>

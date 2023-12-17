@@ -1,4 +1,4 @@
-import { Draws } from "@pkg/poker_eval";
+import { Draws } from '@pkg/poker_eval';
 
 export interface PercOrBetter {
   perc: number;
@@ -15,7 +15,7 @@ export interface ResultsInterface {
 
   //flop, turn, river
   street_results: Array<StreetResults>;
- 
+
   draw_results: Array<Draws>;
 }
 

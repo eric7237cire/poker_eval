@@ -14,7 +14,6 @@
   <div>{{ num_iterations }} Iterations</div>
 
   <div class="ml-10">
-
     <div class="flex-grow my-4 px-6 pt-2 overflow-y-auto" style="height: calc(100% - 2rem)">
       <BoardSelector v-model="boardStore.board" :expected_length="3" />
     </div>
@@ -30,8 +29,6 @@
         <Player :playerId="player.id" />
       </div>
     </div>
-
-    
   </div>
 </template>
 
@@ -48,11 +45,13 @@ import { init, handler } from './worker/global-worker';
 import { PlayerIds, PlayerState, usePlayerStore } from './stores/player';
 import { useBoardStore } from './stores/board';
 import { useResultsStore } from './stores/results';
+import { useRangesStore } from './stores/ranges';
 
 const navStore = useNavStore();
 const playerStore = usePlayerStore();
 const boardStore = useBoardStore();
 const resultsStore = useResultsStore();
+const rangeStore = useRangesStore();
 
 const iterationsPerTick = 1_000;
 const maxIterations = 50_000;
@@ -70,7 +69,11 @@ const myResultsList = computed(() => resultsStore.results);
 
 onMounted(async () => {
   console.log(`the component is now mounted.`);
+  //init the worker
   await init(1);
+
+  //fetch the ranges
+  await rangeStore.init_ranges();
 });
 
 const players = [

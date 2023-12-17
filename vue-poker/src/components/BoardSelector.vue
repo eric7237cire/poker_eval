@@ -68,7 +68,7 @@ import { PlayerState, usePlayerStore } from '@src/stores/player';
 
 interface Props {
   expected_length: number;
-  
+
   //Part of v-model
   modelValue: CardList;
 }
@@ -95,22 +95,20 @@ const playerStore = usePlayerStore();
 const usedCards = computed(() => {
   let uc = [] as Array<number>;
 
-    for (const player of playerStore.players) {
-      if (player.state === PlayerState.USE_HOLE) {
-        uc = uc.concat(player.holeCards.cards);
-      }
+  for (const player of playerStore.players) {
+    if (player.state === PlayerState.USE_HOLE) {
+      uc = uc.concat(player.holeCards.cards);
     }
+  }
 
-    uc = uc.concat(boardStore.board.cards);
-    return uc;
-})
+  uc = uc.concat(boardStore.board.cards);
+  return uc;
+});
 
 // //Initialize
 // onBoardTextChange();
 
 function toggleCard(cardId: number, updateText = true) {
-
-  
   if (cardList.cards.includes(cardId)) {
     //removes the card
     cardList.cards = cardList.cards.filter((card) => card !== cardId);

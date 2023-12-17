@@ -1,7 +1,6 @@
 <template>
   <button
     :class="buttonClassNames"
-
     :style="{
       '--width': width,
       '--font-size': fontSize,
@@ -36,44 +35,40 @@ import { computed, defineComponent } from 'vue';
 import { cardText } from '../utils';
 
 const buttonClassNames = computed(() => {
-      const baseClasses = 'relative rounded-lg border select-none enabled:shadow';
+  const baseClasses = 'relative rounded-lg border select-none enabled:shadow';
 
-      if (props.isSelected) {
-        return baseClasses + ' bg-yellow-300 ring-1 ring-red-600 border-red-600';
-      }
-      if (props.isUsed) {
-        return baseClasses + ' bg-gray-10 border-gray-400';
-      }
-      
-      return baseClasses + ' bg-white border-black';
-    });
+  if (props.isSelected) {
+    return baseClasses + ' bg-yellow-300 ring-1 ring-red-600 border-red-600';
+  }
+  if (props.isUsed) {
+    return baseClasses + ' bg-gray-10 border-gray-400';
+  }
 
-const props = defineProps(
-  {
-    cardId: {
-      type: Number,
-      required: true
-    },
-    isSelected: {
-      type: Boolean,
-      default: false
-    },
-    isUsed: {
-      type: Boolean,
-      default: false
-    },
-    width: {
-      type: String,
-      default: '40px'
-    },
-    fontSize: {
-      type: String,
-      default: '1rem'
-    }
-  });
+  return baseClasses + ' bg-white border-black';
+});
 
-  
-  const { rank, suit, colorClass } = cardText(props.cardId);
+const props = defineProps({
+  cardId: {
+    type: Number,
+    required: true
+  },
+  isSelected: {
+    type: Boolean,
+    default: false
+  },
+  isUsed: {
+    type: Boolean,
+    default: false
+  },
+  width: {
+    type: String,
+    default: '40px'
+  },
+  fontSize: {
+    type: String,
+    default: '1rem'
+  }
+});
 
-
+const { rank, suit, colorClass } = cardText(props.cardId);
 </script>

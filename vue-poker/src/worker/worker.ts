@@ -47,7 +47,6 @@ const createHandler = (mod: Mod) => {
       const r = this.player_flop_results;
       //console.log(`getResults ${r[0].num_iterations} ${r[0].get_perc_family_or_better(1)}`);
       const ri = r.map((r) => {
-
         const street_results: Array<StreetResults> = [];
         const draw_results: Array<Draws> = [];
 
@@ -63,7 +62,7 @@ const createHandler = (mod: Mod) => {
           } as StreetResults);
         }
 
-        for(let i = 0; i < 2; ++i) {
+        for (let i = 0; i < 2; ++i) {
           draw_results.push(r.get_street_draw(i));
         }
 

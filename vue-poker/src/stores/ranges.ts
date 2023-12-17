@@ -13,13 +13,20 @@ function()s become actions*/
   const multiway_ranges = ref([] as Array<String>);
 
   async function init_ranges() {
-    const hu = await fetch_range_from_asset('/assets/ranges/heads_up_rank.txt');
-    const mw = await fetch_range_from_asset('/assets/ranges/multiway_rank.txt');
+    const hu = await fetch_range_from_asset('./heads_up_rank.txt');
+    const mw = await fetch_range_from_asset('./multiway_rank.txt');
 
     heads_up_ranges.value = hu;
     multiway_ranges.value = mw;
+
+    //console.log('ranges init', heads_up_ranges.value, multiway_ranges.value);
   }
 
+  return {
+    heads_up_ranges,
+    multiway_ranges,
+    init_ranges
+  };
 });
 
 async function fetch_range_from_asset(asset_url: string): Promise<Array<String>> {
@@ -31,7 +38,7 @@ async function fetch_range_from_asset(asset_url: string): Promise<Array<String>>
 
   const ret = [] as Array<String>;
 
-  for(const line of text.split('\n')) {
+  for (const line of text.split('\n')) {
     const trimmed = line.trim();
     if (!trimmed) {
       continue;
@@ -40,9 +47,8 @@ async function fetch_range_from_asset(asset_url: string): Promise<Array<String>>
     if (trimmed[0] == '#') {
       continue;
     }
-     
+
     ret.push(line);
-    
   }
 
   return ret;
