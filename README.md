@@ -2,6 +2,11 @@
 
 Equity and Draw Analysis.  Add the flop cards, then for each player, each choose a range or specific cards.
 
+## Tech Stack
+
+* ![Rust](http://rust-lang.org/logos/rust-logo-32x32.png) Rust
+* ![Vue](dev/v-logo.svg =32x32)
+
 ## Screenshot
 
 [Github pages](https://eric7237cire.github.io/)
