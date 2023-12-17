@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+      "target": "es2022",
+      "module": "es2022",
+      "strict": true,
+      "moduleResolution": "node",
+      "forceConsistentCasingInFileNames": true,
+      "baseUrl": ".",
+      "paths": {
+        "@src/*": ["./src/*"],
+        "@pkg/*": ["./pkg/*"],
+      }
+    },
+    "include": ["src/**/*.ts", "src/**/*.vue"]
+  }
+  
