@@ -270,12 +270,17 @@ pub fn rank_cards(cards: &[Card]) -> Rank {
 
 #[cfg(test)]
 mod tests {
-    use log::info;
+    use std::collections::HashMap;
+
+    use itertools::Itertools;
+    use log::{info, debug};
+    use crate::{set_used_card, get_unused_card, add_eval_card};
     use postflop_solver::Hand;
+    use rand::{rngs::StdRng, SeedableRng};
 
     use crate::{
         cards_from_string, get_possible_hole_cards, range_string_to_set, rank_cards, CardUsedType,
-        Rank,
+        Rank, HoleCards,
     };
 
     #[test]
@@ -535,5 +540,109 @@ mod tests {
 
         assert_equity(100.0 * tie_equity[2] / total_showdowns as f64, 0.95, 0.005);
         assert_equity(100.0 * win_equity[2] / total_showdowns as f64, 26.14, 0.005);
+    }
+
+    #[test]
+    fn test_heads_up_ranking() {
+
+        let mut range_idx_to_string: Vec<String> = Vec::new();
+        //let mut range_idx_to_equity: Vec<f64> = Vec::new();
+
+        let mut range_string_to_idx: HashMap<String, usize> = HashMap::new();
+
+        let mut hole_card_list = Vec::new();
+
+        for card1 in 0..52usize {
+            for card2 in card1+1 .. 52 {
+                let hole_cards = HoleCards::new(card1.into(), card2.into()).unwrap();
+
+                hole_card_list.push(hole_cards);
+
+                let hole_string = hole_cards.to_range_string();
+
+                if !range_string_to_idx.contains_key(&hole_string) {
+                    println!("{} {}", hole_string, range_idx_to_string.len());
+                }
+                    //range_idx_to_equity.push(0.0);
+
+                range_string_to_idx.entry(hole_string).or_insert(range_idx_to_string.len());
+            }
+        }
+
+        assert_eq!(13*13, range_string_to_idx.len());
+        assert_eq!(52*51/2, hole_card_list.len());
+
+        let mut hole_idx_to_eq = vec![0.0; hole_card_list.len()];
+
+        let mut total_showdowns = 0;
+
+        let num_flops_per_matchup = 100;
+
+        let mut rng = StdRng::seed_from_u64(42);
+
+        for (h1_idx, h1) in hole_card_list.iter().enumerate() {
+            for h2_idx in h1_idx+1 .. hole_card_list.len() {
+
+                let h2 = &hole_card_list[h2_idx];
+
+                let mut eval_cards = Vec::with_capacity(15);
+                let mut cards_used = CardUsedType::default();
+                h1.set_used(&mut cards_used).unwrap();
+
+                let is_ok = h2.set_used(&mut cards_used);
+
+                if !is_ok.is_ok() {
+                    //some possibilites won't be valid
+                    continue;
+                }
+
+                for _ in 0..total_showdowns {
+                    assert_eq!(4, cards_used.count_ones());
+                    for _ in 0..5 {
+                        add_eval_card(
+                            get_unused_card(&mut rng, &cards_used).unwrap(),
+                            &mut eval_cards,
+                            &mut cards_used,
+                        ).unwrap();
+                    }
+
+                    assert_eq!(4+5, cards_used.count_ones());
+
+                    h1.add_to_eval(&mut eval_cards);
+                    assert_eq!(7, eval_cards.len());
+                    let rank1 = rank_cards(&eval_cards);
+                    h1.remove_from_eval(&mut eval_cards).unwrap();
+
+
+                    h2.add_to_eval(&mut eval_cards);
+                    assert_eq!(7, eval_cards.len());
+                    let rank2 = rank_cards(&eval_cards);
+                    h2.remove_from_eval(&mut eval_cards);
+
+                    if rank1 == rank2 {
+                        hole_idx_to_eq[h1_idx] += 1.0 / 2.0;
+                        hole_idx_to_eq[h2_idx] += 1.0 / 2.0;
+                    } else if rank1 > rank2 {
+                        hole_idx_to_eq[h1_idx] += 1.0;
+                    } else {
+                        hole_idx_to_eq[h2_idx] += 1.0;
+                    }
+
+                    //Pop off the 5
+                    for _ in 0..5 {
+                        let c = eval_cards.pop().unwrap();
+                        cards_used.set(c.into(), false);
+                    }
+                }
+
+            }
+        }
+
+        let mut with_idx = hole_idx_to_eq.iter().enumerate().collect_vec();
+        with_idx.sort_by(|a,b| b.1.partial_cmp(a.1).unwrap());
+
+        for (rank, (idx, eq)) in with_idx.iter().enumerate().take(10) {
+            println!("#{} {} {} {}", 1+rank, hole_card_list[*idx].to_range_string(), eq, 100.0 * **eq / total_showdowns as f64);
+        }
     }
 }

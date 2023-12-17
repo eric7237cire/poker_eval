@@ -7,6 +7,9 @@ use std::cmp;
 use std::convert::TryFrom;
 use std::fmt;
 use std::mem;
+use std::str::FromStr;
+
+use crate::PokerError;
 
 //use bitvec::BitArr;
 // Adapted from https://crates.io/crates/rs-poker
@@ -161,6 +164,32 @@ impl From<char> for CardValue {
     }
 }
 
+impl FromStr for CardValue {
+    type Err = PokerError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut chars = s.chars();
+        let value_char = chars.next().ok_or(PokerError::from_str("No character"))?;
+        match value_char.to_ascii_uppercase() {
+            'A' => Ok(Self::Ace),
+            'K' => Ok(Self::King),
+            'Q' => Ok(Self::Queen),
+            'J' => Ok(Self::Jack),
+            'T' => Ok(Self::Ten),
+            '9' => Ok(Self::Nine),
+            '8' => Ok(Self::Eight),
+            '7' => Ok(Self::Seven),
+            '6' => Ok(Self::Six),
+            '5' => Ok(Self::Five),
+            '4' => Ok(Self::Four),
+            '3' => Ok(Self::Three),
+            '2' => Ok(Self::Two),
+            c => Err(PokerError::from_string(format!("Unsupported char: {}", c))),
+            
+        }
+    }
+}
+
 impl From<CardValue> for char {
     fn from(value: CardValue) -> Self {
         match value {
@@ -178,6 +207,12 @@ impl From<CardValue> for char {
             CardValue::Three => '3',
             CardValue::Two => '2',
         }
+    }
+}
+
+impl fmt::Display for CardValue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", char::from(*self))
     }
 }
 
@@ -254,6 +289,25 @@ impl From<Suit> for char {
     }
 }
 
+
+impl FromStr for Suit {
+    type Err = PokerError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut chars = s.chars();
+        let suit_char = chars.next().ok_or(PokerError::from_str("No character"))?;
+        match suit_char.to_ascii_lowercase() {
+            'd' => Ok(Self::Diamond),
+            's' => Ok(Self::Spade),
+            'h' => Ok(Self::Heart),
+            'c' => Ok(Self::Club),
+            c => Err(PokerError::from_string(format!("Unsupported char: {}", c))),
+            
+        }
+    }
+}
+
+
 /// The main struct of this library.
 /// This is a carrier for Suit and Value combined.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -316,6 +370,20 @@ impl From<&str> for Card {
             value: value_char.into(),
             suit: suit_char.into(),
         }
+    }
+}
+
+impl FromStr for Card {
+    type Err = PokerError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut chars = s.chars();
+        let value_char = chars.next().ok_or(PokerError::from_str("No character"))?;
+        let suit_char = chars.next().ok_or(PokerError::from_str("No character"))?;
+        Ok(Self {
+            value: value_char.to_string().parse()?,
+            suit: suit_char.to_string().parse()?,
+        })
     }
 }
 

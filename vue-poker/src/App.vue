@@ -19,9 +19,10 @@
       <BoardSelector v-model="boardStore.board" :expected_length="3" />
     </div>
 
-    <!-- <div v-show="navStore.currentPage === CurrentPage.RANGE_EDITOR">
+    <!-- This pops up if we are editing a range -->
+    <div v-show="navStore.currentPage === CurrentPage.RANGE_EDITOR">
       <RangeEditor />
-    </div> -->
+    </div>
 
     <!--Show 'players'-->
     <div class="players">

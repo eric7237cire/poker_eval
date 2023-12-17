@@ -1,5 +1,5 @@
 use std::{cmp, fmt::Display, mem};
-
+use crate::PokerError;
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
 use postflop_solver::card_pair_to_index;
@@ -158,34 +158,6 @@ impl Draws {
     }
 }
 
-#[derive(Debug)]
-pub struct MyError {
-    details: String,
-}
-
-impl MyError {
-    fn from_str(msg: &str) -> MyError {
-        MyError {
-            details: msg.to_string(),
-        }
-    }
-    fn from_string(msg: String) -> MyError {
-        MyError { details: msg }
-    }
-}
-
-impl Display for MyError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.details)
-    }
-}
-
-impl From<MyError> for JsValue {
-    fn from(failure: MyError) -> Self {
-        js_sys::Error::new(&failure.to_string()).into()
-    }
-}
-
 #[derive(Clone, Eq, PartialEq)]
 #[repr(u8)]
 enum PlayerPreFlopState {
@@ -329,7 +301,7 @@ impl flop_analyzer {
         &self,
         num_iterations: u32,
         mut flop_results: Vec<PlayerFlopResults>,
-    ) -> Result<Vec<PlayerFlopResults>, MyError> {
+    ) -> Result<Vec<PlayerFlopResults>, PokerError> {
         //let n_players = self.player_info.len();
         let mut rng = StdRng::seed_from_u64(42);
 
@@ -341,14 +313,14 @@ impl flop_analyzer {
             .collect_vec();
 
         if active_players.len() < 2 {
-            return Err(MyError::from_string(format!(
+            return Err(PokerError::from_string(format!(
                 "simulate_flop: n_active_players {} < 2",
                 active_players.len()
             )));
         }
 
         if flop_results.len() != active_players.len() {
-            return Err(MyError::from_string(format!(
+            return Err(PokerError::from_string(format!(
                 "simulate_flop: flop_results.len() {} != active_players.len() {}",
                 flop_results.len(),
                 active_players.len()
@@ -364,21 +336,21 @@ impl flop_analyzer {
 
             //with flop, players with hole cards
             let mut eval_cards = Vec::with_capacity(15);
-            let mut used_cards = self.init_cards_used(&mut eval_cards, 3)?;
+            let mut cards_used = self.init_cards_used(&mut eval_cards, 3)?;
 
             //even though we are doing the flop, if we have turn/river cards specified, we add them too
-            assert_eq!(used_cards.count_ones(), self.board_cards.len());
+            assert_eq!(cards_used.count_ones(), self.board_cards.len());
             assert!(self.board_cards.len() >= 3);
             
             assert_eq!(3, eval_cards.len());
 
             //First we choose hole cards for players that are using a range
             let player_cards =
-                get_all_player_hole_cards(&active_players, &mut rng, &mut used_cards)?;
+                get_all_player_hole_cards(&active_players, &mut rng, &mut cards_used)?;
 
             assert_eq!(player_cards.len(), active_players.len());
 
-            assert_eq!(self.board_cards.len() + 2 * active_players.len(), used_cards.count_ones());
+            assert_eq!(self.board_cards.len() + 2 * active_players.len(), cards_used.count_ones());
 
             eval_current_draws(
                 &active_players,
@@ -401,20 +373,20 @@ impl flop_analyzer {
             if self.board_cards.len() < 4 {
                 //choose one
                 add_eval_card(
-                    get_unused_card(&mut rng, &used_cards).unwrap(),
+                    get_unused_card(&mut rng, &cards_used).unwrap(),
                     &mut eval_cards,
-                    &mut used_cards,
+                    &mut cards_used,
                 )?;
 
                 assert_eq!(3, self.board_cards.len());
-                assert_eq!(4 + 2 * active_players.len(), used_cards.count_ones());
+                assert_eq!(4 + 2 * active_players.len(), cards_used.count_ones());
             } else {
                 //Just do a simple push since we already added it to used cards
                 let turn_card_index: usize = self.board_cards[3].into();
-                assert!(used_cards[turn_card_index]);
+                assert!(cards_used[turn_card_index]);
                 eval_cards.push(self.board_cards[3].into());
 
-                assert_eq!(self.board_cards.len() + 2 * active_players.len(), used_cards.count_ones());
+                assert_eq!(self.board_cards.len() + 2 * active_players.len(), cards_used.count_ones());
             }
 
             assert_eq!(4, eval_cards.len());
@@ -437,19 +409,19 @@ impl flop_analyzer {
             //Perhaps iterate on the remaining cards instead of each eval round doing flop/turn/river
             if self.board_cards.len() < 5 {
                 add_eval_card(
-                    get_unused_card(&mut rng, &mut used_cards).unwrap(),
+                    get_unused_card(&mut rng, &mut cards_used).unwrap(),
                     &mut eval_cards,
-                    &mut used_cards,
+                    &mut cards_used,
                 )?;
                 
-                assert_eq!(5 + 2 * active_players.len(), used_cards.count_ones());
+                assert_eq!(5 + 2 * active_players.len(), cards_used.count_ones());
             } else {
                 //Just do a simple push since we already added it to used cards
                 let river_card_index: usize = self.board_cards[4].into();
-                assert!(used_cards[river_card_index]);
+                assert!(cards_used[river_card_index]);
                 eval_cards.push(self.board_cards[4]);
 
-                assert_eq!(5 + 2 * active_players.len(), used_cards.count_ones());
+                assert_eq!(5 + 2 * active_players.len(), cards_used.count_ones());
             }
 
             assert_eq!(5, eval_cards.len());
@@ -471,11 +443,11 @@ impl flop_analyzer {
         &self,
         eval_cards: &mut Vec<Card>,
         num_board_cards: usize,
-    ) -> Result<CardUsedType, MyError> {
+    ) -> Result<CardUsedType, PokerError> {
         let mut cards_used = CardUsedType::default();
 
         if self.board_cards.len() < num_board_cards {
-            return Err(MyError::from_string(format!(
+            return Err(PokerError::from_string(format!(
                 "init_cards_used: not enough board cards.  board_cards.len() {}, needed num_board_cards {}",
                 self.board_cards.len(),
                 num_board_cards
@@ -508,15 +480,15 @@ pub fn eval_current(
     eval_cards: &mut Vec<Card>,
     flop_results: &mut Vec<PlayerFlopResults>,
     street_index: usize,
-) -> Result<(), MyError> {
+) -> Result<(), PokerError> {
     if eval_cards.len() < 3 {
-        return Err(MyError::from_string(format!(
+        return Err(PokerError::from_string(format!(
             "eval_current: eval_cards needs at least 3 cards, but had {} cards",
             eval_cards.len()
         )));
     }
     if eval_cards.len() > 5 {
-        return Err(MyError::from_string(format!(
+        return Err(PokerError::from_string(format!(
             "eval_current: too many eval_cards, should be 5 max, but had {} cards",
             eval_cards.len()
         )));
@@ -573,15 +545,15 @@ pub fn eval_current_draws(
     eval_cards: &Vec<Card>,
     flop_results: &mut Vec<PlayerFlopResults>,
     draw_index: usize,
-) -> Result<(), MyError> {
+) -> Result<(), PokerError> {
     if eval_cards.len() < 3 {
-        return Err(MyError::from_string(format!(
+        return Err(PokerError::from_string(format!(
             "eval_current: eval_cards needs at least 3 cards, but had {} cards",
             eval_cards.len()
         )));
     }
     if eval_cards.len() >= 5 {
-        return Err(MyError::from_string(format!(
+        return Err(PokerError::from_string(format!(
             "eval_current: too many eval_cards, should be 4 max since we are drawing, but had {} cards",
             eval_cards.len()
         )));
@@ -618,14 +590,14 @@ pub fn eval_current_draws(
 fn add_hole_cards_to_used(
     player_cards: &(Card, Card),
     cards_used: &mut CardUsedType,
-) -> Result<(), MyError> {
+) -> Result<(), PokerError> {
     let count_before = cards_used.count_ones();
     cards_used.set(player_cards.0.into(), true);
     cards_used.set(player_cards.1.into(), true);
     let count_after = cards_used.count_ones();
 
     if count_before + 2 != count_after {
-        return Err(MyError::from_string(format!(
+        return Err(PokerError::from_string(format!(
             "Card already used {} {} in board",
             player_cards.0.to_string(),
             player_cards.1.to_string()
@@ -639,7 +611,7 @@ fn get_all_player_hole_cards(
     active_players: &[(usize, &PreflopPlayerInfo)],
     rng: &mut StdRng,
     cards_used: &mut CardUsedType,
-) -> Result<Vec<(Card, Card)>, MyError> {
+) -> Result<Vec<(Card, Card)>, PokerError> {
     let mut player_cards = Vec::with_capacity(active_players.len());
 
     //Add all the hole cards to used cards first
@@ -648,7 +620,7 @@ fn get_all_player_hole_cards(
             continue;
         }
         if p.hole_cards.len() != 2 {
-            return Err(MyError::from_string(format!(
+            return Err(PokerError::from_string(format!(
                 "get_all_player_hole_cards: player {} has {} hole cards",
                 p_idx,
                 p.hole_cards.len()
@@ -677,7 +649,7 @@ fn get_all_player_hole_cards(
             attempts += 1;
 
             if attempts > MAX_RAND_NUMBER_ATTEMPS {
-                return Err(MyError::from_string(
+                return Err(PokerError::from_string(
                     format!("Unable to find cards for player {} after {} attempts.  Cards used count {} range str {} == {:.1}%",
                     p_idx, attempts, cards_used.count_ones(),
                     &p.range_string, p.range_set.count_ones() as f64 / 2652.0 * 100.0)
@@ -709,16 +681,16 @@ fn get_all_player_hole_cards(
     Ok(player_cards)
 }
 
-fn set_used_card(
+pub fn set_used_card(
     c_index: usize, 
     cards_used: &mut CardUsedType,
-) -> Result<(), MyError> {
+) -> Result<(), PokerError> {
     let count_before = cards_used.count_ones();
     cards_used.set(c_index, true);
     let count_after = cards_used.count_ones();
 
     if count_before + 1 != count_after {
-        return Err(MyError::from_string(format!(
+        return Err(PokerError::from_string(format!(
             "Card already used {} in board",
             Card::from(c_index).to_string()
         )));
@@ -727,11 +699,11 @@ fn set_used_card(
     Ok(())
 }
 
-fn add_eval_card(
+pub fn add_eval_card(
     c_index: usize,
     eval_cards: &mut Vec<Card>,
     cards_used: &mut CardUsedType,
-) -> Result<(), MyError> {
+) -> Result<(), PokerError> {
     set_used_card(c_index, cards_used)?;
 
     eval_cards.push(Card::from(c_index));
@@ -816,7 +788,7 @@ fn indices_of_max_values(arr: &[Rank]) -> Vec<usize> {
     max_indices
 }
 
-fn get_unused_card(rng: &mut StdRng, cards_used: &CardUsedType) -> Option<usize> {
+pub fn get_unused_card(rng: &mut StdRng, cards_used: &CardUsedType) -> Option<usize> {
     let mut attempts = 0;
     loop {
         let rand_int: usize = rng.gen_range(0..52);
