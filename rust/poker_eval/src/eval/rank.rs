@@ -682,6 +682,5 @@ mod tests {
             file.write_all(line.as_bytes()).unwrap();
         }
             
-        assert_eq!(1, 2)
     }
 }

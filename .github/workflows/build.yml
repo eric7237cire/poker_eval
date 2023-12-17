@@ -40,10 +40,12 @@ jobs:
           # Optional version of wasm-pack to install(eg. 'v0.9.1', 'latest')
           version: 'latest'
 
-      - name: Cargo tests
+      - name: Cargo 
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+
+      - name: Run Rust tests  
         run: |
           cd rust
           cargo test
