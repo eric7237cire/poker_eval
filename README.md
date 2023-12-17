@@ -1,11 +1,15 @@
 # Rust Wasm Poker Evaluatior
 
-Equity and Draw Analysis.  Add the flop cards, then for each player, each choose a range or specific cards.
+Equity and Draw Analysis.  
+
+To use: 
+
+Add the flop cards, optionally a turn & river card, then for each player, each choose a range or specific cards.
 
 ## Tech Stack
 
 * ![Rust](http://rust-lang.org/logos/rust-logo-32x32.png) Rust
-* ![Vue](dev/v-logo.svg =32x32)
+* <img src="dev/v-logo.svg"  width=32/> Vue3
 
 ## Screenshot
 
@@ -22,6 +26,12 @@ Used UI components and the Range class of https://github.com/b-inary/wasm-postfl
 ### Rust Poker 
 
 Used core classes and ranking from https://github.com/elliottneilclark/rs-poker
+
+### Comlink
+
+Web Worker <=> App communication 
+
+https://github.com/GoogleChromeLabs/comlink
 
 ## Dev
 
