@@ -163,7 +163,6 @@ type DraggingMode = 'none' | 'enabling' | 'disabling';
 const playerStore = usePlayerStore();
 const navStore = useNavStore();
 
-
 const rangeText = ref('');
 const rangeTextError = ref('');
 const rangeArray = reactive(new Array(13 * 13).fill(0));
@@ -174,8 +173,6 @@ const numCombos = ref(0);
 
 const rangeStore = useRangesStore();
 const { currentPlayer } = storeToRefs(playerStore);
-
-
 
 //update when player changes
 //tried to replace with comptude but didn't work...
@@ -199,15 +196,13 @@ watch(currentPlayer, (newValue, oldValue) => {
 
 let draggingMode: DraggingMode = 'none';
 
-
 //private local to update some stats
 
 //web assembly reference
-let range: RangeManager|null = null;
-
+let range: RangeManager | null = null;
 
 initRangeManager().then(() => {
-  console.log("Range initialized")
+  console.log('Range initialized');
 });
 
 //below are functions only
@@ -234,7 +229,6 @@ const cellValue = (row: number, col: number) => {
 };
 
 function onUpdate() {
-
   if (!range) {
     console.log('range is not ready');
     return;
@@ -248,7 +242,7 @@ function onUpdate() {
   numCombos.value = rawData.reduce((acc, cur) => acc + cur, 0);
 
   percRange.value = Math.round((numCombos.value / ((52 * 51) / 2)) * 100);
-};
+}
 
 function update(row: number, col: number, weight: number) {
   if (!range) {
@@ -259,10 +253,9 @@ function update(row: number, col: number, weight: number) {
   range.update(row, col, weight / 100);
   rangeArray[idx] = weight;
   onUpdate();
-};
+}
 
 function onRangeTextChange() {
-
   if (!range) {
     console.log('range is not ready');
     return;
@@ -293,7 +286,7 @@ function onRangeTextChange() {
     }
     onUpdate();
   }
-};
+}
 
 const dragStart = (row: number, col: number) => {
   const idx = 13 * (row - 1) + col - 1;
@@ -347,7 +340,7 @@ const clearRange = () => {
     console.log('range is not ready');
     return;
   }
-  
+
   range.clear();
   rangeArray.fill(0);
   rangeArrayRaw.fill(0);

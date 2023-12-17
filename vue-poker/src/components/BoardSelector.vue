@@ -1,60 +1,62 @@
 <template>
   <div>
-  <template v-if="!isEditing && cardList">
-    <div class="not_editing">
-      <BoardSelectorCard
-        v-for="card in cardList.cards"
-        :key="card"
-        class="m-1"
-        :card-id="card"
-        @click="startEditing"
-      />
-      <button
-        class="button-base button-blue"
-        @click="startEditing"
-        v-if="cardList.cards.length == 0"
-      >
-        Edit Board
-      </button>
-    </div>
-  </template>
-  <template v-if="isEditing && cardList">
-    <div class="editor">
-      <div v-for="suit in 4" :key="suit" class="flex">
+    <template v-if="!isEditing && cardList">
+      <div class="not_editing">
         <BoardSelectorCard
-          v-for="rank in 13"
-          :key="rank"
+          v-for="card in cardList.cards"
+          :key="card"
           class="m-1"
-          :card-id="56 - 4 * rank - suit"
-          :is-selected="modelValue.cards.includes(56 - 4 * rank - suit)"
-          :is-used="usedCards.includes(56 - 4 * rank - suit)"
-          @click="toggleCard(56 - 4 * rank - suit)"
+          :card-id="card"
+          @click="startEditing"
         />
+        <button
+          class="button-base button-blue"
+          @click="startEditing"
+          v-if="cardList.cards.length == 0"
+        >
+          Edit {{ props.expected_length == 2 ? 'Hole Cards' : 'Board' }}
+        </button>
       </div>
+    </template>
+    <template v-if="isEditing && cardList">
+      <div class="editor">
+        <div v-for="suit in 4" :key="suit" class="flex">
+          <BoardSelectorCard
+            v-for="rank in 13"
+            :key="rank"
+            class="m-1"
+            :card-id="56 - 4 * rank - suit"
+            :is-selected="modelValue.cards.includes(56 - 4 * rank - suit)"
+            :is-used="usedCards.includes(56 - 4 * rank - suit)"
+            @click="toggleCard(56 - 4 * rank - suit)"
+          />
+        </div>
 
-      <div class="flex mt-4 mx-1 gap-3">
-        <input
-          v-model="modelValue.cardText"
-          type="text"
-          class="w-40 px-2 py-1 rounded-lg text-sm text-black"
-          @focus="($event.target as HTMLInputElement).select()"
-          @change="onBoardTextChange"
-        />
-        <button class="button-base button-blue" @click="clearBoard">Clear</button>
-        <button class="button-base button-blue" @click="generateRandomBoard">Random Flop</button>
-        <button class="button-base button-blue" @click="editDone">Ok</button>
-      </div>
+        <div class="flex mt-4 mx-1 gap-3">
+          <input
+            v-model="modelValue.cardText"
+            type="text"
+            class="w-40 px-2 py-1 rounded-lg text-sm text-black"
+            @focus="($event.target as HTMLInputElement).select()"
+            @change="onBoardTextChange"
+          />
+          <button class="button-base button-blue" @click="clearBoard">Clear</button>
+          <button class="button-base button-blue" @click="generateRandomBoard">Random Flop</button>
+          <button class="button-base button-blue" @click="editDone">Ok</button>
+        </div>
 
-      <div
-        v-if="props.expected_length > 0 && props.modelValue.cards.length !== props.expected_length"
-        class="mt-5 text-orange-500 font-semibold"
-      >
-        <span class="underline">Warning:</span>
-        Expecting {{ props.expected_length }} Cards
+        <div
+          v-if="
+            props.expected_length > 0 && props.modelValue.cards.length !== props.expected_length
+          "
+          class="mt-5 text-orange-500 font-semibold"
+        >
+          <span class="underline">Warning:</span>
+          Expecting {{ props.expected_length }} Cards
+        </div>
       </div>
-    </div>
-  </template>
-</div>
+    </template>
+  </div>
 </template>
 
 <style lang="postcss" scoped>

@@ -35,7 +35,7 @@
               <template v-for="street_index in 3" :key="street_index">
                 <tr class="relative" style="height: calc(1.9rem + 1px)">
                   <td>Player {{ item.player_index }}</td>
-                  <td><PlayerPreflop :player-id="item.player_index"/></td>
+                  <td><PlayerPreflop :player-id="item.player_index" /></td>
                   <td>{{ getStreetName(street_index) }}</td>
                   <td>
                     <Percentage :perc="item.street_results[street_index - 1].equity" />
@@ -106,9 +106,9 @@
             <!--3 rows per flop result -->
             <template v-for="item in results" :key="item.player_index">
               <template v-for="draw_index in 2" :key="draw_index">
-                <tr :class="'relative ' " style="height: calc(1.9rem + 1px)">
+                <tr :class="'relative '" style="height: calc(1.9rem + 1px)">
                   <td>Player {{ item.player_index }}</td>
-                  <td><PlayerPreflop :player-id="item.player_index"/></td>
+                  <td><PlayerPreflop :player-id="item.player_index" /></td>
                   <td>{{ getStreetName(draw_index) }}</td>
                   <td>
                     <Percentage
@@ -250,7 +250,6 @@ function getStreetName(street_index: number) {
 </script>
 
 <style scoped>
-
 .root {
   background-color: rgb(20, 20, 20);
 
@@ -261,9 +260,9 @@ function getStreetName(street_index: number) {
 
   tbody {
     tr {
-    color: white;
+      color: white;
+    }
   }
-}
 }
 .header-divider::before {
   content: '';

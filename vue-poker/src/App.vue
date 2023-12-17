@@ -1,4 +1,7 @@
 <template>
+  <div class="user-messages">
+    {{ userMessage }}
+  </div>
   <div class="results-table-container">
     <Transition>
       <ResultTable :results="myResultsList" v-if="myResultsList.length > 0" />
@@ -107,14 +110,18 @@ onMounted(() => {
   console.log(`the component is now mounted.`);
   //init the worker
   init(1).then(() => {
-    console.log("worker initialized");
+    console.log('worker initialized');
   });
 
   //fetch the ranges
   rangeStore.init_ranges().then(() => {
-    console.log("ranges fetched");
+    console.log('ranges fetched');
   });
 });
+
+const userMessage = ref(
+  'Welcome, to get started, choose the flop, optionally the turn and river.  Then either specify the exact hole cards or a range for the players you want to simulate'
+);
 
 const players = [
   { id: 0, class: 'player0' },
@@ -138,23 +145,43 @@ async function go() {
     return;
   }
 
+  if (boardStore.board.cards.length < 3) {
+    userMessage.value = 'You must specify at least 3 board cards';
+    return;
+  }
+
   await handler.reset();
   await handler.setBoardCards(Uint8Array.from(boardStore.board.cards));
+
+  let activePlayerCount = 0;
+
   for (let i = 0; i < playerStore.players.length; i++) {
     const player = playerStore.players[i];
-    if (
-      player.state == PlayerState.USE_HOLE &&
-      Array.isArray(player.holeCards.cards) &&
-      player.holeCards.cards.length === 2
-    ) {
-      await handler.setPlayerCards(i, Uint8Array.from(player.holeCards.cards));
+    if (player.state == PlayerState.USE_HOLE) {
+      if (Array.isArray(player.holeCards.cards) && player.holeCards.cards.length === 2) {
+        await handler.setPlayerCards(i, Uint8Array.from(player.holeCards.cards));
+        activePlayerCount += 1;
+      } else {
+        userMessage.value = `Missing hole cards for player ${
+          i 
+        }.  Either specify cards or click 'Off'`;
+        return;
+      }
     }
     if (player.state == PlayerState.USE_RANGE) {
       await handler.setPlayerRange(i, player.rangeStr);
+      activePlayerCount += 1;
     }
     //await handler.setPlayerRange(i, player.rangeStr);
     await handler.setPlayerState(i, player.state.valueOf());
   }
+
+  if (activePlayerCount < 2) {
+    userMessage.value =
+      'You must specify at least 2 players.  Click Hole to select exact hole cards or Range to select a range';
+    return;
+  }
+
   num_iterations.value = 0;
 
   await handler.initResults();
@@ -191,19 +218,7 @@ async function tick(numIterations: number = iterationsPerTick) {
 
   resultsStore.results = resultList;
 
-  //resultList[0].equity = num_iterations.value / maxIterations;
-
   setTimeoutReturn.value = setTimeout(tick, 100);
-
-  // for(let i = 0; i < playerStore.players.length; i++) {
-  //   const result = await handler.getResult(i);
-  //   console.log(`player ${i}`, result);
-  //   console.log(`player ${i} win rate`, result.win_eq);
-  // }
-
-  // for(const r of result) {
-  //   console.log(r);
-  // }
 }
 
 async function stop() {
@@ -221,9 +236,4 @@ async function stop() {
     console.warn('Timeout is null');
   }
 }
-
-// playerStore.updateRangeStrForPlayer(PlayerIds.HERO, 'TT+');
-// playerStore.updateRangeStrForPlayer(PlayerIds.WEST, '83+');
-// playerStore.updateRangeStrForPlayer(PlayerIds.NORTH_WEST, '22+, 72+');
-// playerStore.updateRangeStrForPlayer(PlayerIds.NORTH_EAST, 'A2o+, Q3o+');
 </script>
