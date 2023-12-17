@@ -158,7 +158,7 @@ impl Draws {
     }
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Eq, PartialEq, Debug)]
 #[repr(u8)]
 enum PlayerPreFlopState {
     Disabled = 0,
@@ -640,6 +640,8 @@ fn get_all_player_hole_cards(
             player_cards.push(pc);
             continue;
         }
+
+        assert_eq!(p.state, PlayerPreFlopState::UseRange);
 
         //Now deal with ranges
         let mut attempts = 0;

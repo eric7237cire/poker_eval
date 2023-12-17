@@ -1,9 +1,4 @@
-use std::{
-    cmp::{max, min},
-    ops::BitOr,
-};
-
-use log::{debug};
+use std::ops::BitOr;
 
 use crate::{
     calc_bitset_cards_metrics, count_higher, count_lower, rank_straight, value_set_iterator,
