@@ -1,6 +1,4 @@
 use bitvec::prelude::*;
-use log::debug;
-use log::info;
 use postflop_solver::card_pair_to_index;
 use postflop_solver::Range;
 use std::cmp;

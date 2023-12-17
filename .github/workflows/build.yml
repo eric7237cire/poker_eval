@@ -40,7 +40,7 @@ jobs:
           # Optional version of wasm-pack to install(eg. 'v0.9.1', 'latest')
           version: 'latest'
 
-      - name: Cargo 
+      - name: Setup Cargo 
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable

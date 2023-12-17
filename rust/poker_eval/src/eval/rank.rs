@@ -273,8 +273,7 @@ mod tests {
     use std::{collections::HashMap, io::Write};
 
     use itertools::Itertools;
-    use log::{info, debug};
-    use crate::{set_used_card, get_unused_card, add_eval_card};
+    use crate::{ get_unused_card, add_eval_card};
     use postflop_solver::Hand;
     use rand::{rngs::StdRng, SeedableRng};
 

@@ -1,12 +1,12 @@
-use std::{cmp, fmt::Display, mem};
-use crate::{PokerError, get_unused_card, add_eval_card, set_used_card};
+use std::{cmp, mem};
+use crate::{PokerError, get_unused_card, add_eval_card, set_used_card, HoleCards};
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
 use postflop_solver::card_pair_to_index;
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::{rngs::StdRng, SeedableRng};
 
 use crate::{
-    get_filtered_range_set, range_string_to_set, rank_cards, Card, CardUsedType, InRangeType, Rank,
+    range_string_to_set, rank_cards, Card, CardUsedType, InRangeType, Rank,
     NUM_RANK_FAMILIES, partial_rank_cards, PartialRankContainer, StraightDrawType, FlushDrawType,
 };
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
@@ -285,11 +285,11 @@ impl flop_analyzer {
             .player_info
             .iter()
             .enumerate()
-            .filter(|(p_idx, p)| p.state != PlayerPreFlopState::Disabled)
+            .filter(|(_p_idx, p)| p.state != PlayerPreFlopState::Disabled)
             .collect_vec();
 
         let mut results = Vec::with_capacity(MAX_PLAYERS);
-        for (p_idx, p) in active_players.iter() {
+        for (p_idx, _p) in active_players.iter() {
             let mut player_results = PlayerFlopResults::new();
             player_results.player_index = *p_idx;
             results.push(player_results);
@@ -309,7 +309,7 @@ impl flop_analyzer {
             .player_info
             .iter()
             .enumerate()
-            .filter(|(p_idx, p)| p.state != PlayerPreFlopState::Disabled)
+            .filter(|(_p_idx, p)| p.state != PlayerPreFlopState::Disabled)
             .collect_vec();
 
         if active_players.len() < 2 {
@@ -500,7 +500,7 @@ pub fn eval_current(
 
     let mut hand_evals: Vec<Rank> = Vec::with_capacity(n_players);
 
-    for (active_index, (p_idx, p)) in active_players.iter().enumerate() {
+    for (active_index, (_p_idx, p)) in active_players.iter().enumerate() {
         assert!(p.state != PlayerPreFlopState::Disabled);
 
         //For players with ranges we already chose their cards
@@ -568,13 +568,14 @@ pub fn eval_current_draws(
     assert!(n_players > 1);
     assert_eq!(player_cards.len(), n_players);
 
-    for (active_index, (p_idx, p)) in active_players.iter().enumerate() {
+    for (active_index, (_p_idx, p)) in active_players.iter().enumerate() {
         assert!(p.state != PlayerPreFlopState::Disabled);
 
         //For players with ranges we already chose their cards
 
+        let hc = HoleCards::new(player_cards[active_index].0, player_cards[active_index].1)?;
         let prc = partial_rank_cards(
-            &[player_cards[active_index].0, player_cards[active_index].1], 
+            &hc, 
             &eval_cards);
 
         update_draw(
@@ -741,12 +742,11 @@ fn update_draw(results: &mut Draws, prc: PartialRankContainer) {
 
 //returns winners and how many players were considered (non None rank)
 fn indices_of_max_values(arr: &[Rank]) -> Vec<usize> {
-    let mut non_none_count = 0;
+    
     let mut max_indices = Vec::with_capacity(MAX_PLAYERS);
     let mut max_value = Rank::HighCard(0);
 
     for (index, &value) in arr.iter().enumerate() {
-        non_none_count += 1;
         if value > max_value {
             max_value = value;
             max_indices.clear();
@@ -762,8 +762,6 @@ fn indices_of_max_values(arr: &[Rank]) -> Vec<usize> {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
-
     use crate::{card_u8s_from_string, web::analyzer::PlayerPreFlopState};
 
     fn assert_equity(equity: f64, target: f64, tolerance: f64) {
@@ -896,24 +894,24 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_heads_up_with_cards() {
-        let mut analyzer = super::flop_analyzer::new();
-        analyzer.reset();
+    // #[test]
+    // fn test_heads_up_with_cards() {
+    //     let mut analyzer = super::flop_analyzer::new();
+    //     analyzer.reset();
 
-        analyzer.set_player_state(0, PlayerPreFlopState::UseHoleCards as u8);
-        analyzer.set_player_state(3, PlayerPreFlopState::UseHoleCards as u8);
+    //     analyzer.set_player_state(0, PlayerPreFlopState::UseHoleCards as u8);
+    //     analyzer.set_player_state(3, PlayerPreFlopState::UseHoleCards as u8);
 
-        analyzer.set_player_cards(0, card_u8s_from_string("2d 7s").as_slice());
-        analyzer.set_player_cards(3, card_u8s_from_string("Ad Ac").as_slice());
+    //     analyzer.set_player_cards(0, card_u8s_from_string("2d 7s").as_slice());
+    //     analyzer.set_player_cards(3, card_u8s_from_string("Ad Ac").as_slice());
 
-        analyzer.set_board_cards(card_u8s_from_string("3s 4s Ac 6h 5c").as_slice());
+    //     analyzer.set_board_cards(card_u8s_from_string("3s 4s Ac 6h 5c").as_slice());
 
-        let num_it = 400_000;
+    //     let num_it = 400_000;
 
-        let tolerance = 0.1;
+    //     let tolerance = 0.1;
 
-        //let mut results = analyzer.build_results();
-        //analyzer.simulate_flop(num_it, &mut results).unwrap();
-    }
+    //     //let mut results = analyzer.build_results();
+    //     //analyzer.simulate_flop(num_it, &mut results).unwrap();
+    // }
 }

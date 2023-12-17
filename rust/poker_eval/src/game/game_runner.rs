@@ -5,6 +5,8 @@ use crate::{
     Position, Round,
 };
 
+
+#[allow(dead_code)]
 pub struct GameRunner<'a> {
     game_state: GameState,
 
@@ -16,6 +18,7 @@ pub struct GameRunner<'a> {
     big_blind: ChipType,
 }
 
+#[allow(dead_code)]
 impl<'a> GameRunner<'a> {
     fn new(agents: Vec<Box<dyn Agent + 'a>>, small_blind: ChipType) -> GameRunner {
         let mut agent_states = Vec::new();
