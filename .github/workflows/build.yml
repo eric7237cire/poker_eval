@@ -24,11 +24,6 @@ jobs:
           cd vue-poker
           npm install
 
-      - name: Build Vue.js app
-        run: |
-          cd vue-poker
-          npm run build2
-
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -37,5 +32,11 @@ jobs:
 
       - name: Build Rust Wasm
         run: |
-          cd rust
-          wasm-pack build --dev --target web --out-dir ../../vue-poker/pkg poker_eval
+          cd vue-poker
+          npm run r1-build-release
+          npm run r2-build-release
+
+      - name: Build Vue.js app
+        run: |
+          cd vue-poker
+          npm run build2
