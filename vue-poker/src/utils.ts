@@ -6,7 +6,8 @@ export const suitLetters = ['c', 'd', 'h', 's'];
 export const rankPat = '[AaKkQqJjTt2-9]';
 const cardRegex = new RegExp(`^(${rankPat})([cdhs])$`);
 
-const suitClasses = ['text-green-600', 'text-blue-600', 'text-pink-600', 'text-black'];
+// dark mode, use white for spades
+const suitClasses = ['text-green-600', 'text-blue-600', 'text-pink-600', 'text-white-600/75'];
 
 export const cardText = (card: number) => {
   return {

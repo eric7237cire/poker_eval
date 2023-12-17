@@ -178,7 +178,7 @@ const { currentPlayer } = storeToRefs(playerStore);
 
 //update when player changes
 //tried to replace with comptude but didn't work...
- watch(currentPlayer, (newValue, oldValue) => {
+watch(currentPlayer, (newValue, oldValue) => {
   console.log(`The re cp changed from ${oldValue} to ${newValue}`);
   //const playerIndex = currentPlayer.value.valueOf();
   const p = playerStore.curPlayerData;
@@ -195,7 +195,6 @@ const { currentPlayer } = storeToRefs(playerStore);
 
 //   return playerStore.currentPlayer;
 // });
-
 
 let draggingMode: DraggingMode = 'none';
 
@@ -294,7 +293,7 @@ function onPercRangeChange() {
   percRange.value = Math.round(Math.max(0, Math.min(100, percRange.value)));
 
   const mwRanks = rangeStore.multiway_ranges;
-  let takeN = Math.round(percRange.value * mwRanks.length / 100);
+  let takeN = Math.round((percRange.value * mwRanks.length) / 100);
 
   console.log(`takeN is ${takeN}`);
 
@@ -306,7 +305,7 @@ function onPercRangeChange() {
   const rStr = rStrParts.join(', ');
 
   rangeText.value = rStr;
-  onRangeTextChange(); 
+  onRangeTextChange();
 }
 
 const clearRange = () => {

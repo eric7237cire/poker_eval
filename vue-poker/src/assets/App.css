@@ -25,13 +25,38 @@ header {
   }
 }
 
+.board-selector-container,
 .players {
   display: grid;
   grid-gap: 10;
   grid-template-columns: repeat(8, minmax(75px, 90px));
-  grid-template-rows: repeat(4, minmax(110px, 120px));
   /*display: block;*/
   margin-left: 30px;
+}
+
+.go-row-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  width: calc(5 * var(--playerWidth));
+  margin-left: 70px;
+  /*width: 600px;*/
+
+  .go-row {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: row;
+    margin-bottom: 10px;
+    gap: 10px;
+
+    .status {
+      color: white;
+    }
+  }
+}
+
+.players {
   /*height: 300px;
     width: 600px;*/
   position: relative;
@@ -39,7 +64,7 @@ header {
   .player {
     /*position: absolute;
       width: 150px;*/
-    width: 150px;
+    width: v-bind(playerWidth);
     border: 1px solid red;
     display: inline-grid;
     margin: 10px;

@@ -1,0 +1,42 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - eval3
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      - name: Install dependencies
+        run: |
+          cd vue-app
+          npm install
+
+      - name: Build Vue.js app
+        run: |
+          cd vue-app
+          npm run build
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Build Rust Wasm
+        run: |
+          cd rust-wasm-app
+          cargo build --target wasm32-unknown-unknown --release
+          wasm-bindgen target/wasm32-unknown-unknown/release/rust_wasm_app.wasm --out-dir ./pkg

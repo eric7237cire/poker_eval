@@ -1,21 +1,21 @@
 <template>
-  <div class="ml-10">
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
+  <div class="results-table-container">
+    <Transition>
+      <ResultTable :results="myResultsList" v-if="myResultsList.length > 0" />
+    </Transition>
   </div>
 
-  <ResultTable :results="myResultsList" />
-
-  <button @click="go" class="button-base button-blue" style="position: relative; left: 400px">
-    Go
-  </button>
-  <button @click="stop" class="button-base button-red" style="position: relative; left: 400px">
-    Stop
-  </button>
-  <div>{{ num_iterations }} Iterations</div>
+  <div class="go-row-container">
+    <div class="go-row">
+      <button @click="go" class="button-base button-blue">Go</button>
+      <button @click="stop" class="button-base button-red">Stop</button>
+      <div class="status">{{ num_iterations }} Iterations</div>
+    </div>
+  </div>
 
   <div class="ml-10">
-    <div class="flex-grow my-4 px-6 pt-2 overflow-y-auto" style="height: calc(100% - 2rem)">
-      <BoardSelector v-model="boardStore.board" :expected_length="3" />
+    <div class="board-selector-container" style="height: calc(100% - 2rem)">
+      <BoardSelector class="child" v-model="boardStore.board" :expected_length="3" />
     </div>
 
     <!-- This pops up if we are editing a range -->
@@ -34,6 +34,41 @@
 
 <style scoped src="./assets/App.css"></style>
 
+<style lang="postcss">
+/*use non scoped styles*/
+.board-selector-container div {
+  grid-column-start: 4;
+  grid-column-end: 6;
+}
+
+.fade-in {
+  opacity: 1;
+  animation-name: fadeInOpacity;
+  animation-iteration-count: 1;
+  animation-timing-function: ease-in;
+  animation-duration: 2s;
+}
+
+@keyframes fadeInOpacity {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.v-enter-active,
+.v-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.v-enter-from,
+.v-leave-to {
+  opacity: 0;
+}
+</style>
+
 <script setup lang="ts">
 import BoardSelector from './components/BoardSelector.vue';
 import Player from './components/Player.vue';
@@ -46,6 +81,7 @@ import { PlayerIds, PlayerState, usePlayerStore } from './stores/player';
 import { useBoardStore } from './stores/board';
 import { useResultsStore } from './stores/results';
 import { useRangesStore } from './stores/ranges';
+import { useCssVar } from '@vueuse/core';
 
 const navStore = useNavStore();
 const playerStore = usePlayerStore();
@@ -88,6 +124,10 @@ const num_iterations = ref(0);
 const setTimeoutReturn: Ref<NodeJS.Timeout | null> = ref(null);
 let stopping = false;
 
+const el = ref(null);
+const color = useCssVar('--playerWidth', el);
+color.value = '150px';
+
 async function go() {
   if (!handler) {
     console.log('handler is not ready');
@@ -115,16 +155,16 @@ async function go() {
 
   await handler.initResults();
 
-  setTimeoutReturn.value = setTimeout(tick, 100);
+  setTimeoutReturn.value = setTimeout(() => tick(50), 100);
   stopping = false;
 }
 
-async function tick() {
+async function tick(numIterations: number = iterationsPerTick) {
   if (!handler) {
     console.log('handler is not ready');
     return;
   }
-  num_iterations.value = num_iterations.value + iterationsPerTick;
+  num_iterations.value = num_iterations.value + numIterations;
 
   if (num_iterations.value >= maxIterations) {
     console.log(`max iterations reached ${maxIterations} > ${num_iterations.value}`);
@@ -141,13 +181,13 @@ async function tick() {
     console.log(r);
   }
 
-  resultsStore.results = resultList;
-
-  //resultList[0].equity = num_iterations.value / maxIterations;
-
   if (stopping) {
     return;
   }
+
+  resultsStore.results = resultList;
+
+  //resultList[0].equity = num_iterations.value / maxIterations;
 
   setTimeoutReturn.value = setTimeout(tick, 100);
 
@@ -163,12 +203,11 @@ async function tick() {
 }
 
 async function stop() {
-  if (!handler) {
-    console.log('handler is not ready');
-    return;
-  }
-
   stopping = true;
+
+  num_iterations.value = 0;
+
+  resultsStore.results = [];
 
   if (setTimeoutReturn.value) {
     console.info('clearTimeout');

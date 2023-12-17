@@ -1,13 +1,21 @@
 <template>
   <template v-if="!isEditing && cardList">
-    <BoardSelectorCard
-      v-for="card in cardList.cards"
-      :key="card"
-      class="m-1"
-      :card-id="card"
-      @click="startEditing"
-    />
-    <button @click="startEditing" v-if="cardList.cards.length == 0">Edit</button>
+    <div class="not_editing">
+      <BoardSelectorCard
+        v-for="card in cardList.cards"
+        :key="card"
+        class="m-1"
+        :card-id="card"
+        @click="startEditing"
+      />
+      <button
+        class="button-base button-blue"
+        @click="startEditing"
+        v-if="cardList.cards.length == 0"
+      >
+        Edit Board
+      </button>
+    </div>
   </template>
   <template v-if="isEditing && cardList">
     <div class="editor">
@@ -48,9 +56,16 @@
 </template>
 
 <style lang="postcss" scoped>
+.not_editing {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
 .editor {
   z-index: 10;
   position: relative;
+  width: 600px;
   opacity: 1;
   background-color: rgb(20, 20, 20);
   padding: 20px;

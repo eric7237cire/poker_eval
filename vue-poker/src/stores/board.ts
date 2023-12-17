@@ -12,7 +12,7 @@ export const useBoardStore = defineStore('board', {
     return {
       board: useLocalStorage('boardText', {
         cardText: '',
-        cards: []
+        cards: [] as number[]
       })
     };
   },
