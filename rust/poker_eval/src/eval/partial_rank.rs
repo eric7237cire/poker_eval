@@ -492,8 +492,15 @@ pub fn partial_rank_cards(hole_cards: &HoleCards, board: &[Card]) -> PartialRank
         let lo_card_value = hole_cards.get_lo_card().value;
         let lo_card_value = lo_card_value as usize;
 
-        let number_above = count_higher(board_metrics.count_to_value[1], lo_card_value);
+        let mut number_above = count_higher(board_metrics.count_to_value[1], lo_card_value);
         let number_below = count_lower(board_metrics.count_to_value[1], lo_card_value);
+
+        //If our higher card paired on the board, it doesn't count
+        if let Some(hi_pair) = partial_ranks.hi_pair.as_ref() {
+            if !hi_pair.made_quads && !hi_pair.made_set {
+                number_above -= 1;
+            }
+        }
 
         partial_ranks.lo_card = Some(PairFamilyRank {
             number_above,
@@ -506,7 +513,15 @@ pub fn partial_rank_cards(hole_cards: &HoleCards, board: &[Card]) -> PartialRank
         let hi_card_value = hi_card_value as usize;
 
         let number_above = count_higher(board_metrics.count_to_value[1], hi_card_value);
-        let number_below = count_lower(board_metrics.count_to_value[1], hi_card_value);
+        let mut number_below = count_lower(board_metrics.count_to_value[1], hi_card_value);
+
+        //If our lower card paired on the board, it doesn't count
+        if let Some(lo_pair) = partial_ranks.lo_pair.as_ref() {
+            if !lo_pair.made_quads && !lo_pair.made_set {
+                number_below -= 1;
+            }
+        }
+
 
         partial_ranks.hi_card = Some(PairFamilyRank {
             number_above,
@@ -694,7 +709,7 @@ mod tests {
         );
         assert_eq!(prc.lo_pair, None);
         assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.lo_card, None);
+        assert_eq!(prc.lo_card, Some(PairFamilyRank { number_above: 4, number_below: 0 }));
 
         let hole_cards = "2c 6h".parse().unwrap();
         let board_cards = cards_from_string("3c 4s 7d Ac");
@@ -718,8 +733,8 @@ mod tests {
         assert_eq!(prc.pocket_pair, None);
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
-        assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.lo_card, None);
+        assert_eq!(prc.hi_card, Some(PairFamilyRank { number_above: 2, number_below: 2 }));
+        assert_eq!(prc.lo_card, Some(PairFamilyRank { number_above: 4, number_below: 0 }));
 
         //Not a straight draw ?  hmmm
         let hole_cards = "7c 8h".parse().unwrap();
@@ -731,8 +746,8 @@ mod tests {
         assert_eq!(prc.pocket_pair, None);
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
-        assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.lo_card, None);
+        assert_eq!(prc.hi_card, Some(PairFamilyRank { number_above: 5, number_below: 0 }));
+        assert_eq!(prc.lo_card, Some(PairFamilyRank { number_above: 5, number_below: 0 }));
 
         let hole_cards = "7c 8h".parse().unwrap();
         let board_cards = cards_from_string("2c Ts Kd Qc Jd");
@@ -754,8 +769,8 @@ mod tests {
         assert_eq!(prc.pocket_pair, None);
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
-        assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.lo_card, None);
+        assert_eq!(prc.hi_card, Some(PairFamilyRank { number_above: 4, number_below: 1 }));
+        assert_eq!(prc.lo_card, Some(PairFamilyRank { number_above: 4, number_below: 1 }));
 
         let hole_cards = "Kc Jh".parse().unwrap();
         let board_cards = cards_from_string("Ts Qc 8d");
@@ -773,8 +788,8 @@ mod tests {
         assert_eq!(prc.pocket_pair, None);
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
-        assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.lo_card, None);
+        assert_eq!(prc.hi_card, Some(PairFamilyRank { number_above: 0, number_below: 3 }));
+        assert_eq!(prc.lo_card, Some(PairFamilyRank { number_above: 1, number_below: 2 }));
 
         let hole_cards = "6c 8h".parse().unwrap();
         let board_cards = cards_from_string("7s 9c 2d");
@@ -793,8 +808,8 @@ mod tests {
         assert_eq!(prc.pocket_pair, None);
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
-        assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.lo_card, None);
+        assert_eq!(prc.hi_card, Some(PairFamilyRank { number_above: 1, number_below: 2 }));
+        assert_eq!(prc.lo_card, Some(PairFamilyRank { number_above: 2, number_below: 1 }));
 
         let hole_cards = "7c Kh".parse().unwrap();
         let board_cards = cards_from_string("9s Jc Td");
@@ -812,8 +827,8 @@ mod tests {
         assert_eq!(prc.pocket_pair, None);
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
-        assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.lo_card, None);
+        assert_eq!(prc.hi_card, Some(PairFamilyRank { number_above: 0, number_below: 3 }));
+        assert_eq!(prc.lo_card, Some(PairFamilyRank { number_above: 3, number_below: 0 }));
 
         let hole_cards = "8c 6h".parse().unwrap();
         let board_cards = cards_from_string("4s Td 7c");
@@ -832,8 +847,8 @@ mod tests {
         assert_eq!(prc.pocket_pair, None);
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
-        assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.lo_card, None);
+        assert_eq!(prc.hi_card, Some(PairFamilyRank { number_above: 1, number_below: 2 }));
+        assert_eq!(prc.lo_card, Some(PairFamilyRank { number_above: 2, number_below: 1 }));
     }
 
     #[test]
