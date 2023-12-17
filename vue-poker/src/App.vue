@@ -183,6 +183,7 @@ async function go() {
   }
 
   num_iterations.value = 0;
+  userMessage.value = `Simulating until ${maxIterations} or Stop is clicked...`;
 
   await handler.initResults();
 
@@ -199,6 +200,7 @@ async function tick(numIterations: number = iterationsPerTick) {
 
   if (num_iterations.value >= maxIterations) {
     console.log(`max iterations reached ${maxIterations} > ${num_iterations.value}`);
+    userMessage.value = ``;
     stopping = true;
     return;
   }
@@ -225,6 +227,7 @@ async function stop() {
   stopping = true;
 
   num_iterations.value = 0;
+  userMessage.value = ``;
 
   resultsStore.results = [];
 
