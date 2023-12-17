@@ -12,6 +12,15 @@ export default defineConfig({
     wasm(),
     //ViteRsw(),
   ],
+  //https://stackoverflow.com/questions/74769990/how-to-override-the-rollup-output-format-setting-in-vite
+  worker: {
+    format: "es"
+  },
+  build: {
+    rollupOptions: {
+      
+    }
+  },
   resolve: {
     alias: {
       //'@': fileURLToPath(new URL('./src', import.meta.url)),
