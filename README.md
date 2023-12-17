@@ -1,4 +1,6 @@
-# Rust Wasm Poker Evaluatior
+# Rust Wasm Poker Evaluatior 
+
+![Github Actions](https://github.com/eric7237cire/poker_eval/actions/workflows/build.yml/badge.svg)
 
 Equity and Draw Analysis.  
 
