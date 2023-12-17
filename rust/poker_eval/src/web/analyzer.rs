@@ -15,7 +15,7 @@ use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 type ResultType = u32;
 use serde::Serialize;
 
-#[wasm_bindgen]
+//#[wasm_bindgen]
 #[derive(Default)]
 pub struct RankResults {
     num_iterations: ResultType,
@@ -27,14 +27,14 @@ pub struct RankResults {
     rank_family_count: [ResultType; 9],
 }
 
-#[wasm_bindgen]
 #[derive(Default)]
+#[wasm_bindgen]
 pub struct PlayerFlopResults {
     /*
     This is when evaluating the flop vs the players
     */
     //pub num_iterations: ResultType,
-    pub player_index: usize,
+    player_index: usize,
 
     //hand rankings as of the flop
     //3 of them, flop turn river
@@ -52,46 +52,7 @@ impl PlayerFlopResults {
         d
     }
 
-    // The rust struct can't get passed via the worker interface, so we need primitive accessors
-    pub fn get_perc_family(&self, street_index: usize, family_index: usize) -> f64 {
-        let r = &self.street_rank_results[street_index];
-        r.rank_family_count[family_index] as f64 / r.num_iterations as f64
-    }
-    pub fn get_perc_family_or_better(&self, street_index: usize, family_index: usize) -> f64 {
-        let mut total = 0.0;
-        for i in family_index..NUM_RANK_FAMILIES {
-            total += self.get_perc_family(street_index, i)
-        }
-        total
-    }
-    pub fn get_equity(&self, street_index: usize) -> f64 {
-        let r = &self.street_rank_results[street_index];
-        (r.win_eq + r.tie_eq) / r.num_iterations as f64
-    }
-
-    //This guy has no arrays, so we can just convert it to json
-    pub fn get_street_draw(&self, draw_index: usize) -> Result<JsValue, JsValue> {
-        info!(
-            "get_street_draw: {} ",
-            draw_index
-        );
-        
-        Ok(serde_wasm_bindgen::to_value(
-            &self.street_draws[draw_index]
-        )?)
-        // return Draws {
-        //     num_iterations: self.street_draws[draw_index].num_iterations,
-        //     gut_shot: self.street_draws[draw_index].gut_shot,
-        //     str8_draw: self.street_draws[draw_index].str8_draw,
-        //     flush_draw: self.street_draws[draw_index].flush_draw,
-        //     backdoor_flush_draw: self.street_draws[draw_index].backdoor_flush_draw,
-        //     one_overcard: self.street_draws[draw_index].one_overcard,
-        //     two_overcards: self.street_draws[draw_index].two_overcards,
-        //     lo_paired: self.street_draws[draw_index].lo_paired,
-        //     hi_paired: self.street_draws[draw_index].hi_paired,
-        //     pp_paired: self.street_draws[draw_index].pp_paired,
-        // };
-    }
+    
 }
 
 
@@ -169,6 +130,80 @@ pub struct PreflopPlayerInfo {
 pub struct flop_analyzer {
     board_cards: Vec<Card>,
     player_info: Vec<PreflopPlayerInfo>,
+}
+
+
+#[wasm_bindgen]
+pub struct FlopSimulationResults {
+    //Because of https://stackoverflow.com/questions/68243940/rust-wasm-bindgen-struct-with-string
+    //we don't want copy but we have accessors
+    all_villians: PlayerFlopResults,
+    flop_results: Vec<PlayerFlopResults>,
+    
+}
+
+#[wasm_bindgen]
+impl FlopSimulationResults {
+
+    //note these player_indexes are the index of active players
+
+    // The rust struct can't get passed via the worker interface, so we need primitive accessors
+    pub fn get_perc_family(&self, active_player_index: Option<usize>, street_index: usize, family_index: usize) -> f64 {
+        let r = if let Some(p_idx) = active_player_index {
+             &self.flop_results[p_idx].street_rank_results[street_index]
+        } else {
+            &self.all_villians.street_rank_results[street_index]
+        };
+          
+        r.rank_family_count[family_index] as f64 / r.num_iterations as f64
+    }
+    pub fn get_perc_family_or_better(&self, active_player_index: Option<usize>, street_index: usize, family_index: usize) -> f64 {
+        let mut total = 0.0;
+        for i in family_index..NUM_RANK_FAMILIES {
+            total += self.get_perc_family(active_player_index, street_index, i)
+        }
+        total
+    }
+    pub fn get_equity(&self, active_player_index: Option<usize>, street_index: usize) -> f64 {
+        
+        let r = if let Some(p_idx) = active_player_index {
+             &self.flop_results[p_idx].street_rank_results[street_index]
+        } else {
+            &self.all_villians.street_rank_results[street_index]
+        };
+
+        (r.win_eq + r.tie_eq) / r.num_iterations as f64
+    }
+
+    //This guy has no arrays, so we can just convert it to json
+    pub fn get_street_draw(&self, active_player_index: Option<usize>, draw_index: usize) -> Result<JsValue, JsValue> {
+        info!(
+            "get_street_draw: {} ",
+            draw_index
+        );
+        
+        Ok(serde_wasm_bindgen::to_value(
+        if let Some(p_idx) = active_player_index {            
+                &self.flop_results[p_idx].street_draws[draw_index]            
+        } else {
+            &self.all_villians.street_draws[draw_index]
+        })?)
+        
+    }
+
+    pub fn get_num_players(&self) -> usize {
+        self.flop_results.len()
+    }
+
+    //Convert from active_player_index to original
+    pub fn get_player_index(&self, player_index: usize) -> usize {
+        info!(
+            "get_player_index: {} ",
+            player_index
+        );
+        
+        self.flop_results[player_index].player_index
+    }
 }
 
 //hero is 0
@@ -255,7 +290,8 @@ impl flop_analyzer {
         }
     }
 
-    pub fn build_results(&self) -> Vec<PlayerFlopResults> {
+    //Because wasm doesn't like refs, we use move semantics
+    pub fn build_results(&self) -> FlopSimulationResults {
         let active_players = self
             .player_info
             .iter()
@@ -269,14 +305,17 @@ impl flop_analyzer {
             player_results.player_index = *p_idx;
             results.push(player_results);
         }
-        results
+        FlopSimulationResults {
+            flop_results: results,
+            all_villians: PlayerFlopResults::new(),
+        }
     }
 
     pub fn simulate_flop(
         &self,
         num_iterations: u32,
-        mut flop_results: Vec<PlayerFlopResults>,
-    ) -> Result<Vec<PlayerFlopResults>, PokerError> {
+        all_flop_results: FlopSimulationResults,        
+    ) -> Result<FlopSimulationResults, PokerError> {
         //let n_players = self.player_info.len();
         let mut rng = StdRng::seed_from_u64(42);
 
@@ -293,6 +332,8 @@ impl flop_analyzer {
                 active_players.len()
             )));
         }
+
+        let mut flop_results = all_flop_results.flop_results;
 
         if flop_results.len() != active_players.len() {
             return Err(PokerError::from_string(format!(
@@ -411,7 +452,10 @@ impl flop_analyzer {
             )?;
         }
 
-        Ok(flop_results)
+        Ok(FlopSimulationResults{
+            flop_results: flop_results,
+            all_villians: PlayerFlopResults::new(),
+        })
     }
 
     fn init_cards_used(
@@ -765,8 +809,10 @@ mod tests {
         analyzer.set_board_cards(card_u8s_from_string("Qs Ts 7c").as_slice());
 
         let num_it = 10_000;
-        let results = analyzer.build_results();
-        let results = analyzer.simulate_flop(num_it, results).unwrap();
+        let f_results = analyzer.build_results();
+        let f_results = analyzer.simulate_flop(num_it, f_results).unwrap();
+
+        let results = &f_results.flop_results;
 
         // let results = analyzer
         //     .player_info
@@ -817,8 +863,10 @@ mod tests {
         let tolerance = 0.5;
         //let tolerance = 0.1;
 
-        let results = analyzer.build_results();
-        let results = analyzer.simulate_flop(num_it, results).unwrap();
+        let f_results = analyzer.build_results();
+        let f_results = analyzer.simulate_flop(num_it, f_results).unwrap();
+
+        let results = &f_results.flop_results;
 
         assert_eq!(results[0].street_rank_results[2].num_iterations, num_it);
         assert_eq!(results[0].player_index, 0);
