@@ -334,6 +334,7 @@ impl flop_analyzer {
         }
 
         let mut flop_results = all_flop_results.flop_results;
+        let mut villian_results = all_flop_results.all_villians;
 
         if flop_results.len() != active_players.len() {
             return Err(PokerError::from_string(format!(
@@ -371,13 +372,16 @@ impl flop_analyzer {
             eval_current_draws(
                 &active_players,
                 &player_cards, &eval_cards, 
-                &mut flop_results, 0)?;
+                &mut flop_results, 
+                &mut villian_results,
+                0)?;
 
             eval_current(
                 &active_players,
                 &player_cards,
                 &mut eval_cards,
                 &mut flop_results,
+                &mut villian_results,
                 0,
             )?;
 
@@ -411,13 +415,14 @@ impl flop_analyzer {
             eval_current_draws(
                 &active_players,
                 &player_cards, &eval_cards, 
-                &mut flop_results, 1)?;
+                &mut flop_results, &mut villian_results, 1)?;
 
             eval_current(
                 &active_players,
                 &player_cards,
                 &mut eval_cards,
                 &mut flop_results,
+                &mut villian_results,
                 1,
             )?;
 
@@ -448,13 +453,14 @@ impl flop_analyzer {
                 &player_cards,
                 &mut eval_cards,
                 &mut flop_results,
+                &mut villian_results,
                 2,
             )?;
         }
 
         Ok(FlopSimulationResults{
             flop_results: flop_results,
-            all_villians: PlayerFlopResults::new(),
+            all_villians: villian_results,
         })
     }
 
@@ -498,6 +504,8 @@ pub fn eval_current(
     player_cards: &[(Card, Card)],
     eval_cards: &mut Vec<Card>,
     flop_results: &mut Vec<PlayerFlopResults>,
+    //treat first active player as the hero, all others as villians
+    villian_results: &mut PlayerFlopResults,
     street_index: usize,
 ) -> Result<(), PokerError> {
     if eval_cards.len() < 3 {
@@ -527,8 +535,6 @@ pub fn eval_current(
         eval_cards.push(player_cards[active_index].0);
         eval_cards.push(player_cards[active_index].1);
 
-        flop_results[active_index].street_rank_results[street_index].num_iterations += 1;
-
         let rank = rank_cards(&eval_cards);
 
         update_results_from_rank(
@@ -542,6 +548,12 @@ pub fn eval_current(
         eval_cards.pop();
     }
 
+    //Best villian hand
+    let best_villian_rank = hand_evals[1..]
+        .iter()
+        .fold(Rank::HighCard(0), |acc, &x| acc.max(x));
+    update_results_from_rank(&mut villian_results.street_rank_results[street_index], best_villian_rank);
+
     let winner_indexes = indices_of_max_values(&hand_evals);
 
     assert!(winner_indexes.len() > 0);
@@ -550,8 +562,15 @@ pub fn eval_current(
         let results = &mut flop_results[*winner_idx].street_rank_results[street_index];
         if winner_indexes.len() == 1 {
             results.win_eq += 1.0;
+            if *winner_idx > 0 {
+                villian_results.street_rank_results[street_index].tie_eq += 1.0;
+            }
         } else {
             results.tie_eq += 1.0 / winner_indexes.len() as f64;
+
+            if *winner_idx > 0 {
+                villian_results.street_rank_results[street_index].tie_eq += 1.0;
+            }
         }
     }
 
@@ -563,6 +582,8 @@ pub fn eval_current_draws(
     player_cards: &[(Card, Card)],
     eval_cards: &Vec<Card>,
     flop_results: &mut Vec<PlayerFlopResults>,
+    //treat first active player as the hero, all others as villians
+    villian_results: &mut PlayerFlopResults,
     draw_index: usize,
 ) -> Result<(), PokerError> {
     if eval_cards.len() < 3 {
@@ -599,8 +620,15 @@ pub fn eval_current_draws(
 
         update_draw(
             &mut flop_results[active_index].street_draws[draw_index],
-            prc,
+            &prc,
         );
+
+        if active_index > 0 {
+            update_draw(
+                &mut villian_results.street_draws[draw_index],
+                &prc,
+            );
+        }
 
     }
 
@@ -705,14 +733,15 @@ fn get_all_player_hole_cards(
 
 
 fn update_results_from_rank(results: &mut RankResults, rank: Rank) {
+    results.num_iterations += 1;
     results.rank_family_count[rank.get_family_index()] += 1;
 }
 
-fn update_draw(results: &mut Draws, prc: PartialRankContainer) {
+fn update_draw(results: &mut Draws, prc: &PartialRankContainer) {
 
     results.num_iterations += 1;
 
-    if let Some(sd) = prc.straight_draw {
+    if let Some(sd) = prc.straight_draw.as_ref() {
         match sd.straight_draw_type {
             StraightDrawType::GutShot(_cv) => results.gut_shot += 1,
             StraightDrawType::OpenEnded => results.str8_draw += 1,
@@ -720,7 +749,7 @@ fn update_draw(results: &mut Draws, prc: PartialRankContainer) {
         }
     }
 
-    if let Some(fd) = prc.flush_draw {
+    if let Some(fd) = prc.flush_draw.as_ref() {
         match fd.flush_draw_type
         {
             FlushDrawType::FlushDraw => results.flush_draw += 1,
@@ -728,27 +757,27 @@ fn update_draw(results: &mut Draws, prc: PartialRankContainer) {
         }
     }
 
-    if let Some(_pp) = prc.pocket_pair {
+    if let Some(_pp) = prc.pocket_pair.as_ref() {
         results.pp_paired += 1;
     }
 
-    if let Some(_hi) = prc.hi_pair {
+    if let Some(_hi) = prc.hi_pair.as_ref() {
         results.hi_paired += 1;
     }
 
-    if let Some(_lo) = prc.lo_pair {
+    if let Some(_lo) = prc.lo_pair.as_ref() {
         results.lo_paired += 1;
     }
 
     let mut num_overcards = 0;
 
-    if let Some (hi) = prc.hi_card {
+    if let Some (hi) = prc.hi_card.as_ref() {
         if hi.number_above == 0 {
             num_overcards += 1;
         }
     }
 
-    if let Some (lo) = prc.lo_card {
+    if let Some (lo) = prc.lo_card.as_ref() {
         if lo.number_above == 0 {
             num_overcards += 1;
         }

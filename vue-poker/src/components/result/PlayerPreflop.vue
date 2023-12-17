@@ -1,5 +1,6 @@
 <template>
-  <span>
+  <span v-if="!playerData"> Villian </span>
+  <span v-if="playerData">
     <template v-if="playerData.state == PlayerState.USE_HOLE">
       <Card v-for="card in playerData.holeCards.cards" :cardNumber="card" />
     </template>
@@ -29,6 +30,9 @@ const boardCards = computed(() => {
 });
 
 const playerData = computed(() => {
+  if (props.playerId < 0) {
+    return null;
+  }
   return playerStore.playerDataForId(props.playerId);
 });
 

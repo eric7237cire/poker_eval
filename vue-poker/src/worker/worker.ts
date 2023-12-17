@@ -10,7 +10,7 @@ let rankIndexes = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 const createHandler = (mod: Mod) => {
   return {
     flop_analyzer: mod.flop_analyzer.new(),
-    results: null as null|FlopSimulationResults,
+    results: null as null | FlopSimulationResults,
     //player_flop_results: Array<PlayerFlopResults> = [],
 
     reset() {
@@ -40,10 +40,7 @@ const createHandler = (mod: Mod) => {
         console.error('results not initialized');
         return;
       }
-      this.results = this.flop_analyzer.simulate_flop(
-        num_iterations,
-        this.results
-      );
+      this.results = this.flop_analyzer.simulate_flop(num_iterations, this.results);
     },
     getResults(): Array<ResultsInterface> {
       console.log('getResults');
@@ -58,40 +55,60 @@ const createHandler = (mod: Mod) => {
 
       const ret = [] as Array<ResultsInterface>;
 
-      for (let active_player_index = 0; active_player_index < n_active_players; ++active_player_index) {
-      
-        const street_results: Array<StreetResults> = [];
-        const draw_results: Array<Draws> = [];
-
-        //flop/turn/river
-        for (let i = 0; i < 3; i++) {
-          street_results.push({
-            equity: r.get_equity(active_player_index, i),
-            rank_family_count: rankIndexes.map((ri) => {
-              return {
-                perc: r.get_perc_family(active_player_index, i, ri),
-                better: r.get_perc_family_or_better(active_player_index, i, ri)
-              } as PercOrBetter;
-            })
-          } as StreetResults);
-        }
-
-        //flop & river
-        for (let street_idx = 0; street_idx < 2; ++street_idx) {
-          draw_results.push(r.get_street_draw(active_player_index, street_idx));
-        }
-
-        ret.push( {
-          player_index: r.get_player_index(active_player_index),
-          street_results,
-          draw_results
-        } );
+      for (
+        let active_player_index = 0;
+        active_player_index < n_active_players;
+        ++active_player_index
+      ) {
+        let ri = buildResultsInterface(r, active_player_index);
+        ret.push(ri);
       }
-      
+
+      //Add villians
+      ret.push(buildResultsInterface(r, undefined));
+
       return ret;
     }
   };
 };
+
+function buildResultsInterface(
+  r: FlopSimulationResults,
+  active_player_index: number | undefined
+): ResultsInterface {
+  const street_results: Array<StreetResults> = [];
+  const draw_results: Array<Draws> = [];
+
+  //flop/turn/river
+  for (let i = 0; i < 3; i++) {
+    street_results.push({
+      equity: r.get_equity(active_player_index, i),
+      rank_family_count: rankIndexes.map((ri) => {
+        return {
+          perc: r.get_perc_family(active_player_index, i, ri),
+          better: r.get_perc_family_or_better(active_player_index, i, ri)
+        } as PercOrBetter;
+      })
+    } as StreetResults);
+  }
+
+  //flop & river
+  for (let street_idx = 0; street_idx < 2; ++street_idx) {
+    draw_results.push(r.get_street_draw(active_player_index, street_idx));
+  }
+
+  let player_index = -1;
+
+  if (active_player_index !== undefined) {
+    player_index = r.get_player_index(active_player_index);
+  }
+
+  return {
+    player_index,
+    street_results,
+    draw_results
+  };
+}
 
 // const isMTSupported = () => {
 //   const browser = detect();
