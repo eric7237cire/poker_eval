@@ -27,7 +27,7 @@ jobs:
       - name: Build Vue.js app
         run: |
           cd vue-poker
-          npm run build
+          npm run build2
 
       - name: Setup Rust
         uses: actions-rs/toolchain@v1

@@ -13,8 +13,9 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
     "format": "prettier --write src/",
     "r-dev": "concurrently \"../rust/run_watch.sh\" \"vite\"",
-    "r-build": "cd ../rust && wasm-pack build --dev --target web --out-dir ../../vue-poker/pkg range"
-    
+    "r-build": "cd ../rust && wasm-pack build --dev --target web --out-dir ../../vue-poker/pkg range",
+    "r1-build-release": "cd ../rust && wasm-pack build --release --target web --out-dir ../../vue-poker/pkg range",
+    "r2-build-release": "cd ../rust && wasm-pack build --release --target web --out-dir ../../vue-poker/pkg poker_eval"
   },
   "dependencies": {
     "@heroicons/vue": "^2.0.18",
