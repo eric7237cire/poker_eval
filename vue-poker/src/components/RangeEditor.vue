@@ -233,7 +233,12 @@ const cellValue = (row: number, col: number) => {
   return rangeArray[cellIndex(row, col)];
 };
 
-const onUpdate = () => {
+function onUpdate() {
+
+  if (!range) {
+    console.log('range is not ready');
+    return;
+  }
   const rawData = range.raw_data();
   rangeArrayRaw = rawData;
   //rangeStoreRaw.set();
@@ -245,14 +250,24 @@ const onUpdate = () => {
   percRange.value = Math.round((numCombos.value / ((52 * 51) / 2)) * 100);
 };
 
-const update = (row: number, col: number, weight: number) => {
+function update(row: number, col: number, weight: number) {
+  if (!range) {
+    console.log('range is not ready');
+    return;
+  }
   const idx = 13 * (row - 1) + col - 1;
   range.update(row, col, weight / 100);
   rangeArray[idx] = weight;
   onUpdate();
 };
 
-const onRangeTextChange = () => {
+function onRangeTextChange() {
+
+  if (!range) {
+    console.log('range is not ready');
+    return;
+  }
+
   const trimmed = rangeText.value.replace(trimRegex, '$1').trim();
   const ranges = trimmed.split(',');
 
@@ -328,6 +343,11 @@ function onPercRangeChange() {
 }
 
 const clearRange = () => {
+  if (!range) {
+    console.log('range is not ready');
+    return;
+  }
+  
   range.clear();
   rangeArray.fill(0);
   rangeArrayRaw.fill(0);
