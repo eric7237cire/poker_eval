@@ -162,9 +162,7 @@ async function go() {
         await handler.setPlayerCards(i, Uint8Array.from(player.holeCards.cards));
         activePlayerCount += 1;
       } else {
-        userMessage.value = `Missing hole cards for player ${
-          i 
-        }.  Either specify cards or click 'Off'`;
+        userMessage.value = `Missing hole cards for player ${i}.  Either specify cards or click 'Off'`;
         return;
       }
     }
