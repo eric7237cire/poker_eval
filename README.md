@@ -1,35 +1,46 @@
-# poker_eval
-Evaluation of poker and simulating of opponent actions
+# Rust Wasm Poker Evaluatior
 
+Equity and Draw Analysis.  Add the flop cards, then for each player, each choose a range or specific cards.
 
-Check with 
-https://openpokertools.com/range-equity.html
+## Screenshot
 
-Next step --
+[Github pages](https://eric7237cire.github.io/)
 
-eval river
+![Screenshot](dev/screenshot.png)
 
-start extra attributes on hand eval, or 
-look at differences between flop hand and turn/river hand
+## Credits
 
+### Wasm Postflop
 
-ok somehow simulate both villians, maybe dealing and waiting until the cards satify their constraints
+Used UI components and the Range class of https://github.com/b-inary/wasm-postflop
 
--or- we simulate them folding
+### Rust Poker 
 
+Used core classes and ranking from https://github.com/elliottneilclark/rs-poker
 
-so deal my cards
-then the flop
+## Dev
 
-these are fixed
+### Prereqs
 
-then simulate dealing villians cards for 4 other players
+Install rust & wasm pack.
 
-record flop situation
+For example:
 
-simulate hero betting
+``` 
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+```
 
+This will watch rust & vue files
+```
+cd vue-poker
+npm install
+npm run r-dev
+```
 
-# Build
+## Tests
 
-Rust docker container builds wasms
+```
+cd rust
+cargo test
+```
