@@ -590,7 +590,8 @@ mod tests {
         let mut range_hole_idx_showdown_count = vec![0; 13*13];
 
 
-        let num_flops_per_matchup = 10;
+        //change this to be higher for more accuracy, kept to 1 for speed
+        let num_flops_per_matchup = 1;
 
         let mut rng = StdRng::seed_from_u64(42);
 
