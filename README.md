@@ -23,6 +23,8 @@ Add the flop cards, optionally a turn & river card, then for each player, each c
 
 Used UI components and the Range class of https://github.com/b-inary/wasm-postflop
 
+Used same worker/Wasm architecture
+
 ### Rust Poker 
 
 Used core classes and ranking from https://github.com/elliottneilclark/rs-poker
