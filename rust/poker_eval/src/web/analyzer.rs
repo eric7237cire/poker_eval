@@ -1,4 +1,4 @@
-use std::{cmp, mem};
+use std::{cmp::{self}, mem};
 use crate::{PokerError, get_unused_card, add_eval_card, set_used_card, HoleCards};
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
@@ -336,6 +336,28 @@ impl flop_analyzer {
         }
     }
 
+    fn init_cards_used(&self) -> Result<CardUsedType, PokerError> {
+        let mut cards_used = CardUsedType::default();
+
+        
+        for c in self.board_cards.iter() {
+            set_used_card((*c).into(), &mut cards_used)?;
+        }
+
+        for p in self.player_info.iter() {
+            if p.state != PlayerPreFlopState::UseHoleCards {
+                continue;
+            } 
+            
+            let hc = p.hole_cards.ok_or(PokerError::from_string(format!("Player missing hole cards")))?;
+
+            set_used_card(hc.get_hi_card().into(), &mut cards_used)?;
+            set_used_card(hc.get_lo_card().into(), &mut cards_used)?;
+        }
+
+        Ok(cards_used)
+    }
+
     //Because wasm doesn't like refs, we use move semantics
     pub fn build_results(&self) -> FlopSimulationResults {
         let active_players = self
@@ -392,6 +414,8 @@ impl flop_analyzer {
 
         info!("simulate_flop: num_iterations {} for {} players", num_iterations, active_players.len());
 
+        let base_cards_used = self.init_cards_used()?;
+
         for _it_num in 0..num_iterations {
             //debug!("simulate_flop: iteration {}", it_num);
 
@@ -399,12 +423,9 @@ impl flop_analyzer {
 
             //with flop, players with hole cards
             let mut eval_cards = Vec::with_capacity(15);
-            let mut cards_used = self.init_cards_used(&mut eval_cards, 3)?;
+            let mut cards_used = base_cards_used.clone();
+            let num_added = self.add_flop(&mut rng, &mut eval_cards, &mut cards_used)?;
 
-            //even though we are doing the flop, if we have turn/river cards specified, we add them too
-            assert_eq!(cards_used.count_ones(), self.board_cards.len());
-            assert!(self.board_cards.len() >= 3);
-            
             assert_eq!(3, eval_cards.len());
 
             //First we choose hole cards for players that are using a range
@@ -413,7 +434,7 @@ impl flop_analyzer {
 
             assert_eq!(player_cards.len(), active_players.len());
 
-            assert_eq!(self.board_cards.len() + 2 * active_players.len(), cards_used.count_ones());
+            assert_eq!(num_added+self.board_cards.len() + 2 * active_players.len(), cards_used.count_ones());
 
             eval_current_draws(
                 &active_players,
@@ -444,13 +465,14 @@ impl flop_analyzer {
                     &mut cards_used,
                 )?;
 
-                assert_eq!(3, self.board_cards.len());
+                assert_eq!(3, self.board_cards.len()+num_added);
                 assert_eq!(4 + 2 * active_players.len(), cards_used.count_ones());
             } else {
                 //Just do a simple push since we already added it to used cards
                 let turn_card_index: usize = self.board_cards[3].into();
                 assert!(cards_used[turn_card_index]);
                 eval_cards.push(self.board_cards[3].into());
+                assert_eq!(num_added, 0);
 
                 assert_eq!(self.board_cards.len() + 2 * active_players.len(), cards_used.count_ones());
             }
@@ -488,7 +510,9 @@ impl flop_analyzer {
                 assert!(cards_used[river_card_index]);
                 eval_cards.push(self.board_cards[4]);
 
-                assert_eq!(5 + 2 * active_players.len(), cards_used.count_ones());
+                assert_eq!(num_added, 0);
+
+                assert_eq!(self.board_cards.len() + 2 * active_players.len(), cards_used.count_ones());
             }
 
             assert_eq!(5, eval_cards.len());
@@ -510,34 +534,47 @@ impl flop_analyzer {
         })
     }
 
-    fn init_cards_used(
+    fn add_flop(
         &self,
+        rng: &mut StdRng,
         eval_cards: &mut Vec<Card>,
-        num_board_cards: usize,
-    ) -> Result<CardUsedType, PokerError> {
-        let mut cards_used = CardUsedType::default();
+        cards_used: &mut CardUsedType,
+    ) -> Result<usize, PokerError> {
+        
+        assert!(eval_cards.is_empty());
 
-        if self.board_cards.len() < num_board_cards {
-            return Err(PokerError::from_string(format!(
-                "init_cards_used: not enough board cards.  board_cards.len() {}, needed num_board_cards {}",
-                self.board_cards.len(),
-                num_board_cards
-            )));
-        }
+        let num_cards_needed_for_flop = 3;
 
         //We add all the board cards to used so they don't get selected again
         //But only add the num we need to eval
         for (c_idx, c) in self.board_cards.iter().enumerate() {
-            set_used_card((*c).into(), &mut cards_used)?;
+            //Should have been initialized already in init_cards_used
+            let card_as_usize: usize = (*c).into();
+            assert!(cards_used[card_as_usize]);
             
-            if c_idx < num_board_cards {
+            if c_idx < num_cards_needed_for_flop {
                 eval_cards.push(*c);
             }
             
         }
 
+        assert!(eval_cards.len() <= num_cards_needed_for_flop);
 
-        Ok(cards_used)
+
+        //Choose any cards up until the flop has been chosen
+
+        let mut num_chosen = 0;
+        for _ in eval_cards.len()..num_cards_needed_for_flop {
+            add_eval_card(
+                get_unused_card(rng, &cards_used).unwrap(),
+                eval_cards,
+                cards_used,
+            )?;
+            num_chosen += 1;
+        }
+
+
+        Ok(num_chosen)
     }
 
 }
@@ -691,27 +728,11 @@ fn get_all_player_hole_cards(
 ) -> Result<Vec<HoleCards>, PokerError> {
     let mut player_cards: Vec<HoleCards> = Vec::with_capacity(active_players.len());
 
-    //Add all the hole cards to used cards first
-    for (p_idx, p) in active_players.iter() {
-        if p.state != PlayerPreFlopState::UseHoleCards {
-            continue;
-        }
-        if p.hole_cards.is_none() {
-            return Err(PokerError::from_string(format!(
-                "get_all_player_hole_cards: player {} missing hole cards",
-                p_idx,
-            )));
-        }
-
-        p.hole_cards.unwrap().set_used(cards_used)?;
-    }
-
-    //Now add them in order
+    
     for (p_idx, p) in active_players.iter() {
         assert!(p.state != PlayerPreFlopState::Disabled);
 
         if p.state == PlayerPreFlopState::UseHoleCards {
-            //we already updated used cards above
             let pc = p.hole_cards.ok_or(PokerError::from_string(format!("Player missing hole cards")))?;
             player_cards.push(pc);
             continue;

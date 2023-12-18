@@ -157,11 +157,6 @@ async function go() {
     return;
   }
 
-  if (boardStore.board.cards.length < 3) {
-    userMessage.value = 'You must specify at least 3 board cards';
-    return;
-  }
-
   await handler.reset();
   await handler.setBoardCards(Uint8Array.from(boardStore.board.cards));
 

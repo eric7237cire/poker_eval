@@ -276,11 +276,9 @@ function getStreetName(street_index: number) {
 }
 .header-divider::before {
   content: '';
-  @apply absolute left-0 -bottom-px w-full border-b border-gray-300;
 }
 
 .row-divider::before {
   content: '';
-  @apply absolute left-0 top-0 w-full border-t border-gray-300;
 }
 </style>
