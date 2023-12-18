@@ -241,7 +241,7 @@ impl PartialRankContainer {
 
         //start with wheel
 
-        for vs_it in value_set_iterator(board_metrics.value_set, 5, CardValue::Ace, CardValue::Ace)
+        for vs_it in value_set_iterator(board_metrics.value_set, 5, CardValue::Ace, CardValue::Ace).unwrap()
         {
             assert!(vs_it.value_count <= 5);
 
@@ -271,8 +271,8 @@ impl PartialRankContainer {
         //debug_print_value_set("Combined cards", combined_value_set);
 
         for (vs_it, bh_it) in
-            value_set_iterator(board_metrics.value_set, 5, CardValue::Ace, CardValue::Ace).zip(
-                value_set_iterator(combined_value_set, 5, CardValue::Ace, CardValue::Ace),
+            value_set_iterator(board_metrics.value_set, 5, CardValue::Ace, CardValue::Ace).unwrap().zip(
+                value_set_iterator(combined_value_set, 5, CardValue::Ace, CardValue::Ace).unwrap(),
             )
         {
             assert!(vs_it.value_count <= 5);

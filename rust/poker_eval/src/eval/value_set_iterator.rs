@@ -1,3 +1,5 @@
+use crate::PokerError;
+
 use crate::{CardValue, ValueSetType};
 
 pub struct ValueSetWindowIterator {
@@ -39,7 +41,7 @@ pub fn value_set_iterator(
     window_length: u8,
     start: CardValue,
     stop: CardValue,
-) -> ValueSetWindowIterator {
+) -> Result<ValueSetWindowIterator, PokerError> {
     assert!(window_length > 1);
 
     if start != CardValue::Ace {
@@ -48,7 +50,7 @@ pub fn value_set_iterator(
 
     let window_start = start;
     //A, win len 2 ends at 2
-    let window_stop: CardValue = (start.next_card() as u8 + (window_length - 2) as u8).into();
+    let window_stop: CardValue = (start.next_card() as u8 + (window_length - 2) as u8).try_into()?;
 
     //Add first one seperately because it could be the Ace
     let mut rolling_one_count =
@@ -59,13 +61,13 @@ pub fn value_set_iterator(
         0
     };
 
-    ValueSetWindowIterator {
+    Ok(ValueSetWindowIterator {
         value_set,
         stop,
         window_start,
         window_stop,
         value_count: rolling_one_count as u8,
-    }
+    })
 }
 
 impl Iterator for ValueSetWindowIterator {
@@ -113,7 +115,7 @@ mod tests {
         value_set.set(CardValue::Two as usize, true);
         value_set.set(CardValue::Five as usize, true);
 
-        let mut it = value_set_iterator(value_set, 2, CardValue::Ace, CardValue::Five);
+        let mut it = value_set_iterator(value_set, 2, CardValue::Ace, CardValue::Five).unwrap();
 
         assert_eq!(it.window_stop, CardValue::Two);
 
@@ -151,7 +153,7 @@ mod tests {
         value_set.set(CardValue::Ten as usize, true);
         value_set.set(CardValue::Queen as usize, true);
 
-        let mut it = value_set_iterator(value_set, 4, CardValue::Two, CardValue::King);
+        let mut it = value_set_iterator(value_set, 4, CardValue::Two, CardValue::King).unwrap();
 
         let item = it.next().unwrap();
         assert_eq!(item.window_start, CardValue::Two);

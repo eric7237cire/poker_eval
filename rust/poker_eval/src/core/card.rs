@@ -1,4 +1,5 @@
 use bitvec::prelude::*;
+use crate::HoleCards;
 use postflop_solver::card_pair_to_index;
 use postflop_solver::Range;
 use std::cmp;
@@ -68,9 +69,9 @@ impl CardValue {
     /// Take a u32 and convert it to a value.
     ///
 
-    pub fn from_u8(v: u8) -> Self {
-        Self::from(v)
-    }
+    // pub fn from_u8(v: u8) -> Self {
+    //     Self::from(v)
+    // }
     /// Get all of the `Value`'s that are possible.
     /// This is used to iterate through all possible
     /// values when creating a new deck, or
@@ -110,7 +111,7 @@ impl CardValue {
         if next > 12 {
             CardValue::Two
         } else {
-            CardValue::from(next)
+            CardValue::try_from(next).unwrap()
         }
     }
 
@@ -118,14 +119,20 @@ impl CardValue {
         if self == CardValue::Two {
             CardValue::Ace
         } else {
-            CardValue::from(self as u8 - 1)
+            CardValue::try_from(self as u8 - 1).unwrap()
         }
     }
 }
 
-impl From<u8> for CardValue {
-    fn from(value: u8) -> Self {
-        unsafe { mem::transmute(cmp::min(value, Self::Ace as u8)) }
+impl TryFrom<u8> for CardValue {
+    type Error = PokerError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        if value > 12 {
+            return Err(PokerError::from_string(format!("Invalid value: {}", value)));
+        }
+
+        Ok(unsafe { mem::transmute(value) })
     }
 }
 
@@ -244,23 +251,22 @@ impl Suit {
         SUITS
     }
 
-    /// Translate a Suit from a u8. If the u8 is above the expected value
-    /// then Diamond will be the result.
-    ///
-
-    pub fn from_u8(s: u8) -> Self {
-        Self::from(s)
-    }
-
+    
     /// This Suit to a character.
     pub fn to_char(self) -> char {
         char::from(self)
     }
 }
 
-impl From<u8> for Suit {
-    fn from(value: u8) -> Self {
-        unsafe { mem::transmute(cmp::min(value, Self::Spade as u8)) }
+impl TryFrom<u8> for Suit {
+    type Error = PokerError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        if value > 3 {
+            return Err(PokerError::from_string(format!("Invalid value: {}", value)));
+        }
+
+        Ok(unsafe { mem::transmute(value) })
     }
 }
 
@@ -332,13 +338,13 @@ impl Card {
         ret
     }
 
-    pub fn from_range_index_part(index: usize) -> Self {
+    pub fn from_range_index_part(index: usize) -> Result<Self, PokerError> {
         let value = index >> 2;
         let suit = index & 0x3;
-        Self {
-            value: CardValue::from(value as u8),
-            suit: Suit::from(suit as u8),
-        }
+        Ok(Self {
+            value: CardValue::try_from(value as u8)?,
+            suit: Suit::try_from(suit as u8)?,
+        })
     }
 }
 
@@ -397,21 +403,27 @@ impl Into<usize> for Card {
     }
 }
 
-impl From<u8> for Card {
-    fn from(value: u8) -> Self {
-        Self {
-            value: CardValue::from_u8(value >> 2),
-            suit: Suit::from_u8(value & 0x3),
-        }
+impl TryFrom<u8> for Card {
+
+    type Error = PokerError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        Ok(Self {
+            value: CardValue::try_from(value >> 2)?,
+            suit: Suit::try_from(value & 0x3)?,
+        })
     }
 }
 
-impl From<usize> for Card {
-    fn from(value: usize) -> Self {
-        Self {
-            value: CardValue::from_u8((value >> 2) as u8),
-            suit: Suit::from_u8((value & 0x3) as u8),
-        }
+impl TryFrom<usize> for Card {
+
+    type Error = PokerError;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        Ok(Self {
+            value: CardValue::try_from((value >> 2) as u8)?,
+            suit: Suit::try_from((value & 0x3) as u8)?,
+        })
     }
 }
 
@@ -510,7 +522,7 @@ pub fn get_possible_hole_cards_count(
 pub fn get_possible_hole_cards(
     range_set: &InRangeType,
     used_card_set: CardUsedType,
-) -> Vec<(Card, Card)> {
+) -> Result<Vec<HoleCards>, PokerError> {
     //let range: Range = range_str.parse().unwrap();
     let mut vec = Vec::new();
 
@@ -531,12 +543,14 @@ pub fn get_possible_hole_cards(
             let in_range = range_set[range_index];
 
             if in_range {
-                vec.push((Card::from(card1), Card::from(card2)));
+                vec.push(
+                    HoleCards::new(
+                    Card::try_from(card1)?, Card::try_from(card2)?)?);
             }
         }
     }
 
-    vec
+    Ok(vec)
 }
 
 pub fn get_filtered_range_set(range_set: &InRangeType, used_card_set: CardUsedType) -> InRangeType {
@@ -637,8 +651,12 @@ mod tests {
 
     #[test]
     fn test_from_u8() {
-        assert_eq!(CardValue::Two, CardValue::from_u8(0));
-        assert_eq!(CardValue::Ace, CardValue::from_u8(12));
+        assert_eq!(CardValue::Two, CardValue::try_from(0u8).unwrap());
+        assert_eq!(CardValue::Three, CardValue::try_from(1u8).unwrap());
+        assert_eq!(CardValue::King, CardValue::try_from(11u8).unwrap());
+        assert_eq!(CardValue::Ace, CardValue::try_from(12u8).unwrap());
+
+        assert!(CardValue::try_from(13u8).is_err());
     }
 
     #[test]

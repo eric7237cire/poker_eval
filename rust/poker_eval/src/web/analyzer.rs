@@ -119,7 +119,7 @@ impl Default for PlayerPreFlopState {
 pub struct PreflopPlayerInfo {
     range_string: String,
     //results: Results,
-    hole_cards: Vec<Card>,
+    hole_cards: Option<HoleCards>,
     range_set: InRangeType,
     state: PlayerPreFlopState,
 }
@@ -233,26 +233,43 @@ impl flop_analyzer {
         }
     }
 
-    pub fn set_board_cards(&mut self, cards: &[u8]) {
+    pub fn set_board_cards(&mut self, cards: &[u8]) -> Result<(), PokerError> {
         self.board_cards.clear();
         info!("set_board_cards: len {}", cards.len());
         let bc = &mut self.board_cards;
         for c in cards.iter() {
-            let card = Card::from(*c);
+            let card = Card::try_from(*c)?;
             debug!("card: {:?}", card);
             bc.push(card);
         }
+
+        Ok(())
     }
 
-    pub fn set_player_cards(&mut self, player_idx: usize, cards: &[u8]) {
-        info!("set_player_cards: {} len {}", player_idx, cards.len());
-        let pc = &mut self.player_info[player_idx].hole_cards;
-        pc.clear();
-        for c in cards.iter() {
-            let card = Card::from(*c);
-            debug!("card: {:?}", card);
-            pc.push(card);
+    pub fn set_player_cards(&mut self, player_idx: usize, cards: &[u8]) -> Result<(), PokerError> {
+        info!("set_player_cards idx {} with {} cards", player_idx, cards.len());
+
+        if player_idx >= self.player_info.len() {
+            return Err(PokerError::from_string(format!(
+                "set_player_cards: player_idx {} >= self.player_info.len() {}",
+                player_idx,
+                self.player_info.len()
+            )));
         }
+
+        if 2 != cards.len() {
+            return Err(PokerError::from_string(format!(
+                "set_player_cards: cards.len() {} != 2",
+                cards.len()
+            )));
+        }
+
+        let card1 = Card::try_from(cards[0])?;
+        let card2 = Card::try_from(cards[1])?;
+
+        self.player_info[player_idx].hole_cards = Some(HoleCards::new(card1, card2)?);
+        
+        Ok(())
     }
 
     pub fn set_player_range(&mut self, player_idx: usize, range_str: &str) {
@@ -276,7 +293,7 @@ impl flop_analyzer {
     }
 
     pub fn clear_player_cards(&mut self, player_idx: usize) {
-        self.player_info[player_idx].hole_cards.clear();
+        self.player_info[player_idx].hole_cards = None;
     }
 
     pub fn reset(&mut self) {
@@ -501,7 +518,7 @@ Assumes all players have either hole cards or their ranges chosen
 */
 pub fn eval_current(
     active_players: &[(usize, &PreflopPlayerInfo)],
-    player_cards: &[(Card, Card)],
+    player_cards: &[HoleCards],
     eval_cards: &mut Vec<Card>,
     flop_results: &mut Vec<PlayerFlopResults>,
     //treat first active player as the hero, all others as villians
@@ -532,9 +549,8 @@ pub fn eval_current(
 
         //For players with ranges we already chose their cards
 
-        eval_cards.push(player_cards[active_index].0);
-        eval_cards.push(player_cards[active_index].1);
-
+        player_cards[active_index].add_to_eval(eval_cards);
+        
         let rank = rank_cards(&eval_cards);
 
         update_results_from_rank(
@@ -544,8 +560,7 @@ pub fn eval_current(
 
         hand_evals.push(rank);
 
-        eval_cards.pop();
-        eval_cards.pop();
+        player_cards[active_index].remove_from_eval(eval_cards)?;
     }
 
     //Best villian hand
@@ -579,7 +594,7 @@ pub fn eval_current(
 
 pub fn eval_current_draws(
     active_players: &[(usize, &PreflopPlayerInfo)],
-    player_cards: &[(Card, Card)],
+    player_cards: &[HoleCards],
     eval_cards: &Vec<Card>,
     flop_results: &mut Vec<PlayerFlopResults>,
     //treat first active player as the hero, all others as villians
@@ -613,7 +628,7 @@ pub fn eval_current_draws(
 
         //For players with ranges we already chose their cards
 
-        let hc = HoleCards::new(player_cards[active_index].0, player_cards[active_index].1)?;
+        let hc = &player_cards[active_index];
         let prc = partial_rank_cards(
             &hc, 
             &eval_cards);
@@ -635,46 +650,27 @@ pub fn eval_current_draws(
     Ok(())
 }
 
-fn add_hole_cards_to_used(
-    player_cards: &(Card, Card),
-    cards_used: &mut CardUsedType,
-) -> Result<(), PokerError> {
-    let count_before = cards_used.count_ones();
-    cards_used.set(player_cards.0.into(), true);
-    cards_used.set(player_cards.1.into(), true);
-    let count_after = cards_used.count_ones();
-
-    if count_before + 2 != count_after {
-        return Err(PokerError::from_string(format!(
-            "Card already used {} {} in board",
-            player_cards.0.to_string(),
-            player_cards.1.to_string()
-        )));
-    }
-
-    Ok(())
-}
 
 fn get_all_player_hole_cards(
     active_players: &[(usize, &PreflopPlayerInfo)],
     rng: &mut StdRng,
     cards_used: &mut CardUsedType,
-) -> Result<Vec<(Card, Card)>, PokerError> {
-    let mut player_cards = Vec::with_capacity(active_players.len());
+) -> Result<Vec<HoleCards>, PokerError> {
+    let mut player_cards: Vec<HoleCards> = Vec::with_capacity(active_players.len());
 
     //Add all the hole cards to used cards first
     for (p_idx, p) in active_players.iter() {
         if p.state != PlayerPreFlopState::UseHoleCards {
             continue;
         }
-        if p.hole_cards.len() != 2 {
+        if p.hole_cards.is_none() {
             return Err(PokerError::from_string(format!(
-                "get_all_player_hole_cards: player {} has {} hole cards",
+                "get_all_player_hole_cards: player {} missing hole cards",
                 p_idx,
-                p.hole_cards.len()
             )));
         }
-        add_hole_cards_to_used(&(p.hole_cards[0], p.hole_cards[1]), cards_used)?;
+
+        p.hole_cards.unwrap().set_used(cards_used)?;
     }
 
     //Now add them in order
@@ -683,7 +679,7 @@ fn get_all_player_hole_cards(
 
         if p.state == PlayerPreFlopState::UseHoleCards {
             //we already updated used cards above
-            let pc = (p.hole_cards[0], p.hole_cards[1]);
+            let pc = p.hole_cards.ok_or(PokerError::from_string(format!("Player missing hole cards")))?;
             player_cards.push(pc);
             continue;
         }
@@ -723,8 +719,9 @@ fn get_all_player_hole_cards(
         }
 
         //we set their cards
-        let pc = (Card::from(card1_index), Card::from(card2_index));
-        add_hole_cards_to_used(&pc, cards_used)?;
+        let pc = HoleCards::new(
+            Card::try_from(card1_index)?, Card::try_from(card2_index)?)?;
+        pc.set_used(cards_used)?;
         player_cards.push(pc);
     }
 
@@ -831,11 +828,11 @@ mod tests {
         analyzer.set_player_state(0, PlayerPreFlopState::UseHoleCards as u8);
         analyzer.set_player_state(3, PlayerPreFlopState::UseHoleCards as u8);
 
-        analyzer.set_player_cards(0, card_u8s_from_string("7h 6s").as_slice());
+        analyzer.set_player_cards(0, card_u8s_from_string("7h 6s").as_slice()).unwrap();
 
-        analyzer.set_player_cards(3, card_u8s_from_string("Th 9h").as_slice());
+        analyzer.set_player_cards(3, card_u8s_from_string("Th 9h").as_slice()).unwrap();
 
-        analyzer.set_board_cards(card_u8s_from_string("Qs Ts 7c").as_slice());
+        analyzer.set_board_cards(card_u8s_from_string("Qs Ts 7c").as_slice()).unwrap();
 
         let num_it = 10_000;
         let f_results = analyzer.build_results();
@@ -876,16 +873,16 @@ mod tests {
         analyzer.set_player_state(2, PlayerPreFlopState::UseRange as u8);
         analyzer.set_player_state(3, PlayerPreFlopState::UseHoleCards as u8);
 
-        analyzer.set_player_cards(0, card_u8s_from_string("8d 7s").as_slice());
+        analyzer.set_player_cards(0, card_u8s_from_string("8d 7s").as_slice()).unwrap();
 
-        analyzer.set_player_cards(3, card_u8s_from_string("Qd 5c").as_slice());
+        analyzer.set_player_cards(3, card_u8s_from_string("Qd 5c").as_slice()).unwrap();
 
         analyzer.set_player_range(
             2,
             "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o",
         );
 
-        analyzer.set_board_cards(card_u8s_from_string("Qs Ts 7c").as_slice());
+        analyzer.set_board_cards(card_u8s_from_string("Qs Ts 7c").as_slice()).unwrap();
 
         let num_it = 4_000;
 
@@ -948,24 +945,24 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn test_heads_up_with_cards() {
-    //     let mut analyzer = super::flop_analyzer::new();
-    //     analyzer.reset();
+    #[test]
+    fn test_villian_draws() {
+        let mut analyzer = super::flop_analyzer::new();
+        analyzer.reset();
 
-    //     analyzer.set_player_state(0, PlayerPreFlopState::UseHoleCards as u8);
-    //     analyzer.set_player_state(3, PlayerPreFlopState::UseHoleCards as u8);
+        analyzer.set_player_state(0, PlayerPreFlopState::UseHoleCards as u8);
+        analyzer.set_player_state(3, PlayerPreFlopState::UseHoleCards as u8);
 
-    //     analyzer.set_player_cards(0, card_u8s_from_string("2d 7s").as_slice());
-    //     analyzer.set_player_cards(3, card_u8s_from_string("Ad Ac").as_slice());
+        analyzer.set_player_cards(0, card_u8s_from_string("2d 7s").as_slice()).unwrap();
+        analyzer.set_player_cards(3, card_u8s_from_string("Ad Ac").as_slice()).unwrap();
 
-    //     analyzer.set_board_cards(card_u8s_from_string("3s 4s Ac 6h 5c").as_slice());
+        analyzer.set_board_cards(card_u8s_from_string("3s 4s Ac 6h 5c").as_slice()).unwrap();
 
-    //     let num_it = 400_000;
+        let num_it = 400_000;
 
-    //     let tolerance = 0.1;
+        let tolerance = 0.1;
 
-    //     //let mut results = analyzer.build_results();
-    //     //analyzer.simulate_flop(num_it, &mut results).unwrap();
-    // }
+        //let mut results = analyzer.build_results();
+        //analyzer.simulate_flop(num_it, &mut results).unwrap();
+    }
 }

@@ -298,7 +298,7 @@ mod tests {
             used_cards.set((*card).into(), true);
         }
 
-        let possible = get_possible_hole_cards(&range_set, used_cards);
+        let possible = get_possible_hole_cards(&range_set, used_cards).unwrap();
 
         assert_eq!(373, possible.len());
 
@@ -314,8 +314,8 @@ mod tests {
         let mut eval_cards = flop.clone();
 
         for hole_cards in possible.iter() {
-            eval_cards.push(hole_cards.0);
-            eval_cards.push(hole_cards.1);
+            eval_cards.push(hole_cards.get_hi_card());
+            eval_cards.push(hole_cards.get_lo_card());
 
             let rank = rank_cards(&eval_cards);
             match rank {
@@ -413,7 +413,7 @@ mod tests {
         }
         assert_eq!(used_cards.count_ones(), 7);
 
-        let possible = get_possible_hole_cards(&range_set, used_cards);
+        let possible = get_possible_hole_cards(&range_set, used_cards).unwrap();
 
         assert_eq!(373, possible.len());
 
@@ -424,8 +424,7 @@ mod tests {
 
         //enumerate everything
         for p in possible.iter() {
-            used_cards.set(p.0.into(), true);
-            used_cards.set(p.1.into(), true);
+            p.set_used(&mut used_cards).unwrap();
             assert_eq!(used_cards.count_ones(), 9);
             let check_showndown = total_showdowns;
             for turn_card in 0..52 {
@@ -443,20 +442,20 @@ mod tests {
                     let mut p1_cards = flop.clone();
                     p1_cards.push(p1_hole_cards[0]);
                     p1_cards.push(p1_hole_cards[1]);
-                    p1_cards.push(turn_card.into());
-                    p1_cards.push(river_card.into());
+                    p1_cards.push(turn_card.try_into().unwrap());
+                    p1_cards.push(river_card.try_into().unwrap());
 
                     let mut p2_cards = flop.clone();
                     p2_cards.push(p2_hole_cards[0]);
                     p2_cards.push(p2_hole_cards[1]);
-                    p2_cards.push(turn_card.into());
-                    p2_cards.push(river_card.into());
+                    p2_cards.push(turn_card.try_into().unwrap());
+                    p2_cards.push(river_card.try_into().unwrap());
 
                     let mut p3_cards = flop.clone();
-                    p3_cards.push(p.0);
-                    p3_cards.push(p.1);
-                    p3_cards.push(turn_card.into());
-                    p3_cards.push(river_card.into());
+                    p3_cards.push(p.get_hi_card());
+                    p3_cards.push(p.get_lo_card());
+                    p3_cards.push(turn_card.try_into().unwrap());
+                    p3_cards.push(river_card.try_into().unwrap());
 
                     let p1_hand = flop_hand.add_card(p1_hole_cards[0].into());
                     let p1_hand = p1_hand.add_card(p1_hole_cards[1].into());
@@ -468,8 +467,8 @@ mod tests {
                     let p2_hand = p2_hand.add_card(turn_card.into());
                     let p2_hand = p2_hand.add_card(river_card.into());
 
-                    let p3_hand = flop_hand.add_card(p.0.into());
-                    let p3_hand = p3_hand.add_card(p.1.into());
+                    let p3_hand = flop_hand.add_card(p.get_hi_card().into());
+                    let p3_hand = p3_hand.add_card(p.get_lo_card().into());
                     let p3_hand = p3_hand.add_card(turn_card.into());
                     let p3_hand = p3_hand.add_card(river_card.into());
 
@@ -523,8 +522,8 @@ mod tests {
                 used_cards.set(turn_card, false);
             }
 
-            used_cards.set(p.0.into(), false);
-            used_cards.set(p.1.into(), false);
+            p.unset_used(&mut used_cards).unwrap();
+            
             assert_eq!(used_cards.count_ones(), 7);
             //we used 9 cards, so there should be 43*42/2 showdowns total
             assert_eq!(total_showdowns - check_showndown, 43 * 42 / 2);
@@ -555,7 +554,7 @@ mod tests {
 
         for card1 in 0..52usize {
             for card2 in card1+1 .. 52 {
-                let hole_cards = HoleCards::new(card1.into(), card2.into()).unwrap();
+                let hole_cards = HoleCards::new(card1.try_into().unwrap(), card2.try_into().unwrap()).unwrap();
 
                 let hole_string = hole_cards.to_range_string();
 

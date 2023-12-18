@@ -15,12 +15,31 @@ pub fn set_used_card(
     if count_before + 1 != count_after {
         return Err(PokerError::from_string(format!(
             "Card already used {} in board",
-            Card::from(c_index).to_string()
+            Card::try_from(c_index)?.to_string()
         )));
     }
 
     Ok(())
 }
+
+pub fn unset_used_card(
+    c_index: usize, 
+    cards_used: &mut CardUsedType,
+) -> Result<(), PokerError> {
+    let count_before = cards_used.count_ones();
+    cards_used.set(c_index, false);
+    let count_after = cards_used.count_ones();
+
+    if count_before != count_after + 1 {
+        return Err(PokerError::from_string(format!(
+            "Card was not used {} in board",
+            Card::try_from(c_index)?.to_string()
+        )));
+    }
+
+    Ok(())
+}
+
 
 pub fn add_eval_card(
     c_index: usize,
@@ -29,7 +48,7 @@ pub fn add_eval_card(
 ) -> Result<(), PokerError> {
     set_used_card(c_index, cards_used)?;
 
-    eval_cards.push(Card::from(c_index));
+    eval_cards.push(Card::try_from(c_index)?);
 
     Ok(())
 }

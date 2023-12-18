@@ -1,10 +1,11 @@
 use std::str::FromStr;
 
-use crate::{CardUsedType, set_used_card};
+use crate::{CardUsedType, set_used_card, unset_used_card};
 use postflop_solver::card_pair_to_index;
 
 use crate::{Card, PokerError};
 
+#[derive(Clone, Copy)]
 pub struct HoleCards {
     card_hi_lo: [Card; 2],
     //card_lo: Card
@@ -67,6 +68,12 @@ impl HoleCards {
     pub fn set_used(&self, cards_used: &mut CardUsedType) -> Result<(), PokerError> {
         set_used_card(self.card_hi_lo[0].into(), cards_used)?;
         set_used_card(self.card_hi_lo[1].into(), cards_used)?;
+        Ok(())
+    }
+
+    pub fn unset_used(&self, cards_used: &mut CardUsedType) -> Result<(), PokerError> {
+        unset_used_card(self.card_hi_lo[0].into(), cards_used)?;
+        unset_used_card(self.card_hi_lo[1].into(), cards_used)?;
         Ok(())
     }
 
