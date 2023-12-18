@@ -644,13 +644,13 @@ pub fn eval_current(
         if winner_indexes.len() == 1 {
             results.win_eq += 1.0;
             if *winner_idx > 0 {
-                villian_results.street_rank_results[street_index].tie_eq += 1.0;
+                villian_results.street_rank_results[street_index].win_eq += 1.0;
             }
         } else {
             results.tie_eq += 1.0 / winner_indexes.len() as f64;
 
             if *winner_idx > 0 {
-                villian_results.street_rank_results[street_index].tie_eq += 1.0;
+                villian_results.street_rank_results[street_index].tie_eq += 1.0 / winner_indexes.len() as f64;
             }
         }
     }
@@ -1031,6 +1031,7 @@ mod tests {
         assert_eq!(0, v_r.street_draws[0].gut_shot);
         assert_eq!(0, v_r.street_draws[0].two_overcards);
         assert_eq!(0, v_r.street_draws[0].one_overcard);
+        assert_eq!(1.0, v_r.street_rank_results[0].win_eq / v_r.street_rank_results[0].num_iterations as f64);
 
         //Turn villian picks up gut shot
         assert_eq!(1, v_r.street_rank_results[1].rank_family_count[Rank::ThreeOfAKind(0).get_family_index()]);
