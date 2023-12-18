@@ -1,6 +1,6 @@
 use postflop_solver::card_pair_to_index;
 
-use crate::{core::Card, ChipType, Position};
+use crate::{core::Card, ChipType, Position, SMALL_BLIND,};
 
 #[derive(Debug)]
 pub struct AgentState {
@@ -25,7 +25,7 @@ impl Default for AgentState {
         AgentState {
             stack: 100,
             initial_stack: 100,
-            position: Position::Button,
+            position: SMALL_BLIND,
             cards: Vec::with_capacity(7),
             folded: false,
             already_bet: 0,

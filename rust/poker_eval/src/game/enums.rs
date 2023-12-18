@@ -2,64 +2,7 @@ use postflop_solver::Range;
 
 pub type ChipType = u16;
 
-#[derive(PartialEq, Eq, Copy, Clone, Debug)]
-pub enum Round {
-    Preflop,
-    Flop,
-    Turn,
-    River,
-}
 
-#[derive(PartialEq, Eq, Copy, Clone, Debug)]
-pub enum Position {
-    SmallBlind = 0,
-    BigBlind,
-    Utg,
-    HiJack,
-    Button,
-}
-
-impl Position {
-    pub fn next(&self) -> Position {
-        match self {
-            Position::SmallBlind => Position::BigBlind,
-            Position::BigBlind => Position::Utg,
-            Position::Utg => Position::HiJack,
-            Position::HiJack => Position::Button,
-            Position::Button => Position::SmallBlind,
-        }
-    }
-
-    pub fn prev(&self) -> Position {
-        match self {
-            Position::SmallBlind => Position::Button,
-            Position::BigBlind => Position::SmallBlind,
-            Position::Utg => Position::BigBlind,
-            Position::HiJack => Position::Utg,
-            Position::Button => Position::HiJack,
-        }
-    }
-
-    pub fn from_usize(pos: usize) -> Position {
-        match pos {
-            0 => Position::SmallBlind,
-            1 => Position::BigBlind,
-            2 => Position::Utg,
-            3 => Position::HiJack,
-            4 => Position::Button,
-            _ => panic!("Invalid position"),
-        }
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum Action {
-    Fold,
-    Call,
-    Check,
-    //Value is the new total, which may include what the player already bet
-    Raise(ChipType),
-}
 
 pub enum PreFrabRanges {
     RangeAll,
