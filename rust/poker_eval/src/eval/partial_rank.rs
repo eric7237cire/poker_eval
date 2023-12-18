@@ -1,4 +1,4 @@
-use std::ops::BitOr;
+use std::{ops::BitOr, cmp::{max, min}};
 
 use crate::{
     calc_bitset_cards_metrics, count_higher, count_lower, rank_straight, value_set_iterator,
@@ -6,28 +6,30 @@ use crate::{
 };
 
 //for pairs, 2 pair, sets, quads, full houses
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub struct PairFamilyRank {
     pub number_above: u8,
     pub number_below: u8,
 }
 
 #[repr(u8)]
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Ord, PartialOrd)]
 pub enum FlushDrawType {
-    BackdoorFlushDraw,
-    FlushDraw,
+    BackdoorFlushDraw = 0,
+    //Higher is better
+    FlushDraw = 1,
 }
 
 #[repr(u8)]
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Ord, PartialOrd)]
 pub enum StraightDrawType {
     //The card that makes the straight, it's not the highest card in the straight
     GutShot(CardValue),
 
+    DoubleGutShot,
+
     OpenEnded,
 
-    DoubleGutShot,
 }
 
 //We'll parse a list of these
@@ -39,13 +41,13 @@ pub enum StraightDrawType {
 //     TwoOverCards(TwoOverCards),
 // }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub struct FlushDraw {
     pub hole_card_value: CardValue,
     pub flush_draw_type: FlushDrawType,
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub struct StraightDraw {
     pub straight_draw_type: StraightDrawType,
 
@@ -53,7 +55,7 @@ pub struct StraightDraw {
     pub number_above: u8,
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub struct PairInfo {
     pub number_above: u8,
     pub number_below: u8,
@@ -424,6 +426,73 @@ impl PartialRankContainer {
         }
 
         None
+    }
+
+    pub fn merge_best(&mut self, other: &PartialRankContainer) {
+        if self.flush_draw.is_none() {
+            //always take rhs
+            self.flush_draw = other.flush_draw;
+        } else if let Some(other_flush_draw) = other.flush_draw {
+            let fd = self.flush_draw.as_mut().unwrap();
+            fd.flush_draw_type = max(fd.flush_draw_type, other_flush_draw.flush_draw_type);
+        }
+
+        if self.straight_draw.is_none() {
+            //always take rhs
+            self.straight_draw = other.straight_draw;
+        } else if let Some(other_straight_draw) = other.straight_draw {
+            let sd = self.straight_draw.as_mut().unwrap();
+            sd.number_above = max(sd.number_above, other_straight_draw.number_above);
+        }
+
+        if self.hi_pair.is_none() {
+            //always take rhs
+            self.hi_pair = other.hi_pair;
+        } else if let Some(other_hi_pair) = other.hi_pair {
+            let hp = self.hi_pair.as_mut().unwrap();
+            //ignore above/below
+            hp.made_quads = hp.made_quads || other_hi_pair.made_quads;
+            hp.made_set = hp.made_set || other_hi_pair.made_set;
+        }
+
+        if self.lo_pair.is_none() {
+            //always take rhs
+            self.lo_pair = other.lo_pair;
+        } else if let Some(other_lo_pair) = other.lo_pair {
+            let lp = self.lo_pair.as_mut().unwrap();
+            //ignore above/below
+            lp.made_quads = lp.made_quads || other_lo_pair.made_quads;
+            lp.made_set = lp.made_set || other_lo_pair.made_set;
+        }
+
+        if self.pocket_pair.is_none() {
+            //always take rhs
+            self.pocket_pair = other.pocket_pair;
+        } else if let Some(other_pocket_pair) = other.pocket_pair {
+            let pp = self.pocket_pair.as_mut().unwrap();
+            //ignore above/below
+            pp.made_quads = pp.made_quads || other_pocket_pair.made_quads;
+            pp.made_set = pp.made_set || other_pocket_pair.made_set;
+        }
+
+        if self.hi_card.is_none() {
+            //always take rhs
+            self.hi_card = other.hi_card;
+        } else if let Some(other_hi_card) = other.hi_card {
+            let hc = self.hi_card.as_mut().unwrap();
+            hc.number_above = min(hc.number_above, other_hi_card.number_above);
+            hc.number_below = max(hc.number_below, other_hi_card.number_below);
+        }
+
+        if self.lo_card.is_none() {
+            //always take rhs
+            self.lo_card = other.lo_card;
+        } else if let Some(other_lo_card) = other.lo_card {
+            let lc = self.lo_card.as_mut().unwrap();
+            lc.number_above = min(lc.number_above, other_lo_card.number_above);
+            lc.number_below = max(lc.number_below, other_lo_card.number_below);
+        }
+
     }
 }
 
