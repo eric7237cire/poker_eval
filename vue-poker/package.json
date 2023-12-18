@@ -2,11 +2,11 @@
   "name": "vue-poker",
   "version": "0.0.0",
   "private": true,
-"type": "module",
+  "type": "module",
   "scripts": {
     "dev": "vite",
-    "build2": "vue-tsc --noEmit && vite build",
-    "build": "run-p type-check \"build-only {@}\" --",
+    "build": "npm run write-build-info && vue-tsc --noEmit && vite build",
+    
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build --force",
@@ -15,7 +15,8 @@
     "r-dev": "concurrently \"../rust/run_watch.sh\" \"vite\"",
     "r-build": "cd ../rust && wasm-pack build --dev --target web --out-dir ../../vue-poker/pkg range",
     "r1-build-release": "cd ../rust && wasm-pack build --release --target web --out-dir ../../vue-poker/pkg range",
-    "r2-build-release": "cd ../rust && wasm-pack build --release --target web --out-dir ../../vue-poker/pkg poker_eval"
+    "r2-build-release": "cd ../rust && wasm-pack build --release --target web --out-dir ../../vue-poker/pkg poker_eval",
+    "write-build-info": "node ../dev/writeBuildInfo.js"
   },
   "dependencies": {
     "@heroicons/vue": "^2.0.18",
@@ -37,6 +38,7 @@
     "@vue/tsconfig": "^0.4.0",
     "autoprefixer": "^10.4.16",
     "concurrently": "^8.2.2",
+    "date-fns": "^3.0.0",
     "eslint": "^8.49.0",
     "eslint-plugin-vue": "^9.17.0",
     "npm-run-all2": "^6.1.1",

@@ -32,6 +32,17 @@
         <Player :playerId="player.id" />
       </div>
     </div>
+
+    <div class="footer-container">
+      <Suspense>
+        <template v-slot:default>
+          <Footer />
+        </template>
+        <template v-slot:fallback>
+          <div>Loading...</div>
+        </template>
+      </Suspense>
+    </div>
   </div>
 </template>
 
@@ -85,6 +96,7 @@ import { useBoardStore } from './stores/board';
 import { useResultsStore } from './stores/results';
 import { useRangesStore } from './stores/ranges';
 import { useCssVar } from '@vueuse/core';
+import Footer from './components/Footer.vue';
 
 const navStore = useNavStore();
 const playerStore = usePlayerStore();
