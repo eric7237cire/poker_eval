@@ -44,6 +44,8 @@
                   <td>{{ getStreetName(street_index) }}</td>
                   <td>
                     <Percentage :perc="item.street_results[street_index - 1].equity" />
+
+                    <RangeEquityViewer :range_equity="item.street_results[street_index-1].eq_by_simple_range_idx"/>
                   </td>
                   <td v-for="index in 9" :key="index">
                     <!-- {{item.rank_family_count}}  -->
@@ -221,6 +223,7 @@ import { computed, defineComponent, reactive, ref, toRefs, watch } from 'vue';
 import { RANK_FAMILY_NAMES, ResultsInterface } from '@src/worker/result_types';
 import Percentage from '@src/components/result/Percentage.vue';
 import PlayerPreflop from './result/PlayerPreflop.vue';
+import RangeEquityViewer from './result/RangeEquityViewer.vue';
 
 const props = defineProps<{
   results: Array<ResultsInterface>;

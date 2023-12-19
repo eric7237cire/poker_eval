@@ -2,7 +2,7 @@ import * as Comlink from 'comlink';
 import { Draws, FlopSimulationResults, PlayerFlopResults } from '@pkg/poker_eval';
 import { PercOrBetter, ResultsInterface, StreetResults } from './result_types';
 import * as _ from 'lodash';
-import { assert } from 'console';
+
 //import { detect } from "detect-browser";
 
 type Mod = typeof import('@pkg/poker_eval');
@@ -13,7 +13,6 @@ const createHandler = (mod: Mod) => {
   return {
     flop_analyzer: mod.flop_analyzer.new(),
     results: null as null | FlopSimulationResults,
-    //player_flop_results: Array<PlayerFlopResults> = [],
 
     reset() {
       this.flop_analyzer.reset();
@@ -99,7 +98,7 @@ function buildResultsInterface(
       const r_eq = r.get_range_equity(active_player_index, i);
       const r_it = r.get_range_it_count(active_player_index, i);
 
-      assert(r_eq.length === r_it.length);
+      //assert(r_eq.length === r_it.length);
 
       const eq_range = [] as Array<number | null>;
 

@@ -152,7 +152,7 @@ function positionEditor() {
     console.log('root_element.value is null');
     return;
   }
-  const computedStyles = getComputedStyle(root_element.value);
+  //const computedStyles = getComputedStyle(root_element.value);
 
   const rect = root_element.value.getBoundingClientRect();
 
