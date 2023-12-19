@@ -35,13 +35,21 @@ const createHandler = (mod: Mod) => {
     initResults() {
       this.results = this.flop_analyzer.build_results();
       console.log(`initResults`);
+
+      if (!this.results) {
+        console.error('results not initialized');
+        return false;
+      } else {
+        return true;
+      }
     },
     simulateFlop(num_iterations: number) {
       if (!this.results) {
         console.error('results not initialized');
-        return;
+        return false;
       }
       this.results = this.flop_analyzer.simulate_flop(num_iterations, this.results);
+      return true;
     },
     getResults(): Array<ResultsInterface> {
       console.log('getResults');

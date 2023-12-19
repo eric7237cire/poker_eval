@@ -105,7 +105,8 @@ const resultsStore = useResultsStore();
 const rangeStore = useRangesStore();
 
 const iterationsPerTick = 1_000;
-const maxIterations = 500_000;
+const maxIterations = 50_000;
+const pauseAfterTickMs = 500;
 
 boardStore.$subscribe((board) => {
   console.log('boardStore.$subscribe', board);
@@ -190,13 +191,18 @@ async function go() {
   num_iterations.value = 0;
   userMessage.value = `Simulating until ${maxIterations} or Stop is clicked...`;
 
-  await handler.initResults();
+  const resultsOk = await handler.initResults();
+
+  if (!resultsOk) {
+    userMessage.value = `Error initializing results`;
+    return;
+  }
 
   setTimeoutReturn.value = setTimeout(() => tick(50), 100);
   stopping = false;
 }
 
-async function tick(numIterations: number = iterationsPerTick) {
+async function tick(numIterations: number) {
   if (!handler) {
     console.log('handler is not ready');
     return;
@@ -210,7 +216,13 @@ async function tick(numIterations: number = iterationsPerTick) {
     return;
   }
 
-  await handler.simulateFlop(iterationsPerTick);
+  const ok = await handler.simulateFlop(numIterations);
+
+  if (!ok) {
+    userMessage.value = `Error simulating flop`;
+    stopping = true;
+    return;
+  }
 
   const resultList = await handler.getResults();
 
@@ -225,7 +237,9 @@ async function tick(numIterations: number = iterationsPerTick) {
 
   resultsStore.results = resultList;
 
-  setTimeoutReturn.value = setTimeout(tick, 100);
+  setTimeoutReturn.value = setTimeout(()=>{
+    tick(iterationsPerTick);
+  }, pauseAfterTickMs);
 }
 
 async function stop() {
