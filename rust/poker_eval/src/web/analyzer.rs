@@ -5,22 +5,18 @@ use crate::{
 };
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
-use postflop_solver::card_pair_to_index;
+
 use rand::{rngs::StdRng, SeedableRng};
-use std::{
-    cmp::{self},
-    mem,
-};
+
 
 use crate::{
-    partial_rank_cards, range_string_to_set, rank_cards, Card, CardUsedType, FlushDrawType,
-    InRangeType, PartialRankContainer, Rank, StraightDrawType, NUM_RANK_FAMILIES,
+    range_string_to_set, Card, CardUsedType,
 };
-use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
+use wasm_bindgen::{prelude::wasm_bindgen};
 //extern crate wasm_bindgen;
 //extern crate console_error_panic_hook;
 type ResultType = u32;
-use serde::Serialize;
+
 
 #[wasm_bindgen]
 //doing this to stop warnings in vs code about camel case in the wasm function names

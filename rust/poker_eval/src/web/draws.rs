@@ -1,18 +1,14 @@
 use crate::{
-    add_eval_card, get_unused_card, set_used_card, HoleCards, PlayerFlopResults,
+    HoleCards, PlayerFlopResults,
     PlayerPreFlopState, PokerError, PreflopPlayerInfo,
 };
-use itertools::Itertools;
-use std::{
-    cmp::{self},
-    mem,
-};
+
+
 
 use crate::{
     partial_rank_cards, Card, FlushDrawType, PartialRankContainer, StraightDrawType,
-    NUM_RANK_FAMILIES,
 };
-use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
+use wasm_bindgen::{prelude::wasm_bindgen};
 //extern crate wasm_bindgen;
 //extern crate console_error_panic_hook;
 type ResultType = u32;
