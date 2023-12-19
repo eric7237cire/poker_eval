@@ -4,7 +4,23 @@
         <template v-if="isVisible" >
             <div @click="isVisible = false" ref="popup" class="popup" :style="popupStyle"
             
-            >Yo</div>
+            >Yo
+        <table>
+            <tr v-for="row in 13" :key="row" class="h-9">
+            
+                <td v-for="col in 13"
+                    :key="col"
+                    :style="cellStyle(row, col)"
+                    :title="cellPerc(row, col)"
+                        class="relative w-[2.625rem] border border-black bg-no-repeat">
+                        
+                    {{ cellText(row, col) }}
+                </td>
+            </tr>
+
+        </table>
+        
+        </div>
         </template>
         <template v-else>
             <div @click="setVisible(true)" class="button"
@@ -16,8 +32,12 @@
 
 <style lang="postcss" scoped>
 .popup {
-    background: green;
+    background: gray;
     z-index: 100;
+
+    table {
+        margin-left: 20px;
+    }
 }
 
 .button {
@@ -26,6 +46,7 @@
 </style>
 
 <script setup lang="ts">
+import { ranks } from '@src/utils';
 import { ref } from 'vue';
 
 
@@ -39,8 +60,86 @@ const isVisible = ref(false);
 
 const popupStyle = ref({});
 
-const POPUP_PIXEL_WIDTH = 600;
-const POPUP_PIXEL_HEIGHT = 400;
+const POPUP_PIXEL_WIDTH = 590;
+const POPUP_PIXEL_HEIGHT = 530;
+
+//console.log("My eq is ", Array.from(props.range_equity));
+
+function cellText(row1: number, col1: number) {
+  const r1 = 13 - Math.min(row1, col1);
+  const r2 = 13 - Math.max(row1, col1);
+
+  /*
+  const row = row1 - 1;
+  const col = col1 - 1;
+  const index = row * 13 + col;
+  
+  const equity = props.range_equity[index];
+
+  if (equity !== null) {
+    const eqPercent = (equity * 100).toFixed(1) + "%";
+    return eqPercent;
+  }*/
+  
+
+  return ranks[r1] + ranks[r2] + ['s', '', 'o'][Math.sign(row1 - col1) + 1];
+};
+
+function cellPerc(row1: number, col1: number) : string | undefined {
+  const r1 = 13 - Math.min(row1, col1);
+  const r2 = 13 - Math.max(row1, col1);
+
+  
+  const row = row1 - 1;
+  const col = col1 - 1;
+  const index = row * 13 + col;
+  
+  const equity = props.range_equity[index];
+
+  if (equity !== null) {
+    const eqPercent = (equity * 100).toFixed(1) + "%";
+    return eqPercent;
+  }
+  
+  return undefined;
+};
+
+function cellStyle(row1: number, col1: number) {
+    const row = row1 - 1;
+    const col = col1 - 1;
+    const index = row * 13 + col;
+  const equity = props.range_equity[index];
+
+  
+
+  //console.log('index', index);
+   // console.log('equity', equity);
+
+  if (equity === null) {
+    return {     
+        "background-color": 'black', 
+    };
+  }
+
+  
+  const eqPercent = (equity * 100).toFixed(1) + "%";
+
+  if (equity < 0.5) {    
+    return {
+        
+        "background-color": 'rgba(55,0,0,0.5)', 
+      "background-image": "linear-gradient(to right, rgba(255, 0, 0, 1), rgba(125, 0, 0, 1))",
+      "background-size": `${eqPercent} 100% `,
+    };
+  } else {
+    const eqPercent = (equity * 100).toFixed(1) + "%";
+    return {
+        "background-color": 'black', 
+        "background-image": "linear-gradient(to right, rgba(0, 125, 0, 1), rgba(0, 255, 0, 1))",
+        "background-size": `${eqPercent} 100% `,
+    };
+  }
+};
 
 function setVisible(value: boolean) {
     if(value) {
