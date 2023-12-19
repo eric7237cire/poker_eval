@@ -351,8 +351,20 @@ mod tests {
         //get total equity for p3
         let total_eq = p3_results.win_eq + p3_results.tie_eq;
 
-        let total_of_4 = p3_results.win_or_tie_eq_by_range_index[kj_index] + p3_results.win_or_tie_eq_by_range_index[t2_index] + p3_results.win_or_tie_eq_by_range_index[e7_index]
-        + p3_results.win_or_tie_eq_by_range_index[e7s_index];
+        let total_of_4 = p3_results.eq_by_range_index[kj_index] + p3_results.eq_by_range_index[t2_index] + p3_results.eq_by_range_index[e7_index]
+        + p3_results.eq_by_range_index[e7s_index];
+
+        let total_eq2 = p3_results.eq_by_range_index.iter().sum::<f64>();
+        
+        assert_eq!(total_eq, total_eq2);
+
+        let total_it_of_4 = p3_results.num_it_by_range_index[kj_index] + p3_results.num_it_by_range_index[t2_index] + p3_results.num_it_by_range_index[e7_index] +
+        p3_results.num_it_by_range_index[e7s_index];
+
+        assert_eq!(total_it_of_4, num_it);
+
+        let sum_it = p3_results.num_it_by_range_index.iter().sum::<u32>();
+        assert_eq!(sum_it, num_it);
 
         println!("total_eq {} total_of_4 {}", total_eq, total_of_4);
         assert!( (total_eq - total_of_4).abs() < 0.000001);
