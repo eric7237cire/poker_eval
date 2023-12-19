@@ -1,7 +1,7 @@
 use log::info;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 
-use crate::{PlayerFlopResults, NUM_RANK_FAMILIES};
+use crate::{web::{PlayerFlopResults}, NUM_RANK_FAMILIES};
 
 #[wasm_bindgen]
 pub struct FlopSimulationResults {

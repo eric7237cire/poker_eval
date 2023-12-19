@@ -8,4 +8,3 @@ pub use eval::*;
 mod core;
 pub use core::*;
 mod web;
-pub use web::*;

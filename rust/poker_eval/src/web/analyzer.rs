@@ -1,7 +1,11 @@
+use crate::web::player_results::PlayerFlopResults;
 use crate::{
-    add_eval_card, eval_current, eval_current_draws, get_all_player_hole_cards, get_unused_card,
-    set_used_card, FlopSimulationResults, HoleCards, PlayerFlopResults, PlayerPreFlopState,
-    PokerError, PreflopPlayerInfo,
+    HoleCards,  PokerError, set_used_card, add_eval_card, get_unused_card
+};
+use crate::web::{
+     eval_current, eval_current_draws, get_all_player_hole_cards, 
+     FlopSimulationResults, PlayerPreFlopState,
+     PreflopPlayerInfo,
 };
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
@@ -12,10 +16,8 @@ use rand::{rngs::StdRng, SeedableRng};
 use crate::{
     range_string_to_set, Card, CardUsedType,
 };
-use wasm_bindgen::{prelude::wasm_bindgen};
-//extern crate wasm_bindgen;
-//extern crate console_error_panic_hook;
-type ResultType = u32;
+use wasm_bindgen::prelude::wasm_bindgen;
+
 
 
 #[wasm_bindgen]

@@ -1,6 +1,10 @@
 use crate::{
-    HoleCards, PlayerFlopResults,
-    PlayerPreFlopState, PokerError, PreflopPlayerInfo,
+    HoleCards, PokerError
+};
+use crate::web::{
+    PlayerFlopResults,
+    PlayerPreFlopState, 
+    PreflopPlayerInfo,
 };
 
 
@@ -8,9 +12,7 @@ use crate::{
 use crate::{
     partial_rank_cards, Card, FlushDrawType, PartialRankContainer, StraightDrawType,
 };
-use wasm_bindgen::{prelude::wasm_bindgen};
-//extern crate wasm_bindgen;
-//extern crate console_error_panic_hook;
+use wasm_bindgen::prelude::wasm_bindgen;
 type ResultType = u32;
 use serde::Serialize;
 

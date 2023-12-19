@@ -1,7 +1,22 @@
 use crate::{
-    rank_cards, Card, HoleCards, PlayerFlopResults, PlayerPreFlopState, PokerError,
-    PreflopPlayerInfo, Rank, RankResults, MAX_PLAYERS,
+    rank_cards, Card, HoleCards, PokerError,
+     Rank,  
 };
+use crate::web::{
+    PreflopPlayerInfo, MAX_PLAYERS, ResultType,PlayerFlopResults, PlayerPreFlopState
+};
+
+#[derive(Default)]
+pub struct RankResults {
+    pub(crate) num_iterations: ResultType,
+
+    //win = 1, tie = 1 / num players in tie, loss = 0
+    pub(crate) win_eq: f64,
+    pub(crate) tie_eq: f64,
+
+    pub(crate) rank_family_count: [ResultType; 9],
+}
+
 
 /*
 Assumes all players have either hole cards or their ranges chosen

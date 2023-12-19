@@ -1,18 +1,8 @@
 use wasm_bindgen::prelude::wasm_bindgen;
-type ResultType = u32;
+pub(crate) type ResultType = u32;
 
-use crate::Draws;
+use crate::web::{Draws, RankResults};
 
-#[derive(Default)]
-pub struct RankResults {
-    pub(crate) num_iterations: ResultType,
-
-    //win = 1, tie = 1 / num players in tie, loss = 0
-    pub(crate) win_eq: f64,
-    pub(crate) tie_eq: f64,
-
-    pub(crate) rank_family_count: [ResultType; 9],
-}
 
 #[derive(Default)]
 #[wasm_bindgen]
