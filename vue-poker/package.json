@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run write-build-info && vue-tsc --noEmit && vite build",
-    
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build --force",
@@ -23,6 +22,7 @@
     "@vueuse/core": "^10.7.0",
     "comlink": "^4.4.1",
     "dexie": "^3.2.4",
+    "lodash": "^4.17.21",
     "pinia": "^2.1.7",
     "vue": "^3.3.10",
     "vue-tippy": "^6.3.1"

@@ -1,6 +1,8 @@
 import * as Comlink from 'comlink';
 import { Draws, FlopSimulationResults, PlayerFlopResults } from '@pkg/poker_eval';
 import { PercOrBetter, ResultsInterface, StreetResults } from './result_types';
+import * as _ from 'lodash';
+import { assert } from 'console';
 //import { detect } from "detect-browser";
 
 type Mod = typeof import('@pkg/poker_eval');
@@ -81,15 +83,38 @@ function buildResultsInterface(
 
   //flop/turn/river
   for (let i = 0; i < 3; i++) {
-    street_results.push({
+
+    const sr : StreetResults = {
       equity: r.get_equity(active_player_index, i),
       rank_family_count: rankIndexes.map((ri) => {
         return {
           perc: r.get_perc_family(active_player_index, i, ri),
           better: r.get_perc_family_or_better(active_player_index, i, ri)
         } as PercOrBetter;
-      })
-    } as StreetResults);
+      }),
+      eq_by_simple_range_idx: []
+    };
+
+    if (!_.isNil(active_player_index)) {
+      const r_eq = r.get_range_equity(active_player_index, i);
+      const r_it = r.get_range_it_count(active_player_index, i);
+
+      assert(r_eq.length === r_it.length);
+
+      const eq_range = [] as Array<number | null>;
+
+      for(let ri = 0; ri < r_eq.length; ++ri) {
+        if (r_it[ri] > 0) {
+          eq_range.push(r_eq[ri] / r_it[ri]);
+        } else {
+          eq_range.push(null);
+        }
+      }
+
+      sr.eq_by_simple_range_idx = eq_range;
+    }
+
+    street_results.push(sr);
   }
 
   //flop & river
