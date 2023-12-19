@@ -29,8 +29,34 @@ impl HoleCards {
         })
     }
 
+    //This converts our exact hole cards to the range index from 0 to 52*51/2
     pub fn to_range_index(&self) -> usize {
         card_pair_to_index(self.card_hi_lo[1].into(), self.card_hi_lo[0].into())
+    }
+
+    //This is to convert to the range index from 0 to 169
+    // row 0, col 0 is AA
+    // row 0, col 1 is AKs
+    // row 1, col 0 is AKo
+    pub fn to_simple_range_index(&self) -> usize {
+        //suited
+        if self.card_hi_lo[0].suit == self.card_hi_lo[1].suit {
+            //ace is first row, 2 is last row
+            let row = 12 - self.card_hi_lo[0].value as usize;    
+
+            let col = 12 - self.card_hi_lo[1].value as usize;
+
+            return row * 13 + col;
+        }
+        
+        //not suited
+
+        //ace is first col, 2 is last col
+        let col = 12 - self.card_hi_lo[0].value as usize;
+        //ace is first row, 2 is last row
+        let row = 12 - self.card_hi_lo[1].value as usize;
+
+        return row * 13 + col;
     }
 
     pub fn get_hi_card(&self) -> Card {
@@ -150,5 +176,26 @@ mod tests {
 
         assert_eq!(HoleCards::new("8d".parse().unwrap(),
         "9h".parse().unwrap()).unwrap().to_range_string(), "98o");
+    }
+
+    #[test]
+    fn test_simplified_range_index() {
+        assert_eq!(HoleCards::new("Ac".parse().unwrap(),
+        "Ad".parse().unwrap()).unwrap().to_simple_range_index(), 0);
+
+        assert_eq!(HoleCards::new("2c".parse().unwrap(),
+        "Ac".parse().unwrap()).unwrap().to_simple_range_index(), 12);
+
+        assert_eq!(HoleCards::new("Kc".parse().unwrap(),
+        "Ad".parse().unwrap()).unwrap().to_simple_range_index(), 13);
+
+        assert_eq!(HoleCards::new("Kd".parse().unwrap(),
+        "3d".parse().unwrap()).unwrap().to_simple_range_index(), 24);
+
+        assert_eq!(HoleCards::new("2c".parse().unwrap(),
+        "2d".parse().unwrap()).unwrap().to_simple_range_index(), 168);
+
+        assert_eq!(HoleCards::new("7c".parse().unwrap(),
+        "2d".parse().unwrap()).unwrap().to_simple_range_index(), 163);
     }
 }
