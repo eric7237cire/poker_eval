@@ -1,8 +1,11 @@
-use std::{ops::BitOr, cmp::{max, min}};
+use std::{
+    cmp::{max, min},
+    ops::BitOr,
+};
 
 use crate::{
     calc_bitset_cards_metrics, count_higher, count_lower, rank_straight, value_set_iterator,
-    BitSetCardsMetrics, Card, CardValue, ValueSetType, HoleCards,
+    BitSetCardsMetrics, Card, CardValue, HoleCards, ValueSetType,
 };
 
 //for pairs, 2 pair, sets, quads, full houses
@@ -29,7 +32,6 @@ pub enum StraightDrawType {
     DoubleGutShot,
 
     OpenEnded,
-
 }
 
 //We'll parse a list of these
@@ -243,7 +245,8 @@ impl PartialRankContainer {
 
         //start with wheel
 
-        for vs_it in value_set_iterator(board_metrics.value_set, 5, CardValue::Ace, CardValue::Ace).unwrap()
+        for vs_it in
+            value_set_iterator(board_metrics.value_set, 5, CardValue::Ace, CardValue::Ace).unwrap()
         {
             assert!(vs_it.value_count <= 5);
 
@@ -273,9 +276,12 @@ impl PartialRankContainer {
         //debug_print_value_set("Combined cards", combined_value_set);
 
         for (vs_it, bh_it) in
-            value_set_iterator(board_metrics.value_set, 5, CardValue::Ace, CardValue::Ace).unwrap().zip(
-                value_set_iterator(combined_value_set, 5, CardValue::Ace, CardValue::Ace).unwrap(),
-            )
+            value_set_iterator(board_metrics.value_set, 5, CardValue::Ace, CardValue::Ace)
+                .unwrap()
+                .zip(
+                    value_set_iterator(combined_value_set, 5, CardValue::Ace, CardValue::Ace)
+                        .unwrap(),
+                )
         {
             assert!(vs_it.value_count <= 5);
 
@@ -419,7 +425,8 @@ impl PartialRankContainer {
                 number_above: pairs_above + trips_above,
                 number_below: unique_pairs_on_board + unique_trips_on_board
                     - 1
-                    - trips_above - pairs_above,
+                    - trips_above
+                    - pairs_above,
                 made_set: false,
                 made_quads: true,
             });
@@ -492,7 +499,6 @@ impl PartialRankContainer {
             lc.number_above = min(lc.number_above, other_lo_card.number_above);
             lc.number_below = max(lc.number_below, other_lo_card.number_below);
         }
-
     }
 }
 
@@ -511,7 +517,12 @@ pub fn partial_rank_cards(hole_cards: &HoleCards, board: &[Card]) -> PartialRank
     partial_ranks.handle_str8_draws(hole_cards.as_slice(), &hole_metrics, &board_metrics);
 
     //flush draws
-    partial_ranks.handle_flush_draws(hole_cards.as_slice(), &hole_metrics, &board_metrics, board.len());
+    partial_ranks.handle_flush_draws(
+        hole_cards.as_slice(),
+        &hole_metrics,
+        &board_metrics,
+        board.len(),
+    );
 
     // Calculate pairs
     if !hole_cards.is_pocket_pair() {
@@ -524,8 +535,9 @@ pub fn partial_rank_cards(hole_cards: &HoleCards, board: &[Card]) -> PartialRank
             partial_ranks.get_pair_info_for_single_hole_card(lo_card_value, &board_metrics);
 
         //special case if we have 2 matching pairs we need to tweak the above/below
-        if partial_ranks.hi_pair.is_some() && partial_ranks.lo_pair.is_some() 
-            && !partial_ranks.hi_pair.as_ref().unwrap().made_set 
+        if partial_ranks.hi_pair.is_some()
+            && partial_ranks.lo_pair.is_some()
+            && !partial_ranks.hi_pair.as_ref().unwrap().made_set
             && !partial_ranks.hi_pair.as_ref().unwrap().made_quads
             && !partial_ranks.lo_pair.as_ref().unwrap().made_set
             && !partial_ranks.lo_pair.as_ref().unwrap().made_quads
@@ -539,7 +551,7 @@ pub fn partial_rank_cards(hole_cards: &HoleCards, board: &[Card]) -> PartialRank
             let mut p = partial_ranks.lo_pair.take().unwrap();
             // if p.number_above == 0 {
             //     for b in board {
-            //         debug!("Board card: {:?}", b);	
+            //         debug!("Board card: {:?}", b);
             //     }
             //     for h in hole_cards {
             //         debug!("Hole card: {:?}", h);
@@ -571,7 +583,7 @@ pub fn partial_rank_cards(hole_cards: &HoleCards, board: &[Card]) -> PartialRank
             number_below,
         });
     }
-    
+
     if partial_ranks.hi_pair.is_none() && !hole_cards.is_pocket_pair() {
         let hi_card_value = hole_cards.get_hi_card().value;
         let hi_card_value = hi_card_value as usize;
@@ -585,7 +597,6 @@ pub fn partial_rank_cards(hole_cards: &HoleCards, board: &[Card]) -> PartialRank
                 number_below -= 1;
             }
         }
-
 
         partial_ranks.hi_card = Some(PairFamilyRank {
             number_above,
@@ -773,7 +784,13 @@ mod tests {
         );
         assert_eq!(prc.lo_pair, None);
         assert_eq!(prc.hi_card, None);
-        assert_eq!(prc.lo_card, Some(PairFamilyRank { number_above: 4, number_below: 0 }));
+        assert_eq!(
+            prc.lo_card,
+            Some(PairFamilyRank {
+                number_above: 4,
+                number_below: 0
+            })
+        );
 
         let hole_cards = "2c 6h".parse().unwrap();
         let board_cards = cards_from_string("3c 4s 7d Ac");
@@ -797,8 +814,20 @@ mod tests {
         assert_eq!(prc.pocket_pair, None);
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
-        assert_eq!(prc.hi_card, Some(PairFamilyRank { number_above: 2, number_below: 2 }));
-        assert_eq!(prc.lo_card, Some(PairFamilyRank { number_above: 4, number_below: 0 }));
+        assert_eq!(
+            prc.hi_card,
+            Some(PairFamilyRank {
+                number_above: 2,
+                number_below: 2
+            })
+        );
+        assert_eq!(
+            prc.lo_card,
+            Some(PairFamilyRank {
+                number_above: 4,
+                number_below: 0
+            })
+        );
 
         //Not a straight draw ?  hmmm
         let hole_cards = "7c 8h".parse().unwrap();
@@ -810,8 +839,20 @@ mod tests {
         assert_eq!(prc.pocket_pair, None);
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
-        assert_eq!(prc.hi_card, Some(PairFamilyRank { number_above: 5, number_below: 0 }));
-        assert_eq!(prc.lo_card, Some(PairFamilyRank { number_above: 5, number_below: 0 }));
+        assert_eq!(
+            prc.hi_card,
+            Some(PairFamilyRank {
+                number_above: 5,
+                number_below: 0
+            })
+        );
+        assert_eq!(
+            prc.lo_card,
+            Some(PairFamilyRank {
+                number_above: 5,
+                number_below: 0
+            })
+        );
 
         let hole_cards = "7c 8h".parse().unwrap();
         let board_cards = cards_from_string("2c Ts Kd Qc Jd");
@@ -833,8 +874,20 @@ mod tests {
         assert_eq!(prc.pocket_pair, None);
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
-        assert_eq!(prc.hi_card, Some(PairFamilyRank { number_above: 4, number_below: 1 }));
-        assert_eq!(prc.lo_card, Some(PairFamilyRank { number_above: 4, number_below: 1 }));
+        assert_eq!(
+            prc.hi_card,
+            Some(PairFamilyRank {
+                number_above: 4,
+                number_below: 1
+            })
+        );
+        assert_eq!(
+            prc.lo_card,
+            Some(PairFamilyRank {
+                number_above: 4,
+                number_below: 1
+            })
+        );
 
         let hole_cards = "Kc Jh".parse().unwrap();
         let board_cards = cards_from_string("Ts Qc 8d");
@@ -852,8 +905,20 @@ mod tests {
         assert_eq!(prc.pocket_pair, None);
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
-        assert_eq!(prc.hi_card, Some(PairFamilyRank { number_above: 0, number_below: 3 }));
-        assert_eq!(prc.lo_card, Some(PairFamilyRank { number_above: 1, number_below: 2 }));
+        assert_eq!(
+            prc.hi_card,
+            Some(PairFamilyRank {
+                number_above: 0,
+                number_below: 3
+            })
+        );
+        assert_eq!(
+            prc.lo_card,
+            Some(PairFamilyRank {
+                number_above: 1,
+                number_below: 2
+            })
+        );
 
         let hole_cards = "6c 8h".parse().unwrap();
         let board_cards = cards_from_string("7s 9c 2d");
@@ -872,8 +937,20 @@ mod tests {
         assert_eq!(prc.pocket_pair, None);
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
-        assert_eq!(prc.hi_card, Some(PairFamilyRank { number_above: 1, number_below: 2 }));
-        assert_eq!(prc.lo_card, Some(PairFamilyRank { number_above: 2, number_below: 1 }));
+        assert_eq!(
+            prc.hi_card,
+            Some(PairFamilyRank {
+                number_above: 1,
+                number_below: 2
+            })
+        );
+        assert_eq!(
+            prc.lo_card,
+            Some(PairFamilyRank {
+                number_above: 2,
+                number_below: 1
+            })
+        );
 
         let hole_cards = "7c Kh".parse().unwrap();
         let board_cards = cards_from_string("9s Jc Td");
@@ -891,8 +968,20 @@ mod tests {
         assert_eq!(prc.pocket_pair, None);
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
-        assert_eq!(prc.hi_card, Some(PairFamilyRank { number_above: 0, number_below: 3 }));
-        assert_eq!(prc.lo_card, Some(PairFamilyRank { number_above: 3, number_below: 0 }));
+        assert_eq!(
+            prc.hi_card,
+            Some(PairFamilyRank {
+                number_above: 0,
+                number_below: 3
+            })
+        );
+        assert_eq!(
+            prc.lo_card,
+            Some(PairFamilyRank {
+                number_above: 3,
+                number_below: 0
+            })
+        );
 
         let hole_cards = "8c 6h".parse().unwrap();
         let board_cards = cards_from_string("4s Td 7c");
@@ -911,8 +1000,20 @@ mod tests {
         assert_eq!(prc.pocket_pair, None);
         assert_eq!(prc.hi_pair, None);
         assert_eq!(prc.lo_pair, None);
-        assert_eq!(prc.hi_card, Some(PairFamilyRank { number_above: 1, number_below: 2 }));
-        assert_eq!(prc.lo_card, Some(PairFamilyRank { number_above: 2, number_below: 1 }));
+        assert_eq!(
+            prc.hi_card,
+            Some(PairFamilyRank {
+                number_above: 1,
+                number_below: 2
+            })
+        );
+        assert_eq!(
+            prc.lo_card,
+            Some(PairFamilyRank {
+                number_above: 2,
+                number_below: 1
+            })
+        );
     }
 
     #[test]

@@ -2,8 +2,6 @@ use std::fmt::Display;
 
 use wasm_bindgen::JsValue;
 
-
-
 #[derive(Debug)]
 pub struct PokerError {
     details: String,

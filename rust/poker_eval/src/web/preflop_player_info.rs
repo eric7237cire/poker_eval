@@ -1,10 +1,13 @@
-use std::{mem, cmp};
+use std::{cmp, mem};
 
 use postflop_solver::card_pair_to_index;
 use rand::rngs::StdRng;
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use crate::{HoleCards, InRangeType, get_unused_card, Card, PokerError, MAX_RAND_NUMBER_ATTEMPS, CardUsedType};
+use crate::{
+    get_unused_card, Card, CardUsedType, HoleCards, InRangeType, PokerError,
+    MAX_RAND_NUMBER_ATTEMPS,
+};
 
 #[derive(Eq, PartialEq, Debug)]
 #[repr(u8)]
@@ -36,7 +39,6 @@ pub struct PreflopPlayerInfo {
     pub(crate) state: PlayerPreFlopState,
 }
 
-
 pub fn get_all_player_hole_cards(
     active_players: &[(usize, &PreflopPlayerInfo)],
     rng: &mut StdRng,
@@ -44,12 +46,13 @@ pub fn get_all_player_hole_cards(
 ) -> Result<Vec<HoleCards>, PokerError> {
     let mut player_cards: Vec<HoleCards> = Vec::with_capacity(active_players.len());
 
-    
     for (p_idx, p) in active_players.iter() {
         assert!(p.state != PlayerPreFlopState::Disabled);
 
         if p.state == PlayerPreFlopState::UseHoleCards {
-            let pc = p.hole_cards.ok_or(PokerError::from_string(format!("Player missing hole cards")))?;
+            let pc = p.hole_cards.ok_or(PokerError::from_string(format!(
+                "Player missing hole cards"
+            )))?;
             player_cards.push(pc);
             continue;
         }
@@ -89,12 +92,10 @@ pub fn get_all_player_hole_cards(
         }
 
         //we set their cards
-        let pc = HoleCards::new(
-            Card::try_from(card1_index)?, Card::try_from(card2_index)?)?;
+        let pc = HoleCards::new(Card::try_from(card1_index)?, Card::try_from(card2_index)?)?;
         pc.set_used(cards_used)?;
         player_cards.push(pc);
     }
 
     Ok(player_cards)
 }
-

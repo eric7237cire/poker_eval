@@ -1,4 +1,7 @@
-use crate::{PreflopPlayerInfo, HoleCards, Card, PlayerFlopResults, PokerError, Rank, PlayerPreFlopState, rank_cards, RankResults, MAX_PLAYERS};
+use crate::{
+    rank_cards, Card, HoleCards, PlayerFlopResults, PlayerPreFlopState, PokerError,
+    PreflopPlayerInfo, Rank, RankResults, MAX_PLAYERS,
+};
 
 /*
 Assumes all players have either hole cards or their ranges chosen
@@ -37,7 +40,7 @@ pub fn eval_current(
         //For players with ranges we already chose their cards
 
         player_cards[active_index].add_to_eval(eval_cards);
-        
+
         let rank = rank_cards(&eval_cards);
 
         update_results_from_rank(
@@ -54,7 +57,10 @@ pub fn eval_current(
     let best_villian_rank = hand_evals[1..]
         .iter()
         .fold(Rank::HighCard(0), |acc, &x| acc.max(x));
-    update_results_from_rank(&mut villian_results.street_rank_results[street_index], best_villian_rank);
+    update_results_from_rank(
+        &mut villian_results.street_rank_results[street_index],
+        best_villian_rank,
+    );
 
     let winner_indexes = indices_of_max_values(&hand_evals);
 
@@ -71,14 +77,14 @@ pub fn eval_current(
             results.tie_eq += 1.0 / winner_indexes.len() as f64;
 
             if *winner_idx > 0 {
-                villian_results.street_rank_results[street_index].tie_eq += 1.0 / winner_indexes.len() as f64;
+                villian_results.street_rank_results[street_index].tie_eq +=
+                    1.0 / winner_indexes.len() as f64;
             }
         }
     }
 
     Ok(())
 }
-
 
 pub(crate) fn update_results_from_rank(results: &mut RankResults, rank: Rank) {
     results.num_iterations += 1;
@@ -87,7 +93,6 @@ pub(crate) fn update_results_from_rank(results: &mut RankResults, rank: Rank) {
 
 //returns winners and how many players were considered (non None rank)
 pub(crate) fn indices_of_max_values(arr: &[Rank]) -> Vec<usize> {
-    
     let mut max_indices = Vec::with_capacity(MAX_PLAYERS);
     let mut max_value = Rank::HighCard(0);
 

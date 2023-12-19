@@ -2,8 +2,6 @@ use postflop_solver::Range;
 
 pub type ChipType = u16;
 
-
-
 pub enum PreFrabRanges {
     RangeAll,
     Range75,

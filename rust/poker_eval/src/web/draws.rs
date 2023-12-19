@@ -1,17 +1,22 @@
-use std::{cmp::{self}, mem};
-use crate::{PokerError, get_unused_card, add_eval_card, set_used_card, HoleCards, PreflopPlayerInfo, PlayerFlopResults, PlayerPreFlopState};
+use crate::{
+    add_eval_card, get_unused_card, set_used_card, HoleCards, PlayerFlopResults,
+    PlayerPreFlopState, PokerError, PreflopPlayerInfo,
+};
 use itertools::Itertools;
+use std::{
+    cmp::{self},
+    mem,
+};
 
 use crate::{
-     Card, 
-    NUM_RANK_FAMILIES, partial_rank_cards, PartialRankContainer, StraightDrawType, FlushDrawType,
+    partial_rank_cards, Card, FlushDrawType, PartialRankContainer, StraightDrawType,
+    NUM_RANK_FAMILIES,
 };
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 //extern crate wasm_bindgen;
 //extern crate console_error_panic_hook;
 type ResultType = u32;
 use serde::Serialize;
-
 
 #[wasm_bindgen]
 #[derive(Default, Serialize)]
@@ -22,10 +27,10 @@ pub struct Draws {
     pub str8_draw: ResultType,
     pub flush_draw: ResultType,
     pub backdoor_flush_draw: ResultType,
-    
+
     pub one_overcard: ResultType,
     pub two_overcards: ResultType,
-    
+
     pub lo_paired: ResultType,
     pub hi_paired: ResultType,
     pub pp_paired: ResultType,
@@ -51,10 +56,7 @@ impl Draws {
     }
 }
 
-
-
 fn update_draw(results: &mut Draws, prc: &PartialRankContainer) {
-
     results.num_iterations += 1;
 
     if let Some(sd) = prc.straight_draw.as_ref() {
@@ -66,8 +68,7 @@ fn update_draw(results: &mut Draws, prc: &PartialRankContainer) {
     }
 
     if let Some(fd) = prc.flush_draw.as_ref() {
-        match fd.flush_draw_type
-        {
+        match fd.flush_draw_type {
             FlushDrawType::FlushDraw => results.flush_draw += 1,
             FlushDrawType::BackdoorFlushDraw => results.backdoor_flush_draw += 1,
         }
@@ -87,12 +88,12 @@ fn update_draw(results: &mut Draws, prc: &PartialRankContainer) {
 
     let mut num_overcards: usize = 0;
 
-    if let Some (hi) = prc.hi_card.as_ref() {
+    if let Some(hi) = prc.hi_card.as_ref() {
         if hi.number_above == 0 {
             num_overcards += 1;
 
             //Only count lower card as overcard if the higher one did too
-            if let Some (lo) = prc.lo_card.as_ref() {
+            if let Some(lo) = prc.lo_card.as_ref() {
                 if lo.number_above == 0 {
                     num_overcards += 1;
                 }
@@ -148,9 +149,7 @@ pub fn eval_current_draws(
         //For players with ranges we already chose their cards
 
         let hc = &player_cards[active_index];
-        let prc = partial_rank_cards(
-            &hc, 
-            &eval_cards);
+        let prc = partial_rank_cards(&hc, &eval_cards);
 
         update_draw(
             &mut flop_results[active_index].street_draws[draw_index],
@@ -160,7 +159,6 @@ pub fn eval_current_draws(
         if active_index > 0 {
             best_villian_draws.merge_best(&prc);
         }
-
     }
 
     update_draw(
@@ -170,4 +168,3 @@ pub fn eval_current_draws(
 
     Ok(())
 }
-

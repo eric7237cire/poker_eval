@@ -50,7 +50,8 @@ pub fn value_set_iterator(
 
     let window_start = start;
     //A, win len 2 ends at 2
-    let window_stop: CardValue = (start.next_card() as u8 + (window_length - 2) as u8).try_into()?;
+    let window_stop: CardValue =
+        (start.next_card() as u8 + (window_length - 2) as u8).try_into()?;
 
     //Add first one seperately because it could be the Ace
     let mut rolling_one_count =

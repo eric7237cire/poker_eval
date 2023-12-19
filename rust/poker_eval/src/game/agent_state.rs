@@ -1,6 +1,6 @@
 use postflop_solver::card_pair_to_index;
 
-use crate::{core::Card, ChipType, Position, SMALL_BLIND,};
+use crate::{core::Card, ChipType, Position, SMALL_BLIND};
 
 #[derive(Debug)]
 pub struct AgentState {

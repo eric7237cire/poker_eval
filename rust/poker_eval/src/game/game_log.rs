@@ -21,7 +21,6 @@ struct GameLog {
     sb: ChipType,
     bb: ChipType,
 
-
     //depending on the game, maybe this is 0, 3, 4, 5 cards
     board: Vec<Card>,
 
@@ -31,7 +30,6 @@ struct GameLog {
 pub struct CurrentPlayerState {
     stack: ChipType,
     //Player id?
-
     folded: bool,
     all_in: bool,
 }

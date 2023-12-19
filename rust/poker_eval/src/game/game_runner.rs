@@ -2,9 +2,8 @@ use log::debug;
 
 use crate::{
     core::Card, rank_cards, Action, Agent, AgentRoundInfo, AgentState, ChipType, GameState,
-    Position, Round, SMALL_BLIND, BIG_BLIND,
+    Position, Round, BIG_BLIND, SMALL_BLIND,
 };
-
 
 #[allow(dead_code)]
 pub struct GameRunner<'a> {
@@ -38,8 +37,9 @@ impl<'a> GameRunner<'a> {
     }
 
     fn init_agent_pos_and_stack(&mut self, position: Position, stack: ChipType) {
-        let agent_state: &mut AgentState = &mut self.agent_states[usize::try_from(position).unwrap()];
-        assert_eq!(agent_state.position,  position);
+        let agent_state: &mut AgentState =
+            &mut self.agent_states[usize::try_from(position).unwrap()];
+        assert_eq!(agent_state.position, position);
 
         agent_state.stack = stack;
         agent_state.initial_stack = stack;
@@ -47,7 +47,7 @@ impl<'a> GameRunner<'a> {
 
     fn run_round(&mut self, round: Round) {
         let mut to_act = Position::first_to_act(self.agents.len() as _, round);
-        
+
         let current_amt_to_call = if round == Round::Preflop {
             self.big_blind
         } else {
@@ -63,8 +63,8 @@ impl<'a> GameRunner<'a> {
         if round == Round::Preflop {
             self.game_state.current_pot += self.agent_states[usize::from(SMALL_BLIND)]
                 .handle_put_money_in_pot(self.small_blind);
-            self.game_state.current_pot += self.agent_states[usize::from(BIG_BLIND)]
-                .handle_put_money_in_pot(self.big_blind);
+            self.game_state.current_pot +=
+                self.agent_states[usize::from(BIG_BLIND)].handle_put_money_in_pot(self.big_blind);
         }
 
         //Initialize for preflop round
@@ -443,7 +443,7 @@ mod tests {
                 }
                 1 => {
                     assert_eq!(round_info.round, Round::Preflop);
-                    assert_eq!(usize::from(agent_state.position),  3usize);
+                    assert_eq!(usize::from(agent_state.position), 3usize);
 
                     assert_eq!(agent_state.cards[0].value, CardValue::Ace);
                     assert_eq!(agent_state.cards[0].suit, Suit::Spade);
@@ -454,7 +454,7 @@ mod tests {
                 }
                 2 => {
                     assert_eq!(round_info.round, Round::Preflop);
-                    assert_eq!(usize::from(agent_state.position),  4usize);
+                    assert_eq!(usize::from(agent_state.position), 4usize);
 
                     assert_eq!(round_info.current_amt_to_call, round_info.bb_amt * 4);
                     assert_eq!(8, round_info.current_amt_to_call);
@@ -469,7 +469,7 @@ mod tests {
                 }
                 3 => {
                     assert_eq!(round_info.round, Round::Preflop);
-                    assert_eq!(agent_state.position,  SMALL_BLIND);
+                    assert_eq!(agent_state.position, SMALL_BLIND);
 
                     assert_eq!(round_info.current_amt_to_call, round_info.bb_amt * 4);
 
@@ -485,7 +485,7 @@ mod tests {
                 }
                 4 => {
                     assert_eq!(round_info.round, Round::Preflop);
-                    assert_eq!(agent_state.position,  BIG_BLIND);
+                    assert_eq!(agent_state.position, BIG_BLIND);
 
                     assert_eq!(round_info.current_amt_to_call, round_info.bb_amt * 8);
 
@@ -506,7 +506,7 @@ mod tests {
                 }
                 5 => {
                     assert_eq!(round_info.round, Round::Preflop);
-                    assert_eq!(usize::from(agent_state.position),  2usize);
+                    assert_eq!(usize::from(agent_state.position), 2usize);
 
                     assert_eq!(round_info.current_amt_to_call, round_info.bb_amt * 10);
 
@@ -526,7 +526,7 @@ mod tests {
                 }
                 6 => {
                     assert_eq!(round_info.round, Round::Preflop);
-                    assert_eq!(usize::from(agent_state.position),  3usize);
+                    assert_eq!(usize::from(agent_state.position), 3usize);
 
                     assert_eq!(round_info.current_amt_to_call, round_info.bb_amt * 10);
 
@@ -542,7 +542,7 @@ mod tests {
                 }
                 7 => {
                     assert_eq!(round_info.round, Round::Preflop);
-                    assert_eq!(usize::from(agent_state.position),  4usize);
+                    assert_eq!(usize::from(agent_state.position), 4usize);
 
                     assert_eq!(round_info.current_amt_to_call, round_info.bb_amt * 10);
 
@@ -557,7 +557,7 @@ mod tests {
                 }
                 8 => {
                     assert_eq!(round_info.round, Round::Preflop);
-                    assert_eq!(agent_state.position,  SMALL_BLIND);
+                    assert_eq!(agent_state.position, SMALL_BLIND);
 
                     assert_eq!(round_info.current_amt_to_call, 29);
 
@@ -573,7 +573,7 @@ mod tests {
                 9 => {
                     assert_eq!(round_info.round, Round::Preflop);
                     //BB is all in
-                    assert_eq!(usize::from(agent_state.position),  2usize);
+                    assert_eq!(usize::from(agent_state.position), 2usize);
 
                     assert_eq!(round_info.current_amt_to_call, 29);
 
@@ -592,7 +592,7 @@ mod tests {
                 10 => {
                     assert_eq!(round_info.round, Round::Preflop);
                     //BB is all in
-                    assert_eq!(usize::from(agent_state.position),  3usize);
+                    assert_eq!(usize::from(agent_state.position), 3usize);
 
                     assert_eq!(round_info.current_amt_to_call, 38);
 
@@ -611,7 +611,7 @@ mod tests {
                 11 => {
                     assert_eq!(round_info.round, Round::Preflop);
                     //BB is all in
-                    assert_eq!(agent_state.position,  SMALL_BLIND);
+                    assert_eq!(agent_state.position, SMALL_BLIND);
 
                     assert_eq!(round_info.current_amt_to_call, 38);
 
@@ -628,7 +628,7 @@ mod tests {
                 }
                 12 => {
                     assert_eq!(round_info.round, Round::Flop);
-                    assert_eq!(agent_state.position,  SMALL_BLIND);
+                    assert_eq!(agent_state.position, SMALL_BLIND);
 
                     assert_eq!(round_info.current_amt_to_call, 0);
 
@@ -646,7 +646,7 @@ mod tests {
 
                 13 => {
                     assert_eq!(round_info.round, Round::Flop);
-                    assert_eq!(usize::from(agent_state.position),  2usize);
+                    assert_eq!(usize::from(agent_state.position), 2usize);
 
                     assert_eq!(round_info.current_amt_to_call, 0);
 
@@ -663,25 +663,25 @@ mod tests {
                 }
                 14 => {
                     assert_eq!(round_info.round, Round::Turn);
-                    assert_eq!(agent_state.position,  SMALL_BLIND);
+                    assert_eq!(agent_state.position, SMALL_BLIND);
 
                     return Action::Check;
                 }
                 15 => {
                     assert_eq!(round_info.round, Round::Turn);
-                    assert_eq!(usize::from(agent_state.position),  2usize);
+                    assert_eq!(usize::from(agent_state.position), 2usize);
 
                     return Action::Raise(2);
                 }
                 16 => {
                     assert_eq!(round_info.round, Round::Turn);
-                    assert_eq!(agent_state.position,  SMALL_BLIND);
+                    assert_eq!(agent_state.position, SMALL_BLIND);
 
                     return Action::Call;
                 }
                 17 => {
                     assert_eq!(round_info.round, Round::River);
-                    assert_eq!(agent_state.position,  SMALL_BLIND);
+                    assert_eq!(agent_state.position, SMALL_BLIND);
 
                     //No one left in hand?
                     return Action::Check;

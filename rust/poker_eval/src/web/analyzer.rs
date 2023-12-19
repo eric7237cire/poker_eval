@@ -1,20 +1,26 @@
-use std::{cmp::{self}, mem};
-use crate::{PokerError, get_unused_card, add_eval_card, set_used_card, HoleCards, PreflopPlayerInfo, PlayerPreFlopState, PlayerFlopResults, FlopSimulationResults, eval_current_draws, get_all_player_hole_cards, eval_current};
+use crate::{
+    add_eval_card, eval_current, eval_current_draws, get_all_player_hole_cards, get_unused_card,
+    set_used_card, FlopSimulationResults, HoleCards, PlayerFlopResults, PlayerPreFlopState,
+    PokerError, PreflopPlayerInfo,
+};
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
 use postflop_solver::card_pair_to_index;
 use rand::{rngs::StdRng, SeedableRng};
+use std::{
+    cmp::{self},
+    mem,
+};
 
 use crate::{
-    range_string_to_set, rank_cards, Card, CardUsedType, InRangeType, Rank,
-    NUM_RANK_FAMILIES, partial_rank_cards, PartialRankContainer, StraightDrawType, FlushDrawType,
+    partial_rank_cards, range_string_to_set, rank_cards, Card, CardUsedType, FlushDrawType,
+    InRangeType, PartialRankContainer, Rank, StraightDrawType, NUM_RANK_FAMILIES,
 };
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 //extern crate wasm_bindgen;
 //extern crate console_error_panic_hook;
 type ResultType = u32;
 use serde::Serialize;
-
 
 #[wasm_bindgen]
 //doing this to stop warnings in vs code about camel case in the wasm function names
@@ -23,7 +29,6 @@ pub struct flop_analyzer {
     board_cards: Vec<Card>,
     player_info: Vec<PreflopPlayerInfo>,
 }
-
 
 //hero is 0
 pub const MAX_PLAYERS: usize = 5;
@@ -54,7 +59,7 @@ impl flop_analyzer {
     pub fn set_board_cards(&mut self, cards: &[u8]) -> Result<(), PokerError> {
         self.board_cards.clear();
         info!("set_board_cards: len {}", cards.len());
-        
+
         for c in cards.iter() {
             let card = Card::try_from(*c)?;
             self.check_if_used(card)?;
@@ -66,7 +71,6 @@ impl flop_analyzer {
     }
 
     fn check_if_used(&self, card: Card) -> Result<(), PokerError> {
-        
         if self.board_cards.contains(&card) {
             return Err(PokerError::from_string(format!(
                 "set_board_cards: card {} already in board",
@@ -77,8 +81,8 @@ impl flop_analyzer {
         for p in self.player_info.iter() {
             if p.state != PlayerPreFlopState::UseHoleCards {
                 continue;
-            } 
-            
+            }
+
             if let Some(hc) = p.hole_cards {
                 if hc.get_hi_card() == card || hc.get_lo_card() == card {
                     return Err(PokerError::from_string(format!(
@@ -93,7 +97,11 @@ impl flop_analyzer {
     }
 
     pub fn set_player_cards(&mut self, player_idx: usize, cards: &[u8]) -> Result<(), PokerError> {
-        info!("set_player_cards idx {} with {} cards", player_idx, cards.len());
+        info!(
+            "set_player_cards idx {} with {} cards",
+            player_idx,
+            cards.len()
+        );
 
         if player_idx >= self.player_info.len() {
             return Err(PokerError::from_string(format!(
@@ -116,7 +124,7 @@ impl flop_analyzer {
         self.check_if_used(card2)?;
 
         self.player_info[player_idx].hole_cards = Some(HoleCards::new(card1, card2)?);
-        
+
         Ok(())
     }
 
@@ -158,7 +166,6 @@ impl flop_analyzer {
     fn init_cards_used(&self) -> Result<CardUsedType, PokerError> {
         let mut cards_used = CardUsedType::default();
 
-        
         for c in self.board_cards.iter() {
             set_used_card((*c).into(), &mut cards_used)?;
         }
@@ -166,9 +173,11 @@ impl flop_analyzer {
         for p in self.player_info.iter() {
             if p.state != PlayerPreFlopState::UseHoleCards {
                 continue;
-            } 
-            
-            let hc = p.hole_cards.ok_or(PokerError::from_string(format!("Player missing hole cards")))?;
+            }
+
+            let hc = p.hole_cards.ok_or(PokerError::from_string(format!(
+                "Player missing hole cards"
+            )))?;
 
             set_used_card(hc.get_hi_card().into(), &mut cards_used)?;
             set_used_card(hc.get_lo_card().into(), &mut cards_used)?;
@@ -201,7 +210,7 @@ impl flop_analyzer {
     pub fn simulate_flop(
         &self,
         num_iterations: u32,
-        all_flop_results: FlopSimulationResults,        
+        all_flop_results: FlopSimulationResults,
     ) -> Result<FlopSimulationResults, PokerError> {
         //let n_players = self.player_info.len();
         let mut rng = StdRng::seed_from_u64(42);
@@ -231,7 +240,11 @@ impl flop_analyzer {
             )));
         }
 
-        info!("simulate_flop: num_iterations {} for {} players", num_iterations, active_players.len());
+        info!(
+            "simulate_flop: num_iterations {} for {} players",
+            num_iterations,
+            active_players.len()
+        );
 
         let base_cards_used = self.init_cards_used()?;
 
@@ -253,14 +266,19 @@ impl flop_analyzer {
 
             assert_eq!(player_cards.len(), active_players.len());
 
-            assert_eq!(num_added+self.board_cards.len() + 2 * active_players.len(), cards_used.count_ones());
+            assert_eq!(
+                num_added + self.board_cards.len() + 2 * active_players.len(),
+                cards_used.count_ones()
+            );
 
             eval_current_draws(
                 &active_players,
-                &player_cards, &eval_cards, 
-                &mut flop_results, 
+                &player_cards,
+                &eval_cards,
+                &mut flop_results,
                 &mut villian_results,
-                0)?;
+                0,
+            )?;
 
             eval_current(
                 &active_players,
@@ -284,7 +302,7 @@ impl flop_analyzer {
                     &mut cards_used,
                 )?;
 
-                assert_eq!(3, self.board_cards.len()+num_added);
+                assert_eq!(3, self.board_cards.len() + num_added);
                 assert_eq!(4 + 2 * active_players.len(), cards_used.count_ones());
             } else {
                 //Just do a simple push since we already added it to used cards
@@ -293,16 +311,22 @@ impl flop_analyzer {
                 eval_cards.push(self.board_cards[3].into());
                 assert_eq!(num_added, 0);
 
-                assert_eq!(self.board_cards.len() + 2 * active_players.len(), cards_used.count_ones());
+                assert_eq!(
+                    self.board_cards.len() + 2 * active_players.len(),
+                    cards_used.count_ones()
+                );
             }
 
             assert_eq!(4, eval_cards.len());
-            
 
             eval_current_draws(
                 &active_players,
-                &player_cards, &eval_cards, 
-                &mut flop_results, &mut villian_results, 1)?;
+                &player_cards,
+                &eval_cards,
+                &mut flop_results,
+                &mut villian_results,
+                1,
+            )?;
 
             eval_current(
                 &active_players,
@@ -321,7 +345,7 @@ impl flop_analyzer {
                     &mut eval_cards,
                     &mut cards_used,
                 )?;
-                
+
                 assert_eq!(5 + 2 * active_players.len(), cards_used.count_ones());
             } else {
                 //Just do a simple push since we already added it to used cards
@@ -331,11 +355,13 @@ impl flop_analyzer {
 
                 assert_eq!(num_added, 0);
 
-                assert_eq!(self.board_cards.len() + 2 * active_players.len(), cards_used.count_ones());
+                assert_eq!(
+                    self.board_cards.len() + 2 * active_players.len(),
+                    cards_used.count_ones()
+                );
             }
 
             assert_eq!(5, eval_cards.len());
-            
 
             eval_current(
                 &active_players,
@@ -347,7 +373,7 @@ impl flop_analyzer {
             )?;
         }
 
-        Ok(FlopSimulationResults{
+        Ok(FlopSimulationResults {
             flop_results: flop_results,
             all_villians: villian_results,
         })
@@ -359,7 +385,6 @@ impl flop_analyzer {
         eval_cards: &mut Vec<Card>,
         cards_used: &mut CardUsedType,
     ) -> Result<usize, PokerError> {
-        
         assert!(eval_cards.is_empty());
 
         let num_cards_needed_for_flop = 3;
@@ -370,15 +395,13 @@ impl flop_analyzer {
             //Should have been initialized already in init_cards_used
             let card_as_usize: usize = (*c).into();
             assert!(cards_used[card_as_usize]);
-            
+
             if c_idx < num_cards_needed_for_flop {
                 eval_cards.push(*c);
             }
-            
         }
 
         assert!(eval_cards.len() <= num_cards_needed_for_flop);
-
 
         //Choose any cards up until the flop has been chosen
 
@@ -392,13 +415,9 @@ impl flop_analyzer {
             num_chosen += 1;
         }
 
-
         Ok(num_chosen)
     }
-
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -421,11 +440,17 @@ mod tests {
         analyzer.set_player_state(0, PlayerPreFlopState::UseHoleCards as u8);
         analyzer.set_player_state(3, PlayerPreFlopState::UseHoleCards as u8);
 
-        analyzer.set_player_cards(0, card_u8s_from_string("7h 6s").as_slice()).unwrap();
+        analyzer
+            .set_player_cards(0, card_u8s_from_string("7h 6s").as_slice())
+            .unwrap();
 
-        analyzer.set_player_cards(3, card_u8s_from_string("Th 9h").as_slice()).unwrap();
+        analyzer
+            .set_player_cards(3, card_u8s_from_string("Th 9h").as_slice())
+            .unwrap();
 
-        analyzer.set_board_cards(card_u8s_from_string("Qs Ts 7c").as_slice()).unwrap();
+        analyzer
+            .set_board_cards(card_u8s_from_string("Qs Ts 7c").as_slice())
+            .unwrap();
 
         let num_it = 10_000;
         let f_results = analyzer.build_results();
@@ -466,16 +491,22 @@ mod tests {
         analyzer.set_player_state(2, PlayerPreFlopState::UseRange as u8);
         analyzer.set_player_state(3, PlayerPreFlopState::UseHoleCards as u8);
 
-        analyzer.set_player_cards(0, card_u8s_from_string("8d 7s").as_slice()).unwrap();
+        analyzer
+            .set_player_cards(0, card_u8s_from_string("8d 7s").as_slice())
+            .unwrap();
 
-        analyzer.set_player_cards(3, card_u8s_from_string("Qd 5c").as_slice()).unwrap();
+        analyzer
+            .set_player_cards(3, card_u8s_from_string("Qd 5c").as_slice())
+            .unwrap();
 
         analyzer.set_player_range(
             2,
             "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o",
         );
 
-        analyzer.set_board_cards(card_u8s_from_string("Qs Ts 7c").as_slice()).unwrap();
+        analyzer
+            .set_board_cards(card_u8s_from_string("Qs Ts 7c").as_slice())
+            .unwrap();
 
         let num_it = 4_000;
 
@@ -548,13 +579,23 @@ mod tests {
         analyzer.set_player_state(4, PlayerPreFlopState::UseHoleCards as u8);
         analyzer.set_player_state(2, PlayerPreFlopState::UseHoleCards as u8);
 
-        analyzer.set_player_cards(0, card_u8s_from_string("Td 8s").as_slice()).unwrap();
+        analyzer
+            .set_player_cards(0, card_u8s_from_string("Td 8s").as_slice())
+            .unwrap();
 
-        analyzer.set_player_cards(3, card_u8s_from_string("Ad Kc").as_slice()).unwrap();
-        analyzer.set_player_cards(4, card_u8s_from_string("5s 5c").as_slice()).unwrap();
-        analyzer.set_player_cards(2, card_u8s_from_string("Qd 7d").as_slice()).unwrap();
+        analyzer
+            .set_player_cards(3, card_u8s_from_string("Ad Kc").as_slice())
+            .unwrap();
+        analyzer
+            .set_player_cards(4, card_u8s_from_string("5s 5c").as_slice())
+            .unwrap();
+        analyzer
+            .set_player_cards(2, card_u8s_from_string("Qd 7d").as_slice())
+            .unwrap();
 
-        analyzer.set_board_cards(card_u8s_from_string("9s 8c Ah 5h 6h").as_slice()).unwrap();
+        analyzer
+            .set_board_cards(card_u8s_from_string("9s 8c Ah 5h 6h").as_slice())
+            .unwrap();
 
         let num_it = 1;
 
@@ -562,25 +603,48 @@ mod tests {
         let results = analyzer.simulate_flop(num_it, results).unwrap();
 
         let v_r = &results.all_villians;
-        assert_eq!(1, v_r.street_rank_results[0].rank_family_count[Rank::OnePair(0).get_family_index()]);
-        assert_eq!(1u32, v_r.street_rank_results[0].rank_family_count.iter().sum());
+        assert_eq!(
+            1,
+            v_r.street_rank_results[0].rank_family_count[Rank::OnePair(0).get_family_index()]
+        );
+        assert_eq!(
+            1u32,
+            v_r.street_rank_results[0].rank_family_count.iter().sum()
+        );
         assert_eq!(0, v_r.street_draws[0].gut_shot);
         assert_eq!(0, v_r.street_draws[0].two_overcards);
         assert_eq!(0, v_r.street_draws[0].one_overcard);
-        assert_eq!(1.0, v_r.street_rank_results[0].win_eq / v_r.street_rank_results[0].num_iterations as f64);
+        assert_eq!(
+            1.0,
+            v_r.street_rank_results[0].win_eq / v_r.street_rank_results[0].num_iterations as f64
+        );
 
         //Turn villian picks up gut shot
-        assert_eq!(1, v_r.street_rank_results[1].rank_family_count[Rank::ThreeOfAKind(0).get_family_index()]);
-        assert_eq!(1u32, v_r.street_rank_results[1].rank_family_count.iter().sum());
+        assert_eq!(
+            1,
+            v_r.street_rank_results[1].rank_family_count[Rank::ThreeOfAKind(0).get_family_index()]
+        );
+        assert_eq!(
+            1u32,
+            v_r.street_rank_results[1].rank_family_count.iter().sum()
+        );
         assert_eq!(1, v_r.street_draws[1].gut_shot);
         assert_eq!(0, v_r.street_draws[1].two_overcards);
         assert_eq!(0, v_r.street_draws[1].one_overcard);
 
-        assert_eq!(0, v_r.street_rank_results[2].rank_family_count[Rank::OnePair(0).get_family_index()]);
-        assert_eq!(1, v_r.street_rank_results[2].rank_family_count[Rank::Straight(0).get_family_index()]);
-        assert_eq!(1u32, v_r.street_rank_results[2].rank_family_count.iter().sum());
+        assert_eq!(
+            0,
+            v_r.street_rank_results[2].rank_family_count[Rank::OnePair(0).get_family_index()]
+        );
+        assert_eq!(
+            1,
+            v_r.street_rank_results[2].rank_family_count[Rank::Straight(0).get_family_index()]
+        );
+        assert_eq!(
+            1u32,
+            v_r.street_rank_results[2].rank_family_count.iter().sum()
+        );
         assert_eq!(2, v_r.street_draws.len());
-        
     }
 
     #[test]
@@ -593,13 +657,23 @@ mod tests {
         analyzer.set_player_state(4, PlayerPreFlopState::UseHoleCards as u8);
         analyzer.set_player_state(2, PlayerPreFlopState::UseHoleCards as u8);
 
-        analyzer.set_player_cards(0, card_u8s_from_string("Tc 8s").as_slice()).unwrap();
+        analyzer
+            .set_player_cards(0, card_u8s_from_string("Tc 8s").as_slice())
+            .unwrap();
 
-        analyzer.set_player_cards(3, card_u8s_from_string("Ad Jc").as_slice()).unwrap();
-        analyzer.set_player_cards(4, card_u8s_from_string("Ks Qc").as_slice()).unwrap();
-        analyzer.set_player_cards(2, card_u8s_from_string("Jd Td").as_slice()).unwrap();
+        analyzer
+            .set_player_cards(3, card_u8s_from_string("Ad Jc").as_slice())
+            .unwrap();
+        analyzer
+            .set_player_cards(4, card_u8s_from_string("Ks Qc").as_slice())
+            .unwrap();
+        analyzer
+            .set_player_cards(2, card_u8s_from_string("Jd Td").as_slice())
+            .unwrap();
 
-        analyzer.set_board_cards(card_u8s_from_string("2s 4c 7h Qh Ah").as_slice()).unwrap();
+        analyzer
+            .set_board_cards(card_u8s_from_string("2s 4c 7h Qh Ah").as_slice())
+            .unwrap();
 
         let num_it = 1;
 
@@ -607,20 +681,45 @@ mod tests {
         let results = analyzer.simulate_flop(num_it, results).unwrap();
 
         let v_r = &results.all_villians;
-        assert_eq!(1, v_r.street_rank_results[0].rank_family_count[Rank::HighCard(0).get_family_index()]);
-        assert_eq!(1, v_r.street_rank_results[0].rank_family_count.iter().sum::<u32>());
+        assert_eq!(
+            1,
+            v_r.street_rank_results[0].rank_family_count[Rank::HighCard(0).get_family_index()]
+        );
+        assert_eq!(
+            1,
+            v_r.street_rank_results[0]
+                .rank_family_count
+                .iter()
+                .sum::<u32>()
+        );
         assert_eq!(1, v_r.street_draws[0].two_overcards);
         assert_eq!(0, v_r.street_draws[0].one_overcard);
 
-        assert_eq!(1, v_r.street_rank_results[1].rank_family_count[Rank::OnePair(0).get_family_index()]);
-        assert_eq!(1, v_r.street_rank_results[1].rank_family_count.iter().sum::<u32>());
+        assert_eq!(
+            1,
+            v_r.street_rank_results[1].rank_family_count[Rank::OnePair(0).get_family_index()]
+        );
+        assert_eq!(
+            1,
+            v_r.street_rank_results[1]
+                .rank_family_count
+                .iter()
+                .sum::<u32>()
+        );
         assert_eq!(0, v_r.street_draws[1].two_overcards);
         assert_eq!(1, v_r.street_draws[1].one_overcard);
 
-        assert_eq!(1, v_r.street_rank_results[2].rank_family_count[Rank::OnePair(0).get_family_index()]);
-        assert_eq!(1, v_r.street_rank_results[2].rank_family_count.iter().sum::<u32>());
+        assert_eq!(
+            1,
+            v_r.street_rank_results[2].rank_family_count[Rank::OnePair(0).get_family_index()]
+        );
+        assert_eq!(
+            1,
+            v_r.street_rank_results[2]
+                .rank_family_count
+                .iter()
+                .sum::<u32>()
+        );
         assert_eq!(2, v_r.street_draws.len());
-
-
     }
 }

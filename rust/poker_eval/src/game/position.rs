@@ -1,5 +1,4 @@
-use crate::{Round, PokerError};
-
+use crate::{PokerError, Round};
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub struct Position {
@@ -12,14 +11,13 @@ pub struct Position {
     // Button,
 }
 
-pub  const SMALL_BLIND: Position = Position { pos: 0 };
+pub const SMALL_BLIND: Position = Position { pos: 0 };
 pub const BIG_BLIND: Position = Position { pos: 1 };
 const UTG: Position = Position { pos: 2 };
 
-const MAX_POSITION: u8 = 15;            
+const MAX_POSITION: u8 = 15;
 
 impl Position {
-
     pub fn first_to_act(n_players: u8, round: Round) -> Position {
         assert!(n_players >= 2);
 
@@ -37,7 +35,6 @@ impl Position {
         } else {
             return SMALL_BLIND;
         }
-        
     }
 
     pub fn next(&self, n_players: u8) -> Position {
@@ -48,16 +45,11 @@ impl Position {
 
     pub fn prev(&self, n_players: u8) -> Position {
         if self.pos == 0 {
-            Position {
-                pos: n_players - 1,
-            }
+            Position { pos: n_players - 1 }
         } else {
-            Position {
-                pos: self.pos - 1,
-            }
+            Position { pos: self.pos - 1 }
         }
     }
-
 }
 
 impl TryFrom<usize> for Position {

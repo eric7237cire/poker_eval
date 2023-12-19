@@ -1,5 +1,5 @@
-use bitvec::prelude::*;
 use crate::HoleCards;
+use bitvec::prelude::*;
 use postflop_solver::card_pair_to_index;
 use postflop_solver::Range;
 use std::cmp;
@@ -190,7 +190,6 @@ impl FromStr for CardValue {
             '3' => Ok(Self::Three),
             '2' => Ok(Self::Two),
             c => Err(PokerError::from_string(format!("Unsupported char: {}", c))),
-            
         }
     }
 }
@@ -251,7 +250,6 @@ impl Suit {
         SUITS
     }
 
-    
     /// This Suit to a character.
     pub fn to_char(self) -> char {
         char::from(self)
@@ -293,7 +291,6 @@ impl From<Suit> for char {
     }
 }
 
-
 impl FromStr for Suit {
     type Err = PokerError;
 
@@ -306,11 +303,9 @@ impl FromStr for Suit {
             'h' => Ok(Self::Heart),
             'c' => Ok(Self::Club),
             c => Err(PokerError::from_string(format!("Unsupported char: {}", c))),
-            
         }
     }
 }
-
 
 /// The main struct of this library.
 /// This is a carrier for Suit and Value combined.
@@ -404,7 +399,6 @@ impl Into<usize> for Card {
 }
 
 impl TryFrom<u8> for Card {
-
     type Error = PokerError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
@@ -416,7 +410,6 @@ impl TryFrom<u8> for Card {
 }
 
 impl TryFrom<usize> for Card {
-
     type Error = PokerError;
 
     fn try_from(value: usize) -> Result<Self, Self::Error> {
@@ -543,9 +536,10 @@ pub fn get_possible_hole_cards(
             let in_range = range_set[range_index];
 
             if in_range {
-                vec.push(
-                    HoleCards::new(
-                    Card::try_from(card1)?, Card::try_from(card2)?)?);
+                vec.push(HoleCards::new(
+                    Card::try_from(card1)?,
+                    Card::try_from(card2)?,
+                )?);
             }
         }
     }

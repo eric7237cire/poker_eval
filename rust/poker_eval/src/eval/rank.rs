@@ -272,14 +272,14 @@ pub fn rank_cards(cards: &[Card]) -> Rank {
 mod tests {
     use std::{collections::HashMap, io::Write};
 
+    use crate::{add_eval_card, get_unused_card};
     use itertools::Itertools;
-    use crate::{ get_unused_card, add_eval_card};
     use postflop_solver::Hand;
     use rand::{rngs::StdRng, SeedableRng};
 
     use crate::{
         cards_from_string, get_possible_hole_cards, range_string_to_set, rank_cards, CardUsedType,
-        Rank, HoleCards,
+        HoleCards, Rank,
     };
 
     #[test]
@@ -523,7 +523,7 @@ mod tests {
             }
 
             p.unset_used(&mut used_cards).unwrap();
-            
+
             assert_eq!(used_cards.count_ones(), 7);
             //we used 9 cards, so there should be 43*42/2 showdowns total
             assert_eq!(total_showdowns - check_showndown, 43 * 42 / 2);
@@ -542,7 +542,6 @@ mod tests {
 
     #[test]
     fn test_heads_up_ranking() {
-
         //let mut range_idx_to_string: Vec<String> = Vec::new();
         //let mut range_idx_to_equity: Vec<f64> = Vec::new();
 
@@ -553,8 +552,9 @@ mod tests {
         let mut hole_range_strings = Vec::new();
 
         for card1 in 0..52usize {
-            for card2 in card1+1 .. 52 {
-                let hole_cards = HoleCards::new(card1.try_into().unwrap(), card2.try_into().unwrap()).unwrap();
+            for card2 in card1 + 1..52 {
+                let hole_cards =
+                    HoleCards::new(card1.try_into().unwrap(), card2.try_into().unwrap()).unwrap();
 
                 let hole_string = hole_cards.to_range_string();
 
@@ -563,7 +563,7 @@ mod tests {
                 // }
 
                 hole_card_list.push(hole_cards);
-                    //range_idx_to_equity.push(0.0);
+                //range_idx_to_equity.push(0.0);
 
                 let l = range_string_to_idx.len();
                 let range_str_index = range_string_to_idx.entry(hole_string.clone()).or_insert(l);
@@ -576,17 +576,16 @@ mod tests {
             }
         }
 
-        assert_eq!(13*13, range_string_to_idx.len());
+        assert_eq!(13 * 13, range_string_to_idx.len());
         assert_eq!(range_string_to_idx.len(), hole_range_strings.len());
 
         assert_eq!(hole_card_list.len(), hole_index_list.len());
-        assert_eq!(52*51/2, hole_card_list.len());
+        assert_eq!(52 * 51 / 2, hole_card_list.len());
 
         //let mut hole_idx_to_eq = vec![0.0; hole_card_list.len()];
 
-        let mut range_hole_idx_to_eq = vec![0.0; 13*13];
-        let mut range_hole_idx_showdown_count = vec![0; 13*13];
-
+        let mut range_hole_idx_to_eq = vec![0.0; 13 * 13];
+        let mut range_hole_idx_showdown_count = vec![0; 13 * 13];
 
         //change this to be higher for more accuracy, kept to 1 for speed
         let num_flops_per_matchup = 1;
@@ -594,8 +593,7 @@ mod tests {
         let mut rng = StdRng::seed_from_u64(42);
 
         for (h1_idx, h1) in hole_card_list.iter().enumerate() {
-            for h2_idx in h1_idx+1 .. hole_card_list.len() {
-
+            for h2_idx in h1_idx + 1..hole_card_list.len() {
                 let r1_idx = hole_index_list[h1_idx];
                 let r2_idx = hole_index_list[h2_idx];
 
@@ -624,22 +622,22 @@ mod tests {
                             get_unused_card(&mut rng, &cards_used).unwrap(),
                             &mut eval_cards,
                             &mut cards_used,
-                        ).unwrap();
+                        )
+                        .unwrap();
                     }
 
-                    assert_eq!(4+5, cards_used.count_ones());
+                    assert_eq!(4 + 5, cards_used.count_ones());
 
                     h1.add_to_eval(&mut eval_cards);
                     assert_eq!(7, eval_cards.len());
                     let rank1 = rank_cards(&eval_cards);
                     h1.remove_from_eval(&mut eval_cards).unwrap();
 
-
                     h2.add_to_eval(&mut eval_cards);
                     assert_eq!(7, eval_cards.len());
                     let rank2 = rank_cards(&eval_cards);
                     h2.remove_from_eval(&mut eval_cards).unwrap();
-                    
+
                     range_hole_idx_showdown_count[r1_idx] += 1;
                     range_hole_idx_showdown_count[r2_idx] += 1;
                     if rank1 == rank2 {
@@ -657,7 +655,6 @@ mod tests {
                         cards_used.set(c.into(), false);
                     }
                 }
-
             }
         }
 
@@ -666,19 +663,23 @@ mod tests {
         }
 
         let mut with_idx = range_hole_idx_to_eq.iter().enumerate().collect_vec();
-        with_idx.sort_by(|a,b| b.1.partial_cmp(a.1).unwrap());
+        with_idx.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
 
         for (rank, (r_idx, eq)) in with_idx.iter().enumerate().take(10) {
-            println!("#{} {} {} ", 1+rank, hole_range_strings[*r_idx], 100.0 * **eq );
+            println!(
+                "#{} {} {} ",
+                1 + rank,
+                hole_range_strings[*r_idx],
+                100.0 * **eq
+            );
         }
 
         //open a text file and write the results
-        
+
         let mut file = std::fs::File::create("/tmp/heads_up_equity.txt").unwrap();
-        for (r_idx,_) in with_idx.iter() {
-            let line = format!("{}\n", hole_range_strings[*r_idx] );
+        for (r_idx, _) in with_idx.iter() {
+            let line = format!("{}\n", hole_range_strings[*r_idx]);
             file.write_all(line.as_bytes()).unwrap();
         }
-            
     }
 }

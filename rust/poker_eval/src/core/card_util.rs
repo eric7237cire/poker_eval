@@ -1,13 +1,10 @@
 use rand::{rngs::StdRng, Rng};
 
-use crate::{CardUsedType, PokerError, Card};
+use crate::{Card, CardUsedType, PokerError};
 
 const MAX_RAND_NUMBER_ATTEMPS: usize = 1000;
 
-pub fn set_used_card(
-    c_index: usize, 
-    cards_used: &mut CardUsedType,
-) -> Result<(), PokerError> {
+pub fn set_used_card(c_index: usize, cards_used: &mut CardUsedType) -> Result<(), PokerError> {
     let count_before = cards_used.count_ones();
     cards_used.set(c_index, true);
     let count_after = cards_used.count_ones();
@@ -22,10 +19,7 @@ pub fn set_used_card(
     Ok(())
 }
 
-pub fn unset_used_card(
-    c_index: usize, 
-    cards_used: &mut CardUsedType,
-) -> Result<(), PokerError> {
+pub fn unset_used_card(c_index: usize, cards_used: &mut CardUsedType) -> Result<(), PokerError> {
     let count_before = cards_used.count_ones();
     cards_used.set(c_index, false);
     let count_after = cards_used.count_ones();
@@ -39,7 +33,6 @@ pub fn unset_used_card(
 
     Ok(())
 }
-
 
 pub fn add_eval_card(
     c_index: usize,

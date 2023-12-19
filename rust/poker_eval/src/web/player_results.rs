@@ -1,5 +1,3 @@
-
-
 use wasm_bindgen::prelude::wasm_bindgen;
 type ResultType = u32;
 
@@ -40,6 +38,4 @@ impl PlayerFlopResults {
         //d.num_iterations = 0;
         d
     }
-
-    
 }
