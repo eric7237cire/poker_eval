@@ -1,7 +1,7 @@
 <template>
-  <div>
+  <div ref="root_element" class="template_root">
     <template v-if="!isEditing && cardList">
-      <div class="not_editing">
+      <div ref="not_editing" class="not_editing">
         <BoardSelectorCard
           v-for="card in cardList.cards"
           :key="card"
@@ -19,7 +19,7 @@
       </div>
     </template>
     <template v-if="isEditing && cardList">
-      <div class="editor">
+      <div ref="editor" class="editor" :style="editorStyle">
         <div v-for="suit in 4" :key="suit" class="flex">
           <BoardSelectorCard
             v-for="rank in 13"
@@ -60,16 +60,21 @@
 </template>
 
 <style lang="postcss" scoped>
+
+.template_root {
+  
+}
+
 .not_editing {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
 }
-.editor {
+.editor {  
   z-index: 10;
   position: relative;
-  width: 600px;
+  width: var(--editorWidth);
   opacity: 1;
   background-color: rgb(20, 20, 20);
   padding: 20px;
@@ -84,6 +89,11 @@ import { cardText, parseCardString } from '../utils';
 
 import BoardSelectorCard from './BoardSelectorCard.vue';
 import { PlayerState, usePlayerStore } from '@src/stores/player';
+import { useCssVar } from '@vueuse/core';
+
+const BOARD_EDITOR_PIXEL_WIDTH = 600;
+const BOARD_EDITOR_PIXEL_HEIGHT = 400;
+const BOARD_EDITOR_CSS_VAR_NAME = "--editorWidth";
 
 interface Props {
   expected_length: number;
@@ -107,6 +117,14 @@ if (cardList && !Array.isArray(cardList.cards)) {
 
 const isEditing = ref(false);
 
+//Will be assigned the editor div
+//const editor = ref(null);
+const not_editing = ref(null);
+const root_element = ref<HTMLDivElement|null>(null);
+const width = useCssVar(BOARD_EDITOR_CSS_VAR_NAME, root_element);
+width.value = BOARD_EDITOR_PIXEL_WIDTH + 'px';
+const editorStyle = ref({});
+
 //Listen to the board and player stores in order to know what cards are used
 const boardStore = useBoardStore();
 const playerStore = usePlayerStore();
@@ -126,6 +144,45 @@ const usedCards = computed(() => {
 
 // //Initialize
 // onBoardTextChange();
+
+function positionEditor() {
+  //const editorWidth = useCssVar('--editorWidth', editor.value);
+  //console.log('editorWidth', editorWidth.value);
+  if (!root_element.value) {
+    console.log('root_element.value is null');
+    return;
+  }
+  const computedStyles = getComputedStyle(root_element.value);
+
+  const rect = root_element.value.getBoundingClientRect();
+
+  const popupWidth = BOARD_EDITOR_PIXEL_WIDTH; 
+  const popupHeight = BOARD_EDITOR_PIXEL_HEIGHT;
+
+  const extraWidth = 50;
+
+  let top = rect.top + window.scrollY;
+  let left = rect.left + window.scrollX;
+
+  let right = left + popupWidth + extraWidth;
+
+  //console.log('top', top);
+  //console.log('left', left);
+  
+  // Adjust position to keep the popup on screen
+  if (right > window.innerWidth) {
+    left -= right - window.innerWidth;
+  }
+  if (top + popupHeight > window.innerHeight) {
+    top -= top + popupHeight - window.innerHeight;
+  }
+
+  editorStyle.value = {
+    position: "fixed",
+    left: `${left}px`,
+    top: `${top}px`,
+  };
+}
 
 function toggleCard(cardId: number, updateText = true) {
   if (cardList.cards.includes(cardId)) {
@@ -167,6 +224,7 @@ function editDone() {
 }
 
 function startEditing() {
+  positionEditor();
   isEditing.value = true;
 }
 

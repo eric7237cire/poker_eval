@@ -70,3 +70,12 @@ serve -s dist
 ```
 
 http://localhost:3000
+
+
+
+# Need an equity per range
+
+# Display 
+
+the range editor, with the bars using /home/eric/git/poker_eval/ui/src/components/RangeEditor.vue
+and 2 values for background-size
