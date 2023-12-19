@@ -285,7 +285,7 @@ mod tests {
     #[test]
     fn test_flop_rank() {
         let range_str = "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o";
-        let range_set = range_string_to_set(range_str);
+        let range_set = range_string_to_set(range_str).unwrap();
 
         let mut used_cards = CardUsedType::default();
         let flop = cards_from_string("Qs Ts 7c");
@@ -389,7 +389,7 @@ mod tests {
     #[test]
     fn test_enumerate_all_equity() {
         let range_str = "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o";
-        let range_set = range_string_to_set(range_str);
+        let range_set = range_string_to_set(range_str).unwrap();
 
         let mut used_cards = CardUsedType::default();
         let flop = cards_from_string("Qs Ts 7c");

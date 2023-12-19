@@ -1,12 +1,11 @@
 use crate::{
     rank_cards, Card, HoleCards, PokerError,
-     Rank,  
+     Rank,  NUM_RANK_FAMILIES, SIMPLE_RANGE_INDEX_LEN
 };
 use crate::web::{
     PreflopPlayerInfo, MAX_PLAYERS, ResultType,PlayerFlopResults, PlayerPreFlopState
 };
 
-#[derive(Default)]
 pub struct RankResults {
     pub(crate) num_iterations: ResultType,
 
@@ -14,7 +13,24 @@ pub struct RankResults {
     pub(crate) win_eq: f64,
     pub(crate) tie_eq: f64,
 
-    pub(crate) rank_family_count: [ResultType; 9],
+    //Also track equity by the simplified hole card range index
+    pub(crate) win_or_tie_eq_by_range_index: Vec<f64>,
+
+    //This is a win or lose tally of hand ranks, [0] for high card .. [8] for straight flush
+    pub(crate) rank_family_count: [ResultType; NUM_RANK_FAMILIES],
+}
+
+impl Default for RankResults {
+    fn default() -> Self {
+        Self {
+            
+            win_or_tie_eq_by_range_index: vec![0.0; SIMPLE_RANGE_INDEX_LEN],
+            rank_family_count: [0; NUM_RANK_FAMILIES],
+            num_iterations: 0,
+            win_eq: 0.0,
+            tie_eq: 0.0,
+        }
+    }
 }
 
 
@@ -96,6 +112,10 @@ pub fn eval_current(
                     1.0 / winner_indexes.len() as f64;
             }
         }
+
+        //Update equity by range index
+        let range_index = player_cards[*winner_idx].to_simple_range_index();
+        results.win_or_tie_eq_by_range_index[range_index] += 1.0 / winner_indexes.len() as f64;
     }
 
     Ok(())

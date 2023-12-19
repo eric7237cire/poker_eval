@@ -15,3 +15,5 @@ pub use ranks::*;
 
 mod preflop_player_info;
 pub use preflop_player_info::*;
+
+mod test_analyser;

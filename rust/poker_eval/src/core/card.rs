@@ -453,8 +453,11 @@ pub type InRangeType = BitArr!(for 1326, in usize, Lsb0);
 
 pub type CardUsedType = BitArr!(for 52, in usize, Lsb0);
 
-pub fn range_string_to_set(range_str: &str) -> InRangeType {
-    let range: Range = range_str.parse().unwrap();
+pub fn range_string_to_set(range_str: &str) -> Result<InRangeType, PokerError> {
+    let range: Range = range_str.parse().ok().ok_or(PokerError::from_string(format!(
+        "Unable to parse range {}",
+        range_str
+    )))?;
     let mut set = InRangeType::default();
 
     for card1 in 0..52 {
@@ -471,7 +474,7 @@ pub fn range_string_to_set(range_str: &str) -> InRangeType {
         }
     }
 
-    set
+    Ok(set)
 }
 
 //returns in range / total
@@ -721,7 +724,7 @@ mod tests {
         let range_str = "Q4o+";
         //let range: Range = Range::from_sanitized_str(rangeStr).unwrap();
 
-        let set = range_string_to_set(range_str);
+        let set = range_string_to_set(range_str).unwrap();
 
         assert!(!set[card_pair_to_index(Card::from("Qs").into(), Card::from("3h").into())]);
         assert!(set[card_pair_to_index(Card::from("Qs").into(), Card::from("4h").into())]);
@@ -733,13 +736,13 @@ mod tests {
         let range_str = "22+";
         //let range: Range = Range::from_sanitized_str(rangeStr).unwrap();
 
-        let set = range_string_to_set(range_str);
+        let set = range_string_to_set(range_str).unwrap();
 
         assert_eq!(set.count_ones(), 13 * 6);
 
         let range_str = "22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32";
 
-        let set = range_string_to_set(range_str);
+        let set = range_string_to_set(range_str).unwrap();
 
         assert_eq!(set.count_ones(), 52 * 51 / 2);
     }
@@ -759,7 +762,7 @@ mod tests {
     #[test]
     fn test_get_possible_hole_cards() {
         let range_str = "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o";
-        let range_set = range_string_to_set(range_str);
+        let range_set = range_string_to_set(range_str).unwrap();
 
         let mut used_cards = CardUsedType::default();
         let cards = cards_from_string("8d 7s Qd 5c Qs Ts 7c");
