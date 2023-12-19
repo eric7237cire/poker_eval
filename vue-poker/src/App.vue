@@ -105,7 +105,7 @@ const resultsStore = useResultsStore();
 const rangeStore = useRangesStore();
 
 const iterationsPerTick = 1_000;
-const maxIterations = 50_000;
+const maxIterations = 500_000;
 
 boardStore.$subscribe((board) => {
   console.log('boardStore.$subscribe', board);

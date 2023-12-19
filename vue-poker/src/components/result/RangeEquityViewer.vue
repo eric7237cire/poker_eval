@@ -51,7 +51,8 @@ import { ref } from 'vue';
 
 
 const props = defineProps<{
-    range_equity: Array<number | null>
+    range_equity: Array<number | null>,
+        range_it_num: Array<number>
 }>();
 
 const root_element = ref<HTMLDivElement|null>(null);
@@ -96,10 +97,14 @@ function cellPerc(row1: number, col1: number) : string | undefined {
   
   const equity = props.range_equity[index];
 
+  const itNum = props.range_it_num[index];
+
   if (equity !== null) {
-    const eqPercent = (equity * 100).toFixed(1) + "%";
+    const eqPercent = (equity * 100).toFixed(1) + `% for ${itNum} iterations`;
     return eqPercent;
   }
+
+  return `${itNum} iterations`;
   
   return undefined;
 };
@@ -117,7 +122,7 @@ function cellStyle(row1: number, col1: number) {
 
   if (equity === null) {
     return {     
-        "background-color": 'black', 
+        "background-color": 'gray', 
     };
   }
 
@@ -127,7 +132,8 @@ function cellStyle(row1: number, col1: number) {
   if (equity < 0.5) {    
     return {
         
-        "background-color": 'rgba(55,0,0,0.5)', 
+       // "background-color": 'rgba(55,0,0,0.5)', 
+       "background-color": 'black', 
       "background-image": "linear-gradient(to right, rgba(255, 0, 0, 1), rgba(125, 0, 0, 1))",
       "background-size": `${eqPercent} 100% `,
     };

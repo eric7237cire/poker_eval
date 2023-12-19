@@ -45,7 +45,8 @@
                   <td>
                     <Percentage :perc="item.street_results[street_index - 1].equity" />
 
-                    <RangeEquityViewer :range_equity="item.street_results[street_index-1].eq_by_simple_range_idx"/>
+                    <RangeEquityViewer :range_it_num="item.street_results[street_index-1].it_num_by_simple_range_idx"
+                    :range_equity="item.street_results[street_index-1].eq_by_simple_range_idx"/>
                   </td>
                   <td v-for="index in 9" :key="index">
                     <!-- {{item.rank_family_count}}  -->

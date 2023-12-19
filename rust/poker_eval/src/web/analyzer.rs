@@ -10,6 +10,7 @@ use crate::web::{
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
 
+use rand::thread_rng;
 use rand::{rngs::StdRng, SeedableRng};
 
 
@@ -212,7 +213,11 @@ impl flop_analyzer {
         all_flop_results: FlopSimulationResults,
     ) -> Result<FlopSimulationResults, PokerError> {
         //let n_players = self.player_info.len();
+        #[cfg(test)]
         let mut rng = StdRng::seed_from_u64(42);
+    
+        #[cfg(not(test))]
+        let mut rng = StdRng::from_rng(thread_rng()).ok().ok_or(PokerError::from_str("Failed to create rng"))?;
 
         let active_players = self
             .player_info
