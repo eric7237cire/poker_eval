@@ -3,7 +3,6 @@ pub(crate) type ResultType = u32;
 
 use crate::web::{Draws, RankResults};
 
-
 #[derive(Default)]
 #[wasm_bindgen]
 pub struct PlayerFlopResults {

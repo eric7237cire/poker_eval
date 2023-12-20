@@ -1,25 +1,17 @@
 use crate::web::player_results::PlayerFlopResults;
-use crate::{
-    HoleCards,  PokerError, set_used_card, add_eval_card, get_unused_card
-};
 use crate::web::{
-     eval_current, eval_current_draws, get_all_player_hole_cards, 
-     FlopSimulationResults, PlayerPreFlopState,
-     PreflopPlayerInfo,
+    eval_current, eval_current_draws, get_all_player_hole_cards, FlopSimulationResults,
+    PlayerPreFlopState, PreflopPlayerInfo,
 };
+use crate::{add_eval_card, get_unused_card, set_used_card, HoleCards, PokerError};
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
 
 use rand::thread_rng;
 use rand::{rngs::StdRng, SeedableRng};
 
-
-use crate::{
-    range_string_to_set, Card, CardUsedType,
-};
+use crate::{range_string_to_set, Card, CardUsedType};
 use wasm_bindgen::prelude::wasm_bindgen;
-
-
 
 #[wasm_bindgen]
 //doing this to stop warnings in vs code about camel case in the wasm function names
@@ -127,7 +119,11 @@ impl flop_analyzer {
         Ok(())
     }
 
-    pub fn set_player_range(&mut self, player_idx: usize, range_str: &str) -> Result<(), PokerError> {
+    pub fn set_player_range(
+        &mut self,
+        player_idx: usize,
+        range_str: &str,
+    ) -> Result<(), PokerError> {
         info!("set_player_range: {} [{}]", player_idx, range_str);
 
         if range_str.is_empty() {
@@ -215,9 +211,11 @@ impl flop_analyzer {
         //let n_players = self.player_info.len();
         #[cfg(test)]
         let mut rng = StdRng::seed_from_u64(42);
-    
+
         #[cfg(not(test))]
-        let mut rng = StdRng::from_rng(thread_rng()).ok().ok_or(PokerError::from_str("Failed to create rng"))?;
+        let mut rng = StdRng::from_rng(thread_rng())
+            .ok()
+            .ok_or(PokerError::from_str("Failed to create rng"))?;
 
         let active_players = self
             .player_info

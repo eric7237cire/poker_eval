@@ -1,9 +1,8 @@
-use crate::{
-    rank_cards, Card, HoleCards, PokerError,
-     Rank,  NUM_RANK_FAMILIES, SIMPLE_RANGE_INDEX_LEN
-};
 use crate::web::{
-    PreflopPlayerInfo, MAX_PLAYERS, ResultType,PlayerFlopResults, PlayerPreFlopState
+    PlayerFlopResults, PlayerPreFlopState, PreflopPlayerInfo, ResultType, MAX_PLAYERS,
+};
+use crate::{
+    rank_cards, Card, HoleCards, PokerError, Rank, NUM_RANK_FAMILIES, SIMPLE_RANGE_INDEX_LEN,
 };
 
 pub struct RankResults {
@@ -24,7 +23,6 @@ pub struct RankResults {
 impl Default for RankResults {
     fn default() -> Self {
         Self {
-            
             eq_by_range_index: vec![0.0; SIMPLE_RANGE_INDEX_LEN],
             num_it_by_range_index: vec![0; SIMPLE_RANGE_INDEX_LEN],
             rank_family_count: [0; NUM_RANK_FAMILIES],
@@ -34,7 +32,6 @@ impl Default for RankResults {
         }
     }
 }
-
 
 /*
 Assumes all players have either hole cards or their ranges chosen
@@ -81,7 +78,8 @@ pub fn eval_current(
             rank,
         );
 
-        flop_results[active_index].street_rank_results[street_index].num_it_by_range_index[player_cards[active_index].to_simple_range_index()] += 1;
+        flop_results[active_index].street_rank_results[street_index].num_it_by_range_index
+            [player_cards[active_index].to_simple_range_index()] += 1;
 
         hand_evals.push(rank);
 

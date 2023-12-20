@@ -1,9 +1,12 @@
-
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
 
-    use crate::{card_u8s_from_string, web::{PlayerPreFlopState, flop_analyzer}, Rank, HoleCards};
+    use crate::{
+        card_u8s_from_string,
+        web::{flop_analyzer, PlayerPreFlopState},
+        HoleCards, Rank,
+    };
 
     fn assert_equity(equity: f64, target: f64, tolerance: f64) {
         let passed = (equity - target).abs() < tolerance;
@@ -81,10 +84,12 @@ mod tests {
             .set_player_cards(3, card_u8s_from_string("Qd 5c").as_slice())
             .unwrap();
 
-        analyzer.set_player_range(
-            2,
-            "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o",
-        ).unwrap();
+        analyzer
+            .set_player_range(
+                2,
+                "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o",
+            )
+            .unwrap();
 
         analyzer
             .set_board_cards(card_u8s_from_string("Qs Ts 7c").as_slice())
@@ -313,19 +318,14 @@ mod tests {
         analyzer.set_player_state(0, PlayerPreFlopState::UseHoleCards as u8);
         analyzer.set_player_state(3, PlayerPreFlopState::UseRange as u8);
         analyzer.set_player_state(4, PlayerPreFlopState::UseRange as u8);
-        
 
         analyzer
             .set_player_cards(0, card_u8s_from_string("2d 8s").as_slice())
             .unwrap();
 
-        analyzer
-            .set_player_range(3, "87, KJo, T2s")
-                        .unwrap();
-        analyzer
-        .set_player_range(4, "22, 99")
-            .unwrap();
-        
+        analyzer.set_player_range(3, "87, KJo, T2s").unwrap();
+        analyzer.set_player_range(4, "22, 99").unwrap();
+
         // analyzer
         //     .set_board_cards(card_u8s_from_string("9s 8c Ah 5h 6h").as_slice())
         //     .unwrap();
@@ -335,12 +335,19 @@ mod tests {
         let results = analyzer.build_results();
         let results = analyzer.simulate_flop(num_it, results).unwrap();
 
+        let kj_index = HoleCards::from_str("Kd Jc")
+            .unwrap()
+            .to_simple_range_index();
+        let t2_index = HoleCards::from_str("Th 2h")
+            .unwrap()
+            .to_simple_range_index();
+        let e7_index = HoleCards::from_str("8d 7c")
+            .unwrap()
+            .to_simple_range_index();
+        let e7s_index = HoleCards::from_str("8d 7d")
+            .unwrap()
+            .to_simple_range_index();
 
-        let kj_index = HoleCards::from_str("Kd Jc").unwrap().to_simple_range_index();
-        let t2_index = HoleCards::from_str("Th 2h").unwrap().to_simple_range_index();
-        let e7_index = HoleCards::from_str("8d 7c").unwrap().to_simple_range_index();
-        let e7s_index = HoleCards::from_str("8d 7d").unwrap().to_simple_range_index();
-        
         assert_eq!(3, results.flop_results[1].player_index);
 
         //results are only active players
@@ -351,15 +358,19 @@ mod tests {
         //get total equity for p3
         let total_eq = p3_results.win_eq + p3_results.tie_eq;
 
-        let total_of_4 = p3_results.eq_by_range_index[kj_index] + p3_results.eq_by_range_index[t2_index] + p3_results.eq_by_range_index[e7_index]
-        + p3_results.eq_by_range_index[e7s_index];
+        let total_of_4 = p3_results.eq_by_range_index[kj_index]
+            + p3_results.eq_by_range_index[t2_index]
+            + p3_results.eq_by_range_index[e7_index]
+            + p3_results.eq_by_range_index[e7s_index];
 
         let total_eq2 = p3_results.eq_by_range_index.iter().sum::<f64>();
-        
+
         assert_eq!(total_eq, total_eq2);
 
-        let total_it_of_4 = p3_results.num_it_by_range_index[kj_index] + p3_results.num_it_by_range_index[t2_index] + p3_results.num_it_by_range_index[e7_index] +
-        p3_results.num_it_by_range_index[e7s_index];
+        let total_it_of_4 = p3_results.num_it_by_range_index[kj_index]
+            + p3_results.num_it_by_range_index[t2_index]
+            + p3_results.num_it_by_range_index[e7_index]
+            + p3_results.num_it_by_range_index[e7s_index];
 
         assert_eq!(total_it_of_4, num_it);
 
@@ -367,7 +378,6 @@ mod tests {
         assert_eq!(sum_it, num_it);
 
         println!("total_eq {} total_of_4 {}", total_eq, total_of_4);
-        assert!( (total_eq - total_of_4).abs() < 0.000001);
-        
+        assert!((total_eq - total_of_4).abs() < 0.000001);
     }
 }

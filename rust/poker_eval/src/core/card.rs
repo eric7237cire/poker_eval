@@ -454,10 +454,13 @@ pub type InRangeType = BitArr!(for 1326, in usize, Lsb0);
 pub type CardUsedType = BitArr!(for 52, in usize, Lsb0);
 
 pub fn range_string_to_set(range_str: &str) -> Result<InRangeType, PokerError> {
-    let range: Range = range_str.parse().ok().ok_or(PokerError::from_string(format!(
-        "Unable to parse range {}",
-        range_str
-    )))?;
+    let range: Range = range_str
+        .parse()
+        .ok()
+        .ok_or(PokerError::from_string(format!(
+            "Unable to parse range {}",
+            range_str
+        )))?;
     let mut set = InRangeType::default();
 
     for card1 in 0..52 {

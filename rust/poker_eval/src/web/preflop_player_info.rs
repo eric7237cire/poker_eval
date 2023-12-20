@@ -5,8 +5,8 @@ use rand::rngs::StdRng;
 use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::{
-    get_unused_card, Card, CardUsedType, HoleCards, InRangeType, PokerError, web::MAX_RAND_NUMBER_ATTEMPS,
-    
+    get_unused_card, web::MAX_RAND_NUMBER_ATTEMPS, Card, CardUsedType, HoleCards, InRangeType,
+    PokerError,
 };
 
 #[derive(Eq, PartialEq, Debug)]

@@ -1,7 +1,7 @@
 use log::info;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 
-use crate::{web::{PlayerFlopResults}, NUM_RANK_FAMILIES, PokerError};
+use crate::{web::PlayerFlopResults, PokerError, NUM_RANK_FAMILIES};
 
 #[wasm_bindgen]
 pub struct FlopSimulationResults {
@@ -54,19 +54,35 @@ impl FlopSimulationResults {
         (r.win_eq + r.tie_eq) / r.num_iterations as f64
     }
 
-    pub fn get_range_equity(&self, active_player_index: Option<usize>, street_index: usize) -> Result<JsValue, PokerError> {
-        let api = active_player_index.ok_or(PokerError::from_str("Villian range equity not supported yet"))?;
+    pub fn get_range_equity(
+        &self,
+        active_player_index: Option<usize>,
+        street_index: usize,
+    ) -> Result<JsValue, PokerError> {
+        let api = active_player_index.ok_or(PokerError::from_str(
+            "Villian range equity not supported yet",
+        ))?;
 
         let r = &self.flop_results[api].street_rank_results[street_index].eq_by_range_index;
 
-        Ok(serde_wasm_bindgen::to_value(r).ok().ok_or(PokerError::from_str("Unable to convert to js value"))?)
+        Ok(serde_wasm_bindgen::to_value(r)
+            .ok()
+            .ok_or(PokerError::from_str("Unable to convert to js value"))?)
     }
-    pub fn get_range_it_count(&self, active_player_index: Option<usize>, street_index: usize) -> Result<JsValue, PokerError> {
-        let api = active_player_index.ok_or(PokerError::from_str("Villian range equity not supported yet"))?;
+    pub fn get_range_it_count(
+        &self,
+        active_player_index: Option<usize>,
+        street_index: usize,
+    ) -> Result<JsValue, PokerError> {
+        let api = active_player_index.ok_or(PokerError::from_str(
+            "Villian range equity not supported yet",
+        ))?;
 
         let r = &self.flop_results[api].street_rank_results[street_index].num_it_by_range_index;
 
-        Ok(serde_wasm_bindgen::to_value(r).ok().ok_or(PokerError::from_str("Unable to convert to js value"))?)
+        Ok(serde_wasm_bindgen::to_value(r)
+            .ok()
+            .ok_or(PokerError::from_str("Unable to convert to js value"))?)
     }
 
     //This guy has no arrays, so we can just convert it to json
