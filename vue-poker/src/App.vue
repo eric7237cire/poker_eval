@@ -55,6 +55,10 @@
   grid-column-end: 6;
 }
 
+.results-table-container {
+    width: 100vw;
+}
+
 .fade-in {
   opacity: 1;
   animation-name: fadeInOpacity;
