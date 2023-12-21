@@ -2,14 +2,16 @@
 
 use std::str::FromStr;
 
-use crate::Action;
+use crate::ActionEnum;
 use crate::Card;
 use crate::HoleCards;
 
 use crate::game::game_log_parser::GameLogParser;
 use crate::ChipType;
+use crate::PlayerAction;
 use crate::PokerError;
 use crate::Position;
+use crate::Round;
 use log::trace;
 use regex::Regex;
 
@@ -33,7 +35,7 @@ struct GameLog {
     //depending on the game, maybe this is 0, 3, 4, 5 cards
     board: Vec<Card>,
 
-    actions: Vec<Action>,
+    actions: Vec<PlayerAction>,
 }
 
 impl FromStr for GameLog {
@@ -41,7 +43,7 @@ impl FromStr for GameLog {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let p = GameLogParser::new();
-        let (section_name, mut remaining_str) = p.parse_section_name(s)?;
+        let (section_name, mut remaining_str) = p.parse_section_name(s, Some("Players"))?;
 
         if section_name != "Players" {
             return Err(PokerError::from_string(format!(
@@ -54,23 +56,72 @@ impl FromStr for GameLog {
 
         remaining_str = new_remaining_str;
 
-        let (section_name, new_remaining_str) = p.parse_section_name(remaining_str)?;
+        let (_section_name, new_remaining_str) =
+            p.parse_section_name(remaining_str, Some("Blinds"))?;
         remaining_str = new_remaining_str;
-
-        if section_name != "Blinds" {
-            return Err(PokerError::from_string(format!(
-                "Expected section Blinds, got {}",
-                section_name
-            )));
-        }
 
         let (sb, bb, new_remaining_str) = p.parse_blinds(&players, remaining_str)?;
         remaining_str = new_remaining_str;
+
+        let (_section_name, new_remaining_str) =
+            p.parse_section_name(remaining_str, Some("Preflop"))?;
+        remaining_str = new_remaining_str;
+
+        let (preflop_actions, new_remaining_str) =
+            p.parse_round_actions(&players, Round::Preflop, remaining_str)?;
+
+        let mut actions = preflop_actions;
+        remaining_str = new_remaining_str;
+
+        let mut board_cards = Vec::new();
+
+        //The remaining rounds have the same structure
+        // section name, then cards, then actions
+        for round in [Round::Flop, Round::Turn, Round::River].iter() {
+            let (section_name, new_remaining_str) = p.parse_section_name(remaining_str, None)?;
+            remaining_str = new_remaining_str;
+
+            if section_name == "Summary" {
+                break;
+            }
+
+            if section_name != round.to_string() {
+                return Err(PokerError::from_string(format!(
+                    "Expected section [{}], got [{}]",
+                    round.to_string(),
+                    section_name
+                )));
+            }
+
+            let (cards, new_remaining_str) = p.parse_cards(remaining_str)?;
+
+            if *round == Round::Flop {
+                if cards.len() != 3 {
+                    return Err(PokerError::from_string(format!(
+                        "Expected 3 cards, got {}",
+                        cards.len()
+                    )));
+                }
+            }
+
+            board_cards.extend(cards);
+
+            remaining_str = new_remaining_str;
+
+            let (round_actions, new_remaining_str) =
+                p.parse_round_actions(&players, *round, remaining_str)?;
+            remaining_str = new_remaining_str;
+
+            actions.extend(round_actions);
+        }
 
         let mut game_log = GameLog::default();
         game_log.players = players;
         game_log.sb = sb;
         game_log.bb = bb;
+        game_log.actions = actions;
+        game_log.board = board_cards;
+
 
         Ok(game_log)
     }
@@ -136,7 +187,7 @@ Seat 3 checks # BB Acts last preflop
 *** Flop ***
 2s 7c 8s
 Seat 2 checks
-Seat 3 bets 0.50
+Seat 3 bets 5
 Seat 2 folds
 *** Summary ***
 Seat 3 wins 0.75 # split pots?
@@ -152,5 +203,71 @@ Seat 6 - 55.30
         assert_eq!(3, game_log.players.len());
         assert_eq!(5, game_log.sb);
         assert_eq!(10, game_log.bb);
+
+        assert_eq!(
+            3,
+            game_log
+                .actions
+                .iter()
+                .filter(|a| a.round == Round::Preflop)
+                .count()
+        );
+
+        assert_eq!(
+            game_log.actions[0],
+            PlayerAction {
+                player_index: 2,
+                action: ActionEnum::Fold,
+                round: Round::Preflop,
+            }
+        );
+        assert_eq!(
+            game_log.actions[1],
+            PlayerAction {
+                player_index: 0,
+                action: ActionEnum::Call,
+                round: Round::Preflop,
+            }
+        );
+        assert_eq!(
+            game_log.actions[2],
+            PlayerAction {
+                player_index: 1,
+                action: ActionEnum::Check,
+                round: Round::Preflop,
+            }
+        );
+
+        assert_eq!(3, game_log.board.len());
+        assert_eq!(Card::try_from("2s").unwrap(), game_log.board[0]);
+        assert_eq!(Card::try_from("7c").unwrap(), game_log.board[1]);
+        assert_eq!(Card::try_from("8s").unwrap(), game_log.board[2]);
+
+        assert_eq!(
+            game_log.actions[3],
+            PlayerAction {
+                player_index: 0,
+                action: ActionEnum::Check,
+                round: Round::Flop,
+            }
+        );
+        
+        assert_eq!(
+            game_log.actions[4],
+            PlayerAction {
+                player_index: 1,
+                action: ActionEnum::Bet(5),
+                round: Round::Flop,
+            }
+        );
+
+        assert_eq!(
+            game_log.actions[5],
+            PlayerAction {
+                player_index: 0,
+                action: ActionEnum::Fold,
+                round: Round::Flop,
+            }
+        );
     }
 }

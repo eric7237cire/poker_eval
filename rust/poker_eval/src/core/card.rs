@@ -148,9 +148,12 @@ impl Into<usize> for CardValue {
     }
 }
 
-impl From<char> for CardValue {
-    fn from(value: char) -> Self {
-        match value.to_ascii_uppercase() {
+impl TryFrom<char> for CardValue {
+
+    type Error = PokerError;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        Ok(match value.to_ascii_uppercase() {
             'A' => Self::Ace,
             'K' => Self::King,
             'Q' => Self::Queen,
@@ -164,8 +167,8 @@ impl From<char> for CardValue {
             '4' => Self::Four,
             '3' => Self::Three,
             '2' => Self::Two,
-            _ => panic!("Unsupported char"),
-        }
+            c => return Err(PokerError::from_string(format!("Unsupported char {}", c))),
+        })
     }
 }
 
@@ -268,15 +271,18 @@ impl TryFrom<u8> for Suit {
     }
 }
 
-impl From<char> for Suit {
-    fn from(value: char) -> Self {
-        match value.to_ascii_lowercase() {
+impl TryFrom<char> for Suit {
+
+    type Error = PokerError;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        Ok(match value.to_ascii_lowercase() {
             'd' => Self::Diamond,
             's' => Self::Spade,
             'h' => Self::Heart,
             'c' => Self::Club,
-            _ => panic!("Unsupported char"),
-        }
+            c => return Err(PokerError::from_string(format!("Unsupported char {}", c))),
+        })
     }
 }
 
@@ -360,23 +366,37 @@ impl fmt::Display for Card {
     }
 }
 
-impl From<&str> for Card {
-    fn from(value: &str) -> Self {
-        let mut chars = value.chars();
-        let value_char = chars.next().unwrap();
-        let suit_char = chars.next().unwrap();
-        Self {
-            value: value_char.into(),
-            suit: suit_char.into(),
-        }
-    }
-}
+// impl From<&str> for Card {
+//     fn from(value: &str) -> Self {
+//         let mut chars = value.chars();
+//         let value_char = chars.next().unwrap();
+//         let suit_char = chars.next().unwrap();
+//         Self {
+//             value: value_char.into(),
+//             suit: suit_char.into(),
+//         }
+//     }
+// }
 
 impl FromStr for Card {
     type Err = PokerError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut chars = s.chars();
+        let value_char = chars.next().ok_or(PokerError::from_str("No character"))?;
+        let suit_char = chars.next().ok_or(PokerError::from_str("No character"))?;
+        Ok(Self {
+            value: value_char.to_string().parse()?,
+            suit: suit_char.to_string().parse()?,
+        })
+    }
+}
+
+impl TryFrom<&str> for Card {
+    type Error = PokerError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let mut chars = value.chars();
         let value_char = chars.next().ok_or(PokerError::from_str("No character"))?;
         let suit_char = chars.next().ok_or(PokerError::from_str("No character"))?;
         Ok(Self {
@@ -420,19 +440,31 @@ impl TryFrom<usize> for Card {
     }
 }
 
-pub fn cards_from_string(a_string: &str) -> Vec<Card> {
+#[deprecated(since="0.5.0", note="please use `cards_from_string` instead")]
+pub fn old_cards_from_string(a_string: &str) -> Vec<Card> {
     let mut cards = Vec::with_capacity(5);
     let mut chars = a_string.chars().filter(|c| !c.is_whitespace());
     while let Some(c) = chars.next() {
         let value = c;
         let suit = chars.next().unwrap();
-        cards.push(Card::new(value.into(), suit.into()));
+        cards.push(Card::new(value.try_into().unwrap(), suit.try_into().unwrap()));
     }
     cards
 }
+pub fn cards_from_string(a_string: &str) -> Result<Vec<Card>, PokerError> {
+    let mut cards = Vec::with_capacity(7);
+    let mut chars = a_string.chars().filter(|c| c.is_alphanumeric());
+    while let Some(c) = chars.next() {
+        let value = c;
+        let suit = chars.next()
+        .ok_or(PokerError::from_string(format!("Unable to parse suit from {}", a_string)))?;
+        cards.push(Card::new(value.try_into()?, suit.try_into()?));
+    }
+    Ok(cards)
+}
 pub fn card_u8s_from_string(a_string: &str) -> Vec<u8> {
     let mut cards = Vec::with_capacity(5);
-    let mut card_obs = cards_from_string(a_string);
+    let mut card_obs = old_cards_from_string(a_string);
     for card in card_obs.drain(..) {
         cards.push(card.into());
     }
@@ -444,7 +476,7 @@ pub fn add_cards_from_string(cards: &mut Vec<Card>, a_string: &str) -> () {
     while let Some(c) = chars.next() {
         let value = c;
         let suit = chars.next().unwrap();
-        cards.push(Card::new(value.into(), suit.into()));
+        cards.push(Card::new(value.try_into().unwrap(), suit.try_into().unwrap()));
     }
 }
 
@@ -615,7 +647,8 @@ mod tests {
             for value in VALUES {
                 let e = Card { suit, value };
                 let card_string = format!("{}{}", char::from(value), char::from(suit));
-                assert_eq!(e, Card::try_from(card_string.as_str()).unwrap());
+                let card: Card = card_string.parse().unwrap();
+                assert_eq!(e, card);
             }
         }
     }
@@ -729,13 +762,24 @@ mod tests {
 
         let set = range_string_to_set(range_str).unwrap();
 
-        assert!(!set[card_pair_to_index(Card::from("Qs").into(), Card::from("3h").into())]);
-        assert!(set[card_pair_to_index(Card::from("Qs").into(), Card::from("4h").into())]);
-        assert!(set[card_pair_to_index(Card::from("5s").into(), Card::from("Qc").into())]);
-        assert!(!set[card_pair_to_index(Card::from("Qs").into(), Card::from("Qc").into())]);
-        assert!(!set[card_pair_to_index(Card::from("Qs").into(), Card::from("Kc").into())]);
-        assert!(set[card_pair_to_index(Card::from("Js").into(), Card::from("Qc").into())]);
+        let hc: HoleCards = "Qs 3h".parse().unwrap();
+        assert!(!set[hc.to_range_index()]);
 
+        let hc: HoleCards = "Qs 4h".parse().unwrap();
+        assert!(set[hc.to_range_index()]);
+
+        let hc: HoleCards = "Qs 5h".parse().unwrap();
+        assert!(set[hc.to_range_index()]);
+        
+        let hc : HoleCards = "Qs Qc".parse().unwrap();
+        assert!(!set[hc.to_range_index()]);
+        
+        let hc : HoleCards = "Qs Kc".parse().unwrap();
+        assert!(!set[hc.to_range_index()]);
+
+        let hc : HoleCards = "Js Qc".parse().unwrap();
+        assert!(set[hc.to_range_index()]);
+        
         let range_str = "22+";
         //let range: Range = Range::from_sanitized_str(rangeStr).unwrap();
 
@@ -768,7 +812,7 @@ mod tests {
         let range_set = range_string_to_set(range_str).unwrap();
 
         let mut used_cards = CardUsedType::default();
-        let cards = cards_from_string("8d 7s Qd 5c Qs Ts 7c");
+        let cards = old_cards_from_string("8d 7s Qd 5c Qs Ts 7c");
 
         for card in cards.iter() {
             used_cards.set((*card).into(), true);

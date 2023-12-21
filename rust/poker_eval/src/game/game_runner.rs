@@ -1,7 +1,7 @@
 use log::debug;
 
 use crate::{
-    core::Card, rank_cards, Action, Agent, AgentRoundInfo, AgentState, ChipType, GameState,
+    core::Card, rank_cards, ActionEnum, Agent, AgentRoundInfo, AgentState, ChipType, GameState,
     Position, Round, BIG_BLIND, SMALL_BLIND,
 };
 
@@ -323,16 +323,16 @@ fn handle_player_action(
     );
 
     match action {
-        Action::Fold => {
+        ActionEnum::Fold => {
             agent_state.folded = true;
             false
         }
-        Action::Check => {
+        ActionEnum::Check => {
             assert_eq!(agent_round_info.current_amt_to_call, 0);
             assert_eq!(agent_state.already_bet, 0);
             false
         }
-        Action::Call => {
+        ActionEnum::Call => {
             assert!(
                 agent_round_info.current_amt_to_call > 0,
                 "Cannot call a 0 bet, that is a check"
@@ -352,7 +352,7 @@ fn handle_player_action(
             assert!(agent_state.already_bet > 0);
             false
         }
-        Action::Raise(bet) => {
+        ActionEnum::Bet(bet) | ActionEnum::Raise(bet) => {
             debug!(
                 "Player {:?} raised to {}.  Min raise {} cur to call {}",
                 to_act, bet, agent_round_info.min_raise, agent_round_info.current_amt_to_call
@@ -409,7 +409,7 @@ mod tests {
             round_info: &AgentRoundInfo,
             agent_state: &AgentState,
             game_state: &GameState,
-        ) -> Action {
+        ) -> ActionEnum {
             debug!(
                 "TEST Action : {} for position {:?}",
                 self.action_counter.borrow(),
@@ -439,7 +439,7 @@ mod tests {
                     assert_eq!(round_info.current_amt_to_call, round_info.bb_amt);
                     assert_eq!(game_state.current_pot, 3);
 
-                    return Action::Call;
+                    return ActionEnum::Call;
                 }
                 1 => {
                     assert_eq!(round_info.round, Round::Preflop);
@@ -450,7 +450,7 @@ mod tests {
 
                     assert_eq!(game_state.current_pot, 5);
 
-                    return Action::Raise(round_info.min_raise + round_info.bb_amt * 3);
+                    return ActionEnum::Raise(round_info.min_raise + round_info.bb_amt * 3);
                 }
                 2 => {
                     assert_eq!(round_info.round, Round::Preflop);
@@ -465,7 +465,7 @@ mod tests {
 
                     assert_eq!(game_state.current_pot, 5 + 8);
 
-                    return Action::Call;
+                    return ActionEnum::Call;
                 }
                 3 => {
                     assert_eq!(round_info.round, Round::Preflop);
@@ -481,7 +481,7 @@ mod tests {
 
                     assert_eq!(round_info.min_raise, 6);
 
-                    return Action::Raise(16);
+                    return ActionEnum::Raise(16);
                 }
                 4 => {
                     assert_eq!(round_info.round, Round::Preflop);
@@ -502,7 +502,7 @@ mod tests {
                     assert_eq!(round_info.min_raise, 8);
 
                     //min raise. effectively an all in
-                    return Action::Raise(agent_state.initial_stack);
+                    return ActionEnum::Raise(agent_state.initial_stack);
                 }
                 5 => {
                     assert_eq!(round_info.round, Round::Preflop);
@@ -522,7 +522,7 @@ mod tests {
 
                     assert_eq!(round_info.min_raise, 8);
 
-                    return Action::Call;
+                    return ActionEnum::Call;
                 }
                 6 => {
                     assert_eq!(round_info.round, Round::Preflop);
@@ -538,7 +538,7 @@ mod tests {
 
                     assert_eq!(game_state.current_pot, 72);
 
-                    return Action::Call;
+                    return ActionEnum::Call;
                 }
                 7 => {
                     assert_eq!(round_info.round, Round::Preflop);
@@ -553,7 +553,7 @@ mod tests {
 
                     assert_eq!(game_state.current_pot, 84);
 
-                    return Action::Raise(agent_state.initial_stack);
+                    return ActionEnum::Raise(agent_state.initial_stack);
                 }
                 8 => {
                     assert_eq!(round_info.round, Round::Preflop);
@@ -568,7 +568,7 @@ mod tests {
 
                     assert_eq!(game_state.current_pot, 105);
 
-                    return Action::Call;
+                    return ActionEnum::Call;
                 }
                 9 => {
                     assert_eq!(round_info.round, Round::Preflop);
@@ -587,7 +587,7 @@ mod tests {
                     assert_eq!(game_state.current_pot, 118);
 
                     //min raise 37 but we want it divisible by bb (2)
-                    return Action::Raise(38);
+                    return ActionEnum::Raise(38);
                 }
                 10 => {
                     assert_eq!(round_info.round, Round::Preflop);
@@ -606,7 +606,7 @@ mod tests {
                     assert_eq!(game_state.current_pot, 136);
 
                     //puts us all in
-                    return Action::Call;
+                    return ActionEnum::Call;
                 }
                 11 => {
                     assert_eq!(round_info.round, Round::Preflop);
@@ -624,7 +624,7 @@ mod tests {
 
                     assert_eq!(game_state.current_pot, 141);
 
-                    return Action::Call;
+                    return ActionEnum::Call;
                 }
                 12 => {
                     assert_eq!(round_info.round, Round::Flop);
@@ -641,7 +641,7 @@ mod tests {
 
                     assert_eq!(game_state.current_pot, 150);
 
-                    return Action::Check;
+                    return ActionEnum::Check;
                 }
 
                 13 => {
@@ -659,32 +659,32 @@ mod tests {
 
                     assert_eq!(game_state.current_pot, 150);
 
-                    return Action::Check;
+                    return ActionEnum::Check;
                 }
                 14 => {
                     assert_eq!(round_info.round, Round::Turn);
                     assert_eq!(agent_state.position, SMALL_BLIND);
 
-                    return Action::Check;
+                    return ActionEnum::Check;
                 }
                 15 => {
                     assert_eq!(round_info.round, Round::Turn);
                     assert_eq!(usize::from(agent_state.position), 2usize);
 
-                    return Action::Raise(2);
+                    return ActionEnum::Raise(2);
                 }
                 16 => {
                     assert_eq!(round_info.round, Round::Turn);
                     assert_eq!(agent_state.position, SMALL_BLIND);
 
-                    return Action::Call;
+                    return ActionEnum::Call;
                 }
                 17 => {
                     assert_eq!(round_info.round, Round::River);
                     assert_eq!(agent_state.position, SMALL_BLIND);
 
                     //No one left in hand?
-                    return Action::Check;
+                    return ActionEnum::Check;
                 }
 
                 df => {
@@ -692,7 +692,7 @@ mod tests {
                 }
             }
 
-            Action::Fold
+            ActionEnum::Fold
             //match round_info.round {
         }
     }

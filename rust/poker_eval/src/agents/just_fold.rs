@@ -1,4 +1,4 @@
-use crate::{Action, Agent, AgentRoundInfo, AgentState, GameState};
+use crate::{ActionEnum, Agent, AgentRoundInfo, AgentState, GameState};
 
 pub struct JustFold {}
 
@@ -8,7 +8,7 @@ impl Agent for JustFold {
         _round_info: &AgentRoundInfo,
         _agent_state: &AgentState,
         _game_state: &GameState,
-    ) -> Action {
-        Action::Fold
+    ) -> ActionEnum {
+        ActionEnum::Fold
     }
 }

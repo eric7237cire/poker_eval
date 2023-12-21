@@ -153,8 +153,8 @@ impl FromStr for HoleCards {
             .ok_or(PokerError::from_string(format!("Need another charecter")))?;
 
         Ok(HoleCards::new(
-            Card::new(v1.into(), s1.into()),
-            Card::new(v2.into(), s2.into()),
+            Card::new(v1.try_into()?, s1.try_into()?),
+            Card::new(v2.try_into()?, s2.try_into()?),
         )?)
     }
 }

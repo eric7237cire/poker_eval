@@ -278,7 +278,7 @@ mod tests {
     use rand::{rngs::StdRng, SeedableRng};
 
     use crate::{
-        cards_from_string, get_possible_hole_cards, range_string_to_set, rank_cards, CardUsedType,
+        old_cards_from_string, get_possible_hole_cards, range_string_to_set, rank_cards, CardUsedType,
         HoleCards, Rank,
     };
 
@@ -288,8 +288,8 @@ mod tests {
         let range_set = range_string_to_set(range_str).unwrap();
 
         let mut used_cards = CardUsedType::default();
-        let flop = cards_from_string("Qs Ts 7c");
-        let other_cards = cards_from_string("8d 7s Qd 5c");
+        let flop = old_cards_from_string("Qs Ts 7c");
+        let other_cards = old_cards_from_string("8d 7s Qd 5c");
 
         for card in flop.iter() {
             used_cards.set((*card).into(), true);
@@ -392,15 +392,15 @@ mod tests {
         let range_set = range_string_to_set(range_str).unwrap();
 
         let mut used_cards = CardUsedType::default();
-        let flop = cards_from_string("Qs Ts 7c");
+        let flop = old_cards_from_string("Qs Ts 7c");
 
         let flop_hand = Hand::new();
         let flop_hand = flop_hand.add_card(flop[0].into());
         let flop_hand = flop_hand.add_card(flop[1].into());
         let flop_hand = flop_hand.add_card(flop[2].into());
 
-        let p1_hole_cards = cards_from_string("8d 7s");
-        let p2_hole_cards = cards_from_string("Qd 5c");
+        let p1_hole_cards = old_cards_from_string("8d 7s");
+        let p2_hole_cards = old_cards_from_string("Qd 5c");
 
         for card in flop.iter() {
             used_cards.set((*card).into(), true);
