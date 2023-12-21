@@ -28,6 +28,8 @@ getrandom = { version = "0.2", features = ["js"] }
 rand="0.8"
 wasm-bindgen = "0.2.89"
 
+regex="1"
+
 # redirect logs to console
 wasm-logger = "0.2.0"
 

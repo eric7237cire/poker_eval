@@ -18,3 +18,5 @@ pub use round::*;
 
 mod position;
 pub use position::*;
+
+mod game_log_parser;

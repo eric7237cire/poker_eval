@@ -275,6 +275,7 @@ dependencies = [
  "log",
  "postflop-solver 0.1.0",
  "rand",
+ "regex",
  "serde",
  "serde-wasm-bindgen",
  "wasm-bindgen",
