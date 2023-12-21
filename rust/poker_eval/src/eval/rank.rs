@@ -272,13 +272,13 @@ pub fn rank_cards(cards: &[Card]) -> Rank {
 mod tests {
     use std::{collections::HashMap, io::Write};
 
-    use crate::{add_eval_card, get_unused_card};
+    use crate::{add_eval_card, get_unused_card, CardVec};
     use itertools::Itertools;
     use postflop_solver::Hand;
     use rand::{rngs::StdRng, SeedableRng};
 
     use crate::{
-        get_possible_hole_cards, old_cards_from_string, range_string_to_set, rank_cards,
+        get_possible_hole_cards, range_string_to_set, rank_cards,
         CardUsedType, HoleCards, Rank,
     };
 
@@ -288,8 +288,8 @@ mod tests {
         let range_set = range_string_to_set(range_str).unwrap();
 
         let mut used_cards = CardUsedType::default();
-        let flop = old_cards_from_string("Qs Ts 7c");
-        let other_cards = old_cards_from_string("8d 7s Qd 5c");
+        let flop = CardVec::try_from("Qs Ts 7c").unwrap().0;
+        let other_cards = CardVec::try_from("8d 7s Qd 5c").unwrap().0;
 
         for card in flop.iter() {
             used_cards.set((*card).into(), true);
@@ -392,15 +392,15 @@ mod tests {
         let range_set = range_string_to_set(range_str).unwrap();
 
         let mut used_cards = CardUsedType::default();
-        let flop = old_cards_from_string("Qs Ts 7c");
+        let flop = CardVec::try_from("Qs Ts 7c").unwrap().0;
 
         let flop_hand = Hand::new();
         let flop_hand = flop_hand.add_card(flop[0].into());
         let flop_hand = flop_hand.add_card(flop[1].into());
         let flop_hand = flop_hand.add_card(flop[2].into());
 
-        let p1_hole_cards = old_cards_from_string("8d 7s");
-        let p2_hole_cards = old_cards_from_string("Qd 5c");
+        let p1_hole_cards = CardVec::try_from("8d 7s").unwrap().0;
+        let p2_hole_cards = CardVec::try_from("Qd 5c").unwrap().0;
 
         for card in flop.iter() {
             used_cards.set((*card).into(), true);

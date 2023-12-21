@@ -2,7 +2,6 @@
 
 use std::str::FromStr;
 
-use crate::ActionEnum;
 use crate::Card;
 use crate::HoleCards;
 
@@ -12,8 +11,6 @@ use crate::PlayerAction;
 use crate::PokerError;
 use crate::Position;
 use crate::Round;
-use log::trace;
-use regex::Regex;
 
 pub struct InitialPlayerState {
     pub stack: ChipType,
@@ -126,6 +123,7 @@ impl FromStr for GameLog {
     }
 }
 
+#[allow(dead_code)]
 pub struct CurrentPlayerState {
     stack: ChipType,
     //Player id?
@@ -134,6 +132,7 @@ pub struct CurrentPlayerState {
 }
 
 //Now when we play back a game, we can pass the current state to the UI
+#[allow(dead_code)]
 struct GameState {
     player_states: Vec<CurrentPlayerState>,
 
@@ -146,6 +145,8 @@ struct GameState {
 
 #[cfg(test)]
 mod tests {
+    use crate::ActionEnum;
+
     use super::*;
     use std::io::Write;
 

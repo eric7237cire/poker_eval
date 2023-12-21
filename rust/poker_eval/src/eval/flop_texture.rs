@@ -124,13 +124,13 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
 #[cfg(test)]
 mod tests {
 
-    use crate::old_cards_from_string;
+    use crate::CardVec;
 
     use super::*;
 
     #[test]
     fn test_board_texture() {
-        let cards = old_cards_from_string("3c 2s As");
+        let cards = CardVec::try_from("3c 2s As").unwrap().0;
         let texture = calc_board_texture(&cards);
 
         assert_eq!(texture.same_suited_max_count, 2);
@@ -144,7 +144,7 @@ mod tests {
         assert_eq!(texture.med_value_count, 0);
         assert_eq!(texture.low_value_count, 2);
 
-        let cards = old_cards_from_string("Ac Ah As");
+        let cards = CardVec::try_from("Ac Ah As").unwrap().0;
         let texture = calc_board_texture(&cards);
 
         assert_eq!(texture.same_suited_max_count, 1);
@@ -156,7 +156,7 @@ mod tests {
         assert_eq!(texture.med_value_count, 0);
         assert_eq!(texture.low_value_count, 0);
 
-        let cards = old_cards_from_string("Qc Kh Qd As Ks");
+        let cards = CardVec::try_from("Qc Kh Qd As Ks").unwrap().0;
         let texture = calc_board_texture(&cards);
 
         assert_eq!(texture.same_suited_max_count, 2);

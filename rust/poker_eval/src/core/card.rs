@@ -438,7 +438,7 @@ impl TryFrom<usize> for Card {
     }
 }
 
-pub struct CardVec(Vec<Card>);
+pub struct CardVec(pub Vec<Card>);
 
 impl TryFrom<&str> for CardVec {
     type Error = PokerError;
@@ -468,33 +468,19 @@ impl CardVec {
     }
 }
 
-#[deprecated(since = "0.5.0", note = "please use `cards_from_string` instead")]
-pub fn old_cards_from_string(a_string: &str) -> Vec<Card> {
-    let mut cards = Vec::with_capacity(5);
-    let mut chars = a_string.chars().filter(|c| !c.is_whitespace());
-    while let Some(c) = chars.next() {
-        let value = c;
-        let suit = chars.next().unwrap();
-        cards.push(Card::new(
-            value.try_into().unwrap(),
-            suit.try_into().unwrap(),
-        ));
-    }
-    cards
-}
-pub fn cards_from_string(a_string: &str) -> Result<Vec<Card>, PokerError> {
-    let mut cards = Vec::with_capacity(7);
-    let mut chars = a_string.chars().filter(|c| c.is_alphanumeric());
-    while let Some(c) = chars.next() {
-        let value = c;
-        let suit = chars.next().ok_or(PokerError::from_string(format!(
-            "Unable to parse suit from {}",
-            a_string
-        )))?;
-        cards.push(Card::new(value.try_into()?, suit.try_into()?));
-    }
-    Ok(cards)
-}
+// pub fn cards_from_string(a_string: &str) -> Result<Vec<Card>, PokerError> {
+//     let mut cards = Vec::with_capacity(7);
+//     let mut chars = a_string.chars().filter(|c| c.is_alphanumeric());
+//     while let Some(c) = chars.next() {
+//         let value = c;
+//         let suit = chars.next().ok_or(PokerError::from_string(format!(
+//             "Unable to parse suit from {}",
+//             a_string
+//         )))?;
+//         cards.push(Card::new(value.try_into()?, suit.try_into()?));
+//     }
+//     Ok(cards)
+// }
 
 pub fn add_cards_from_string(cards: &mut Vec<Card>, a_string: &str) -> () {
     let mut chars = a_string.chars().filter(|c| !c.is_whitespace());
@@ -840,7 +826,7 @@ mod tests {
         let range_set = range_string_to_set(range_str).unwrap();
 
         let mut used_cards = CardUsedType::default();
-        let cards = old_cards_from_string("8d 7s Qd 5c Qs Ts 7c");
+        let cards = CardVec::try_from("8d 7s Qd 5c Qs Ts 7c").unwrap().0;
 
         for card in cards.iter() {
             used_cards.set((*card).into(), true);

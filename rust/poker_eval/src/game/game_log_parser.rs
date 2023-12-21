@@ -1,4 +1,4 @@
-use crate::{cards_from_string, HoleCards};
+use crate::{HoleCards, CardVec};
 use log::trace;
 use regex::Regex;
 
@@ -353,7 +353,7 @@ impl GameLogParser {
             )))?
             .as_str();
 
-        let cards: Vec<Card> = cards_from_string(just_cards_str)?;
+        let cards: Vec<Card> = CardVec::try_from(just_cards_str)?.0;
 
         // let match_end = caps.get(0).unwrap().end();
         // let remaining_str = &s[match_end..];

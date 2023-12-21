@@ -7,6 +7,7 @@ use crate::{add_eval_card, get_unused_card, set_used_card, HoleCards, PokerError
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
 
+#[cfg(not(test))]
 use rand::thread_rng;
 use rand::{rngs::StdRng, SeedableRng};
 
