@@ -149,7 +149,6 @@ impl Into<usize> for CardValue {
 }
 
 impl TryFrom<char> for CardValue {
-
     type Error = PokerError;
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
@@ -272,7 +271,6 @@ impl TryFrom<u8> for Suit {
 }
 
 impl TryFrom<char> for Suit {
-
     type Error = PokerError;
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
@@ -440,14 +438,17 @@ impl TryFrom<usize> for Card {
     }
 }
 
-#[deprecated(since="0.5.0", note="please use `cards_from_string` instead")]
+#[deprecated(since = "0.5.0", note = "please use `cards_from_string` instead")]
 pub fn old_cards_from_string(a_string: &str) -> Vec<Card> {
     let mut cards = Vec::with_capacity(5);
     let mut chars = a_string.chars().filter(|c| !c.is_whitespace());
     while let Some(c) = chars.next() {
         let value = c;
         let suit = chars.next().unwrap();
-        cards.push(Card::new(value.try_into().unwrap(), suit.try_into().unwrap()));
+        cards.push(Card::new(
+            value.try_into().unwrap(),
+            suit.try_into().unwrap(),
+        ));
     }
     cards
 }
@@ -456,8 +457,10 @@ pub fn cards_from_string(a_string: &str) -> Result<Vec<Card>, PokerError> {
     let mut chars = a_string.chars().filter(|c| c.is_alphanumeric());
     while let Some(c) = chars.next() {
         let value = c;
-        let suit = chars.next()
-        .ok_or(PokerError::from_string(format!("Unable to parse suit from {}", a_string)))?;
+        let suit = chars.next().ok_or(PokerError::from_string(format!(
+            "Unable to parse suit from {}",
+            a_string
+        )))?;
         cards.push(Card::new(value.try_into()?, suit.try_into()?));
     }
     Ok(cards)
@@ -476,7 +479,10 @@ pub fn add_cards_from_string(cards: &mut Vec<Card>, a_string: &str) -> () {
     while let Some(c) = chars.next() {
         let value = c;
         let suit = chars.next().unwrap();
-        cards.push(Card::new(value.try_into().unwrap(), suit.try_into().unwrap()));
+        cards.push(Card::new(
+            value.try_into().unwrap(),
+            suit.try_into().unwrap(),
+        ));
     }
 }
 
@@ -770,16 +776,16 @@ mod tests {
 
         let hc: HoleCards = "Qs 5h".parse().unwrap();
         assert!(set[hc.to_range_index()]);
-        
-        let hc : HoleCards = "Qs Qc".parse().unwrap();
-        assert!(!set[hc.to_range_index()]);
-        
-        let hc : HoleCards = "Qs Kc".parse().unwrap();
+
+        let hc: HoleCards = "Qs Qc".parse().unwrap();
         assert!(!set[hc.to_range_index()]);
 
-        let hc : HoleCards = "Js Qc".parse().unwrap();
+        let hc: HoleCards = "Qs Kc".parse().unwrap();
+        assert!(!set[hc.to_range_index()]);
+
+        let hc: HoleCards = "Js Qc".parse().unwrap();
         assert!(set[hc.to_range_index()]);
-        
+
         let range_str = "22+";
         //let range: Range = Range::from_sanitized_str(rangeStr).unwrap();
 

@@ -278,8 +278,8 @@ mod tests {
     use rand::{rngs::StdRng, SeedableRng};
 
     use crate::{
-        old_cards_from_string, get_possible_hole_cards, range_string_to_set, rank_cards, CardUsedType,
-        HoleCards, Rank,
+        get_possible_hole_cards, old_cards_from_string, range_string_to_set, rank_cards,
+        CardUsedType, HoleCards, Rank,
     };
 
     #[test]

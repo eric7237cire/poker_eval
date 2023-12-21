@@ -1,5 +1,5 @@
+use crate::{cards_from_string, HoleCards};
 use log::trace;
-use crate::cards_from_string;
 use regex::Regex;
 
 use crate::{Card, ChipType, InitialPlayerState, PlayerAction, PokerError, Round};
@@ -32,7 +32,7 @@ impl GameLogParser {
             player_stack_regex: Regex::new(
                 r#"(?x) # Enable verbose mode
     ^\s*                    # Asserts the start of the string and matches any leading whitespace
-    (?P<player_id>[\w\ ]+)  # Capture player id
+    \b(?P<player_id>[\w\ ]+)\b  # Capture player id
     \ *                     # Match any trailing spaces
     -                       # Match a dash
     \ *                     # Match any trailing spaces
@@ -44,14 +44,14 @@ impl GameLogParser {
             blinds_regex: Regex::new(
                 r#"(?x) # Enable verbose mode
     ^\s*                    # Asserts the start of the string and matches any leading whitespace
-    (?P<p1>[\w\ ]+)  # Capture player id
+    \b(?P<p1>[\w\ ]+)\b  # Capture player id
     \ *                     # Match any trailing spaces
     -                       # Match a dash
     \ *                     # Match any trailing spaces
     (?P<sb>[\d\.\,]+)    # Capture sb
     (?:\s*\#[^\n\r]*)?      # Non-capturing group for # and anything after it, greedy
     \s*
-    (?P<p2>[\w\ ]+)  # Capture player id
+    \b(?P<p2>[\w\ ]+)\b  # Capture player id with non consuming word boundaries
     \ *                     # Match any trailing spaces
     -                       # Match a dash
     \ *                     # Match any trailing spaces
@@ -63,7 +63,7 @@ impl GameLogParser {
             action_regex: Regex::new(
                 r#"(?x) # Enable verbose mode
     ^\s*                    # Asserts the start of the string and matches any leading whitespace
-    (?P<player_id>[\w\ ]+)  # Capture player id
+    \b(?P<player_id>[\w\ ]+)\b{end-half}  # Capture player id
     \ *                     # Match any trailing spaces
     (?P<action>checks|bets|folds|raises|calls)    # Capture action
     \ *
@@ -144,7 +144,7 @@ impl GameLogParser {
             trace!("Total match {}", caps.get(0).unwrap().as_str());
 
             let player_id = caps.name("player_id").unwrap().as_str();
-            trace!("Player id: {}", player_id);
+            trace!("Player id: [{}]", player_id);
 
             let stack_str = caps.name("stack").unwrap().as_str();
             trace!("Stack: {}", stack_str);
@@ -153,15 +153,36 @@ impl GameLogParser {
                 PokerError::from_string(format!("Could not parse stack {}", stack_str))
             })?;
 
+            
+            let match_end = caps.get(0).unwrap().end();
+            remaining_str = &remaining_str[match_end..];
+
+            //Parse optional cards
+            let cards_result = self.parse_cards(remaining_str);
+
+            let mut cards: Option<HoleCards> = None;
+
+            if let Ok( (vec_cards, new_remaining_str)) = cards_result {
+                
+                remaining_str = new_remaining_str;
+                
+                if vec_cards.len() != 2 {
+                    return Err(PokerError::from_string(format!(
+                        "Expected 2 cards, got {}",
+                        vec_cards.len()
+                    )));
+                }
+                cards = Some(HoleCards::new(vec_cards[0], vec_cards[1])?);
+                
+            }
+
             ret.push(InitialPlayerState {
                 player_name: player_id.to_string(),
                 stack,
-                cards: None,
+                cards,
                 position: ret.len().try_into()?,
             });
 
-            let match_end = caps.get(0).unwrap().end();
-            remaining_str = &remaining_str[match_end..];
 
             trace!(
                 "Remaining string len: {} start {}",
@@ -205,14 +226,14 @@ impl GameLogParser {
 
         if p1_name != players[0].player_name {
             return Err(PokerError::from_string(format!(
-                "Expected small blind to be {} not {}",
+                "Expected small blind to be [{}] not [{}]",
                 players[0].player_name, p1_name
             )));
         }
 
         if p2_name != players[1].player_name {
             return Err(PokerError::from_string(format!(
-                "Expected big blind to be {} not {}",
+                "Expected big blind to be [{}] not [{}]",
                 players[1].player_name, p2_name
             )));
         }
@@ -275,7 +296,7 @@ impl GameLogParser {
                 .iter()
                 .position(|p| p.player_name == player_id)
                 .ok_or(PokerError::from_string(format!(
-                    "Could not find player [{}]",
+                    "Could not find player [{}] in round action",
                     player_id
                 )))?;
 
@@ -324,14 +345,15 @@ impl GameLogParser {
         let cards_str = caps.get(0).unwrap().as_str();
         trace!("Cards: {} num matches {}", cards_str, caps.len());
 
-        let just_cards_str =  caps.get(1)
-        .ok_or(PokerError::from_string(format!(
-            "Expected cards in {}",
-            &s[0..100]
-        )))?.as_str();
-        
-        let cards: Vec<Card> = cards_from_string(just_cards_str)?;
+        let just_cards_str = caps
+            .get(1)
+            .ok_or(PokerError::from_string(format!(
+                "Expected cards in {}",
+                &s[0..100]
+            )))?
+            .as_str();
 
+        let cards: Vec<Card> = cards_from_string(just_cards_str)?;
 
         // let match_end = caps.get(0).unwrap().end();
         // let remaining_str = &s[match_end..];

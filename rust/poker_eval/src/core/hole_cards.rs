@@ -5,7 +5,7 @@ use postflop_solver::card_pair_to_index;
 
 use crate::{Card, PokerError};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub struct HoleCards {
     card_hi_lo: [Card; 2],
     //card_lo: Card

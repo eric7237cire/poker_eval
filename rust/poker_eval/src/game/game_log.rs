@@ -122,7 +122,6 @@ impl FromStr for GameLog {
         game_log.actions = actions;
         game_log.board = board_cards;
 
-
         Ok(game_log)
     }
 }
@@ -192,7 +191,7 @@ Seat 2 folds
 *** Summary ***
 Seat 3 wins 0.75 # split pots?
 *** Final chip counts *** 
-Seat 2 - 12.57
+Seat 2 - 12.57  # This section is just to verify
 Seat 3 - 148.19
 Seat 6 - 55.30
 
@@ -251,7 +250,7 @@ Seat 6 - 55.30
                 round: Round::Flop,
             }
         );
-        
+
         assert_eq!(
             game_log.actions[4],
             PlayerAction {
@@ -269,5 +268,82 @@ Seat 6 - 55.30
                 round: Round::Flop,
             }
         );
+    }
+
+    #[test]
+    fn test_parse_with_hole_cards() {
+        init();
+
+        let hh = "
+*** Players *** 
+Plyr A - 12
+As Kh
+Plyr B - 147
+2d 2c
+Plyr C - 55
+7d 2h
+Plyr D - 55
+Ks Kh
+*** Blinds *** 
+Plyr A - 5
+Plyr B - 10
+*** Preflop ***
+Plyr C calls    # UTG acts first
+Plyr D raises 10
+Plyr A calls 
+Plyr B raises 20 # so puts in an additional 15
+Plyr C folds
+Plyr D calls
+Plyr A calls
+*** Flop ***
+2s 7c 8s
+Plyr A checks
+Plyr B bets 5
+Plyr D calls
+Plyr A calls
+*** Turn ***
+2h 
+Plyr A checks
+Plyr B bets 5
+Plyr D folds
+Plyr A calls
+*** River ***
+2d
+Plyr A bets 15
+Plyr B raises 30 # minimum raise
+Plyr A raises 45
+Plyr B calls
+*** Summary ***
+Plyr A wins 100 with 2h As Kh 2d 2c
+Plyr B loses 100 with 2h As Kh 2d 2c
+*** Final chip counts ***
+Plyr A - 12.57
+Plyr B - 148.19
+Plyr C - 55.30
+Plyr D - 90
+    ";
+        let game_log: GameLog = hh.parse().unwrap();
+
+        assert_eq!(4, game_log.players.len());
+        assert_eq!(5, game_log.sb);
+        assert_eq!(10, game_log.bb);
+
+        assert_eq!(game_log.players[0].cards.unwrap(), 
+        "As Kh".parse::<HoleCards>().unwrap());
+        assert_eq!(game_log.players[1].cards.unwrap(),
+        "2d 2c".parse::<HoleCards>().unwrap());
+        assert_eq!(game_log.players[2].cards.unwrap(),
+        "7d 2h".parse::<HoleCards>().unwrap());
+        assert_eq!(game_log.players[3].cards.unwrap(),
+        "Ks Kh".parse::<HoleCards>().unwrap());
+
+        assert_eq!(game_log.board.len(), 5);
+        assert_eq!(game_log.board[0], "2s".parse::<Card>().unwrap());
+        assert_eq!(game_log.board[1], "7c".parse::<Card>().unwrap());
+        assert_eq!(game_log.board[2], "8s".parse::<Card>().unwrap());
+        assert_eq!(game_log.board[3], "2h".parse::<Card>().unwrap());
+        assert_eq!(game_log.board[4], "2d".parse::<Card>().unwrap());
+
+        
     }
 }
