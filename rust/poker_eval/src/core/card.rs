@@ -438,6 +438,36 @@ impl TryFrom<usize> for Card {
     }
 }
 
+pub struct CardVec(Vec<Card>);
+
+impl TryFrom<&str> for CardVec {
+    type Error = PokerError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let mut cards = Vec::with_capacity(7);
+        let mut chars = value.chars().filter(|c| c.is_alphanumeric());
+        while let Some(c) = chars.next() {
+            let value = c;
+            let suit = chars.next().ok_or(PokerError::from_string(format!(
+                "Unable to parse suit from {}",
+                value
+            )))?;
+            cards.push(Card::new(value.try_into()?, suit.try_into()?));
+        }
+        Ok(CardVec(cards))
+    }
+}
+
+impl CardVec {
+    pub fn as_vec_u8(&self) -> Vec<u8> {
+
+        self.0.iter().map(|c| {
+            let c_u8 : u8 = (*c).into();
+            c_u8
+    }).collect()
+    }
+}
+
 #[deprecated(since = "0.5.0", note = "please use `cards_from_string` instead")]
 pub fn old_cards_from_string(a_string: &str) -> Vec<Card> {
     let mut cards = Vec::with_capacity(5);
@@ -464,14 +494,6 @@ pub fn cards_from_string(a_string: &str) -> Result<Vec<Card>, PokerError> {
         cards.push(Card::new(value.try_into()?, suit.try_into()?));
     }
     Ok(cards)
-}
-pub fn card_u8s_from_string(a_string: &str) -> Vec<u8> {
-    let mut cards = Vec::with_capacity(5);
-    let mut card_obs = old_cards_from_string(a_string);
-    for card in card_obs.drain(..) {
-        cards.push(card.into());
-    }
-    cards
 }
 
 pub fn add_cards_from_string(cards: &mut Vec<Card>, a_string: &str) -> () {
