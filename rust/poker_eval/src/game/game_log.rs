@@ -14,17 +14,18 @@ use log::trace;
 use regex::Regex;
 
 pub struct InitialPlayerState {
-    stack: ChipType,
-    //Player id?
+    pub stack: ChipType,
+    pub player_name: String,
 
     //0 -- sb, 1 bb, 2 utg, 3 hj, 4 btn
-    position: Position,
+    pub position: Position,
 
-    cards: Option<HoleCards>,
+    pub cards: Option<HoleCards>,
 }
 
 #[derive(Default)]
 struct GameLog {
+    //Sb first; then left to right
     players: Vec<InitialPlayerState>,
     sb: ChipType,
     bb: ChipType,
@@ -42,28 +43,34 @@ impl FromStr for GameLog {
         let p = GameLogParser::new();
         let (section_name, mut remaining_str) = p.parse_section_name(s)?;
 
-        let mut player_names = Vec::new();
-        let mut player_stacks = Vec::new();
-
-        loop {
-            let (p_info, new_remaining_str) = p.parse_player_name_stack(remaining_str)?;
-
-            assert!(new_remaining_str.len() < remaining_str.len());
-
-            remaining_str = new_remaining_str;
-            //ready for next section
-            if p_info.is_none() {
-                break;
-            }
-
-            let (player_name, stack) = p_info.unwrap();
-
-            trace!("Player name: {} stack {}", player_name, stack);
-            player_names.push(player_name);
-            player_stacks.push(stack);
+        if section_name != "Players" {
+            return Err(PokerError::from_string(format!(
+                "Expected section [Players], got [{}]",
+                section_name
+            )));
         }
 
+        let (players, new_remaining_str) = p.parse_players(remaining_str)?;
+
+        remaining_str = new_remaining_str;
+
+        let (section_name, new_remaining_str) = p.parse_section_name(remaining_str)?;
+        remaining_str = new_remaining_str;
+
+        if section_name != "Blinds" {
+            return Err(PokerError::from_string(format!(
+                "Expected section Blinds, got {}",
+                section_name
+            )));
+        }
+
+        let (sb, bb, new_remaining_str) = p.parse_blinds(&players, remaining_str)?;
+        remaining_str = new_remaining_str;
+
         let mut game_log = GameLog::default();
+        game_log.players = players;
+        game_log.sb = sb;
+        game_log.bb = bb;
 
         Ok(game_log)
     }
@@ -115,10 +122,10 @@ mod tests {
         init();
 
         let hh = "
-*** Players ***
-Seat 6 - 55 # [button] but can be inferred from the blinds
-Seat 2 - 12  # order is to the left
+*** Players *** 
+Seat 2 - 12 # [Small blind first] # order is to the left
 Seat 3 - 147
+Seat 6 - 55
 *** Blinds *** 
 Seat 2 - 5
 Seat 3 - 10
@@ -134,12 +141,16 @@ Seat 2 folds
 *** Summary ***
 Seat 3 wins 0.75 # split pots?
 *** Final chip counts *** 
-Seat 6 - 55.30
 Seat 2 - 12.57
 Seat 3 - 148.19
+Seat 6 - 55.30
+
+
     ";
         let game_log: GameLog = hh.parse().unwrap();
 
         assert_eq!(3, game_log.players.len());
+        assert_eq!(5, game_log.sb);
+        assert_eq!(10, game_log.bb);
     }
 }
