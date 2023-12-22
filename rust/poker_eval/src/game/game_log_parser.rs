@@ -116,16 +116,16 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             .get_word
             .captures(s)
             .ok_or(PokerError::from_string(format!(
-                "Expected a word in {}"
-            , &s[0..100])))?;
+                "Expected a word in {:.100}"
+            , &s)))?;
 
         let match_end = caps.get(0).unwrap().end();
         let remaining_str = &s[match_end..];
 
         trace!(
-            "Remaining string len: {} start {}",
+            "Remaining string len: {} start {:.10}",
             remaining_str.len(),
-            &remaining_str[0..10]
+            &remaining_str
         );
 
         *s = remaining_str;
@@ -154,7 +154,7 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
         }
         if expected {
             return Err(PokerError::from_string(format!(
-                "Expected dash in {}", &s[0..100]
+                "Expected dash in {:.100}", &s
             )));
         }
         Ok(false)
@@ -209,9 +209,9 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
         let remaining_str = &s[match_end..];
 
         trace!(
-            "Remaining string len: {} start {}",
+            "Remaining string len: {} start {:.10}",
             remaining_str.len(),
-            &remaining_str[0..10]
+            &remaining_str
         );
 
         if let Some(expected) = expected {
@@ -281,11 +281,6 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             });
 
 
-            trace!(
-                "Remaining string len: {} start {}",
-                remaining_str.len(),
-                &remaining_str[0..10]
-            );
         }
 
         Ok(ret)
@@ -401,8 +396,8 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             .cards_regex
             .captures(s)
             .ok_or(PokerError::from_string(format!(
-                "Expected cards in {}",
-                &s[0..100]
+                "Expected cards in {:.100}",
+                &s
             )))?;
 
         let cards_str = caps.get(0).unwrap().as_str();
@@ -411,8 +406,8 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
         let just_cards_str = caps
             .get(1)
             .ok_or(PokerError::from_string(format!(
-                "Expected cards in {}",
-                &s[0..100]
+                "Expected cards in {:.100}",
+                &s
             )))?
             .as_str();
 
@@ -425,9 +420,9 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
         let remaining_str = &s[match_end..];
 
         trace!(
-            "Remaining string len: {} start {}",
+            "Remaining string len: {} start {:.10}",
             remaining_str.len(),
-            &remaining_str[0..10]
+            &remaining_str
         );
 
         *s = remaining_str;
@@ -444,7 +439,7 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             let mut ret = vec![0 as ChipType; players.len()];
 
             //We may already parsed this
-            self.parse_section_name(remaining_str, Some("Summary"));
+            let _ = self.parse_section_name(remaining_str, Some("Summary"));
 
             
             for _ in 0..players.len() {

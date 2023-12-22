@@ -151,7 +151,7 @@ struct GameState {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ActionEnum, CardVec};
+    use crate::ActionEnum;
 
     use super::*;
     use std::io::Write;
@@ -196,9 +196,9 @@ Seat 2 checks
 Seat 3 bets 5
 Seat 2 folds
 *** Summary ***
-Seat 2 - 12.57  # This section is just to verify
-Seat 3 - 148.19
-Seat 6 - 55.30
+Seat 2 - 12  # This section is just to verify
+Seat 3 - 148
+Seat 6 - 55
 
 
     ";
