@@ -458,6 +458,14 @@ impl TryFrom<&str> for CardVec {
     }
 }
 
+impl FromStr for CardVec {
+    type Err = PokerError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        CardVec::try_from(s)
+    }
+}
+
 impl CardVec {
     pub fn as_vec_u8(&self) -> Vec<u8> {
 

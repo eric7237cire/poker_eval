@@ -12,6 +12,13 @@ pub struct GameLogParser {
     pub blinds_regex: Regex,
     pub action_regex: Regex,
     pub cards_regex: Regex,
+    
+    pub trailing_comment_regex: Regex,
+
+    pub player_id_regex: Regex,
+    pub chip_amount_regex: Regex,
+
+    pub get_word: Regex,
 }
 
 const ACTION_LIMIT: usize = 100;
@@ -19,6 +26,23 @@ const ACTION_LIMIT: usize = 100;
 impl GameLogParser {
     pub fn new() -> Self {
         Self {
+player_id_regex: Regex::new(r#"(?x) # Enable verbose mode
+^\s*                    # Asserts the start of the string and matches any leading whitespace
+\b{start-half}          # Non consuming word boundary
+(?P<player_id>[\w\ ]+)  # Capture player id
+\b{end-half}            # Non consuming word boundary
+"#).unwrap(),
+chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
+^\s*                    # Asserts the start of the string and matches any leading whitespace
+(?P<amount>[\d\.\,]+)   # Capture amount
+\b{end-half}            # Non consuming word boundary
+"#).unwrap(),
+            trailing_comment_regex: Regex::new(
+                r#"(?x) # Enable verbose mode
+                (?:\s*\#[^\n\r]*)?      # Non-capturing group for # and anything after it, greedy
+                "#).unwrap(),
+             
+
             section_name_regex: Regex::new(
                 r#"(?x) # Enable verbose mode            
     ^\s*                    # Asserts the start of the string and matches any leading whitespace
@@ -75,26 +99,123 @@ impl GameLogParser {
             cards_regex: Regex::new(
                 r#"(?x) # Enable verbose mode
     ^\s*                    # Asserts the start of the string and matches any leading whitespace
-    (  # start of seq
+    (                       # start of seq
         (?:
-        [\dakqjtAKQJT] # value
-    [cshdCSHD] # suit 
-    [\ ,]* # can have spaces or commas between cards
-    )+ # one or more cards
-    
-) # end capture group
+        [\dakqjtAKQJT]      # value
+        [cshdCSHD]          # suit 
+        [\ ,]*              # can have spaces or commas between cards
+        )+                  # one or more cards
+    )                       # end capture group
     "#,
             )
             .unwrap(),
+            get_word: Regex::new(
+                r#"(?x) # Enable verbose mode
+                ^\s*                    # Asserts the start of the string and matches any leading whitespace
+                \b{start-half}          # Non consuming word boundary
+                ([\w]+-)  # A word, or seperator
+                \b{end-half}            # Non consuming word boundary
+                "#).unwrap(),
+
         }
     }
 
+    //returns player_id and remaining string
+    //if players is passed, will make sure player exists
+    pub fn parse_player_id<'a>(&'a self, s: &mut &'a str, players: Option<&Vec<InitialPlayerState>>,) -> Result<&str, PokerError> {
+        let caps = self
+            .player_id_regex
+            .captures(s)
+            .ok_or(PokerError::from_string(format!(
+                "Expected player id *** player id ***"
+            )))?;
+
+        let player_id = caps.name("player_id").unwrap().as_str();
+        trace!("Player id: {}", player_id);
+
+        let match_end = caps.get(0).unwrap().end();
+        let remaining_str = &s[match_end..];
+
+        if let Some(players) = players {
+            if !players.iter().any(|p| p.player_name == player_id) {
+                return Err(PokerError::from_string(format!(
+                    "Expected player id [{}] to be in players",
+                    player_id
+                )));
+            }
+        }
+
+        trace!(
+            "Remaining string len: {} start {}",
+            remaining_str.len(),
+            &remaining_str[0..10]
+        );
+
+        *s = remaining_str;
+
+        Ok(player_id)
+    }
+
+    pub fn parse_word<'a>(&'a self, s: &mut &'a str) -> Result<&str, PokerError> {
+        let caps = self
+            .player_amt_separator_regex
+            .captures(s)
+            .ok_or(PokerError::from_string(format!(
+                "Expected player amount separator"
+            )))?;
+
+        let match_end = caps.get(0).unwrap().end();
+        let remaining_str = &s[match_end..];
+
+        trace!(
+            "Remaining string len: {} start {}",
+            remaining_str.len(),
+            &remaining_str[0..10]
+        );
+
+        *s = remaining_str;
+
+        let word = caps.get(1).ok_or(PokerError::from_string(format!(
+            "Expected word"
+        )))?.as_str();
+        Ok(word)
+    }
+
+    pub fn parse_chip_amount<'a>(&'a self, s: &mut &'a str) -> Result<ChipType, PokerError> {
+        let caps = self
+            .chip_amount_regex
+            .captures(s)
+            .ok_or(PokerError::from_string(format!(
+                "Expected chip amount"
+            )))?;
+
+        let amount_str = caps.name("amount").unwrap().as_str();
+        trace!("Amount: {}", amount_str);
+
+        let amount: ChipType = amount_str
+            .replace(",", "")
+            .parse()
+            .map_err(|_| PokerError::from_string(format!("Could not parse amount {}", amount_str)))?;
+
+        let match_end = caps.get(0).unwrap().end();
+        let remaining_str = &s[match_end..];
+
+        trace!(
+            "Remaining string len: {} start {}",
+            remaining_str.len(),
+            &remaining_str[0..10]
+        );
+
+        *s = remaining_str;
+
+        Ok(amount)
+    }
     // Returns the section name and the remaining string
     pub fn parse_section_name<'a>(
         &'a self,
-        s: &'a str,
+        s: &mut &'a str,
         expected: Option<&str>,
-    ) -> Result<(&str, &str), PokerError> {
+    ) -> Result<&str, PokerError> {
         let caps = self
             .section_name_regex
             .captures(s)
@@ -123,7 +244,9 @@ impl GameLogParser {
             }
         }
 
-        Ok((section_name, remaining_str))
+        *s = remaining_str;
+
+        Ok(section_name)
     }
 
     //will either return next player, or none if we are at the end of the section
@@ -369,4 +492,27 @@ impl GameLogParser {
 
         Ok((cards, remaining_str))
     }
+
+     pub fn parse_summary<'a>(
+            &'a self,
+            s: &mut &'a str,
+            players: &Vec<InitialPlayerState>
+        ) -> Result<&str, PokerError> {
+            self.parse_section_name(s, "Summary")?;
+
+            for _ in players.len() {
+                let player_id = self.parse_player_id(s, Some(players));
+
+                if player_id.is_err() {
+                    //it's ok, not all players make it to the summary
+                    break;
+                }
+
+                let player_id = player_id.unwrap();
+                let wins_or_loses = self.parse_word(s)?;
+                let amount = self.parse_chip_amount(s)?;
+                trace!("Player {} won {}", player_id, amount);
+            }
+
+     }
 }

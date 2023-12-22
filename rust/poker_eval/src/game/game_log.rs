@@ -22,6 +22,12 @@ pub struct InitialPlayerState {
     pub cards: Option<HoleCards>,
 }
 
+pub struct FinalPlayerState {
+    pub stack: ChipType,
+    pub equity: f64, // 1 win, 0.5 tie, 0.33 3 way tie, 0 folded / lost
+    pub cards: Option<Vec<Card>>,
+}
+
 #[derive(Default)]
 struct GameLog {
     //Sb first; then left to right
@@ -33,6 +39,8 @@ struct GameLog {
     board: Vec<Card>,
 
     actions: Vec<PlayerAction>,
+
+    final_player_states: Vec<FinalPlayerState>,
 }
 
 impl FromStr for GameLog {
@@ -40,29 +48,24 @@ impl FromStr for GameLog {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let p = GameLogParser::new();
-        let (section_name, mut remaining_str) = p.parse_section_name(s, Some("Players"))?;
+        let mut remaining_str = s;
 
-        if section_name != "Players" {
-            return Err(PokerError::from_string(format!(
-                "Expected section [Players], got [{}]",
-                section_name
-            )));
-        }
+        let section_name = p.parse_section_name(&mut remaining_str, Some("Players"))?;
 
         let (players, new_remaining_str) = p.parse_players(remaining_str)?;
 
         remaining_str = new_remaining_str;
 
-        let (_section_name, new_remaining_str) =
-            p.parse_section_name(remaining_str, Some("Blinds"))?;
-        remaining_str = new_remaining_str;
+        let _section_name =
+            p.parse_section_name(&mut remaining_str, Some("Blinds"))?;
+        
 
         let (sb, bb, new_remaining_str) = p.parse_blinds(&players, remaining_str)?;
         remaining_str = new_remaining_str;
 
-        let (_section_name, new_remaining_str) =
-            p.parse_section_name(remaining_str, Some("Preflop"))?;
-        remaining_str = new_remaining_str;
+        let _section_name =
+            p.parse_section_name(&mut remaining_str, Some("Preflop"))?;
+        
 
         let (preflop_actions, new_remaining_str) =
             p.parse_round_actions(&players, Round::Preflop, remaining_str)?;
@@ -75,8 +78,7 @@ impl FromStr for GameLog {
         //The remaining rounds have the same structure
         // section name, then cards, then actions
         for round in [Round::Flop, Round::Turn, Round::River].iter() {
-            let (section_name, new_remaining_str) = p.parse_section_name(remaining_str, None)?;
-            remaining_str = new_remaining_str;
+            let section_name = p.parse_section_name(&mut remaining_str, None)?;            
 
             if section_name == "Summary" {
                 break;
@@ -145,7 +147,7 @@ struct GameState {
 
 #[cfg(test)]
 mod tests {
-    use crate::ActionEnum;
+    use crate::{ActionEnum, CardVec};
 
     use super::*;
     use std::io::Write;
@@ -316,11 +318,11 @@ Plyr A raises 45
 Plyr B calls
 *** Summary ***
 Plyr A wins 100 with 2h As Kh 2d 2c
-Plyr B loses 100 with 2h As Kh 2d 2c
+Plyr B loses 100 with 2h As Kh 2d 7c
 *** Final chip counts ***
-Plyr A - 12.57
-Plyr B - 148.19
-Plyr C - 55.30
+Plyr A - 12 # though this is not valid, the parsing just wants correct syntax
+Plyr B - 148
+Plyr C - 55
 Plyr D - 90
     ";
         let game_log: GameLog = hh.parse().unwrap();
@@ -344,6 +346,24 @@ Plyr D - 90
         assert_eq!(game_log.board[2], "8s".parse::<Card>().unwrap());
         assert_eq!(game_log.board[3], "2h".parse::<Card>().unwrap());
         assert_eq!(game_log.board[4], "2d".parse::<Card>().unwrap());
+
+        assert_eq!(game_log.final_player_states.len(), 4);
+        assert_eq!(game_log.final_player_states[0].stack, 12);
+        assert_eq!(game_log.final_player_states[1].stack, 148);
+        assert_eq!(game_log.final_player_states[2].stack, 55);
+        assert_eq!(game_log.final_player_states[3].stack, 90);
+
+        assert_eq!(game_log.final_player_states[0].equity, 0.5);
+        assert_eq!(game_log.final_player_states[1].equity, 0.5);
+        assert_eq!(game_log.final_player_states[2].equity, 0.0);
+        assert_eq!(game_log.final_player_states[3].equity, 0.0);
+
+        assert_eq!(game_log.final_player_states[0].cards.as_ref().unwrap(),
+        &"2h As Kh 2d 2c".parse::<CardVec>().unwrap().0);
+        assert_eq!(game_log.final_player_states[1].cards.as_ref().unwrap(),
+        &"2h As Kh 2d 7c".parse::<CardVec>().unwrap().0);
+
+
 
         
     }
