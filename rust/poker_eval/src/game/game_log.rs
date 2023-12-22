@@ -22,11 +22,6 @@ pub struct InitialPlayerState {
     pub cards: Option<HoleCards>,
 }
 
-pub struct FinalPlayerState {
-    pub stack: ChipType,
-    pub equity: f64, // 1 win, 0.5 tie, 0.33 3 way tie, 0 folded / lost
-    pub cards: Option<Vec<Card>>,
-}
 
 #[derive(Default)]
 struct GameLog {
@@ -40,7 +35,7 @@ struct GameLog {
 
     actions: Vec<PlayerAction>,
 
-    final_player_states: Vec<FinalPlayerState>,
+    final_stacks: Vec<ChipType>,
 }
 
 impl FromStr for GameLog {
@@ -50,28 +45,28 @@ impl FromStr for GameLog {
         let p = GameLogParser::new();
         let mut remaining_str = s;
 
-        let section_name = p.parse_section_name(&mut remaining_str, Some("Players"))?;
+        let players= p.parse_players(&mut remaining_str)?;
 
-        let (players, new_remaining_str) = p.parse_players(remaining_str)?;
-
-        remaining_str = new_remaining_str;
-
-        let _section_name =
-            p.parse_section_name(&mut remaining_str, Some("Blinds"))?;
+        let (sb, bb) = p.parse_blinds(&players, &mut remaining_str)?;
         
-
-        let (sb, bb, new_remaining_str) = p.parse_blinds(&players, remaining_str)?;
-        remaining_str = new_remaining_str;
 
         let _section_name =
             p.parse_section_name(&mut remaining_str, Some("Preflop"))?;
         
 
-        let (preflop_actions, new_remaining_str) =
-            p.parse_round_actions(&players, Round::Preflop, remaining_str)?;
+        let preflop_actions =
+            p.parse_round_actions(&players, Round::Preflop, &mut remaining_str)?;
+
+        if preflop_actions.len() < players.len() {
+            return Err(PokerError::from_string(format!(
+                "Expected at least {} preflop actions, got {} in   {:.100}",
+                players.len(),
+                preflop_actions.len(),
+                &remaining_str
+            )));
+        }
 
         let mut actions = preflop_actions;
-        remaining_str = new_remaining_str;
 
         let mut board_cards = Vec::new();
 
@@ -92,7 +87,7 @@ impl FromStr for GameLog {
                 )));
             }
 
-            let (cards, new_remaining_str) = p.parse_cards(remaining_str)?;
+            let cards = p.parse_cards(&mut remaining_str)?;
 
             if *round == Round::Flop {
                 if cards.len() != 3 {
@@ -105,13 +100,21 @@ impl FromStr for GameLog {
 
             board_cards.extend(cards);
 
-            remaining_str = new_remaining_str;
-
-            let (round_actions, new_remaining_str) =
-                p.parse_round_actions(&players, *round, remaining_str)?;
-            remaining_str = new_remaining_str;
+            let round_actions =
+                p.parse_round_actions(&players, *round, &mut remaining_str)?;
 
             actions.extend(round_actions);
+        }
+
+        let final_stacks = p.parse_summary(&mut remaining_str, &players)?;
+
+        if final_stacks.len() != players.len() {
+            return Err(PokerError::from_string(format!(
+                "Expected {} final player stacks, got {} in {:.100}",
+                players.len(),
+                final_stacks.len(),
+                &remaining_str
+            )));
         }
 
         let mut game_log = GameLog::default();
@@ -120,6 +123,7 @@ impl FromStr for GameLog {
         game_log.bb = bb;
         game_log.actions = actions;
         game_log.board = board_cards;
+        game_log.final_stacks = final_stacks;
 
         Ok(game_log)
     }
@@ -184,7 +188,7 @@ Seat 2 - 5
 Seat 3 - 10
 *** Preflop ***
 Seat 6 folds   # UTG acts first
-Seat 2 calls 0.25 # call is difference needed
+Seat 2 calls  # call is difference needed, can put call amount in comments
 Seat 3 checks # BB Acts last preflop
 *** Flop ***
 2s 7c 8s
@@ -192,8 +196,6 @@ Seat 2 checks
 Seat 3 bets 5
 Seat 2 folds
 *** Summary ***
-Seat 3 wins 0.75 # split pots?
-*** Final chip counts *** 
 Seat 2 - 12.57  # This section is just to verify
 Seat 3 - 148.19
 Seat 6 - 55.30
@@ -279,14 +281,10 @@ Seat 6 - 55.30
 
         let hh = "
 *** Players *** 
-Plyr A - 12
-As Kh
-Plyr B - 147
-2d 2c
-Plyr C - 55
-7d 2h
-Plyr D - 55
-Ks Kh
+Plyr A - 12 - As Kh
+Plyr B - 147 - 2d 2c
+Plyr C - 55 - 7d 2h
+Plyr D - 55 - Ks Kh
 *** Blinds *** 
 Plyr A - 5
 Plyr B - 10
@@ -317,12 +315,9 @@ Plyr B raises 30 # minimum raise
 Plyr A raises 45
 Plyr B calls
 *** Summary ***
-Plyr A wins 100 with 2h As Kh 2d 2c
-Plyr B loses 100 with 2h As Kh 2d 7c
-*** Final chip counts ***
 Plyr A - 12 # though this is not valid, the parsing just wants correct syntax
-Plyr B - 148
-Plyr C - 55
+Plyr B - 148 # Plyr B loses 100 with 2h As Kh 2d 7c
+Plyr C - 55 # can put in comments showdown, wins / losses side pot / etc
 Plyr D - 90
     ";
         let game_log: GameLog = hh.parse().unwrap();
@@ -347,21 +342,12 @@ Plyr D - 90
         assert_eq!(game_log.board[3], "2h".parse::<Card>().unwrap());
         assert_eq!(game_log.board[4], "2d".parse::<Card>().unwrap());
 
-        assert_eq!(game_log.final_player_states.len(), 4);
-        assert_eq!(game_log.final_player_states[0].stack, 12);
-        assert_eq!(game_log.final_player_states[1].stack, 148);
-        assert_eq!(game_log.final_player_states[2].stack, 55);
-        assert_eq!(game_log.final_player_states[3].stack, 90);
+        assert_eq!(game_log.final_stacks.len(), 4);
+        assert_eq!(game_log.final_stacks[0], 12);
+        assert_eq!(game_log.final_stacks[1], 148);
+        assert_eq!(game_log.final_stacks[2], 55);
+        assert_eq!(game_log.final_stacks[3], 90);
 
-        assert_eq!(game_log.final_player_states[0].equity, 0.5);
-        assert_eq!(game_log.final_player_states[1].equity, 0.5);
-        assert_eq!(game_log.final_player_states[2].equity, 0.0);
-        assert_eq!(game_log.final_player_states[3].equity, 0.0);
-
-        assert_eq!(game_log.final_player_states[0].cards.as_ref().unwrap(),
-        &"2h As Kh 2d 2c".parse::<CardVec>().unwrap().0);
-        assert_eq!(game_log.final_player_states[1].cards.as_ref().unwrap(),
-        &"2h As Kh 2d 7c".parse::<CardVec>().unwrap().0);
 
 
 

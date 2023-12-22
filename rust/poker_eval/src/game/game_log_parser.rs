@@ -8,13 +8,9 @@ use super::action;
 
 pub struct GameLogParser {
     pub section_name_regex: Regex,
-    pub player_stack_regex: Regex,
-    pub blinds_regex: Regex,
-    pub action_regex: Regex,
+    
     pub cards_regex: Regex,
     
-    pub trailing_comment_regex: Regex,
-
     pub player_id_regex: Regex,
     pub chip_amount_regex: Regex,
 
@@ -28,24 +24,26 @@ impl GameLogParser {
         Self {
 player_id_regex: Regex::new(r#"(?x) # Enable verbose mode
 ^\s*                    # Asserts the start of the string and matches any leading whitespace
+(?:\#[^\n\r]*)?         # Non-capturing group for # and anything after it, greedy
+\s*
 \b{start-half}          # Non consuming word boundary
 (?P<player_id>[\w\ ]+)  # Capture player id
 \b{end-half}            # Non consuming word boundary
+\ +
+((wins|loses|bets|raises|calls|folds|checks|-))  # Capture ending
 "#).unwrap(),
 chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
 ^\s*                    # Asserts the start of the string and matches any leading whitespace
 (?P<amount>[\d\.\,]+)   # Capture amount
 \b{end-half}            # Non consuming word boundary
 "#).unwrap(),
-            trailing_comment_regex: Regex::new(
-                r#"(?x) # Enable verbose mode
-                (?:\s*\#[^\n\r]*)?      # Non-capturing group for # and anything after it, greedy
-                "#).unwrap(),
-             
+                      
 
             section_name_regex: Regex::new(
                 r#"(?x) # Enable verbose mode            
     ^\s*                    # Asserts the start of the string and matches any leading whitespace
+    (?:\#[^\n\r]*)?         # Non-capturing group for # and anything after it, greedy
+    \s*
     \*+\s*                  # Matches one or more '*' followed by any whitespace
     (?P<section_name>.+?)   # Lazily captures one or more characters as the section name
     \s*\*+                  # Matches any trailing whitespace followed by one or more '*'
@@ -53,49 +51,7 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             )
             .unwrap(),
 
-            player_stack_regex: Regex::new(
-                r#"(?x) # Enable verbose mode
-    ^\s*                    # Asserts the start of the string and matches any leading whitespace
-    \b(?P<player_id>[\w\ ]+)\b  # Capture player id
-    \ *                     # Match any trailing spaces
-    -                       # Match a dash
-    \ *                     # Match any trailing spaces
-    (?P<stack>[\d\.\,]+)    # Capture stack
-    (?:\s*\#[^\n\r]*)?      # Non-capturing group for # and anything after it, greedy
-    "#,
-            )
-            .unwrap(),
-            blinds_regex: Regex::new(
-                r#"(?x) # Enable verbose mode
-    ^\s*                    # Asserts the start of the string and matches any leading whitespace
-    \b(?P<p1>[\w\ ]+)\b  # Capture player id
-    \ *                     # Match any trailing spaces
-    -                       # Match a dash
-    \ *                     # Match any trailing spaces
-    (?P<sb>[\d\.\,]+)    # Capture sb
-    (?:\s*\#[^\n\r]*)?      # Non-capturing group for # and anything after it, greedy
-    \s*
-    \b(?P<p2>[\w\ ]+)\b  # Capture player id with non consuming word boundaries
-    \ *                     # Match any trailing spaces
-    -                       # Match a dash
-    \ *                     # Match any trailing spaces
-    (?P<bb>[\d\.\,]+)    # Capture bb
-    (?:\s*\#[^\n\r]*)?      # Non-capturing group for # and anything after it, greedy
-    "#,
-            )
-            .unwrap(),
-            action_regex: Regex::new(
-                r#"(?x) # Enable verbose mode
-    ^\s*                    # Asserts the start of the string and matches any leading whitespace
-    \b(?P<player_id>[\w\ ]+)\b{end-half}  # Capture player id
-    \ *                     # Match any trailing spaces
-    (?P<action>checks|bets|folds|raises|calls)    # Capture action
-    \ *
-    (?P<amount>[\d\.\,]+)?    # Capture optional amount
-    (?:\s*\#[^\n\r]*)?      # Non-capturing group for # and anything after it, greedy
-    "#,
-            )
-            .unwrap(),
+            
             cards_regex: Regex::new(
                 r#"(?x) # Enable verbose mode
     ^\s*                    # Asserts the start of the string and matches any leading whitespace
@@ -113,7 +69,7 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
                 r#"(?x) # Enable verbose mode
                 ^\s*                    # Asserts the start of the string and matches any leading whitespace
                 \b{start-half}          # Non consuming word boundary
-                ([\w]+-)  # A word, or seperator
+                ([\w]+)                 # A word
                 \b{end-half}            # Non consuming word boundary
                 "#).unwrap(),
 
@@ -122,19 +78,24 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
 
     //returns player_id and remaining string
     //if players is passed, will make sure player exists
-    pub fn parse_player_id<'a>(&'a self, s: &mut &'a str, players: Option<&Vec<InitialPlayerState>>,) -> Result<&str, PokerError> {
+    pub fn parse_player_id<'a>(&'a self, remaining_str: &mut &'a str, players: Option<&Vec<InitialPlayerState>>,) -> Result<&str, PokerError> {
         let caps = self
             .player_id_regex
-            .captures(s)
+            .captures(remaining_str)
             .ok_or(PokerError::from_string(format!(
-                "Expected player id *** player id ***"
+                "Expected player id in [{:.100}]", &remaining_str
             )))?;
 
         let player_id = caps.name("player_id").unwrap().as_str();
         trace!("Player id: {}", player_id);
 
-        let match_end = caps.get(0).unwrap().end();
-        let remaining_str = &s[match_end..];
+        //the remaining str is beginning of group 2
+        let match_start = caps.get(2)
+        .ok_or(PokerError::from_string(format!(
+            "Expected player id *** player id ***"
+        )))?
+        .start();
+        *remaining_str = &remaining_str[match_start..];
 
         if let Some(players) = players {
             if !players.iter().any(|p| p.player_name == player_id) {
@@ -145,24 +106,18 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             }
         }
 
-        trace!(
-            "Remaining string len: {} start {}",
-            remaining_str.len(),
-            &remaining_str[0..10]
-        );
-
-        *s = remaining_str;
+        
 
         Ok(player_id)
     }
 
     pub fn parse_word<'a>(&'a self, s: &mut &'a str) -> Result<&str, PokerError> {
         let caps = self
-            .player_amt_separator_regex
+            .get_word
             .captures(s)
             .ok_or(PokerError::from_string(format!(
-                "Expected player amount separator"
-            )))?;
+                "Expected a word in {}"
+            , &s[0..100])))?;
 
         let match_end = caps.get(0).unwrap().end();
         let remaining_str = &s[match_end..];
@@ -175,10 +130,34 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
 
         *s = remaining_str;
 
+        //If the regex passed we should definitely have something in group1
         let word = caps.get(1).ok_or(PokerError::from_string(format!(
             "Expected word"
         )))?.as_str();
         Ok(word)
+    }
+
+    
+
+    pub fn parse_dash<'a>(&'a self, s: &mut &'a str, expected: bool) -> Result<bool,PokerError> {
+        
+        for c in s.chars() {
+            if c == '-' {
+                *s = &s[1..];
+                return Ok(true);
+            } else if c == ' ' {
+                *s = &s[1..];
+                continue;
+            } else {
+                break;
+            }
+        }
+        if expected {
+            return Err(PokerError::from_string(format!(
+                "Expected dash in {}", &s[0..100]
+            )));
+        }
+        Ok(false)
     }
 
     pub fn parse_chip_amount<'a>(&'a self, s: &mut &'a str) -> Result<ChipType, PokerError> {
@@ -201,9 +180,9 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
         let remaining_str = &s[match_end..];
 
         trace!(
-            "Remaining string len: {} start {}",
+            "Remaining string len: {} start {:.100}",
             remaining_str.len(),
-            &remaining_str[0..10]
+            &remaining_str
         );
 
         *s = remaining_str;
@@ -220,7 +199,7 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             .section_name_regex
             .captures(s)
             .ok_or(PokerError::from_string(format!(
-                "Expected section *** section name ***"
+                "Expected section *** section name *** in {:.100}", &s
             )))?;
 
         let section_name = caps.name("section_name").unwrap().as_str();
@@ -252,42 +231,36 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
     //will either return next player, or none if we are at the end of the section
     pub fn parse_players<'a>(
         &'a self,
-        s: &'a str,
-    ) -> Result<(Vec<InitialPlayerState>, &str), PokerError> {
-        let mut ret = Vec::new();
-        let mut remaining_str = s;
-        for _ in 0..15 {
-            let caps = self.player_stack_regex.captures(remaining_str);
+        remaining_str: &mut &'a str,
+    ) -> Result<Vec<InitialPlayerState>, PokerError> {
 
-            if caps.is_none() {
+        let _section_name = self.parse_section_name( remaining_str, Some("Players"))?;
+
+        
+        let mut ret = Vec::new();
+        
+        // Cards are optional
+        // Plyr B - 147 - 2d 2c
+        // Plyr C - 98
+        for _ in 0..15 {
+            let player_id = self.parse_player_id(remaining_str, None);
+
+            if player_id.is_err() {
+                //maybe its the next section
                 break;
             }
-            let caps = caps.unwrap();
+            let player_id = player_id.unwrap();
 
-            trace!("Total match {}", caps.get(0).unwrap().as_str());
+            self.parse_dash(remaining_str, true)?;
+            let stack = self.parse_chip_amount(remaining_str)?;
 
-            let player_id = caps.name("player_id").unwrap().as_str();
-            trace!("Player id: [{}]", player_id);
-
-            let stack_str = caps.name("stack").unwrap().as_str();
-            trace!("Stack: {}", stack_str);
-
-            let stack: ChipType = stack_str.replace(",", "").parse().map_err(|_| {
-                PokerError::from_string(format!("Could not parse stack {}", stack_str))
-            })?;
-
-            
-            let match_end = caps.get(0).unwrap().end();
-            remaining_str = &remaining_str[match_end..];
-
-            //Parse optional cards
-            let cards_result = self.parse_cards(remaining_str);
+            let dash = self.parse_dash(remaining_str, false)?;
 
             let mut cards: Option<HoleCards> = None;
 
-            if let Ok( (vec_cards, new_remaining_str)) = cards_result {
-                
-                remaining_str = new_remaining_str;
+            if dash {
+                //Parse optional cards only if second dash is there
+                let vec_cards = self.parse_cards(remaining_str)?;
                 
                 if vec_cards.len() != 2 {
                     return Err(PokerError::from_string(format!(
@@ -299,6 +272,7 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
                 
             }
 
+            
             ret.push(InitialPlayerState {
                 player_name: player_id.to_string(),
                 stack,
@@ -314,31 +288,25 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             );
         }
 
-        Ok((ret, remaining_str))
+        Ok(ret)
     }
 
     pub fn parse_blinds<'a>(
         &'a self,
         players: &Vec<InitialPlayerState>,
-        s: &'a str,
-    ) -> Result<(ChipType, ChipType, &str), PokerError> {
-        let caps = self
-            .blinds_regex
-            .captures(s)
-            .ok_or(PokerError::from_string(format!(
-                "Expected blinds in {}",
-                &s[0..100]
-            )))?;
+        remaining_str: &mut &'a str,
+    ) -> Result<(ChipType, ChipType), PokerError> {
 
-        let p1_name = caps.name("p1").unwrap().as_str();
-        let p2_name = caps.name("p2").unwrap().as_str();
-        let sb_str = caps.name("sb").unwrap().as_str();
-        let bb_str = caps.name("bb").unwrap().as_str();
+        self.parse_section_name(remaining_str, Some("Blinds"))?;
+        
+        let p1_name = self.parse_player_id(remaining_str, Some(players))?;
+        self.parse_dash(remaining_str, true)?;
+        let sb = self.parse_chip_amount(remaining_str)?;
+        let p2_name = self.parse_player_id(remaining_str, Some(players))?;
+        self.parse_dash(remaining_str, true)?;
+        let bb = self.parse_chip_amount(remaining_str)?;
 
-        trace!("p1: {}", p1_name);
-        trace!("p2: {}", p2_name);
-        trace!("sb: {}", sb_str);
-        trace!("bb: {}", bb_str);
+        
 
         if players.len() < 2 {
             return Err(PokerError::from_string(format!(
@@ -361,74 +329,53 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             )));
         }
 
-        let sb: ChipType = sb_str
-            .replace(",", "")
-            .parse()
-            .map_err(|_| PokerError::from_string(format!("Could not parse sb {}", sb_str)))?;
-        let bb: ChipType = bb_str
-            .replace(",", "")
-            .parse()
-            .map_err(|_| PokerError::from_string(format!("Could not parse bb {}", bb_str)))?;
+        
 
-        let match_end = caps.get(0).unwrap().end();
-        let remaining_str = &s[match_end..];
+        Ok((sb, bb))
+    }
 
-        trace!(
-            "Remaining string len: {} start {}",
-            remaining_str.len(),
-            &remaining_str[0..10]
-        );
-
-        Ok((sb, bb, remaining_str))
+    pub fn get_player_index(players: &Vec<InitialPlayerState>, player_id: &str) -> Result<usize, PokerError> {
+        players
+            .iter()
+            .position(|p| p.player_name == player_id)
+            .ok_or(PokerError::from_string(format!(
+                "Could not find player [{}]",
+                player_id
+            )))
     }
 
     pub fn parse_round_actions<'a>(
         &'a self,
         players: &Vec<InitialPlayerState>,
         round: Round,
-        s: &'a str,
-    ) -> Result<(Vec<PlayerAction>, &str), PokerError> {
+        remaining_str: &mut &'a str,
+    ) -> Result<Vec<PlayerAction>, PokerError> {
+        trace!("Parsing round actions for round {}", round.to_string());
         let mut ret = Vec::new();
-        let mut remaining_str = s;
+        
         for _ in 0..ACTION_LIMIT {
-            let caps = self.action_regex.captures(remaining_str);
-
-            if caps.is_none() {
+           
+            let player_id = self.parse_player_id(remaining_str, Some(players));
+            
+            if !player_id.is_ok() {
                 break;
             }
-            let caps = caps.unwrap();
-
-            trace!("Total match {}", caps.get(0).unwrap().as_str());
-
-            let player_id = caps.name("player_id").unwrap().as_str();
+            let player_id = player_id.unwrap();
             trace!("Player id: {}", player_id);
 
-            let action_str = caps.name("action").unwrap().as_str();
-            trace!("Action: {}", action_str);
-
-            let amount_str = caps.name("amount").map(|m| m.as_str());
-
-            let amount: Option<Result<ChipType, PokerError>> = amount_str.map(|s| {
-                s.replace(",", "")
-                    .parse()
-                    .map_err(|_| PokerError::from_string(format!("Could not parse amount {}", s)))
-            });
-
             //lookup index of player or return error if we don't find it
-            let player_index = players
-                .iter()
-                .position(|p| p.player_name == player_id)
-                .ok_or(PokerError::from_string(format!(
-                    "Could not find player [{}] in round action",
-                    player_id
-                )))?;
+            let player_index = Self::get_player_index(players, player_id)?;
+
+            let action_str = self.parse_word(remaining_str)?;
+            //trace!("Action: {}", action_str);
 
             let action = match action_str {
                 "checks" => action::ActionEnum::Check,
-                "bets" => action::ActionEnum::Bet(amount.unwrap()?),
+                "bets" => action::ActionEnum::Bet(self.parse_chip_amount(remaining_str)?),
+                
                 "folds" => action::ActionEnum::Fold,
                 "calls" => action::ActionEnum::Call,
-                "raises" => action::ActionEnum::Raise(amount.unwrap()?),
+                "raises" => action::ActionEnum::Raise(self.parse_chip_amount(remaining_str)?),
                 _ => {
                     return Err(PokerError::from_string(format!(
                         "Unknown action {}",
@@ -443,20 +390,13 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
                 round,
             });
 
-            let match_end = caps.get(0).unwrap().end();
-            remaining_str = &remaining_str[match_end..];
-
-            trace!(
-                "Remaining string len: {} start {}",
-                remaining_str.len(),
-                &remaining_str[0..10]
-            );
+            trace!("Parsed {}", ret.last().unwrap());
         }
 
-        Ok((ret, remaining_str))
+        Ok(ret)
     }
 
-    pub fn parse_cards<'a>(&'a self, s: &'a str) -> Result<(Vec<Card>, &str), PokerError> {
+    pub fn parse_cards<'a>(&'a self, s: &mut &'a str) -> Result<Vec<Card>, PokerError> {
         let caps = self
             .cards_regex
             .captures(s)
@@ -490,18 +430,25 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             &remaining_str[0..10]
         );
 
-        Ok((cards, remaining_str))
+        *s = remaining_str;
+
+        Ok(cards)
     }
 
      pub fn parse_summary<'a>(
             &'a self,
-            s: &mut &'a str,
+            remaining_str: &mut &'a str,
             players: &Vec<InitialPlayerState>
-        ) -> Result<&str, PokerError> {
-            self.parse_section_name(s, "Summary")?;
+        ) -> Result<Vec<ChipType>, PokerError> {
+            trace!("Parsing summary");
+            let mut ret = vec![0 as ChipType; players.len()];
 
-            for _ in players.len() {
-                let player_id = self.parse_player_id(s, Some(players));
+            //We may already parsed this
+            self.parse_section_name(remaining_str, Some("Summary"));
+
+            
+            for _ in 0..players.len() {
+                let player_id = self.parse_player_id(remaining_str, Some(players));
 
                 if player_id.is_err() {
                     //it's ok, not all players make it to the summary
@@ -509,10 +456,15 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
                 }
 
                 let player_id = player_id.unwrap();
-                let wins_or_loses = self.parse_word(s)?;
-                let amount = self.parse_chip_amount(s)?;
-                trace!("Player {} won {}", player_id, amount);
+                self.parse_dash(remaining_str, true)?;
+                let amount = self.parse_chip_amount(remaining_str)?;
+
+                let player_index = Self::get_player_index(players, player_id)?;
+
+                ret[player_index] = amount;
             }
+
+            Ok(ret)
 
      }
 }
