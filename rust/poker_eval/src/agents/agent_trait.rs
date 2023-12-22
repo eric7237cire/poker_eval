@@ -1,4 +1,4 @@
-use crate::{ActionEnum, AgentState, ChipType, GameState, Round};
+use crate::{ActionEnum, AgentState, ChipType, OldGameState, Round};
 
 //For convenience, also build a struct that gives agent relavant info
 
@@ -24,6 +24,6 @@ pub trait Agent {
         &self,
         round_info: &AgentRoundInfo,
         agent_state: &AgentState,
-        game_state: &GameState,
+        game_state: &OldGameState,
     ) -> ActionEnum;
 }

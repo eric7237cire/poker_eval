@@ -1,4 +1,4 @@
-use crate::{ActionEnum, Agent, AgentRoundInfo, AgentState, GameState, Round};
+use crate::{ActionEnum, Agent, AgentRoundInfo, AgentState, OldGameState, Round};
 use postflop_solver::Range;
 
 //#[derive(Copy, Clone)]
@@ -11,7 +11,7 @@ impl Agent for PassiveCallingStation {
         &self,
         round_info: &AgentRoundInfo,
         agent_state: &AgentState,
-        _game_state: &GameState,
+        _game_state: &OldGameState,
     ) -> ActionEnum {
         match round_info.round {
             Round::Preflop => {
