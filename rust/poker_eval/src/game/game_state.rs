@@ -18,7 +18,6 @@ pub struct PlayerState {
 
     //In current betting round, so == remaining stack
     pub all_in: bool,
-
     //Used in all in, to see how much they can win
     //pub max_pot: Option<ChipType>,
 }

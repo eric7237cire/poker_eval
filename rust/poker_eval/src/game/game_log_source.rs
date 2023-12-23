@@ -1,9 +1,11 @@
 use log::trace;
 
-use crate::{GameLog, InitialPlayerState, ChipType, PlayerState, GameState, PokerError, ActionEnum, HoleCards, Card};
+use crate::{
+    ActionEnum, Card, ChipType, GameLog, GameState, HoleCards, InitialPlayerState, PlayerState,
+    PokerError,
+};
 
 use super::game_runner_source::GameRunnerSource;
-
 
 pub struct GameLogSource {
     game_log: GameLog,
@@ -95,11 +97,18 @@ impl GameRunnerSource for GameLogSource {
         Ok(card)
     }
 
-    fn set_final_player_state(&mut self, player_index: usize, player_state: &PlayerState,
-        comment: Option<String>) -> Result<(), PokerError> {
+    fn set_final_player_state(
+        &mut self,
+        player_index: usize,
+        player_state: &PlayerState,
+        comment: Option<String>,
+    ) -> Result<(), PokerError> {
+        trace!(
+            "set_final_player_state({}) with comment {}",
+            player_index,
+            comment.unwrap_or("None".to_string())
+        );
 
-        trace!("set_final_player_state({}) with comment {}", player_index, comment.unwrap_or("None".to_string()));
-        
         if player_index >= self.game_log.players.len() {
             return Err(PokerError::from_string(format!(
                 "Invalid player index {}",
@@ -123,5 +132,5 @@ impl GameRunnerSource for GameLogSource {
         }
 
         Ok(())
-        }
+    }
 }

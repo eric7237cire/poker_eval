@@ -4,15 +4,15 @@
 
 use std::cmp::{max, min};
 
-use crate::{Rank, set_used_card, rank_cards, PlayerAction};
+use crate::{rank_cards, set_used_card, PlayerAction, Rank};
 use crate::{
     ActionEnum, Card, CardUsedType, ChipType, GameLog, GameState, HoleCards, InitialPlayerState,
     PlayerState, PokerError, Position, Round,
 };
 
-use log::trace;
 use crate::game::game_runner_source::GameRunnerSource;
 use crate::game::game_runner_source::GameRunnerSourceEnum;
+use log::trace;
 
 // Enforces the poker rules
 pub struct GameRunner {
@@ -156,10 +156,7 @@ impl GameRunner {
 
         for player_state in &self.game_state.player_states {
             let money_put_in = player_state.initial_stack - player_state.stack;
-            max_pot += min(
-                money_put_in,
-                all_in_for,
-            )
+            max_pot += min(money_put_in, all_in_for)
         }
         max_pot
     }
@@ -187,7 +184,7 @@ impl GameRunner {
             // );
 
             check_round_pot += cur_round_putting_in_pot;
-            if !player_state.is_active() {                
+            if !player_state.is_active() {
                 continue;
             }
             if let Some(current_to_call) = self.game_state.current_to_call {
@@ -306,7 +303,6 @@ impl GameRunner {
             self.game_state.board.push(card);
         }
 
-
         Ok(())
     }
 
@@ -316,10 +312,9 @@ impl GameRunner {
         self.close_betting_round()?;
 
         if self.game_state.round_pot > 0 {
-            return Err(format!(
-                "Round pot is {} but should be 0",
-                self.game_state.round_pot
-            ).into());
+            return Err(
+                format!("Round pot is {} but should be 0", self.game_state.round_pot).into(),
+            );
         }
 
         let mut hand_rankings: Vec<(Rank, usize)> = Vec::new();
@@ -327,7 +322,6 @@ impl GameRunner {
         let mut eval_cards = self.game_state.board.clone();
 
         for player_index in 0..self.game_state.player_states.len() {
-
             if self.game_state.player_states[player_index].folded {
                 trace!(
                     "Player #{} named {} folded, did not win, skipping",
@@ -346,8 +340,12 @@ impl GameRunner {
             hole_cards.remove_from_eval(&mut eval_cards)?;
         }
 
-        let mut max_pots: Vec<ChipType> = self.game_state.player_states.iter().map(|p|
-            self.calc_max_pot(p.initial_stack)).collect();
+        let mut max_pots: Vec<ChipType> = self
+            .game_state
+            .player_states
+            .iter()
+            .map(|p| self.calc_max_pot(p.initial_stack))
+            .collect();
 
         //best is last
         hand_rankings.sort();
@@ -357,7 +355,6 @@ impl GameRunner {
         trace!("All pot left to split {}", all_pot_left_to_split);
 
         while !hand_rankings.is_empty() {
-
             let winning_rank = hand_rankings.last().unwrap().0;
 
             //Find 1st index with same rank
@@ -377,24 +374,28 @@ impl GameRunner {
             });
 
             let mut pot_left_to_split = all_pot_left_to_split;
-            
+
             //If we split evenly then we can stop early with > 0
             while !tie_hand_rankings.is_empty() && pot_left_to_split > 0 {
-
                 //pop last player who can win smallest pot
                 let (_, player_index) = tie_hand_rankings.last().unwrap();
-                
+
                 let player_state = &mut self.game_state.player_states[*player_index];
 
                 let side_pot_size = min(max_pots[*player_index], pot_left_to_split);
-                trace!("Player #{} named {} can win at most {} of {} pot", 
-                    player_index, &player_state.player_name, side_pot_size, pot_left_to_split);
+                trace!(
+                    "Player #{} named {} can win at most {} of {} pot",
+                    player_index,
+                    &player_state.player_name,
+                    side_pot_size,
+                    pot_left_to_split
+                );
 
                 let winnings = side_pot_size / tie_hand_rankings.len() as ChipType;
 
                 trace!(
                     "Split side pot {} with {} other players, giving {} to each",
-                    side_pot_size,                    
+                    side_pot_size,
                     tie_hand_rankings.len(),
                     winnings,
                 );
@@ -407,7 +408,7 @@ impl GameRunner {
                         player_index,
                         &player_state.player_name,
                         winnings,
-                        player_state.stack-winnings,
+                        player_state.stack - winnings,
                         player_state.stack
                     );
                     pot_left_to_split -= winnings;
@@ -423,9 +424,8 @@ impl GameRunner {
                         max_pots[pi] -= side_pot_size;
                     }
                 }
-                
+
                 tie_hand_rankings.pop().unwrap();
-                
             }
 
             //remove all the players with the same rank
@@ -433,8 +433,11 @@ impl GameRunner {
         }
 
         for player_index in 0..self.game_state.player_states.len() {
-            self.game_runner_source.set_final_player_state(player_index,
-               & self.game_state.player_states[player_index], None)?;
+            self.game_runner_source.set_final_player_state(
+                player_index,
+                &self.game_state.player_states[player_index],
+                None,
+            )?;
         }
         Ok(())
     }
@@ -452,8 +455,6 @@ impl GameRunner {
             cur_active_player_count,
             self.game_state.current_round
         );
-
-        
 
         let action = self.game_runner_source.get_action(
             &self.game_state.player_states[player_index],
@@ -474,13 +475,14 @@ impl GameRunner {
                 //if we folded before betting anything then make sure we have a not None value
                 //to indicate we acted
                 self.game_state.player_states[player_index].cur_round_putting_in_pot = Some(
-                    self.game_state.player_states[player_index].cur_round_putting_in_pot.unwrap_or(
-                        0,
-                    )
+                    self.game_state.player_states[player_index]
+                        .cur_round_putting_in_pot
+                        .unwrap_or(0),
                 );
 
-                let pot_eq =
-         100.0 * self.game_state.current_to_call.unwrap_or(0) as f64 / (self.game_state.current_to_call.unwrap_or(0) as f64 + self.game_state.pot() as f64);
+                let pot_eq = 100.0 * self.game_state.current_to_call.unwrap_or(0) as f64
+                    / (self.game_state.current_to_call.unwrap_or(0) as f64
+                        + self.game_state.pot() as f64);
 
                 self.game_state.actions.push(PlayerAction {
                     player_index,
@@ -491,7 +493,8 @@ impl GameRunner {
                         player_index,
                         &self.game_state.player_states[player_index].player_name,
                         pot_eq,
-                        self.game_state.pot()))
+                        self.game_state.pot()
+                    )),
                 });
             }
             ActionEnum::Call => {
@@ -499,7 +502,7 @@ impl GameRunner {
                 let actual_amt = self.handle_put_money_in_pot(player_index, amt_to_call)?;
 
                 //pot has already changed
-                let pot_eq = 100.0 * actual_amt as f64 / ( self.game_state.pot() as f64);
+                let pot_eq = 100.0 * actual_amt as f64 / (self.game_state.pot() as f64);
 
                 let player_state = &self.game_state.player_states[player_index];
 
@@ -520,14 +523,15 @@ impl GameRunner {
                         actual_amt,
                         amt_to_call,
                         pot_eq,
-                        self.game_state.pot())
+                        self.game_state.pot()
+                    )
                 };
 
                 self.game_state.actions.push(PlayerAction {
                     player_index,
                     action,
                     round: self.game_state.current_round,
-                    comment: Some(comment)
+                    comment: Some(comment),
                 });
             }
             ActionEnum::Raise(raise_amt) => {
@@ -542,7 +546,7 @@ impl GameRunner {
                 self.game_state.current_to_call = Some(raise_amt);
                 let actual_amt = self.handle_put_money_in_pot(player_index, raise_amt)?;
 
-                let pot_eq = 100.0 * actual_amt as f64 / ( self.game_state.pot() as f64);
+                let pot_eq = 100.0 * actual_amt as f64 / (self.game_state.pot() as f64);
 
                 let player_state = &self.game_state.player_states[player_index];
 
@@ -563,14 +567,15 @@ impl GameRunner {
                         actual_amt,
                         raise_amt,
                         pot_eq,
-                        self.game_state.pot())
+                        self.game_state.pot()
+                    )
                 };
 
                 self.game_state.actions.push(PlayerAction {
                     player_index,
                     action,
                     round: self.game_state.current_round,
-                    comment: Some(comment)
+                    comment: Some(comment),
                 });
             }
             ActionEnum::Check => {
@@ -590,7 +595,7 @@ impl GameRunner {
                     player_index,
                     action,
                     round: self.game_state.current_round,
-                    comment: None
+                    comment: None,
                 });
             }
             ActionEnum::Bet(bet_amt) => {
@@ -601,7 +606,7 @@ impl GameRunner {
 
                 let actual_amt = self.handle_put_money_in_pot(player_index, bet_amt)?;
 
-                let pot_eq = 100.0 * actual_amt as f64 / ( self.game_state.pot() as f64);
+                let pot_eq = 100.0 * actual_amt as f64 / (self.game_state.pot() as f64);
 
                 let player_state = &self.game_state.player_states[player_index];
 
@@ -622,25 +627,22 @@ impl GameRunner {
                         actual_amt,
                         bet_amt,
                         pot_eq,
-                        self.game_state.pot())
+                        self.game_state.pot()
+                    )
                 };
 
                 self.game_state.actions.push(PlayerAction {
                     player_index,
                     action,
                     round: self.game_state.current_round,
-                    comment: Some(comment)
+                    comment: Some(comment),
                 });
             }
         }
 
         let cur_active_player_count = self.active_player_count();
 
-        let any_all_in = self
-            .game_state
-            .player_states
-            .iter()
-            .any(|p| p.all_in);
+        let any_all_in = self.game_state.player_states.iter().any(|p| p.all_in);
 
         if cur_active_player_count == 0 && any_all_in {
             trace!("Only all in player left, and we have at least 1 all in, advancing to river");
@@ -649,7 +651,10 @@ impl GameRunner {
                 trace!("Only all in player left, advancing round...");
                 self.move_to_next_round()?;
             }
-            trace!("Only all in player left, finishing with round {}", self.game_state.current_round);
+            trace!(
+                "Only all in player left, finishing with round {}",
+                self.game_state.current_round
+            );
             self.finish()?;
             return Ok(true);
         }
@@ -714,20 +719,14 @@ impl GameRunner {
             if bet_amt < self.game_state.bb {
                 return Err(format!(
                     "Player #{} {} tried to bet {} but must be at least big blind {}",
-                    player_index,
-                    &player_state.player_name,
-                    bet_amt,
-                    self.game_state.bb
+                    player_index, &player_state.player_name, bet_amt, self.game_state.bb
                 )
                 .into());
             }
             if bet_amt % self.game_state.bb != 0 {
                 return Err(format!(
                     "Player #{} {} tried to bet {} but must be a multiple of big blind {}",
-                    player_index,
-                    &player_state.player_name,
-                    bet_amt,
-                    self.game_state.bb
+                    player_index, &player_state.player_name, bet_amt, self.game_state.bb
                 )
                 .into());
             }
@@ -736,10 +735,7 @@ impl GameRunner {
         if bet_amt > player_state.stack {
             return Err(format!(
                 "Player #{} {} tried to bet {} but only has {}",
-                player_index,
-                &player_state.player_name,
-                bet_amt,
-                player_state.stack
+                player_index, &player_state.player_name, bet_amt, player_state.stack
             )
             .into());
         }
@@ -753,23 +749,19 @@ impl GameRunner {
 
         let amt_to_call = self.game_state.current_to_call.unwrap_or(0);
 
-        //Can only raise if there is a current to call                
+        //Can only raise if there is a current to call
         if amt_to_call == 0 {
             return Err(format!(
                 "Player #{} {} tried to raise {} but there is no bet to call, must bet or fold",
-                player_index,
-                &player_state.player_name,
-                raise_amt,
-            ).into());
+                player_index, &player_state.player_name, raise_amt,
+            )
+            .into());
         }
 
         if raise_amt <= amt_to_call {
             return Err(format!(
                 "Player #{} {} tried to raise {} but must be more than the call amount {} ",
-                player_index,
-                &player_state.player_name,
-                raise_amt,
-                amt_to_call
+                player_index, &player_state.player_name, raise_amt, amt_to_call
             )
             .into());
         }
@@ -792,10 +784,7 @@ impl GameRunner {
             if (raise_amt - self.game_state.current_to_call.unwrap()) % self.game_state.bb != 0 {
                 return Err(format!(
                     "Player #{} {} tried to raise {} but must be a multiple of big blind {}",
-                    player_index,
-                    &player_state.player_name,
-                    raise_amt,
-                    self.game_state.bb
+                    player_index, &player_state.player_name, raise_amt, self.game_state.bb
                 )
                 .into());
             }
@@ -804,10 +793,7 @@ impl GameRunner {
         if raise_amt > player_state.stack {
             return Err(format!(
                 "Player #{} {} tried to raise {} but only has {}",
-                player_index,
-                &player_state.player_name,
-                raise_amt,
-                player_state.stack
+                player_index, &player_state.player_name, raise_amt, player_state.stack
             )
             .into());
         }
@@ -820,7 +806,7 @@ impl GameRunner {
 mod tests {
     use log::debug;
 
-    use crate::{init_test_logger, CardVec, game::game_log_source::GameLogSource};
+    use crate::{game::game_log_source::GameLogSource, init_test_logger, CardVec};
 
     use super::*;
 
@@ -892,7 +878,10 @@ Plyr D - 15 # Lost 30, 10
         assert!(game_runner.game_state.player_states[0].all_in);
         assert_eq!(game_runner.game_state.prev_round_pot, 12 + 30 * 2 + 10);
         assert_eq!(game_runner.game_state.round_pot, 0);
-        assert_eq!(game_runner.game_state.board, CardVec::try_from("2s 7c 8s").unwrap().0);
+        assert_eq!(
+            game_runner.game_state.board,
+            CardVec::try_from("2s 7c 8s").unwrap().0
+        );
 
         //flop actions
         for _ in 0..2 {
@@ -903,7 +892,10 @@ Plyr D - 15 # Lost 30, 10
         assert!(game_runner.game_state.player_states[0].all_in);
         assert_eq!(game_runner.game_state.prev_round_pot, 12 + 30 * 2 + 10 + 20);
         assert_eq!(game_runner.game_state.round_pot, 0);
-        assert_eq!(game_runner.game_state.board, CardVec::try_from("2s 7c 8s 2h").unwrap().0);
+        assert_eq!(
+            game_runner.game_state.board,
+            CardVec::try_from("2s 7c 8s 2h").unwrap().0
+        );
 
         //turn actions
         for _ in 0..2 {
@@ -914,13 +906,15 @@ Plyr D - 15 # Lost 30, 10
         assert!(game_runner.game_state.player_states[0].all_in);
         assert_eq!(game_runner.game_state.prev_round_pot, 12 + 30 * 2 + 10 + 30);
         assert_eq!(game_runner.game_state.round_pot, 0);
-        assert_eq!(game_runner.game_state.board, CardVec::try_from("2s 7c 8s 2h 2d").unwrap().0);
+        assert_eq!(
+            game_runner.game_state.board,
+            CardVec::try_from("2s 7c 8s 2h 2d").unwrap().0
+        );
 
         //river actions
 
         assert_eq!(true, game_runner.process_next_action().unwrap());
     }
-
 
     #[test]
     fn test_multi_splits() {
@@ -1017,9 +1011,11 @@ Player D1 - 60 # Keeps what's left of his stack
                 break;
             }
             let action_count_after = game_runner.game_state.actions.len();
-            debug!("Last action: {}", &game_runner.game_state.actions.last().as_ref().unwrap());
+            debug!(
+                "Last action: {}",
+                &game_runner.game_state.actions.last().as_ref().unwrap()
+            );
             assert_eq!(action_count_before + 1, action_count_after);
         }
-
     }
 }

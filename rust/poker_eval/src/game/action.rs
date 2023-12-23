@@ -38,7 +38,9 @@ impl Display for PlayerAction {
         write!(
             f,
             "Player #{} {} in {} -- {}",
-            self.player_index, self.action, self.round,
+            self.player_index,
+            self.action,
+            self.round,
             self.comment.as_ref().unwrap_or(&"".to_string())
         )
     }
