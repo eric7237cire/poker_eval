@@ -3,9 +3,8 @@ mod tests {
     use std::str::FromStr;
 
     use crate::{
-        
         web::{flop_analyzer, PlayerPreFlopState},
-        HoleCards, Rank, CardVec,
+        CardVec, HoleCards, Rank,
     };
 
     fn assert_equity(equity: f64, target: f64, tolerance: f64) {

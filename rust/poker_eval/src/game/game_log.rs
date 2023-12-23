@@ -22,20 +22,19 @@ pub struct InitialPlayerState {
     pub cards: Option<HoleCards>,
 }
 
-
 #[derive(Default)]
-struct GameLog {
+pub struct GameLog {
     //Sb first; then left to right
-    players: Vec<InitialPlayerState>,
-    sb: ChipType,
-    bb: ChipType,
+    pub players: Vec<InitialPlayerState>,
+    pub sb: ChipType,
+    pub bb: ChipType,
 
     //depending on the game, maybe this is 0, 3, 4, 5 cards
-    board: Vec<Card>,
+    pub board: Vec<Card>,
 
-    actions: Vec<PlayerAction>,
+    pub actions: Vec<PlayerAction>,
 
-    final_stacks: Vec<ChipType>,
+    pub final_stacks: Vec<ChipType>,
 }
 
 impl FromStr for GameLog {
@@ -45,14 +44,11 @@ impl FromStr for GameLog {
         let p = GameLogParser::new();
         let mut remaining_str = s;
 
-        let players= p.parse_players(&mut remaining_str)?;
+        let players = p.parse_players(&mut remaining_str)?;
 
         let (sb, bb) = p.parse_blinds(&players, &mut remaining_str)?;
-        
 
-        let _section_name =
-            p.parse_section_name(&mut remaining_str, Some("Preflop"))?;
-        
+        let _section_name = p.parse_section_name(&mut remaining_str, Some("Preflop"))?;
 
         let preflop_actions =
             p.parse_round_actions(&players, Round::Preflop, &mut remaining_str)?;
@@ -73,7 +69,7 @@ impl FromStr for GameLog {
         //The remaining rounds have the same structure
         // section name, then cards, then actions
         for round in [Round::Flop, Round::Turn, Round::River].iter() {
-            let section_name = p.parse_section_name(&mut remaining_str, None)?;            
+            let section_name = p.parse_section_name(&mut remaining_str, None)?;
 
             if section_name == "Summary" {
                 break;
@@ -100,8 +96,7 @@ impl FromStr for GameLog {
 
             board_cards.extend(cards);
 
-            let round_actions =
-                p.parse_round_actions(&players, *round, &mut remaining_str)?;
+            let round_actions = p.parse_round_actions(&players, *round, &mut remaining_str)?;
 
             actions.extend(round_actions);
         }
@@ -151,32 +146,15 @@ struct GameState {
 
 #[cfg(test)]
 mod tests {
-    use crate::ActionEnum;
+    use crate::{init_test_logger, ActionEnum};
 
     use super::*;
-    use std::io::Write;
 
-    fn init() {
-        let _ = env_logger::builder()
-            .is_test(true)
-            .filter_level(log::LevelFilter::Trace)
-            .format(|buf, record| {
-                writeln!(
-                    buf,
-                    "{}:{} [{}] - {}",
-                    record.file().unwrap_or("unknown"),
-                    record.line().unwrap_or(0),
-                    record.level(),
-                    record.args()
-                )
-            })
-            .try_init();
-    }
     //https://crates.io/crates/pokerlookup
     //https://github.com/traversgrayson/Poker-Hand-Parser/tree/master/Parser%20and%20Data
     #[test]
     fn test_parse_game_log_from_str() {
-        init();
+        init_test_logger();
 
         let hh = "
 *** Players *** 
@@ -223,6 +201,7 @@ Seat 6 - 55
                 player_index: 2,
                 action: ActionEnum::Fold,
                 round: Round::Preflop,
+                comment: None,
             }
         );
         assert_eq!(
@@ -231,6 +210,7 @@ Seat 6 - 55
                 player_index: 0,
                 action: ActionEnum::Call,
                 round: Round::Preflop,
+                comment: None,
             }
         );
         assert_eq!(
@@ -239,6 +219,7 @@ Seat 6 - 55
                 player_index: 1,
                 action: ActionEnum::Check,
                 round: Round::Preflop,
+                comment: None,
             }
         );
 
@@ -253,6 +234,7 @@ Seat 6 - 55
                 player_index: 0,
                 action: ActionEnum::Check,
                 round: Round::Flop,
+                comment: None,
             }
         );
 
@@ -262,6 +244,7 @@ Seat 6 - 55
                 player_index: 1,
                 action: ActionEnum::Bet(5),
                 round: Round::Flop,
+                comment: None,
             }
         );
 
@@ -271,13 +254,14 @@ Seat 6 - 55
                 player_index: 0,
                 action: ActionEnum::Fold,
                 round: Round::Flop,
+                comment: None,
             }
         );
     }
 
     #[test]
     fn test_parse_with_hole_cards() {
-        init();
+        init_test_logger();
 
         let hh = "
 *** Players *** 
@@ -326,14 +310,22 @@ Plyr D - 90
         assert_eq!(5, game_log.sb);
         assert_eq!(10, game_log.bb);
 
-        assert_eq!(game_log.players[0].cards.unwrap(), 
-        "As Kh".parse::<HoleCards>().unwrap());
-        assert_eq!(game_log.players[1].cards.unwrap(),
-        "2d 2c".parse::<HoleCards>().unwrap());
-        assert_eq!(game_log.players[2].cards.unwrap(),
-        "7d 2h".parse::<HoleCards>().unwrap());
-        assert_eq!(game_log.players[3].cards.unwrap(),
-        "Ks Kh".parse::<HoleCards>().unwrap());
+        assert_eq!(
+            game_log.players[0].cards.unwrap(),
+            "As Kh".parse::<HoleCards>().unwrap()
+        );
+        assert_eq!(
+            game_log.players[1].cards.unwrap(),
+            "2d 2c".parse::<HoleCards>().unwrap()
+        );
+        assert_eq!(
+            game_log.players[2].cards.unwrap(),
+            "7d 2h".parse::<HoleCards>().unwrap()
+        );
+        assert_eq!(
+            game_log.players[3].cards.unwrap(),
+            "Ks Kh".parse::<HoleCards>().unwrap()
+        );
 
         assert_eq!(game_log.board.len(), 5);
         assert_eq!(game_log.board[0], "2s".parse::<Card>().unwrap());
@@ -347,10 +339,5 @@ Plyr D - 90
         assert_eq!(game_log.final_stacks[1], 148);
         assert_eq!(game_log.final_stacks[2], 55);
         assert_eq!(game_log.final_stacks[3], 90);
-
-
-
-
-        
     }
 }

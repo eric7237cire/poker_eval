@@ -11,7 +11,7 @@ pub fn set_used_card(c_index: usize, cards_used: &mut CardUsedType) -> Result<()
 
     if count_before + 1 != count_after {
         return Err(PokerError::from_string(format!(
-            "Card already used {} in board",
+            "Card already used {}",
             Card::try_from(c_index)?.to_string()
         )));
     }

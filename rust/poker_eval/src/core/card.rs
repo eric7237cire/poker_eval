@@ -468,11 +468,13 @@ impl FromStr for CardVec {
 
 impl CardVec {
     pub fn as_vec_u8(&self) -> Vec<u8> {
-
-        self.0.iter().map(|c| {
-            let c_u8 : u8 = (*c).into();
-            c_u8
-    }).collect()
+        self.0
+            .iter()
+            .map(|c| {
+                let c_u8: u8 = (*c).into();
+                c_u8
+            })
+            .collect()
     }
 }
 

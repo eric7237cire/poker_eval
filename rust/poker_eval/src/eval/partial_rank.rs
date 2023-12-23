@@ -610,22 +610,12 @@ pub fn partial_rank_cards(hole_cards: &HoleCards, board: &[Card]) -> PartialRank
 #[cfg(test)]
 mod tests {
 
-
     use crate::CardVec;
 
     use super::*;
 
-    fn init() {
-        let _ = env_logger::builder()
-            .is_test(true)
-            .filter_level(log::LevelFilter::Trace)
-            .try_init();
-    }
-
     #[test]
     fn test_pairs() {
-        init();
-
         //Normal 2 pair
         let hole_cards: HoleCards = "6c 8h".parse().unwrap();
         let board_cards = CardVec::try_from("6s 8c 2d 9h").unwrap().0;

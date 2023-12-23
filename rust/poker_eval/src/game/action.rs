@@ -1,4 +1,3 @@
-
 use std::fmt::{Display, Formatter};
 
 use crate::{ChipType, Round};
@@ -30,12 +29,12 @@ pub struct PlayerAction {
     pub player_index: usize,
     pub action: ActionEnum,
     pub round: Round,
+
+    pub comment: Option<String>,
 }
 
 impl Display for PlayerAction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        
-
         write!(
             f,
             "Player #{} {} in {}",

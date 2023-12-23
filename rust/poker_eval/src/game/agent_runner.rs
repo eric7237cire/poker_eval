@@ -398,14 +398,6 @@ mod tests {
 
     pub use super::*;
 
-    //env_logger::Builder::from_env(Env::default().default_filter_or("warn")).init();
-    fn init() {
-        let _ = env_logger::builder()
-            .is_test(true)
-            .filter_level(log::LevelFilter::Trace)
-            .try_init();
-    }
-
     struct TestPlayerAgent<'a> {
         action_counter: &'a RefCell<u8>,
     }
@@ -706,8 +698,6 @@ mod tests {
 
     #[test]
     fn test_split_pots() {
-        init();
-
         let action_counter = RefCell::new(0u8);
 
         let mut agents: Vec<Box<dyn Agent>> = Vec::new();
