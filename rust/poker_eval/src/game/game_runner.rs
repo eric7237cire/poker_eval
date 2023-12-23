@@ -187,17 +187,7 @@ impl GameRunner {
             // );
 
             check_round_pot += cur_round_putting_in_pot;
-            if player_state.folded {
-                continue;
-            }
-            if player_state.all_in {
-                self.game_state.current_to_call.ok_or(format!(
-                    "
-                Player {} is all in for {} but there is no current to call",
-                    &player_state.player_name,
-                    player_state.initial_stack
-                ))?;
-
+            if !player_state.is_active() {                
                 continue;
             }
             if let Some(current_to_call) = self.game_state.current_to_call {
@@ -294,7 +284,14 @@ impl GameRunner {
         self.game_state.current_to_act =
             Position::first_to_act(player_count as _, self.game_state.current_round);
 
-        self.move_if_needed_next_to_act()?;
+        let num_active = self.active_player_count();
+
+        if num_active > 0 {
+            trace!("Moving if needed to first active player");
+            self.move_if_needed_next_to_act()?;
+        } else {
+            trace!("No active players, keeping position as is");
+        }
 
         let cards_needed = match self.game_state.current_round {
             Round::Flop => 3,
@@ -349,13 +346,15 @@ impl GameRunner {
             hole_cards.remove_from_eval(&mut eval_cards)?;
         }
 
-        let max_pots: Vec<ChipType> = self.game_state.player_states.iter().map(|p|
+        let mut max_pots: Vec<ChipType> = self.game_state.player_states.iter().map(|p|
             self.calc_max_pot(p.initial_stack)).collect();
 
         //best is last
         hand_rankings.sort();
 
         let mut all_pot_left_to_split = self.game_state.prev_round_pot;
+
+        trace!("All pot left to split {}", all_pot_left_to_split);
 
         while !hand_rankings.is_empty() {
 
@@ -368,38 +367,65 @@ impl GameRunner {
                 .unwrap();
 
             //Now take a slice of all the players with the same rank
-            //we need to sort by max_pot, lowest first
+            //we need to sort by max_pot, lowest last
             let mut tie_hand_rankings = Vec::from_iter(hand_rankings[first_index..].iter());
 
             tie_hand_rankings.sort_by(|(_, player_index1), (_, player_index2)| {
                 let p1_max_pot = max_pots[*player_index1];
                 let p2_max_pot = max_pots[*player_index2];
-                p1_max_pot.cmp(&p2_max_pot)
+                p2_max_pot.cmp(&p1_max_pot)
             });
 
             let mut pot_left_to_split = all_pot_left_to_split;
-            let mut cur_tie_count = tie_hand_rankings.len() as ChipType;
+            
+            //If we split evenly then we can stop early with > 0
+            while !tie_hand_rankings.is_empty() && pot_left_to_split > 0 {
 
-            for (_, player_index) in tie_hand_rankings.iter() {
+                //pop last player who can win smallest pot
+                let (_, player_index) = tie_hand_rankings.last().unwrap();
+                
                 let player_state = &mut self.game_state.player_states[*player_index];
 
-                let max_winnings = min(max_pots[*player_index], pot_left_to_split);
+                let side_pot_size = min(max_pots[*player_index], pot_left_to_split);
+                trace!("Player #{} named {} can win at most {} of {} pot", 
+                    player_index, &player_state.player_name, side_pot_size, pot_left_to_split);
 
-                let winnings = max_winnings / cur_tie_count;
+                let winnings = side_pot_size / tie_hand_rankings.len() as ChipType;
 
                 trace!(
-                    "Player #{} named {} won {}, split with {} other players",
-                    player_index,
-                    &player_state.player_name,
+                    "Split side pot {} with {} other players, giving {} to each",
+                    side_pot_size,                    
+                    tie_hand_rankings.len(),
                     winnings,
-                    tie_hand_rankings.len()
                 );
 
-                player_state.stack += winnings;
-                cur_tie_count -= 1;
-                pot_left_to_split -= winnings;
+                for (_, player_index) in &tie_hand_rankings {
+                    let player_state = &mut self.game_state.player_states[*player_index];
+                    player_state.stack += winnings;
+                    trace!(
+                        "Player #{} named {} now has {}+{}={}",
+                        player_index,
+                        &player_state.player_name,
+                        winnings,
+                        player_state.stack-winnings,
+                        player_state.stack
+                    );
+                    pot_left_to_split -= winnings;
+                    all_pot_left_to_split -= winnings;
+                }
 
-                all_pot_left_to_split -= winnings;
+                //The max pot that anyone can win has also just been reduced by the side pot we just distributed
+                let n_players = self.game_state.player_states.len();
+                for pi in 0..n_players {
+                    if side_pot_size > max_pots[pi] {
+                        max_pots[pi] = 0;
+                    } else {
+                        max_pots[pi] -= side_pot_size;
+                    }
+                }
+                
+                tie_hand_rankings.pop().unwrap();
+                
             }
 
             //remove all the players with the same rank
@@ -616,12 +642,14 @@ impl GameRunner {
             .iter()
             .any(|p| p.all_in);
 
-        if cur_active_player_count <= 1 && any_all_in {
-            trace!("Only 1 player left, and we have at least 1 all in, advancing to river");
+        if cur_active_player_count == 0 && any_all_in {
+            trace!("Only all in player left, and we have at least 1 all in, advancing to river");
             let cur_round = self.game_state.current_round as u8;
             for _ in cur_round..3 {
+                trace!("Only all in player left, advancing round...");
                 self.move_to_next_round()?;
             }
+            trace!("Only all in player left, finishing with round {}", self.game_state.current_round);
             self.finish()?;
             return Ok(true);
         }
@@ -909,16 +937,16 @@ Plyr D - 15 # Lost 30, 10
 
         let hh = "
 *** Players ***
-Player C1 - 340 - Qd 6c
+Player C1 - 340 - Qd 2d
 Player B3 - 231 - Kd 4d
 Player A1 - 100 - Ad 3h
 Player B2 - 220 - Kc 3s
-Player A2 - 110 - As 5c
-Player B1 - 200 - Kh 5d
+Player A2 - 110 - As 2c
+Player B1 - 200 - Kh 2h
 Player A4 - 103 - Ac 4c
 Player A3 - 130 - Ah 3c
 Player C2 - 320 - Qs 4s
-Player D1 - 400 - Jd 5h
+Player D1 - 400 - Jd 3d
 *** Blinds ***
 Player C1 - 1
 Player B3 - 5
@@ -938,7 +966,7 @@ Player B2 calls
 Player A2 calls
 Player B1 calls
 *** Flop ***
-Ks Qh Jc
+Ts 9h 8c
 Player C1 checks
 Player B3 checks
 Player B2 checks
@@ -953,7 +981,7 @@ Player B2 calls
 Player A2 calls # all in
 Player B1 calls
 *** Turn ***
-9h
+6h
 Player C1 bets 100
 Player B3 raises 101 # all in
 Player B2 calls
@@ -963,17 +991,17 @@ Player D1 raises 270 # all in
 Player C1 calls
 Player C2 calls
 *** River ***
-8d
+5d
 *** Summary ***
-Player C1 - 1 # 1 from plyr B3
-Player B3 - 5 # Plyr B3 loses 5 with 9h Ks Qh Jc 8d
-Player A1 - 100 # Plyr A1 loses 100 with Ad 3h Ks Qh Jc
-Player B2 - 220 # Plyr B2 loses 220 with 9h Ks Qh Jc 8d
-Player A2 - 110 # Plyr A2 loses 110 with As 5c Ks Qh Jc
-Player B1 - 200 # Plyr B1 loses 200 with 9h Ks Qh Jc 8d
-Player A4 - 103 # Plyr A4 loses 103 with Ac 4c Ks Qh Jc
-Player A3 - 130 # Plyr A3 loses 130 with As 3c Ks Qh Jc
-Player C2 - 320 # Plyr C2 loses 320 with Qs 4s Ks Qh Jc
+Player C1 - 173 # 133 + 20*2
+Player B3 - 234 # 190 + 11*4
+Player A1 - 250 # 100 * 10 / 4 == 250
+Player B2 - 190 # 140 + 20*5/2
+Player A2 - 287 # 250 (side pot with A1) + 9 (side pot with A4) + (7*8) / 2
+Player B1 - 140 # 70 * 6 / 3
+Player A4 - 259 # 250 + (3*9) / 3 
+Player A3 - 427 # 250 + 9 + 28 + 20*7
+Player C2 - 133 # (320-231)*3 / 2 == 133.5 rounded down
 Player D1 - 60 # Keeps what's left of his stack
     ";
         let game_log: GameLog = hh.parse().unwrap();
