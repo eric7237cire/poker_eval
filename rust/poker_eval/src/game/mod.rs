@@ -23,3 +23,6 @@ mod position;
 pub use position::*;
 
 mod game_log_parser;
+
+mod game_runner_source;
+mod game_log_source;

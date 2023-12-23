@@ -12,7 +12,8 @@ pub struct PlayerState {
     pub folded: bool,
 
     //Not yet taken from stack
-    pub cur_round_putting_in_pot: ChipType,
+    //None means not yet acted this round
+    pub cur_round_putting_in_pot: Option<ChipType>,
 
     //In current betting round, so == remaining stack
     pub all_in_for: Option<ChipType>,
@@ -26,11 +27,16 @@ impl PlayerState {
         PlayerState {
             stack: initial_player_state.stack,
             folded: false,
-            cur_round_putting_in_pot: 0,
+            cur_round_putting_in_pot: None,
             all_in_for: None,
             max_pot: None,
             player_name: initial_player_state.player_name.clone(),
         }
+    }
+
+    //Still in the hand, able to act
+    pub fn is_active(&self) -> bool {
+        !self.folded && self.all_in_for.is_none()
     }
 }
 
@@ -46,6 +52,8 @@ pub struct GameState {
     //Until current rounds are finished, is not added to pot
     pub round_pot: ChipType,
 
+    //None means no one has acted yet for the round
+    //checking sets this to 0
     pub current_to_call: Option<ChipType>,
 
     //Initial bet is also considered a raise for this value
