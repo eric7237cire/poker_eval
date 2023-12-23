@@ -1,3 +1,5 @@
+use log::trace;
+
 use crate::{GameLog, InitialPlayerState, ChipType, PlayerState, GameState, PokerError, ActionEnum, HoleCards, Card};
 
 use super::game_runner_source::GameRunnerSource;
@@ -92,4 +94,34 @@ impl GameRunnerSource for GameLogSource {
         self.cur_board_card += 1;
         Ok(card)
     }
+
+    fn set_final_player_state(&mut self, player_index: usize, player_state: &PlayerState,
+        comment: Option<String>) -> Result<(), PokerError> {
+
+        trace!("set_final_player_state({}) with comment {}", player_index, comment.unwrap_or("None".to_string()));
+        
+        if player_index >= self.game_log.players.len() {
+            return Err(PokerError::from_string(format!(
+                "Invalid player index {}",
+                player_index
+            )));
+        }
+        let player = &mut self.game_log.players[player_index];
+
+        if player.player_name != player_state.player_name {
+            return Err(PokerError::from_string(format!(
+                "Player name mismatch {} != {}",
+                player.player_name, player_state.player_name
+            )));
+        }
+
+        if self.game_log.final_stacks[player_index] != player_state.stack {
+            return Err(PokerError::from_string(format!(
+                "Player stack mismatch {} != {}",
+                self.game_log.final_stacks[player_index], player_state.stack
+            )));
+        }
+
+        Ok(())
+        }
 }

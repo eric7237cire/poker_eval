@@ -2,8 +2,9 @@
 // and we have 2 playbacks, either agent or a log
 // via trait that will do
 
-use std::cmp::max;
+use std::cmp::{max, min};
 
+use crate::{Rank, set_used_card, rank_cards};
 use crate::{
     ActionEnum, Card, CardUsedType, ChipType, GameLog, GameState, HoleCards, InitialPlayerState,
     PlayerState, PokerError, Position, Round,
@@ -119,8 +120,7 @@ impl GameRunner {
         let max_actual_amount = amount - player_state.cur_round_putting_in_pot.unwrap_or(0);
 
         let actual_amount = if player_state.stack <= max_actual_amount {
-            player_state.all_in_for =
-                Some(player_state.stack + player_state.cur_round_putting_in_pot.unwrap_or(0));
+            player_state.all_in = true;
 
             //max_pot is created when the round is done
             player_state.stack
@@ -155,8 +155,9 @@ impl GameRunner {
         let mut max_pot = 0;
 
         for player_state in &self.game_state.player_states {
-            max_pot += max(
-                player_state.cur_round_putting_in_pot.unwrap_or(0),
+            let money_put_in = player_state.initial_stack - player_state.stack;
+            max_pot += min(
+                money_put_in,
                 all_in_for,
             )
         }
@@ -185,12 +186,12 @@ impl GameRunner {
             if player_state.folded {
                 continue;
             }
-            if player_state.all_in_for.is_some() {
+            if player_state.all_in {
                 self.game_state.current_to_call.ok_or(format!(
                     "
                 Player {} is all in for {} but there is no current to call",
                     &player_state.player_name,
-                    player_state.all_in_for.unwrap()
+                    player_state.initial_stack 
                 ))?;
 
                 continue;
@@ -248,12 +249,12 @@ impl GameRunner {
         self.check_pots_good()?;
         //calculate max_pot
         let player_count = self.game_state.player_states.len();
-        for player_index in 0..self.game_state.player_states.len() {
-            if let Some(all_in) = self.game_state.player_states[player_index].all_in_for {
-                let max_pot = self.calc_max_pot(all_in);
-                self.game_state.player_states[player_index].max_pot = Some(max_pot);
-            }
-        }
+        // for player_index in 0..self.game_state.player_states.len() {
+        //     if let Some(all_in) = self.game_state.player_states[player_index].all_in_for {
+        //         let max_pot = self.calc_max_pot(all_in);
+        //         self.game_state.player_states[player_index].max_pot = Some(max_pot);
+        //     }
+        // }
 
         //set cur round putting in pot to None
         for player_index in 0..self.game_state.player_states.len() {
@@ -281,27 +282,118 @@ impl GameRunner {
 
         self.move_if_needed_next_to_act()?;
 
-        if self.game_state.current_round == Round::Flop {
-            for _ in 0..3 {
-                self.game_state
-                    .board
-                    .push(self.game_runner_source.get_next_board_card()?);
-            }
-        } else if self.game_state.current_round == Round::Turn {
-            self.game_state
-                .board
-                .push(self.game_runner_source.get_next_board_card()?);
-        } else if self.game_state.current_round == Round::River {
-            self.game_state
-                .board
-                .push(self.game_runner_source.get_next_board_card()?);
+        let cards_needed = match self.game_state.current_round {
+            Round::Flop => 3,
+            Round::Turn => 1,
+            Round::River => 1,
+            _ => 0,
+        };
+
+        for _ in 0..cards_needed {
+            let card = self.game_runner_source.get_next_board_card()?;
+            set_used_card(card.into(), &mut self.used_cards)?;
+            self.game_state.board.push(card);
         }
+
 
         Ok(())
     }
 
     fn finish(&mut self) -> Result<(), PokerError> {
         trace!("Finish game");
+
+        if self.game_state.round_pot > 0 {
+            return Err(format!(
+                "Round pot is {} but should be 0",
+                self.game_state.round_pot
+            ).into());
+        }
+
+        let mut hand_rankings: Vec<(Rank, usize)> = Vec::new();
+
+        let mut eval_cards = self.game_state.board.clone();
+
+        for player_index in 0..self.game_state.player_states.len() {
+
+            if self.game_state.player_states[player_index].folded {
+                trace!(
+                    "Player #{} named {} folded, did not win, skipping",
+                    player_index,
+                    &self.game_state.player_states[player_index].player_name
+                );
+                continue;
+            }
+
+            let hole_cards = self.game_runner_source.get_hole_cards(player_index)?;
+
+            hole_cards.add_to_eval(&mut eval_cards);
+            let rank = rank_cards(&eval_cards);
+            hand_rankings.push((rank, player_index));
+
+            hole_cards.remove_from_eval(&mut eval_cards)?;
+        }
+
+        let max_pots: Vec<ChipType> = self.game_state.player_states.iter().map(|p| 
+            self.calc_max_pot(p.initial_stack)).collect();
+
+        //best is last
+        hand_rankings.sort();
+
+        let mut all_pot_left_to_split = self.game_state.prev_round_pot;
+
+        while !hand_rankings.is_empty() {
+
+            let winning_rank = hand_rankings.last().unwrap().0;
+
+            //Find 1st index with same rank
+            let first_index = hand_rankings
+                .iter()
+                .position(|(rank, _)| *rank == winning_rank)
+                .unwrap();
+
+            //Now take a slice of all the players with the same rank
+            //we need to sort by max_pot, lowest first
+            let mut tie_hand_rankings = Vec::from_iter(hand_rankings[first_index..].iter());
+
+            tie_hand_rankings.sort_by(|(_, player_index1), (_, player_index2)| {
+                let p1_max_pot = max_pots[*player_index1];
+                let p2_max_pot = max_pots[*player_index2];
+                p1_max_pot.cmp(&p2_max_pot)
+            });
+            
+            let mut pot_left_to_split = all_pot_left_to_split;
+            let mut cur_tie_count = tie_hand_rankings.len() as ChipType;
+
+            for (_, player_index) in tie_hand_rankings.iter() {
+                let player_state = &mut self.game_state.player_states[*player_index];
+
+                let max_winnings = min(max_pots[*player_index], pot_left_to_split);
+
+                let winnings = max_winnings / cur_tie_count;
+
+                trace!(
+                    "Player #{} named {} won {}, split with {} other players",
+                    player_index,
+                    &player_state.player_name,
+                    winnings,
+                    tie_hand_rankings.len()
+                );
+
+                player_state.stack += winnings;
+                cur_tie_count -= 1;
+                pot_left_to_split -= winnings;
+
+                all_pot_left_to_split -= winnings;
+            }
+
+            //remove all the players with the same rank
+            hand_rankings.truncate(first_index);
+        }
+
+        for player_index in 0..self.game_state.player_states.len() {
+            self.game_runner_source.set_final_player_state(player_index,
+               & self.game_state.player_states[player_index], None)?;
+        }
         Ok(())
     }
 
@@ -505,9 +597,9 @@ mod tests {
 
         let hh = "
 *** Players *** 
-Plyr A - 12 - As Kh
-Plyr B - 147 - 2d 2c
-Plyr C - 55 - 7d 2h
+Plyr A - 12 - As 2c
+Plyr B - 147 - 3d 3c
+Plyr C - 55 - 7d 3h
 Plyr D - 55 - Ks Kd
 *** Blinds *** 
 Plyr A - 5
@@ -529,15 +621,15 @@ Plyr B bets 10
 Plyr D folds
 *** River ***
 2d
-Plyr A bets 15
+Plyr A bets 15 # This never gets used
 Plyr B raises 30 # minimum raise
 Plyr A raises 45
 Plyr B calls
 *** Summary ***
-Plyr A - 12 # though this is not valid, the parsing just wants correct syntax
-Plyr B - 148 # Plyr B loses 100 with 2h As Kh 2d 7c
-Plyr C - 55 # can put in comments showdown, wins / losses side pot / etc
-Plyr D - 90
+Plyr A - 46 # 10 from plyr C, 12 from everyone else
+Plyr B - 163 # Plyr B loses 100 with 2h As Kh 2d 7c
+Plyr C - 45 # Folded 10
+Plyr D - 15 # Lost 30, 10
     ";
         let game_log: GameLog = hh.parse().unwrap();
 
@@ -564,7 +656,7 @@ Plyr D - 90
         }
 
         assert_eq!(game_runner.game_state.current_round, Round::Flop);
-        assert_eq!(game_runner.game_state.player_states[0].all_in_for, Some(12));
+        assert!(game_runner.game_state.player_states[0].all_in);
         assert_eq!(game_runner.game_state.prev_round_pot, 12 + 30 * 2 + 10);
         assert_eq!(game_runner.game_state.round_pot, 0);
         assert_eq!(game_runner.game_state.board, CardVec::try_from("2s 7c 8s").unwrap().0);
@@ -575,7 +667,7 @@ Plyr D - 90
         }
 
         assert_eq!(game_runner.game_state.current_round, Round::Turn);
-        assert_eq!(game_runner.game_state.player_states[0].all_in_for, Some(12));
+        assert!(game_runner.game_state.player_states[0].all_in);
         assert_eq!(game_runner.game_state.prev_round_pot, 12 + 30 * 2 + 10 + 20);
         assert_eq!(game_runner.game_state.round_pot, 0);
         assert_eq!(game_runner.game_state.board, CardVec::try_from("2s 7c 8s 2h").unwrap().0);
@@ -586,9 +678,13 @@ Plyr D - 90
         }
 
         assert_eq!(game_runner.game_state.current_round, Round::River);
-        assert_eq!(game_runner.game_state.player_states[0].all_in_for, Some(12));
+        assert!(game_runner.game_state.player_states[0].all_in);
         assert_eq!(game_runner.game_state.prev_round_pot, 12 + 30 * 2 + 10 + 30);
         assert_eq!(game_runner.game_state.round_pot, 0);
         assert_eq!(game_runner.game_state.board, CardVec::try_from("2s 7c 8s 2h 2d").unwrap().0);
+
+        //river actions
+
+        assert_eq!(true, game_runner.process_next_action().unwrap());
     }
 }

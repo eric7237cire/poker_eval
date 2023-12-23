@@ -25,4 +25,7 @@ pub trait GameRunnerSource {
 
     //get board cards?
     fn get_next_board_card(&mut self) -> Result<Card, PokerError>;
+
+    fn set_final_player_state(&mut self, player_index: usize, player_state: &PlayerState,
+        comment: Option<String>) -> Result<(), PokerError>;
 }
