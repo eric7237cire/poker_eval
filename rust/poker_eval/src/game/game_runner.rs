@@ -4,7 +4,7 @@
 
 use std::cmp::{max, min};
 
-use crate::{Rank, set_used_card, rank_cards};
+use crate::{Rank, set_used_card, rank_cards, PlayerAction};
 use crate::{
     ActionEnum, Card, CardUsedType, ChipType, GameLog, GameState, HoleCards, InitialPlayerState,
     PlayerState, PokerError, Position, Round,
@@ -99,7 +99,7 @@ impl GameRunner {
         &mut self,
         player_index: usize,
         amount: ChipType,
-    ) -> Result<(), PokerError> {
+    ) -> Result<ChipType, PokerError> {
         if player_index >= self.game_state.player_states.len() {
             return Err(PokerError::from_string(format!(
                 "Invalid player index {}",
@@ -140,7 +140,7 @@ impl GameRunner {
 
         self.game_state.round_pot += actual_amount;
 
-        Ok(())
+        Ok(actual_amount)
     }
 
     fn active_player_count(&self) -> usize {
@@ -177,9 +177,13 @@ impl GameRunner {
             ))?;
 
             trace!(
-                "Player {} has put in {}",
+                "{} has put in {} this round.  Folded? {} All in? {} Initial {} Current {}",
                 player_state.player_name,
-                cur_round_putting_in_pot
+                cur_round_putting_in_pot,
+                player_state.folded,
+                player_state.all_in,
+                player_state.initial_stack,
+                player_state.stack
             );
 
             check_round_pot += cur_round_putting_in_pot;
@@ -438,11 +442,58 @@ impl GameRunner {
                     self.game_state.player_states[player_index].cur_round_putting_in_pot.unwrap_or(
                         0,
                     )
-                )
+                );
+
+                let pot_eq =
+         100.0 * self.game_state.current_to_call.unwrap_or(0) as f64 / (self.game_state.current_to_call.unwrap_or(0) as f64 + self.game_state.pot() as f64);
+
+                self.game_state.actions.push(PlayerAction {
+                    player_index,
+                    action,
+                    round: self.game_state.current_round,
+                    comment: Some(format!(
+                        "Player #{} {} folded to {:.1}% pot equity with {} in the pot",
+                        player_index,
+                        &self.game_state.player_states[player_index].player_name, 
+                        pot_eq,
+                        self.game_state.pot()))
+                });
             }
             ActionEnum::Call => {
                 let amt_to_call = self.game_state.current_to_call.unwrap();
-                self.handle_put_money_in_pot(player_index, amt_to_call)?;
+                let actual_amt = self.handle_put_money_in_pot(player_index, amt_to_call)?;
+
+                //pot has already changed
+                let pot_eq = 100.0 * actual_amt as f64 / ( self.game_state.pot() as f64);
+
+                let player_state = &self.game_state.player_states[player_index];
+
+                let comment = if player_state.all_in {
+                    format!(
+                        "Player #{} {} calls ALL IN {} of {} with {:.1}% pot equity with {} in the pot",
+                        player_index,
+                        &self.game_state.player_states[player_index].player_name, 
+                        actual_amt,
+                        amt_to_call,
+                        pot_eq,
+                        self.game_state.pot())
+                } else {
+                    format!(
+                        "Player #{} {} calls {} (of {}) with {:.1}% pot equity with {} in the pot",
+                        player_index,
+                        &self.game_state.player_states[player_index].player_name, 
+                        actual_amt,
+                        amt_to_call,
+                        pot_eq,
+                        self.game_state.pot())
+                };
+
+                self.game_state.actions.push(PlayerAction {
+                    player_index,
+                    action,
+                    round: self.game_state.current_round,
+                    comment: Some(comment)
+                });
             }
             ActionEnum::Raise(raise_amt) => {
                 //Can only raise if there is a current to call
@@ -493,7 +544,38 @@ impl GameRunner {
 
                 self.game_state.min_raise = raise_amt - amt_to_call;
                 self.game_state.current_to_call = Some(raise_amt);
-                self.handle_put_money_in_pot(player_index, raise_amt)?;
+                let actual_amt = self.handle_put_money_in_pot(player_index, raise_amt)?;
+
+                let pot_eq = 100.0 * actual_amt as f64 / ( self.game_state.pot() as f64);
+
+                let player_state = &self.game_state.player_states[player_index];
+
+                let comment = if player_state.all_in {
+                    format!(
+                        "Player #{} {} raises ALL IN {} to {} with {:.1}% pot equity with {} in the pot",
+                        player_index,
+                        &self.game_state.player_states[player_index].player_name, 
+                        actual_amt,
+                        raise_amt,
+                        pot_eq,
+                        self.game_state.pot())
+                } else {
+                    format!(
+                        "Player #{} {} raises {} to {} with {:.1}% pot equity with {} in the pot",
+                        player_index,
+                        &self.game_state.player_states[player_index].player_name, 
+                        actual_amt,
+                        raise_amt,
+                        pot_eq,
+                        self.game_state.pot())
+                };
+
+                self.game_state.actions.push(PlayerAction {
+                    player_index,
+                    action,
+                    round: self.game_state.current_round,
+                    comment: Some(comment)
+                });
             }
             ActionEnum::Check => {
                 if let Some(amt) = self.game_state.current_to_call {
@@ -507,13 +589,21 @@ impl GameRunner {
                 }
 
                 self.game_state.current_to_call = Some(0);
+
+                self.game_state.actions.push(PlayerAction {
+                    player_index,
+                    action,
+                    round: self.game_state.current_round,
+                    comment: None
+                });
             }
             ActionEnum::Bet(bet_amt) => {
-                if self.game_state.current_to_call.is_some() {
+                if self.game_state.current_to_call.unwrap_or(0) != 0 {
                     return Err(format!(
-                        "Player #{} {} tried to bet but there is a current to call, must call or raise or fold",
+                        "Player #{} {} tried to bet {} but there is already a bet to call, must call or raise or fold",
                         player_index, 
                         &self.game_state.player_states[player_index].player_name,
+                        bet_amt,
                     ).into());
                 }
 
@@ -544,7 +634,38 @@ impl GameRunner {
                 self.game_state.min_raise = bet_amt;
                 self.game_state.current_to_call = Some(bet_amt);
 
-                self.handle_put_money_in_pot(player_index, bet_amt)?;
+                let actual_amt = self.handle_put_money_in_pot(player_index, bet_amt)?;
+
+                let pot_eq = 100.0 * actual_amt as f64 / ( self.game_state.pot() as f64);
+
+                let player_state = &self.game_state.player_states[player_index];
+
+                let comment = if player_state.all_in {
+                    format!(
+                        "Player #{} {} bets ALL IN {} to {} with {:.1}% pot equity with {} in the pot",
+                        player_index,
+                        &self.game_state.player_states[player_index].player_name, 
+                        actual_amt,
+                        bet_amt,
+                        pot_eq,
+                        self.game_state.pot())
+                } else {
+                    format!(
+                        "Player #{} {} bets {} to {} with {:.1}% pot equity with {} in the pot",
+                        player_index,
+                        &self.game_state.player_states[player_index].player_name, 
+                        actual_amt,
+                        bet_amt,
+                        pot_eq,
+                        self.game_state.pot())
+                };
+
+                self.game_state.actions.push(PlayerAction {
+                    player_index,
+                    action,
+                    round: self.game_state.current_round,
+                    comment: Some(comment)
+                });
             }
         }
 
@@ -587,6 +708,8 @@ impl GameRunner {
 
 #[cfg(test)]
 mod tests {
+    use log::debug;
+
     use crate::{init_test_logger, CardVec, game::game_log_source::GameLogSource};
 
     use super::*;
@@ -686,5 +809,109 @@ Plyr D - 15 # Lost 30, 10
         //river actions
 
         assert_eq!(true, game_runner.process_next_action().unwrap());
+    }
+
+
+    #[test]
+    fn test_multi_splits() {
+        init_test_logger();
+
+        //We are going to have the best 4 hands split, then next best 3 hands split,
+        //then next best 2 hands split, then last guy getting the diff
+
+        //So 4 players with A5 A4 A3 A2 
+        //Board K Q J 9 8
+        // 3 players with K5 k4 k3 
+        // 2 players with Q5 Q4
+        // 1 player with J5 (with most chips)
+
+        let hh = "
+*** Players *** 
+Player C1 - 340 - Qd 6c
+Player B3 - 231 - Kd 4d
+Player A1 - 100 - Ad 3h
+Player B2 - 220 - Kc 3s
+Player A2 - 110 - As 5c
+Player B1 - 200 - Kh 5d
+Player A4 - 103 - Ac 4c
+Player A3 - 130 - Ah 3c
+Player C2 - 320 - Qs 4s
+Player D1 - 400 - Jd 5h
+*** Blinds *** 
+Player C1 - 1
+Player B3 - 5
+*** Preflop ***
+Player A1 calls    # UTG acts first
+Player B2 calls
+Player A2 calls
+Player B1 calls
+Player A4 raises 103
+Player A3 calls
+Player C2 calls
+Player D1 calls
+Player C1 calls
+Player B3 calls
+Player A1 calls # all in
+Player B2 calls
+Player A2 calls
+Player B1 calls
+*** Flop ***
+Ks Qh Jc
+Player C1 checks
+Player B3 checks
+Player B2 checks
+Player A2 checks
+Player B1 checks
+Player A3 bets 130
+Player C2 calls
+Player D1 calls
+Player C1 calls
+Player B3 calls
+Player B2 calls
+Player A2 calls # all in
+Player B1 calls
+*** Turn ***
+9h
+Player C1 bets 230
+Player B3 raises 231 # all in
+Player B2 calls
+Player B1 calls
+Player C2 calls
+Player D1 raises 400 # all in
+Player C1 calls
+Player B3 calls
+Player B2 calls
+Player B1 calls
+*** River ***
+8d
+*** Summary ***
+Player C1 - 1 # 1 from plyr B3
+Player B3 - 5 # Plyr B3 loses 5 with 9h Ks Qh Jc 8d
+Player A1 - 100 # Plyr A1 loses 100 with Ad 3h Ks Qh Jc
+Player B2 - 220 # Plyr B2 loses 220 with 9h Ks Qh Jc 8d
+Player A2 - 110 # Plyr A2 loses 110 with As 5c Ks Qh Jc
+Player B1 - 200 # Plyr B1 loses 200 with 9h Ks Qh Jc 8d
+Player A4 - 103 # Plyr A4 loses 103 with Ac 4c Ks Qh Jc
+Player A3 - 130 # Plyr A3 loses 130 with As 3c Ks Qh Jc
+Player C2 - 320 # Plyr C2 loses 320 with Qs 4s Ks Qh Jc
+Player D1 - 60 # Keeps what's left of his stack
+    ";
+        let game_log: GameLog = hh.parse().unwrap();
+
+        let game_log_source = GameLogSource::new(game_log);
+
+        let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
+
+        for _ in 0..200 {
+            let action_count_before = game_runner.game_state.actions.len();
+            let r = game_runner.process_next_action().unwrap();
+            if r {
+                break;
+            }
+            let action_count_after = game_runner.game_state.actions.len();
+            debug!("Last action: {}", &game_runner.game_state.actions.last().as_ref().unwrap());
+            assert_eq!(action_count_before + 1, action_count_after);
+        }
+        
     }
 }

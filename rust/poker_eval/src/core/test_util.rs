@@ -8,11 +8,21 @@ pub fn init_test_logger() {
             writeln!(
                 buf,
                 "{}:{} [{}] - {}",
-                record.file().unwrap_or("unknown"),
+                take_after_last_slash(record.file().unwrap_or("unknown")),
                 record.line().unwrap_or(0),
                 record.level(),
                 record.args()
             )
         })
         .try_init();
+}
+
+fn take_after_last_slash(s: &str) -> &str {
+    let mut last_slash = 0;
+    for (i, c) in s.chars().enumerate() {
+        if c == '/' {
+            last_slash = i;
+        }
+    }
+    &s[last_slash + 1..]
 }
