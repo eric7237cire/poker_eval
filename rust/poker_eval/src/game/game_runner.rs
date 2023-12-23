@@ -2,11 +2,11 @@
 // and we have 2 playbacks, either agent or a log
 // via trait that will do
 
-use std::cmp::{max, min};
+use std::cmp::min;
 
 use crate::{rank_cards, set_used_card, PlayerAction, Rank};
 use crate::{
-    ActionEnum, Card, CardUsedType, ChipType, GameLog, GameState, HoleCards, InitialPlayerState,
+    ActionEnum, CardUsedType, ChipType, GameState,
     PlayerState, PokerError, Position, Round,
 };
 
@@ -239,7 +239,7 @@ impl GameRunner {
 
         self.check_pots_good()?;
         //calculate max_pot
-        let player_count = self.game_state.player_states.len();
+        let _player_count = self.game_state.player_states.len();
         // for player_index in 0..self.game_state.player_states.len() {
         //     if let Some(all_in) = self.game_state.player_states[player_index].all_in_for {
         //         let max_pot = self.calc_max_pot(all_in);
@@ -806,7 +806,7 @@ impl GameRunner {
 mod tests {
     use log::debug;
 
-    use crate::{game::game_log_source::GameLogSource, init_test_logger, CardVec};
+    use crate::{game::game_log_source::GameLogSource, init_test_logger, CardVec, GameLog};
 
     use super::*;
 
