@@ -673,6 +673,18 @@ impl GameRunner {
             &self.game_state.actions.last().as_ref().unwrap()
         );
 
+        let non_folded_count = self
+            .game_state
+            .player_states
+            .iter()
+            .filter(|p| !p.folded)
+            .count();
+        if non_folded_count == 1 {
+            trace!("Only 1 player left; everyone else folded, game is done");
+            self.finish()?;
+            return Ok(true);
+        }
+
         let cur_active_player_count = self.active_player_count();
 
         let any_all_in = self.game_state.player_states.iter().any(|p| p.all_in);
@@ -692,11 +704,7 @@ impl GameRunner {
             return Ok(true);
         }
         trace!("{} active players left, any all in? {}", cur_active_player_count, any_all_in);
-        if cur_active_player_count == 1 && !any_all_in {
-            trace!("Only 1 player left; everyone else folded, game is done");
-            self.finish()?;
-            return Ok(true);
-        }
+        
 
         self.game_state.current_to_act = self
             .game_state
@@ -1118,6 +1126,127 @@ W1 - 126 # 380 / 3
 L2 - 50 # Lost 50
 W2 - 126 # 
 W3 - 126 # 
+    ";
+        let game_log: GameLog = hh.parse().unwrap();
+
+        let game_log_source = GameLogSource::new(game_log);
+
+        let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
+
+        for _ in 0..200 {
+            let action_count_before = game_runner.game_state.actions.len();
+            let r = game_runner.process_next_action().unwrap();
+            if r {
+                break;
+            }
+            let action_count_after = game_runner.game_state.actions.len();
+            debug!(
+                "Last action: {}",
+                &game_runner.game_state.actions.last().as_ref().unwrap()
+            );
+            assert_eq!(action_count_before + 1, action_count_after);
+        }
+    }
+
+    #[test]
+    fn test_cbet_win() {
+        init_test_logger();
+
+        let hh = "
+*** Players ***
+L1 - 100 - Kd Kh
+W1 - 100 - Ad Qs
+L2 - 100 - 2d 2h
+W2 - 100 - Ah Qc
+W3 - 100 - Ac Qd
+*** Blinds ***
+L1 - 1
+W1 - 5
+*** Preflop ***
+L2 raises 10
+W2 raises 15
+W3 raises 20
+L1 raises 30
+W1 raises 40
+L2 raises 50
+W2 calls
+W3 calls
+L1 folds
+W1 raises 95
+L2 folds
+W2 calls
+W3 calls
+*** Flop ***
+As 3d 4c
+W1 checks
+W2 checks
+W3 bets 5
+W1 folds
+W2 folds
+*** Summary ***
+L1 - 70 # Lost 30
+W1 - 5 # Lost 95
+L2 - 50 # Lost 50
+W2 - 5 # Lost 95
+W3 - 370 #  Wins everything
+    ";
+        let game_log: GameLog = hh.parse().unwrap();
+
+        let game_log_source = GameLogSource::new(game_log);
+
+        let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
+
+        for _ in 0..200 {
+            let action_count_before = game_runner.game_state.actions.len();
+            let r = game_runner.process_next_action().unwrap();
+            if r {
+                break;
+            }
+            let action_count_after = game_runner.game_state.actions.len();
+            debug!(
+                "Last action: {}",
+                &game_runner.game_state.actions.last().as_ref().unwrap()
+            );
+            assert_eq!(action_count_before + 1, action_count_after);
+        }
+    }
+
+    #[test]
+    fn test_all_in_preflop_win() {
+        init_test_logger();
+
+        let hh = "
+*** Players ***
+L1 - 80 - 3c 2h
+W1 - 110 - Ad Ac
+L2 - 95 - 2d 2c
+W2 - 100 - Kh Kd
+W3 - 100 - Ks Kc
+*** Blinds ***
+L1 - 1
+W1 - 5
+*** Preflop ***
+L2 raises 10
+W2 raises 15
+W3 calls
+L1 raises 30
+W1 raises 110
+L2 calls
+W2 calls
+W3 calls
+L1 folds
+*** Flop ***
+As 8d 4c
+*** Turn ***
+5d
+*** River ***
+7d
+*** Summary ***
+L1 - 50 # Lost 30
+W1 - 435 # Wins 295+110+50
+L2 - 0 # Lost 50
+W2 - 0 
+W3 - 0
     ";
         let game_log: GameLog = hh.parse().unwrap();
 
