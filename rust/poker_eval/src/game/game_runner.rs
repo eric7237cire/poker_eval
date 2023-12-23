@@ -176,15 +176,15 @@ impl GameRunner {
                 player_state.player_name
             ))?;
 
-            trace!(
-                "{} has put in {} this round.  Folded? {} All in? {} Initial {} Current {}",
-                player_state.player_name,
-                cur_round_putting_in_pot,
-                player_state.folded,
-                player_state.all_in,
-                player_state.initial_stack,
-                player_state.stack
-            );
+            // trace!(
+            //     "{} has put in {} this round.  Folded? {} All in? {} Initial {} Current {}",
+            //     player_state.player_name,
+            //     cur_round_putting_in_pot,
+            //     player_state.folded,
+            //     player_state.all_in,
+            //     player_state.initial_stack,
+            //     player_state.stack
+            // );
 
             check_round_pot += cur_round_putting_in_pot;
             if player_state.folded {
@@ -195,7 +195,7 @@ impl GameRunner {
                     "
                 Player {} is all in for {} but there is no current to call",
                     &player_state.player_name,
-                    player_state.initial_stack 
+                    player_state.initial_stack
                 ))?;
 
                 continue;
@@ -245,8 +245,8 @@ impl GameRunner {
         Err(format!("No players left to act").into())
     }
 
-    fn move_to_next_round(&mut self) -> Result<(), PokerError> {
-        trace!("Move to next round");
+    fn close_betting_round(&mut self) -> Result<(), PokerError> {
+        trace!("Close betting round");
 
         trace!("Check all players have called/folded/or are all in");
 
@@ -274,6 +274,16 @@ impl GameRunner {
         self.game_state.round_pot = 0;
         self.game_state.current_to_call = None;
         self.game_state.min_raise = 0;
+
+        Ok(())
+    }
+
+    fn move_to_next_round(&mut self) -> Result<(), PokerError> {
+        trace!("Move to next round");
+
+        let player_count = self.game_state.player_states.len();
+
+        self.close_betting_round()?;
 
         self.game_state.current_round = self
             .game_state
@@ -306,6 +316,8 @@ impl GameRunner {
     fn finish(&mut self) -> Result<(), PokerError> {
         trace!("Finish game");
 
+        self.close_betting_round()?;
+
         if self.game_state.round_pot > 0 {
             return Err(format!(
                 "Round pot is {} but should be 0",
@@ -337,7 +349,7 @@ impl GameRunner {
             hole_cards.remove_from_eval(&mut eval_cards)?;
         }
 
-        let max_pots: Vec<ChipType> = self.game_state.player_states.iter().map(|p| 
+        let max_pots: Vec<ChipType> = self.game_state.player_states.iter().map(|p|
             self.calc_max_pot(p.initial_stack)).collect();
 
         //best is last
@@ -364,7 +376,7 @@ impl GameRunner {
                 let p2_max_pot = max_pots[*player_index2];
                 p1_max_pot.cmp(&p2_max_pot)
             });
-            
+
             let mut pot_left_to_split = all_pot_left_to_split;
             let mut cur_tie_count = tie_hand_rankings.len() as ChipType;
 
@@ -415,10 +427,7 @@ impl GameRunner {
             self.game_state.current_round
         );
 
-        if cur_active_player_count == 1 {
-            self.finish()?;
-            return Ok(true);
-        }
+        
 
         let action = self.game_runner_source.get_action(
             &self.game_state.player_states[player_index],
@@ -454,7 +463,7 @@ impl GameRunner {
                     comment: Some(format!(
                         "Player #{} {} folded to {:.1}% pot equity with {} in the pot",
                         player_index,
-                        &self.game_state.player_states[player_index].player_name, 
+                        &self.game_state.player_states[player_index].player_name,
                         pot_eq,
                         self.game_state.pot()))
                 });
@@ -472,7 +481,7 @@ impl GameRunner {
                     format!(
                         "Player #{} {} calls ALL IN {} of {} with {:.1}% pot equity with {} in the pot",
                         player_index,
-                        &self.game_state.player_states[player_index].player_name, 
+                        &self.game_state.player_states[player_index].player_name,
                         actual_amt,
                         amt_to_call,
                         pot_eq,
@@ -481,7 +490,7 @@ impl GameRunner {
                     format!(
                         "Player #{} {} calls {} (of {}) with {:.1}% pot equity with {} in the pot",
                         player_index,
-                        &self.game_state.player_states[player_index].player_name, 
+                        &self.game_state.player_states[player_index].player_name,
                         actual_amt,
                         amt_to_call,
                         pot_eq,
@@ -496,51 +505,12 @@ impl GameRunner {
                 });
             }
             ActionEnum::Raise(raise_amt) => {
-                //Can only raise if there is a current to call
                 let amt_to_call = self.game_state.current_to_call.ok_or(format!(
                     "Player {} tried to raise {} but there is no current to call",
                     player_index, raise_amt
                 ))?;
 
-                //Would this raise essentially put this player all in ?
-                if self.game_state.player_states[player_index].stack > raise_amt {
-                    if raise_amt < self.game_state.min_raise + amt_to_call {
-                        return Err(format!(
-                        "Player #{} {} tried to raise {} but needs to be at least {} more than {}",
-                        player_index,
-                        &self.game_state.player_states[player_index].player_name,
-                        raise_amt,
-                        self.game_state.min_raise,
-                        amt_to_call
-                    )
-                        .into());
-                    }
-
-                    //Also check multiple of bb
-                    if (raise_amt - amt_to_call) % self.game_state.bb != 0 {
-                        return Err(format!(
-                            "Player #{} {} tried to raise {} but must be a multiple of big blind {}",
-                            player_index,
-                            &self.game_state.player_states[player_index].player_name,
-                            raise_amt,
-                            self.game_state.bb
-                        )
-                        .into());
-                    }
-                } else {
-                    //if we are going all in with this raise, just check the raise is > 0
-                    if raise_amt < amt_to_call {
-                        return Err(format!(
-                            "Player #{} {} tried to all-in raise {} but needs to be at least {} more than {}",
-                            player_index,
-                            &self.game_state.player_states[player_index].player_name,
-                            raise_amt,
-                            self.game_state.min_raise,
-                            amt_to_call
-                        )
-                        .into());
-                    }
-                }
+                self.check_able_to_raise(raise_amt)?;
 
                 self.game_state.min_raise = raise_amt - amt_to_call;
                 self.game_state.current_to_call = Some(raise_amt);
@@ -554,7 +524,7 @@ impl GameRunner {
                     format!(
                         "Player #{} {} raises ALL IN {} to {} with {:.1}% pot equity with {} in the pot",
                         player_index,
-                        &self.game_state.player_states[player_index].player_name, 
+                        &self.game_state.player_states[player_index].player_name,
                         actual_amt,
                         raise_amt,
                         pot_eq,
@@ -563,7 +533,7 @@ impl GameRunner {
                     format!(
                         "Player #{} {} raises {} to {} with {:.1}% pot equity with {} in the pot",
                         player_index,
-                        &self.game_state.player_states[player_index].player_name, 
+                        &self.game_state.player_states[player_index].player_name,
                         actual_amt,
                         raise_amt,
                         pot_eq,
@@ -598,38 +568,7 @@ impl GameRunner {
                 });
             }
             ActionEnum::Bet(bet_amt) => {
-                if self.game_state.current_to_call.unwrap_or(0) != 0 {
-                    return Err(format!(
-                        "Player #{} {} tried to bet {} but there is already a bet to call, must call or raise or fold",
-                        player_index, 
-                        &self.game_state.player_states[player_index].player_name,
-                        bet_amt,
-                    ).into());
-                }
-
-                //A bet all in doesn't need to be at least anything
-                if bet_amt < self.game_state.player_states[player_index].stack {
-                    if bet_amt < self.game_state.bb {
-                        return Err(format!(
-                            "Player #{} {} tried to bet {} but must be at least big blind {}",
-                            player_index,
-                            &self.game_state.player_states[player_index].player_name,
-                            bet_amt,
-                            self.game_state.bb
-                        )
-                        .into());
-                    }
-                    if bet_amt % self.game_state.bb != 0 {
-                        return Err(format!(
-                            "Player #{} {} tried to bet {} but must be a multiple of big blind {}",
-                            player_index,
-                            &self.game_state.player_states[player_index].player_name,
-                            bet_amt,
-                            self.game_state.bb
-                        )
-                        .into());
-                    }
-                }
+                self.check_able_to_bet(bet_amt)?;
 
                 self.game_state.min_raise = bet_amt;
                 self.game_state.current_to_call = Some(bet_amt);
@@ -644,7 +583,7 @@ impl GameRunner {
                     format!(
                         "Player #{} {} bets ALL IN {} to {} with {:.1}% pot equity with {} in the pot",
                         player_index,
-                        &self.game_state.player_states[player_index].player_name, 
+                        &self.game_state.player_states[player_index].player_name,
                         actual_amt,
                         bet_amt,
                         pot_eq,
@@ -653,7 +592,7 @@ impl GameRunner {
                     format!(
                         "Player #{} {} bets {} to {} with {:.1}% pot equity with {} in the pot",
                         player_index,
-                        &self.game_state.player_states[player_index].player_name, 
+                        &self.game_state.player_states[player_index].player_name,
                         actual_amt,
                         bet_amt,
                         pot_eq,
@@ -668,6 +607,29 @@ impl GameRunner {
                 });
             }
         }
+
+        let cur_active_player_count = self.active_player_count();
+
+        let any_all_in = self
+            .game_state
+            .player_states
+            .iter()
+            .any(|p| p.all_in);
+
+        if cur_active_player_count <= 1 && any_all_in {
+            trace!("Only 1 player left, and we have at least 1 all in, advancing to river");
+            let cur_round = self.game_state.current_round as u8;
+            for _ in cur_round..3 {
+                self.move_to_next_round()?;
+            }
+            self.finish()?;
+            return Ok(true);
+        }
+        // if cur_active_player_count == 1 {
+        //     trace!("Only 1 player left, game is done");
+        //     self.finish()?;
+        //     return Ok(true);
+        // }
 
         self.game_state.current_to_act = self
             .game_state
@@ -692,6 +654,7 @@ impl GameRunner {
                         amt_to_call
                     );
                     if self.game_state.current_round == Round::River {
+                        trace!("River is done, game is done");
                         self.finish()?;
                         return Ok(true);
                     }
@@ -703,6 +666,125 @@ impl GameRunner {
         }
 
         Ok(false)
+    }
+
+    fn check_able_to_bet(self: &Self, bet_amt: ChipType) -> Result<(), PokerError> {
+        let player_index: usize = self.game_state.current_to_act.into();
+        let player_state = &self.game_state.player_states[player_index];
+
+        if self.game_state.current_to_call.unwrap_or(0) != 0 {
+            return Err(format!(
+                "Player #{} {} tried to bet {} but there is already a bet to call, must call or raise or fold",
+                player_index,
+                &player_state.player_name,
+                bet_amt,
+            ).into());
+        }
+
+        //A bet all in doesn't need to be at least anything
+        if bet_amt < player_state.stack {
+            if bet_amt < self.game_state.bb {
+                return Err(format!(
+                    "Player #{} {} tried to bet {} but must be at least big blind {}",
+                    player_index,
+                    &player_state.player_name,
+                    bet_amt,
+                    self.game_state.bb
+                )
+                .into());
+            }
+            if bet_amt % self.game_state.bb != 0 {
+                return Err(format!(
+                    "Player #{} {} tried to bet {} but must be a multiple of big blind {}",
+                    player_index,
+                    &player_state.player_name,
+                    bet_amt,
+                    self.game_state.bb
+                )
+                .into());
+            }
+        }
+
+        if bet_amt > player_state.stack {
+            return Err(format!(
+                "Player #{} {} tried to bet {} but only has {}",
+                player_index,
+                &player_state.player_name,
+                bet_amt,
+                player_state.stack
+            )
+            .into());
+        }
+
+        Ok(())
+    }
+
+    fn check_able_to_raise(self: &Self, raise_amt: ChipType) -> Result<(), PokerError> {
+        let player_index: usize = self.game_state.current_to_act.into();
+        let player_state = &self.game_state.player_states[player_index];
+
+        let amt_to_call = self.game_state.current_to_call.unwrap_or(0);
+
+        //Can only raise if there is a current to call                
+        if amt_to_call == 0 {
+            return Err(format!(
+                "Player #{} {} tried to raise {} but there is no bet to call, must bet or fold",
+                player_index,
+                &player_state.player_name,
+                raise_amt,
+            ).into());
+        }
+
+        if raise_amt <= amt_to_call {
+            return Err(format!(
+                "Player #{} {} tried to raise {} but must be more than the call amount {} ",
+                player_index,
+                &player_state.player_name,
+                raise_amt,
+                amt_to_call
+            )
+            .into());
+        }
+
+        //A raise all in doesn't need to be at least anything
+        if raise_amt < player_state.stack {
+            if raise_amt < self.game_state.min_raise + self.game_state.current_to_call.unwrap() {
+                return Err(format!(
+                    "Player #{} {} tried to raise {} but needs to be at least {} more than {}",
+                    player_index,
+                    &player_state.player_name,
+                    raise_amt,
+                    self.game_state.min_raise,
+                    self.game_state.current_to_call.unwrap()
+                )
+                .into());
+            }
+
+            //Also check multiple of bb
+            if (raise_amt - self.game_state.current_to_call.unwrap()) % self.game_state.bb != 0 {
+                return Err(format!(
+                    "Player #{} {} tried to raise {} but must be a multiple of big blind {}",
+                    player_index,
+                    &player_state.player_name,
+                    raise_amt,
+                    self.game_state.bb
+                )
+                .into());
+            }
+        }
+
+        if raise_amt > player_state.stack {
+            return Err(format!(
+                "Player #{} {} tried to raise {} but only has {}",
+                player_index,
+                &player_state.player_name,
+                raise_amt,
+                player_state.stack
+            )
+            .into());
+        }
+
+        Ok(())
     }
 }
 
@@ -719,19 +801,19 @@ mod tests {
         init_test_logger();
 
         let hh = "
-*** Players *** 
+*** Players ***
 Plyr A - 12 - As 2c
 Plyr B - 147 - 3d 3c
 Plyr C - 55 - 7d 3h
 Plyr D - 55 - Ks Kd
-*** Blinds *** 
+*** Blinds ***
 Plyr A - 5
 Plyr B - 10
 *** Preflop ***
 Plyr C calls    # UTG acts first
 Plyr D raises 20
-Plyr A calls 
-Plyr B raises 30 
+Plyr A calls
+Plyr B raises 30
 Plyr C folds
 Plyr D calls
 *** Flop ***
@@ -739,7 +821,7 @@ Plyr D calls
 Plyr B bets 10
 Plyr D calls
 *** Turn ***
-2h 
+2h
 Plyr B bets 10
 Plyr D folds
 *** River ***
@@ -819,14 +901,14 @@ Plyr D - 15 # Lost 30, 10
         //We are going to have the best 4 hands split, then next best 3 hands split,
         //then next best 2 hands split, then last guy getting the diff
 
-        //So 4 players with A5 A4 A3 A2 
+        //So 4 players with A5 A4 A3 A2
         //Board K Q J 9 8
-        // 3 players with K5 k4 k3 
+        // 3 players with K5 k4 k3
         // 2 players with Q5 Q4
         // 1 player with J5 (with most chips)
 
         let hh = "
-*** Players *** 
+*** Players ***
 Player C1 - 340 - Qd 6c
 Player B3 - 231 - Kd 4d
 Player A1 - 100 - Ad 3h
@@ -837,7 +919,7 @@ Player A4 - 103 - Ac 4c
 Player A3 - 130 - Ah 3c
 Player C2 - 320 - Qs 4s
 Player D1 - 400 - Jd 5h
-*** Blinds *** 
+*** Blinds ***
 Player C1 - 1
 Player B3 - 5
 *** Preflop ***
@@ -862,7 +944,7 @@ Player B3 checks
 Player B2 checks
 Player A2 checks
 Player B1 checks
-Player A3 bets 130
+Player A3 bets 27 # all in for 130
 Player C2 calls
 Player D1 calls
 Player C1 calls
@@ -872,16 +954,14 @@ Player A2 calls # all in
 Player B1 calls
 *** Turn ***
 9h
-Player C1 bets 230
-Player B3 raises 231 # all in
+Player C1 bets 100
+Player B3 raises 101 # all in
 Player B2 calls
 Player B1 calls
 Player C2 calls
-Player D1 raises 400 # all in
+Player D1 raises 270 # all in
 Player C1 calls
-Player B3 calls
-Player B2 calls
-Player B1 calls
+Player C2 calls
 *** River ***
 8d
 *** Summary ***
@@ -912,6 +992,6 @@ Player D1 - 60 # Keeps what's left of his stack
             debug!("Last action: {}", &game_runner.game_state.actions.last().as_ref().unwrap());
             assert_eq!(action_count_before + 1, action_count_after);
         }
-        
+
     }
 }
