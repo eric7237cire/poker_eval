@@ -12,7 +12,7 @@ use crate::{
 
 use crate::game::game_runner_source::GameRunnerSource;
 use crate::game::game_runner_source::GameRunnerSourceEnum;
-use log::trace;
+use log::{trace, debug};
 
 // Enforces the poker rules
 pub struct GameRunner {
@@ -456,6 +456,32 @@ impl GameRunner {
             self.game_state.current_round
         );
 
+        //Must handle the case where only 1 active, but that 1 active needs to fold/call
+        if self.active_player_count() == 1 && self.game_state.current_to_call.is_none() {
+            trace!("Only 1 player left to act, everyone else folded/all-in, game is done");
+
+            assert!(self.game_state.player_states[player_index].is_active());
+
+            let all_in_count = self
+                .game_state
+                .player_states
+                .iter()
+                .filter(|p| p.all_in)
+                .count();
+
+            if all_in_count == 0 {
+                return Err(format!(
+                    "Only 1 player left to act, everyone else folded, but no one is all in, we should have finished then"
+                ).into());                
+            }
+
+            //effectively act like a check without registering it
+            self.game_state.player_states[player_index].cur_round_putting_in_pot = Some(0);
+
+            self.finish()?;
+            return Ok(true);
+        }
+
         let action = self.game_runner_source.get_action(
             &self.game_state.player_states[player_index],
             &self.game_state,
@@ -590,6 +616,8 @@ impl GameRunner {
                 }
 
                 self.game_state.current_to_call = Some(0);
+                self.game_state.player_states[player_index].cur_round_putting_in_pot =
+                    Some(0);
 
                 self.game_state.actions.push(PlayerAction {
                     player_index,
@@ -640,6 +668,11 @@ impl GameRunner {
             }
         }
 
+        debug!(
+            "Last action: {}",
+            &self.game_state.actions.last().as_ref().unwrap()
+        );
+
         let cur_active_player_count = self.active_player_count();
 
         let any_all_in = self.game_state.player_states.iter().any(|p| p.all_in);
@@ -658,11 +691,12 @@ impl GameRunner {
             self.finish()?;
             return Ok(true);
         }
-        // if cur_active_player_count == 1 {
-        //     trace!("Only 1 player left, game is done");
-        //     self.finish()?;
-        //     return Ok(true);
-        // }
+        trace!("{} active players left, any all in? {}", cur_active_player_count, any_all_in);
+        if cur_active_player_count == 1 && !any_all_in {
+            trace!("Only 1 player left; everyone else folded, game is done");
+            self.finish()?;
+            return Ok(true);
+        }
 
         self.game_state.current_to_act = self
             .game_state
@@ -766,8 +800,22 @@ impl GameRunner {
             .into());
         }
 
+        if raise_amt < player_state.cur_round_putting_in_pot.unwrap_or(0) {
+            return Err(format!(
+                "Player #{} {} tried to raise {} but needs to be at least {} more than {}, what they put in last time",
+                player_index,
+                &player_state.player_name,
+                raise_amt,
+                player_state.cur_round_putting_in_pot.unwrap_or(0),
+                amt_to_call
+            )
+            .into());
+        }
+
+        let actual_increase = raise_amt - player_state.cur_round_putting_in_pot.unwrap_or(0);
+
         //A raise all in doesn't need to be at least anything
-        if raise_amt < player_state.stack {
+        if actual_increase < player_state.stack {
             if raise_amt < self.game_state.min_raise + self.game_state.current_to_call.unwrap() {
                 return Err(format!(
                     "Player #{} {} tried to raise {} but needs to be at least {} more than {}",
@@ -790,7 +838,7 @@ impl GameRunner {
             }
         }
 
-        if raise_amt > player_state.stack {
+        if actual_increase > player_state.stack {
             return Err(format!(
                 "Player #{} {} tried to raise {} but only has {}",
                 player_index, &player_state.player_name, raise_amt, player_state.stack
@@ -997,6 +1045,79 @@ Player A4 - 259 # 250 + (3*9) / 3
 Player A3 - 427 # 250 + 9 + 28 + 20*7
 Player C2 - 133 # (320-231)*3 / 2 == 133.5 rounded down
 Player D1 - 60 # Keeps what's left of his stack
+    ";
+        let game_log: GameLog = hh.parse().unwrap();
+
+        let game_log_source = GameLogSource::new(game_log);
+
+        let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
+
+        for _ in 0..200 {
+            let action_count_before = game_runner.game_state.actions.len();
+            let r = game_runner.process_next_action().unwrap();
+            if r {
+                break;
+            }
+            let action_count_after = game_runner.game_state.actions.len();
+            debug!(
+                "Last action: {}",
+                &game_runner.game_state.actions.last().as_ref().unwrap()
+            );
+            assert_eq!(action_count_before + 1, action_count_after);
+        }
+    }
+
+    #[test]
+    fn test_3way_all_in_river() {
+        init_test_logger();
+
+        let hh = "
+*** Players ***
+L1 - 100 - Kd Kh
+W1 - 100 - Ad Qs
+L2 - 100 - 2d 2h
+W2 - 100 - Ah Qc
+W3 - 100 - Ac Qd
+*** Blinds ***
+L1 - 1
+W1 - 5
+*** Preflop ***
+L2 raises 10
+W2 raises 15
+W3 raises 20
+L1 raises 30
+W1 raises 40
+L2 raises 50
+W2 calls
+W3 calls
+L1 folds
+W1 raises 95
+L2 folds
+W2 calls
+W3 calls
+*** Flop ***
+As 3d 4c
+W1 checks
+W2 checks
+W3 checks
+*** Turn ***
+5d
+W1 checks
+W2 checks
+W3 checks
+*** River ***
+7d
+W1 checks
+W2 checks
+W3 bets 5
+W1 calls
+W2 calls
+*** Summary ***
+L1 - 70 # Lost 30
+W1 - 126 # 380 / 3
+L2 - 50 # Lost 50
+W2 - 126 # 
+W3 - 126 # 
     ";
         let game_log: GameLog = hh.parse().unwrap();
 
