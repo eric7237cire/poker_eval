@@ -1,4 +1,4 @@
-use log::{info, trace};
+use log::{trace};
 
 use crate::{Card, ChipType, GameState, HoleCards, InitialPlayerState, PlayerState, PokerError};
 
@@ -88,7 +88,7 @@ mod tests {
             },
             game_runner_source::GameRunnerSourceEnum,
         },
-        init_test_logger, test_game_runner, Card, GameRunner, InitialPlayerState, Position,
+        init_test_logger, test_game_runner, Card, GameRunner, InitialPlayerState,
     };
 
     use super::AgentSource;

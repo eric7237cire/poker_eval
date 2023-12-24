@@ -11,7 +11,7 @@ use crate::{
 
 use crate::game::game_runner_source::GameRunnerSource;
 use crate::game::game_runner_source::GameRunnerSourceEnum;
-use log::{debug, trace};
+use log::{trace};
 
 // Enforces the poker rules
 pub struct GameRunner {
