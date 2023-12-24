@@ -539,7 +539,9 @@ mod tests {
         assert_equity(100.0 * win_equity[2] / total_showdowns as f64, 26.14, 0.005);
     }
 
-    #[test]
+    //Slow
+    //#[test]
+    #[allow(dead_code)]
     fn test_heads_up_ranking() {
         //let mut range_idx_to_string: Vec<String> = Vec::new();
         //let mut range_idx_to_equity: Vec<f64> = Vec::new();

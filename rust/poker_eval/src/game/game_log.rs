@@ -2,6 +2,8 @@
 
 use std::str::FromStr;
 
+use log::trace;
+
 use crate::Card;
 use crate::HoleCards;
 
@@ -53,10 +55,11 @@ impl FromStr for GameLog {
         let preflop_actions =
             p.parse_round_actions(&players, Round::Preflop, &mut remaining_str)?;
 
-        if preflop_actions.len() < players.len() {
+        //If fold to bb, the bb wouldn't act
+        if preflop_actions.len() < players.len() - 1 {
             return Err(PokerError::from_string(format!(
                 "Expected at least {} preflop actions, got {} in   {:.100}",
-                players.len(),
+                players.len()-1,
                 preflop_actions.len(),
                 &remaining_str
             )));
@@ -97,7 +100,9 @@ impl FromStr for GameLog {
             board_cards.extend(cards);
 
             let round_actions = p.parse_round_actions(&players, *round, &mut remaining_str)?;
-
+            
+            trace!("{} Round actions parsed for {}", round_actions.len(), round);
+            
             actions.extend(round_actions);
         }
 

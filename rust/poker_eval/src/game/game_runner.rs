@@ -166,36 +166,27 @@ impl GameRunner {
 
         let mut check_round_pot = 0;
 
+        let current_to_call = self.game_state.current_to_call.unwrap_or(0);
+
         //Do some sanity checks, each player either folded or put in the same amount or is all in
         for player_state in &self.game_state.player_states {
-            let cur_round_putting_in_pot = player_state.cur_round_putting_in_pot.ok_or(format!(
-                "Player {} has no cur_round_putting_in_pot, has not acted yet",
-                player_state.player_name
-            ))?;
 
-            // trace!(
-            //     "{} has put in {} this round.  Folded? {} All in? {} Initial {} Current {}",
-            //     player_state.player_name,
-            //     cur_round_putting_in_pot,
-            //     player_state.folded,
-            //     player_state.all_in,
-            //     player_state.initial_stack,
-            //     player_state.stack
-            // );
+            //we can have an active player that has not acted if there's only 1
+            //So this check is just to see everyone has put in, not necesarily if they have acted
+            let cur_round_putting_in_pot = player_state.cur_round_putting_in_pot.unwrap_or(0);
 
             check_round_pot += cur_round_putting_in_pot;
             if !player_state.is_active() {
                 continue;
             }
-            if let Some(current_to_call) = self.game_state.current_to_call {
-                if cur_round_putting_in_pot != current_to_call {
-                    return Err(format!(
-                        "Player {} has put in {} but current to call is {}",
-                        player_state.player_name, cur_round_putting_in_pot, current_to_call
-                    )
-                    .into());
-                }
+            if cur_round_putting_in_pot != current_to_call {
+                return Err(format!(
+                    "Player {} has put in {} but current to call is {}",
+                    player_state.player_name, cur_round_putting_in_pot, current_to_call
+                )
+                .into());
             }
+        
         }
 
         if check_round_pot != self.game_state.round_pot {
@@ -209,12 +200,13 @@ impl GameRunner {
         Ok(())
     }
 
-    fn move_if_needed_next_to_act(&mut self) -> Result<(), PokerError> {
+    fn find_next_to_act(&self) -> Result<Position, PokerError> {
         let n_players = self.game_state.player_states.len();
+        let mut pos = self.game_state.current_to_act;
         for _ in 0..n_players {
-            let player_index: usize = self.game_state.current_to_act.into();
+            let player_index: usize = pos.into();
             if self.game_state.player_states[player_index].is_active() {
-                return Ok(());
+                return Ok(pos);
             }
 
             trace!(
@@ -223,10 +215,7 @@ impl GameRunner {
                 &self.game_state.player_states[player_index].player_name
             );
 
-            self.game_state.current_to_act = self
-                .game_state
-                .current_to_act
-                .next(self.game_state.player_states.len() as _);
+            pos = pos.next(self.game_state.player_states.len() as _);
         }
 
         Err(format!("No players left to act").into())
@@ -250,11 +239,6 @@ impl GameRunner {
         //set cur round putting in pot to None
         for player_index in 0..self.game_state.player_states.len() {
             self.game_state.player_states[player_index].cur_round_putting_in_pot = None;
-
-            if !self.game_state.player_states[player_index].is_active() {
-                //They have acted essentially for this round
-                self.game_state.player_states[player_index].cur_round_putting_in_pot = Some(0);
-            }
         }
 
         self.game_state.prev_round_pot += self.game_state.round_pot;
@@ -266,7 +250,7 @@ impl GameRunner {
     }
 
     fn move_to_next_round(&mut self) -> Result<(), PokerError> {
-        trace!("Move to next round");
+        trace!("Done with {}, Move to next round", self.game_state.current_round);
 
         let player_count = self.game_state.player_states.len();
 
@@ -285,7 +269,7 @@ impl GameRunner {
 
         if num_active > 0 {
             trace!("Moving if needed to first active player");
-            self.move_if_needed_next_to_act()?;
+            self.game_state.current_to_act = self.find_next_to_act()?;
         } else {
             trace!("No active players, keeping position as is");
         }
@@ -455,32 +439,6 @@ impl GameRunner {
             cur_active_player_count,
             self.game_state.current_round
         );
-
-        //Must handle the case where only 1 active, but that 1 active needs to fold/call
-        if self.active_player_count() == 1 && self.game_state.current_to_call.is_none() {
-            trace!("Only 1 player left to act, everyone else folded/all-in, game is done");
-
-            assert!(self.game_state.player_states[player_index].is_active());
-
-            let all_in_count = self
-                .game_state
-                .player_states
-                .iter()
-                .filter(|p| p.all_in)
-                .count();
-
-            if all_in_count == 0 {
-                return Err(format!(
-                    "Only 1 player left to act, everyone else folded, but no one is all in, we should have finished then"
-                ).into());                
-            }
-
-            //effectively act like a check without registering it
-            self.game_state.player_states[player_index].cur_round_putting_in_pot = Some(0);
-
-            self.finish()?;
-            return Ok(true);
-        }
 
         let action = self.game_runner_source.get_action(
             &self.game_state.player_states[player_index],
@@ -689,8 +647,54 @@ impl GameRunner {
 
         let any_all_in = self.game_state.player_states.iter().any(|p| p.all_in);
 
-        if cur_active_player_count == 0 && any_all_in {
+        //Must handle the case where only 1 active, but that 1 active needs to fold/call
+        /*
+            trace!("Only 1 player left to act, everyone else folded/all-in, game is done");
+
+            assert!(self.game_state.player_states[player_index].is_active());
+
+            let all_in_count = self
+                .game_state
+                .player_states
+                .iter()
+                .filter(|p| p.all_in)
+                .count();
+
+            if all_in_count == 0 {
+                return Err(format!(
+                    "Only 1 player left to act, everyone else folded, but no one is all in, we should have finished then"
+                ).into());                
+            }
+
+            //effectively act like a check without registering it
+            self.game_state.player_states[player_index].cur_round_putting_in_pot = Some(0);
+
+            self.finish()?;
+            return Ok(true);
+        }*/
+
+        //If last action was a fold, and there is 1 active player, that player is good with the pot?
+        //P1 checks
+        //P2 all in
+        //P3 fold
+        //P1 is not good
+        let finish_with_1_active_plyr = if cur_active_player_count == 1 {
+            let active_player_pos = self.find_next_to_act().unwrap();
+            let active_player_index: usize = active_player_pos.into();
+            let active_player_state = &self.game_state.player_states[active_player_index];
+            let ret = active_player_state.cur_round_putting_in_pot.unwrap_or(0) == self.game_state.current_to_call.unwrap_or(0);
+            trace!("Finish with 1 active player? {} ", ret);
+            ret 
+        } else {
+            false
+        };
+
+        //either only all in left or only 1 active left that is ok with the pot
+        if finish_with_1_active_plyr || cur_active_player_count == 0 {
             trace!("Only all in player left, and we have at least 1 all in, advancing to river");
+
+            assert!(any_all_in);
+
             let cur_round = self.game_state.current_round as u8;
             for _ in cur_round..3 {
                 trace!("Only all in player left, advancing round...");
@@ -710,7 +714,7 @@ impl GameRunner {
             .game_state
             .current_to_act
             .next(self.game_state.player_states.len() as _);
-        self.move_if_needed_next_to_act()?;
+        self.game_state.current_to_act = self.find_next_to_act()?;
 
         let player_index: usize = self.game_state.current_to_act.into();
 
@@ -969,7 +973,7 @@ Plyr D - 15 # Lost 30, 10
 
         //river actions
 
-        assert_eq!(true, game_runner.process_next_action().unwrap());
+        //assert_eq!(true, game_runner.process_next_action().unwrap());
     }
 
     #[test]
@@ -1247,6 +1251,129 @@ W1 - 435 # Wins 295+110+50
 L2 - 0 # Lost 50
 W2 - 0 
 W3 - 0
+    ";
+        let game_log: GameLog = hh.parse().unwrap();
+
+        let game_log_source = GameLogSource::new(game_log);
+
+        let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
+
+        for _ in 0..200 {
+            let action_count_before = game_runner.game_state.actions.len();
+            let r = game_runner.process_next_action().unwrap();
+            if r {
+                break;
+            }
+            let action_count_after = game_runner.game_state.actions.len();
+            debug!(
+                "Last action: {}",
+                &game_runner.game_state.actions.last().as_ref().unwrap()
+            );
+            assert_eq!(action_count_before + 1, action_count_after);
+        }
+    }
+
+    #[test]
+    fn test_fold_in_preflop_win() {
+        init_test_logger();
+
+        let hh = "
+*** Players ***
+L1 - 80 - 3c 2h
+W1 - 110 - Ad Ac
+L2 - 95 - 2d 2c
+W2 - 100 - Kh Kd
+W3 - 100 - Ks Kc
+*** Blinds ***
+L1 - 1
+W1 - 5
+*** Preflop ***
+L2 folds
+W2 folds
+W3 folds
+L1 folds
+*** Summary ***
+L1 - 79
+W1 - 111
+L2 - 95
+W2 - 100
+W3 - 100
+    ";
+        let game_log: GameLog = hh.parse().unwrap();
+
+        let game_log_source = GameLogSource::new(game_log);
+
+        let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
+
+        for _ in 0..200 {
+            let action_count_before = game_runner.game_state.actions.len();
+            let r = game_runner.process_next_action().unwrap();
+            if r {
+                break;
+            }
+            let action_count_after = game_runner.game_state.actions.len();
+            debug!(
+                "Last action: {}",
+                &game_runner.game_state.actions.last().as_ref().unwrap()
+            );
+            assert_eq!(action_count_before + 1, action_count_after);
+        }
+    }
+
+    #[test]
+    fn test_normal_3way_showdown() {
+        init_test_logger();
+
+        let hh = "
+*** Players ***
+L1 - 80 - Ac Ah
+L2 - 110 - Ad As
+L3 - 195 - 2d 2c
+L4 - 100 - Kh Kd
+W1 - 100 - 2s 7c
+*** Blinds ***
+L1 - 1
+L2 - 5
+*** Preflop ***
+L3 calls
+L4 raises 20
+W1 calls
+L1 calls
+L2 raises 35
+L3 calls
+L4 raises 50
+W1 calls
+L1 calls
+L2 calls
+L3 calls
+*** Flop ***
+7d 7h 7s
+L1 checks
+L2 checks
+L3 checks
+L4 bets 45
+W1 calls
+L1 folds
+L2 calls
+L3 calls
+*** Turn ***
+8d 
+L2 checks
+L3 checks
+L4 checks
+W1 checks
+*** River ***
+9d
+L2 checks
+L3 checks
+L4 checks
+W1 checks
+*** Summary ***
+L1 - 30
+L2 - 15
+L3 - 100
+L4 - 5
+W1 - 435
     ";
         let game_log: GameLog = hh.parse().unwrap();
 

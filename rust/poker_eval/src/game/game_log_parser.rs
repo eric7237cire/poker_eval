@@ -92,7 +92,7 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             )))?;
 
         let player_id = caps.name("player_id").unwrap().as_str();
-        trace!("Player id: {}", player_id);
+        //trace!("Player id: {}", player_id);
 
         //the remaining str is beginning of group 2
         let match_start = caps
@@ -115,31 +115,35 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
         Ok(player_id)
     }
 
-    pub fn parse_word<'a>(&'a self, s: &mut &'a str) -> Result<&str, PokerError> {
+    pub fn parse_word<'a>(&'a self, remaining_str: &mut &'a str) -> Result<&str, PokerError> {
         let caps = self
             .get_word
-            .captures(s)
+            .captures(remaining_str)
             .ok_or(PokerError::from_string(format!(
                 "Expected a word in {:.100}",
-                &s
+                &remaining_str
             )))?;
 
         let match_end = caps.get(0).unwrap().end();
-        let remaining_str = &s[match_end..];
+        let orig_remaining_str = *remaining_str;
 
-        trace!(
-            "Remaining string len: {} start {:.10}",
-            remaining_str.len(),
-            &remaining_str
-        );
-
-        *s = remaining_str;
+        *remaining_str = &remaining_str[match_end..];
 
         //If the regex passed we should definitely have something in group1
         let word = caps
             .get(1)
             .ok_or(PokerError::from_string(format!("Expected word")))?
             .as_str();
+
+        trace!(
+                "Parsed word {} Remaining string len: {} [{:.20}] and was {} [{:.20}]",
+                word,
+                remaining_str.len(),
+                &remaining_str,
+                orig_remaining_str.len(),
+                &orig_remaining_str,
+            );
+
         Ok(word)
     }
 
@@ -346,10 +350,14 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             let player_id = self.parse_player_id(remaining_str, Some(players));
 
             if !player_id.is_ok() {
+                trace!("No more actions for round {} as couldn't parse player id in {} {:.100}", round.to_string(),
+                remaining_str.len(),
+                remaining_str);
                 break;
             }
-            let player_id = player_id.unwrap();
-            trace!("Player id: {}", player_id);
+            let player_id = player_id.unwrap();   
+
+            trace!("Player id for action: {}", player_id);
 
             //lookup index of player or return error if we don't find it
             let player_index = Self::get_player_index(players, player_id)?;
@@ -379,7 +387,9 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
                 comment: None,
             });
 
-            trace!("Parsed {}", ret.last().unwrap());
+            trace!("Parsed {} for {}  Remaining str {} [{:.100}]", ret.last().unwrap(), player_id, 
+            remaining_str.len(),
+            remaining_str);
         }
 
         Ok(ret)
@@ -448,6 +458,8 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             let amount = self.parse_chip_amount(remaining_str)?;
 
             let player_index = Self::get_player_index(players, player_id)?;
+
+            trace!("Player {} has {}", player_id, amount);
 
             ret[player_index] = amount;
         }
