@@ -18,7 +18,7 @@ impl Agent for Tag {
                 let ri = self.hole_cards.unwrap().to_range_index();
 
                 //Anyone bet so far?
-                let any_raises = game_state.current_to_call > game_state.bb;
+                let _any_raises = game_state.current_to_call > game_state.bb;
 
                 if let Some(calling_range) = self.pfr_range {
                     if calling_range.data[ri] > 0.0 {

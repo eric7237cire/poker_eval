@@ -1,7 +1,7 @@
 use log::info;
 
 use crate::{
-    ActionEnum, Card, ChipType, GameState, HoleCards, InitialPlayerState, PlayerState, PokerError,
+    Card, ChipType, GameState, HoleCards, InitialPlayerState, PlayerState, PokerError,
 };
 
 use crate::game::agents::Agent;
@@ -80,7 +80,7 @@ impl GameRunnerSource for AgentSource {
 
 #[cfg(test)]
 mod tests {
-    use log::{debug, info};
+    
     use postflop_solver::Range;
     use rand::{rngs::StdRng, SeedableRng};
 
@@ -89,7 +89,7 @@ mod tests {
             agents::{Agent, JustFold, PassiveCallingStation},
             game_runner_source::GameRunnerSourceEnum,
         },
-        get_unused_card, init_test_logger, test_game_runner, Card, CardUsedType, GameLog,
+        get_unused_card, init_test_logger, test_game_runner, Card, CardUsedType,
         GameRunner, HoleCards, InitialPlayerState, Position,
     };
 

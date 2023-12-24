@@ -1,7 +1,7 @@
 use log::trace;
 
 use crate::{
-    ActionEnum, Card, ChipType, GameLog, GameState, HoleCards, InitialPlayerState, PlayerState,
+    Card, ChipType, GameLog, GameState, HoleCards, InitialPlayerState, PlayerState,
     PokerError,
 };
 
