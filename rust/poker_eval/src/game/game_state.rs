@@ -6,7 +6,9 @@ use crate::Position;
 use crate::ChipType;
 use crate::Round;
 
+
 pub struct PlayerState {
+    pub position: Position,
     pub player_name: String,
     pub initial_stack: ChipType,
     pub stack: ChipType,
@@ -25,6 +27,7 @@ pub struct PlayerState {
 impl PlayerState {
     pub fn new(initial_player_state: &InitialPlayerState) -> Self {
         PlayerState {
+            position: initial_player_state.position,
             stack: initial_player_state.stack,
             initial_stack: initial_player_state.stack,
             folded: false,

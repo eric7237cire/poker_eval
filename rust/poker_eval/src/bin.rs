@@ -11,9 +11,6 @@ use postflop_solver::flop_from_str;
 use postflop_solver::Hand;
 use postflop_solver::Range;
 
-mod agent;
-mod agents;
-pub use agents::*;
 mod game;
 pub use game::*;
 mod eval;

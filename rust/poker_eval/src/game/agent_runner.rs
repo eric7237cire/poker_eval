@@ -1,9 +1,10 @@
 use log::debug;
 
 use crate::{
-    core::Card, rank_cards, ActionEnum, Agent, AgentRoundInfo, AgentState, ChipType, OldGameState,
+    core::Card, rank_cards, ActionEnum, AgentState, ChipType, OldGameState,
     Position, Round, BIG_BLIND, SMALL_BLIND,
 };
+use crate::game::agents::{Agent, AgentRoundInfo};
 
 //GameLog -- history of a game
 //GameState -- current state of a game

@@ -1,6 +1,3 @@
-mod agent;
-mod agents;
-pub use agents::*;
 mod game;
 pub use game::*;
 mod eval;

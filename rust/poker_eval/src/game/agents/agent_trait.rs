@@ -1,4 +1,4 @@
-use crate::{ActionEnum, AgentState, ChipType, OldGameState, Round};
+use crate::{ActionEnum, AgentState, ChipType, OldGameState, Round, PlayerState, GameState, HoleCards};
 
 //For convenience, also build a struct that gives agent relavant info
 
@@ -19,11 +19,12 @@ pub struct AgentRoundInfo {
 
 pub trait Agent {
     //Get hand cards with index_to_card_pair
-    fn decide_round(
+    fn decide(
         //To be able to mutate internal state
         &self,
-        round_info: &AgentRoundInfo,
-        agent_state: &AgentState,
-        game_state: &OldGameState,
+        player_state: &PlayerState,
+        game_state: &GameState,
     ) -> ActionEnum;
+
+    fn get_hole_cards(&self) -> HoleCards;
 }
