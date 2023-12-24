@@ -5,6 +5,7 @@ use super::Agent;
 #[derive(Default)]
 pub struct JustFold {
     hole_cards: Option<HoleCards>,
+    name: String,
 }
 
 impl Agent for JustFold {
@@ -18,5 +19,9 @@ impl Agent for JustFold {
 
     fn set_hole_cards(&mut self, hole_cards: HoleCards) {
         self.hole_cards = Some(hole_cards);
+    }
+
+    fn get_name(&self) -> &str {
+        &self.name
     }
 }

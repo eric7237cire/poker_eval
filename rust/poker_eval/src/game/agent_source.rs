@@ -50,14 +50,12 @@ impl GameRunnerSource for AgentSource {
 
     //get board cards?
     fn get_next_board_card(&mut self) -> Result<Card, PokerError> {
-        if self.board.len() >= 5 {
+        if self.board.is_empty() {
             return Err(PokerError::from_string(format!(
-                "Too many board cards {}",
-                self.board.len()
+                "No more board cards to provide"
             )));
         }
-        let card = self.board[self.board.len()];
-        self.board.push(card);
+        let card = self.board.remove(0);
         Ok(card)
     }
 
@@ -82,6 +80,7 @@ impl GameRunnerSource for AgentSource {
 #[cfg(test)]
 mod tests {
     use log::{debug, info};
+    use postflop_solver::Range;
     use rand::{rngs::StdRng, SeedableRng};
 
     use crate::{init_test_logger, game::{agents::{Agent, PassiveCallingStation, JustFold}, game_runner_source::GameRunnerSourceEnum}, InitialPlayerState, Position, CardUsedType, get_unused_card, HoleCards, Card, GameRunner, GameLog, test_game_runner};
@@ -93,13 +92,22 @@ mod tests {
     fn test_agents() {
         init_test_logger();
 
+        let calling_75 = "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+";
+        let calling_75_range : Range = calling_75.parse().unwrap();
+
         let mut rng = StdRng::seed_from_u64(42);
         
         let mut agents: Vec<Box<dyn Agent>> = Vec::new();
         agents.push(Box::new(JustFold::default()));
         agents.push(Box::new(PassiveCallingStation::default()));
-        agents.push(Box::new(PassiveCallingStation::default()));
-        agents.push(Box::new(PassiveCallingStation::default()));
+
+        for i in 0..3 {
+            let mut agent = PassiveCallingStation::default();
+            agent.calling_range = Some(calling_75_range.clone());
+            agent.name = format!("{} Calling Station 75%", i+1);
+            agents.push(Box::new(agent));
+        }
+
         agents.push(Box::new(PassiveCallingStation::default()));
         agents.push(Box::new(JustFold::default()));
 
@@ -118,7 +126,12 @@ mod tests {
                 Card::try_from(card1).unwrap(), Card::try_from(card2).unwrap()).unwrap();
             agent.set_hole_cards(agent_hole_cards);
 
-            let player_name = format!("Agent {}", agent_index);
+            let player_name =
+                if agent.get_name().to_string().len() > 0  {
+                    agent.get_name().to_string()
+                } else {
+                    format!("Agent {}", agent_index)
+                };
             let player = InitialPlayerState {
                 player_name,
                 stack: 1000,

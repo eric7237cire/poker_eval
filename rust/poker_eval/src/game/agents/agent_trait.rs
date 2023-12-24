@@ -31,4 +31,6 @@ pub trait Agent {
     fn get_hole_cards(&self) -> HoleCards;
 
     fn set_hole_cards(&mut self, hole_cards: HoleCards);
+
+    fn get_name(&self) -> &str;
 }

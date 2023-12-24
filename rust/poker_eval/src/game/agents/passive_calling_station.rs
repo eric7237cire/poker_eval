@@ -7,6 +7,7 @@ use super::Agent;
 pub struct PassiveCallingStation {
     pub calling_range: Option<Range>,
     pub hole_cards: Option<HoleCards>,
+    pub name: String,
 }
 
 impl Agent for PassiveCallingStation {
@@ -22,12 +23,16 @@ impl Agent for PassiveCallingStation {
                         ActionEnum::Fold
                     }
                 } else {
-                    ActionEnum::Fold
+                    ActionEnum::Call
                 }
             }
-            Round::Flop => ActionEnum::Call,
-            Round::Turn => ActionEnum::Call,
-            Round::River => ActionEnum::Call,
+            _ => {
+                if game_state.current_to_call == 0 {
+                    ActionEnum::Check
+                } else {
+                    ActionEnum::Call
+                }
+            }
         }
     }
 
@@ -37,5 +42,9 @@ impl Agent for PassiveCallingStation {
 
     fn set_hole_cards(&mut self, hole_cards: HoleCards) {
         self.hole_cards = Some(hole_cards);
+    }
+
+    fn get_name(&self) -> &str {
+        &self.name
     }
 }

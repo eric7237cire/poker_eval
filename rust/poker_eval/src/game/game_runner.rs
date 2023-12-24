@@ -50,7 +50,7 @@ impl GameRunner {
             ),
             prev_round_pot: 0,
             round_pot: 0,
-            current_to_call: Some(bb),
+            current_to_call: bb,
             current_round: Round::Preflop,
             board: Vec::new(),
             sb,
@@ -165,7 +165,7 @@ impl GameRunner {
 
         let mut check_round_pot = 0;
 
-        let current_to_call = self.game_state.current_to_call.unwrap_or(0);
+        let current_to_call = self.game_state.current_to_call;
 
         //Do some sanity checks, each player either folded or put in the same amount or is all in
         for player_state in &self.game_state.player_states {
@@ -240,7 +240,7 @@ impl GameRunner {
 
         self.game_state.prev_round_pot += self.game_state.round_pot;
         self.game_state.round_pot = 0;
-        self.game_state.current_to_call = None;
+        self.game_state.current_to_call = 0;
         self.game_state.min_raise = 0;
 
         Ok(())
@@ -464,8 +464,8 @@ impl GameRunner {
                         .unwrap_or(0),
                 );
 
-                let pot_eq = 100.0 * self.game_state.current_to_call.unwrap_or(0) as f64
-                    / (self.game_state.current_to_call.unwrap_or(0) as f64
+                let pot_eq = 100.0 * self.game_state.current_to_call as f64
+                    / (self.game_state.current_to_call as f64
                         + self.game_state.pot() as f64);
 
                 self.game_state.actions.push(PlayerAction {
@@ -482,7 +482,17 @@ impl GameRunner {
                 });
             }
             ActionEnum::Call => {
-                let amt_to_call = self.game_state.current_to_call.unwrap();
+                let amt_to_call = self.game_state.current_to_call;
+                
+                if amt_to_call == 0 {
+                    return Err(
+                    format!(
+                        "Player {} named {} tried to call but there is no current to call",
+                        player_index,
+                        &self.game_state.player_states[player_index].player_name
+                    ).into());
+                    
+                }
                 let actual_amt = self.handle_put_money_in_pot(player_index, amt_to_call)?;
 
                 //pot has already changed
@@ -519,15 +529,12 @@ impl GameRunner {
                 });
             }
             ActionEnum::Raise(raise_amt) => {
-                let amt_to_call = self.game_state.current_to_call.ok_or(format!(
-                    "Player {} tried to raise {} but there is no current to call",
-                    player_index, raise_amt
-                ))?;
+                let amt_to_call = self.game_state.current_to_call;
 
                 self.check_able_to_raise(raise_amt)?;
 
                 self.game_state.min_raise = raise_amt - amt_to_call;
-                self.game_state.current_to_call = Some(raise_amt);
+                self.game_state.current_to_call = raise_amt;
                 let actual_amt = self.handle_put_money_in_pot(player_index, raise_amt)?;
 
                 let pot_eq = 100.0 * actual_amt as f64 / (self.game_state.pot() as f64);
@@ -563,17 +570,17 @@ impl GameRunner {
                 });
             }
             ActionEnum::Check => {
-                if let Some(amt) = self.game_state.current_to_call {
-                    if amt > 0 {
-                        return Err(format!(
-                            "Player #{} {} tried to check but there is a current to call",
-                            player_index, &self.game_state.player_states[player_index].player_name,
-                        )
-                        .into());
-                    }
+                if self.game_state.current_to_call > 0 {
+                    return Err(format!(
+                        "Player #{} {} tried to check but there is a current to call of {}",
+                        player_index, &self.game_state.player_states[player_index].player_name,
+                        self.game_state.current_to_call
+                    )
+                    .into());
+                    
                 }
 
-                self.game_state.current_to_call = Some(0);
+                self.game_state.current_to_call = 0;
                 self.game_state.player_states[player_index].cur_round_putting_in_pot = Some(0);
 
                 self.game_state.actions.push(PlayerAction {
@@ -587,7 +594,7 @@ impl GameRunner {
                 self.check_able_to_bet(bet_amt)?;
 
                 self.game_state.min_raise = bet_amt;
-                self.game_state.current_to_call = Some(bet_amt);
+                self.game_state.current_to_call = bet_amt;
 
                 let actual_amt = self.handle_put_money_in_pot(player_index, bet_amt)?;
 
@@ -682,7 +689,7 @@ impl GameRunner {
             let active_player_index: usize = active_player_pos.into();
             let active_player_state = &self.game_state.player_states[active_player_index];
             let ret = active_player_state.cur_round_putting_in_pot.unwrap_or(0)
-                == self.game_state.current_to_call.unwrap_or(0);
+                == self.game_state.current_to_call;
             trace!("Finish with 1 active player? {} ", ret);
             ret
         } else {
@@ -723,29 +730,29 @@ impl GameRunner {
 
         //Do we need to move to the next round?
         //Either checks all around or everyone called
-        if let Some(amt_to_call) = self.game_state.current_to_call {
-            if let Some(cur_round_putting_in_pot) =
-                self.game_state.player_states[player_index].cur_round_putting_in_pot
-            {
-                //If current player has called the amount needed we move to the next round
-                if amt_to_call == cur_round_putting_in_pot {
-                    trace!(
-                        "Player #{} named {} has called {} and we are moving to next round",
-                        player_index,
-                        &self.game_state.player_states[player_index].player_name,
-                        amt_to_call
-                    );
-                    if self.game_state.current_round == Round::River {
-                        trace!("River is done, game is done");
-                        self.finish()?;
-                        return Ok(true);
-                    }
-                    let cur_round = self.game_state.current_round;
-                    self.move_to_next_round()?;
-                    assert_eq!(cur_round.next().unwrap(), self.game_state.current_round);
+        let amt_to_call = self.game_state.current_to_call;
+        if let Some(cur_round_putting_in_pot) =
+            self.game_state.player_states[player_index].cur_round_putting_in_pot
+        {
+            //If current player has called the amount needed we move to the next round
+            if amt_to_call == cur_round_putting_in_pot {
+                trace!(
+                    "Player #{} named {} has called {} and we are moving to next round",
+                    player_index,
+                    &self.game_state.player_states[player_index].player_name,
+                    amt_to_call
+                );
+                if self.game_state.current_round == Round::River {
+                    trace!("River is done, game is done");
+                    self.finish()?;
+                    return Ok(true);
                 }
+                let cur_round = self.game_state.current_round;
+                self.move_to_next_round()?;
+                assert_eq!(cur_round.next().unwrap(), self.game_state.current_round);
             }
         }
+        
 
         Ok(false)
     }
@@ -754,7 +761,7 @@ impl GameRunner {
         let player_index: usize = self.game_state.current_to_act.into();
         let player_state = &self.game_state.player_states[player_index];
 
-        if self.game_state.current_to_call.unwrap_or(0) != 0 {
+        if self.game_state.current_to_call != 0 {
             return Err(format!(
                 "Player #{} {} tried to bet {} but there is already a bet to call, must call or raise or fold",
                 player_index,
@@ -796,7 +803,7 @@ impl GameRunner {
         let player_index: usize = self.game_state.current_to_act.into();
         let player_state = &self.game_state.player_states[player_index];
 
-        let amt_to_call = self.game_state.current_to_call.unwrap_or(0);
+        let amt_to_call = self.game_state.current_to_call;
 
         //Can only raise if there is a current to call
         if amt_to_call == 0 {
@@ -831,20 +838,20 @@ impl GameRunner {
 
         //A raise all in doesn't need to be at least anything
         if actual_increase < player_state.stack {
-            if raise_amt < self.game_state.min_raise + self.game_state.current_to_call.unwrap() {
+            if raise_amt < self.game_state.min_raise + self.game_state.current_to_call {
                 return Err(format!(
                     "Player #{} {} tried to raise {} but needs to be at least {} more than {}",
                     player_index,
                     &player_state.player_name,
                     raise_amt,
                     self.game_state.min_raise,
-                    self.game_state.current_to_call.unwrap()
+                    self.game_state.current_to_call
                 )
                 .into());
             }
 
             //Also check multiple of bb
-            if (raise_amt - self.game_state.current_to_call.unwrap()) % self.game_state.bb != 0 {
+            if (raise_amt - self.game_state.current_to_call) % self.game_state.bb != 0 {
                 return Err(format!(
                     "Player #{} {} tried to raise {} but must be a multiple of big blind {}",
                     player_index, &player_state.player_name, raise_amt, self.game_state.bb
@@ -904,7 +911,21 @@ impl GameRunner {
             if action.round != round {
                 round = action.round;
                 s.push_str(&format!("*** {} ***\n", round));
+
+                if round == Round::Flop {
+                    self.game_state.board[0..3].iter().for_each(|c| {
+                        s.push_str(&format!("{} ", c));
+                    });                
+                    s.push_str("\n");
+                } else if round == Round::Turn {
+                    s.push_str(&format!("{}\n", self.game_state.board[3]));
+                                   
+                } else if round == Round::River {
+                    s.push_str(&format!("{}\n", self.game_state.board[4]));
+                }
             }
+
+            
 
             s.push_str(&format!(
                 "{:width$} {} # {}\n",

@@ -58,9 +58,8 @@ pub struct GameState {
     //Until current rounds are finished, is not added to pot
     pub round_pot: ChipType,
 
-    //None means no one has acted yet for the round
-    //checking sets this to 0
-    pub current_to_call: Option<ChipType>,
+    //Amount next player needs to call (total, not diff what they need to put in)
+    pub current_to_call: ChipType,
 
     //Initial bet is also considered a raise for this value
     pub min_raise: ChipType,
