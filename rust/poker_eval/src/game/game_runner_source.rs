@@ -4,10 +4,12 @@ use crate::{
 };
 use enum_dispatch::enum_dispatch;
 
+use crate::game::agent_source::AgentSource;
+
 #[enum_dispatch]
 pub enum GameRunnerSourceEnum {
     GameLogSource,
-    //LogarithmicKnob,
+    AgentSource,
 }
 
 #[enum_dispatch(GameRunnerSourceEnum)]

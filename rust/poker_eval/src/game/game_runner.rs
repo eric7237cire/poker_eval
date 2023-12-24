@@ -863,6 +863,73 @@ impl GameRunner {
 
         Ok(())
     }
+
+    pub fn to_game_log_string(&self) -> String {
+        //Find longest player id width
+        let max_player_id_width = self.game_state.player_states
+        .iter()
+        .map(|player_state| player_state.player_name.len())
+        .max()
+        .unwrap_or(0);
+
+        let mut s = String::new();
+        s.push_str("*** Players ***\n");
+        for player_state in &self.game_state.player_states {
+            s.push_str(&format!(
+                "{:width$} - {} - {}\n",
+                player_state.player_name,
+                player_state.initial_stack,
+                self.game_runner_source.get_hole_cards(player_state.player_index()).unwrap(),
+                width = max_player_id_width
+            ));
+        }
+
+        s.push_str("*** Blinds ***\n");
+        s.push_str(&format!(
+            "{:width$} - {}\n",
+            self.game_state.player_states[0].player_name,
+            min(self.game_state.sb, self.game_state.player_states[0].initial_stack),
+            width = max_player_id_width
+        ));
+        s.push_str(&format!(
+            "{:width$} - {}\n",
+            self.game_state.player_states[1].player_name,
+            min(self.game_state.bb, self.game_state.player_states[0].initial_stack),
+            width = max_player_id_width
+        ));
+
+        let mut round = Round::River;
+
+        for action in &self.game_state.actions {
+            if action.round != round {
+                round = action.round;
+                s.push_str(&format!("*** {} ***\n", round));
+            }
+
+            s.push_str(&format!(
+                "{:width$} {} # {}\n",
+                self.game_state.player_states[action.player_index].player_name,
+                action.action,
+                action.comment.as_ref().unwrap_or(&String::new()),
+                width = max_player_id_width
+            ));
+        }
+
+        s.push_str("*** Summary ***\n");
+
+        for player_state in &self.game_state.player_states {
+            s.push_str(&format!(
+                "{:width$} - {} # Started with {} change {}\n",
+                player_state.player_name,
+                player_state.stack,
+                player_state.initial_stack,
+                (player_state.stack as i64) - (player_state.initial_stack as i64),
+                width = max_player_id_width
+            ));
+        }
+    
+        s
+    }
 }
 
 #[cfg(test)]

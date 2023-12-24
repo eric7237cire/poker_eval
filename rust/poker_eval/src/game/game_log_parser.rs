@@ -27,7 +27,7 @@ player_id_regex: Regex::new(r#"(?x) # Enable verbose mode
 (?:\#[^\n\r]*)?         # Non-capturing group for # and anything after it, greedy
 \s*
 \b{start-half}          # Non consuming word boundary
-(?P<player_id>[\w\ ]+)  # Capture player id
+(?P<player_id>[\w\ ]+?)  # Capture player id, non greedy for no trailing whitespace
 \b{end-half}            # Non consuming word boundary
 \ +
 ((wins|loses|bets|raises|calls|folds|checks|-))  # Capture ending

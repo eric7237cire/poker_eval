@@ -40,6 +40,10 @@ impl PlayerState {
     pub fn is_active(&self) -> bool {
         !self.folded && !self.all_in
     }
+
+    pub fn player_index(&self) -> usize {
+        self.position.into()
+    }
 }
 
 pub struct GameState {

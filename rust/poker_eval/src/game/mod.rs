@@ -24,8 +24,8 @@ pub use position::*;
 
 mod game_log_parser;
 
-mod game_log_source;
-mod game_runner_source;
+pub mod game_log_source;
+pub mod game_runner_source;
 
 mod agent_source;
 mod agents;

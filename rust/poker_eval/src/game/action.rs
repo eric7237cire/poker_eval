@@ -15,11 +15,11 @@ pub enum ActionEnum {
 impl Display for ActionEnum {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ActionEnum::Fold => write!(f, "Fold"),
-            ActionEnum::Call => write!(f, "Call"),
-            ActionEnum::Check => write!(f, "Check"),
-            ActionEnum::Bet(amount) => write!(f, "Bet {}", amount),
-            ActionEnum::Raise(amount) => write!(f, "Raise {}", amount),
+            ActionEnum::Fold => write!(f, "folds"),
+            ActionEnum::Call => write!(f, "calls"),
+            ActionEnum::Check => write!(f, "checks"),
+            ActionEnum::Bet(amount) => write!(f, "bets {}", amount),
+            ActionEnum::Raise(amount) => write!(f, "raises {}", amount),
         }
     }
 }

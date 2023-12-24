@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, fmt::{Display, Formatter}};
 
 use crate::{set_used_card, unset_used_card, CardUsedType};
 use postflop_solver::card_pair_to_index;
@@ -159,20 +159,11 @@ impl FromStr for HoleCards {
     }
 }
 
-// impl Index<usize> for HoleCards
-// {
-//     type Output = Card;
-
-//     fn index(&self, index: usize) -> &Self::Output {
-//         if index == 0 {
-//             return &self.card_hi;
-//         }
-//         if index == 1 {
-//             return &self.card_lo;
-//         }
-//         panic!("Invalid index");
-//     }
-// }
+impl Display for HoleCards {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {}", self.card_hi_lo[0], self.card_hi_lo[1])
+    }
+}
 
 #[cfg(test)]
 mod tests {

@@ -2,8 +2,9 @@ use crate::{ActionEnum, GameState, HoleCards, PlayerState};
 
 use super::Agent;
 
+#[derive(Default)]
 pub struct JustFold {
-    hole_cards: HoleCards,
+    hole_cards: Option<HoleCards>,
 }
 
 impl Agent for JustFold {
@@ -12,6 +13,10 @@ impl Agent for JustFold {
     }
 
     fn get_hole_cards(&self) -> crate::HoleCards {
-        self.hole_cards
+        self.hole_cards.unwrap()
+    }
+
+    fn set_hole_cards(&mut self, hole_cards: HoleCards) {
+        self.hole_cards = Some(hole_cards);
     }
 }
