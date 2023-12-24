@@ -638,7 +638,7 @@ impl GameRunner {
             }
         }
 
-        debug!(
+        trace!(
             "Last action: {}",
             &self.game_state.actions.last().as_ref().unwrap()
         );

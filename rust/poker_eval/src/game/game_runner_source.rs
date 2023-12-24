@@ -1,6 +1,6 @@
 use crate::{
-    game::game_log_source::GameLogSource, Card, ChipType, GameState, HoleCards,
-    InitialPlayerState, PlayerState, PokerError,
+    game::game_log_source::GameLogSource, Card, ChipType, GameState, HoleCards, InitialPlayerState,
+    PlayerState, PokerError,
 };
 use enum_dispatch::enum_dispatch;
 

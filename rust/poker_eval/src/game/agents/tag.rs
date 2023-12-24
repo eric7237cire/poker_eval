@@ -2,7 +2,7 @@ use crate::{ActionEnum, GameState, HoleCards, PlayerState, Round};
 use postflop_solver::Range;
 
 use super::{Agent, AgentDecision};
-//JJ+,AJs+,AQo+,KQs
+
 #[derive(Default)]
 pub struct Tag {
     pub three_bet_range: Option<Range>,

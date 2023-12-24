@@ -13,6 +13,8 @@ pub fn init_test_logger() {
         .filter_module("poker_eval::game::game_log_parser", log::LevelFilter::Debug)
         .filter_module("poker_eval::game::game_log_source", log::LevelFilter::Debug)
         .filter_module("poker_eval::game::game_runner", log::LevelFilter::Debug)
+        .filter_module("poker_eval::game::agent_source", log::LevelFilter::Debug)
+        .filter_module("poker_eval::game::game_log", log::LevelFilter::Debug)
         .format(|buf, record| {
             writeln!(
                 buf,
@@ -27,6 +29,7 @@ pub fn init_test_logger() {
         .try_init();
 }
 
+#[allow(dead_code)]
 fn take_after_last_slash(s: &str) -> &str {
     let mut last_slash = 0;
     for (i, c) in s.chars().enumerate() {
@@ -37,6 +40,7 @@ fn take_after_last_slash(s: &str) -> &str {
     &s[last_slash + 1..]
 }
 
+
 pub fn test_game_runner(game_runner: &mut GameRunner) -> Result<(), PokerError> {
     for _ in 0..200 {
         let action_count_before = game_runner.game_state.actions.len();
@@ -45,10 +49,10 @@ pub fn test_game_runner(game_runner: &mut GameRunner) -> Result<(), PokerError> 
             break;
         }
         let action_count_after = game_runner.game_state.actions.len();
-        debug!(
-            "Last action: {}",
-            &game_runner.game_state.actions.last().as_ref().unwrap()
-        );
+        // debug!(
+        //     "Last action: {}",
+        //     &game_runner.game_state.actions.last().as_ref().unwrap()
+        // );
         assert_eq!(action_count_before + 1, action_count_after);
     }
 
@@ -74,7 +78,7 @@ pub fn test_game_runner(game_runner: &mut GameRunner) -> Result<(), PokerError> 
 
     let log2 = game_runner2.to_game_log_string();
 
-    info!("log2:\n{}", log2);
+    //info!("log2:\n{}", log2);
 
     assert_eq!(log, log2);
 

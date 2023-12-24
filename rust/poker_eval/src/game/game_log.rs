@@ -345,4 +345,54 @@ Plyr D - 90
         assert_eq!(game_log.final_stacks[2], 55);
         assert_eq!(game_log.final_stacks[3], 90);
     }
+
+    #[test]
+    fn test_parse_machine_generated_game_log() {
+        init_test_logger();
+
+        let hh = "
+        *** Players ***
+Agent 0               - 500 - 9c 8s
+Agent 1               - 500 - Td 7d
+1 Calling Station 75% - 500 - Jh 2d
+2 Calling Station 75% - 500 - Kc 2c
+Agent 4               - 500 - Ac 8h
+*** Blinds ***
+Agent 0               - 2
+Agent 1               - 5
+*** Preflop ***
+1 Calling Station 75% calls # Player #2 1 Calling Station 75% calls 5 (of 5) with 41.7% pot equity with 12 in the pot
+2 Calling Station 75% calls # Player #3 2 Calling Station 75% calls 5 (of 5) with 29.4% pot equity with 17 in the pot
+Agent 4               calls # Player #4 Agent 4 calls 5 (of 5) with 22.7% pot equity with 22 in the pot
+Agent 0               calls # Player #0 Agent 0 calls 3 (of 5) with 12.0% pot equity with 25 in the pot
+*** Flop ***
+7c 3s 4s
+Agent 0               checks #
+Agent 1               checks #
+1 Calling Station 75% checks #
+2 Calling Station 75% checks #
+Agent 4               checks #
+*** Turn ***
+2h
+Agent 0               checks #
+Agent 1               checks #
+1 Calling Station 75% checks #
+2 Calling Station 75% checks #
+Agent 4               checks #
+*** River ***
+2s
+Agent 0               checks #
+Agent 1               checks #
+1 Calling Station 75% checks #
+2 Calling Station 75% checks #
+Agent 4               checks #
+*** Summary ***
+Agent 0               - 495 # Started with 500 change -5
+Agent 1               - 495 # Started with 500 change -5
+1 Calling Station 75% - 495 # Started with 500 change -5
+2 Calling Station 75% - 520 # Started with 500 change 20
+Agent 4               - 495 # Started with 500 change -5
+";
+let game_log: GameLog = hh.parse().unwrap();
+}
 }

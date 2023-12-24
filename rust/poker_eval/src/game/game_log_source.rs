@@ -1,8 +1,7 @@
 use log::trace;
 
 use crate::{
-    Card, ChipType, GameLog, GameState, HoleCards, InitialPlayerState, PlayerState,
-    PokerError,
+    Card, ChipType, GameLog, GameState, HoleCards, InitialPlayerState, PlayerState, PokerError,
 };
 
 use super::{agents::AgentDecision, game_runner_source::GameRunnerSource};

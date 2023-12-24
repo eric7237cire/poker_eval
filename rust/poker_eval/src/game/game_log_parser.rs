@@ -24,11 +24,11 @@ impl GameLogParser {
         Self {
 player_id_regex: Regex::new(r#"(?x) # Enable verbose mode
 ^\s*                    # Asserts the start of the string and matches any leading whitespace
-(?:\#[^\n\r]*)?         # Non-capturing group for # and anything after it, greedy
+(?:\#[^\n\r]*\n)?         # comment in prev line; Non-capturing group for # and anything after it, greedy
 \s*
 \b{start-half}          # Non consuming word boundary
-(?P<player_id>[\w\ \%]+?)  # Capture player id, non greedy for no trailing whitespace, can have % in name
-\b{end-half}            # Non consuming word boundary
+(?P<player_id>[0-9A-Za-z_\ \%]+?)  # Capture player id, non greedy for no trailing whitespace, can have % in name
+(?-u:\b{end-half})            # Non consuming word boundary
 \ +
 ((wins|loses|bets|raises|calls|folds|checks|-))  # Capture ending
 "#).unwrap(),
@@ -45,7 +45,7 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
     (?:\#[^\n\r]*)?         # Non-capturing group for # and anything after it, greedy
     \s*
     \*+\s*                  # Matches one or more '*' followed by any whitespace
-    (?P<section_name>.+?)   # Lazily captures one or more characters as the section name
+    (?P<section_name>[A-Za-z]+?)   # Lazily captures one or more characters as the section name
     \s*\*+                  # Matches any trailing whitespace followed by one or more '*'
 "#,
             )
@@ -351,7 +351,7 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
 
             if !player_id.is_ok() {
                 trace!(
-                    "No more actions for round {} as couldn't parse player id in {} {:.100}",
+                    "No more actions for round {} as couldn't parse player id in {} [[{:.100}]]",
                     round.to_string(),
                     remaining_str.len(),
                     remaining_str
@@ -392,7 +392,7 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             });
 
             trace!(
-                "Parsed {} for {}  Remaining str {} [{:.100}]",
+                "Parsed {} for {}  Remaining str {} [[{:.100}]]",
                 ret.last().unwrap(),
                 player_id,
                 remaining_str.len(),
