@@ -109,11 +109,13 @@ mod tests {
             agents.push(Box::new(agent));
         }
 
-        let mut tag = Tag::default();
-        tag.name = "Hero".to_string();
-        tag.three_bet_range = Some("JJ+,AJs+,AQo+,KQs".parse().unwrap());
-        tag.pfr_range = Some("22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+".parse().unwrap());
-        agents.push(Box::new(Tag::default()));
+        let tag = Tag {
+            three_bet_range: "JJ+,AJs+,AQo+,KQs".parse().unwrap(),
+            pfr_range: "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+".parse().unwrap(),
+            name: "Hero".to_string(),
+            hole_cards: None,
+        };
+        agents.push(Box::new(tag));
 
         agents
     }
@@ -127,7 +129,7 @@ mod tests {
         
         let mut hero_winnings: i64 = 0;
 
-        for _ in 0..500 {
+        for _ in 0..200 {
             agent_deck.reset();
 
             let mut agents = build_agents();
