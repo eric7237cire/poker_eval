@@ -206,7 +206,7 @@ Seat 6 - 55
                 player_index: 2,
                 action: ActionEnum::Fold,
                 round: Round::Preflop,
-                comment: None,
+                ..PlayerAction::default()
             }
         );
         assert_eq!(
@@ -215,7 +215,7 @@ Seat 6 - 55
                 player_index: 0,
                 action: ActionEnum::Call,
                 round: Round::Preflop,
-                comment: None,
+                ..PlayerAction::default()
             }
         );
         assert_eq!(
@@ -224,7 +224,7 @@ Seat 6 - 55
                 player_index: 1,
                 action: ActionEnum::Check,
                 round: Round::Preflop,
-                comment: None,
+                ..PlayerAction::default()
             }
         );
 
@@ -239,7 +239,7 @@ Seat 6 - 55
                 player_index: 0,
                 action: ActionEnum::Check,
                 round: Round::Flop,
-                comment: None,
+                ..PlayerAction::default()
             }
         );
 
@@ -249,7 +249,7 @@ Seat 6 - 55
                 player_index: 1,
                 action: ActionEnum::Bet(5),
                 round: Round::Flop,
-                comment: None,
+                ..PlayerAction::default()
             }
         );
 
@@ -259,7 +259,7 @@ Seat 6 - 55
                 player_index: 0,
                 action: ActionEnum::Fold,
                 round: Round::Flop,
-                comment: None,
+                ..PlayerAction::default()
             }
         );
     }

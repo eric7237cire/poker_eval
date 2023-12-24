@@ -10,6 +10,12 @@ pub enum Round {
     River,
 }
 
+impl Default for Round {
+    fn default() -> Self {
+        Round::Preflop
+    }
+}
+
 impl Display for Round {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

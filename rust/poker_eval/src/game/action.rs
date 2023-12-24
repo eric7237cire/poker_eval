@@ -12,6 +12,12 @@ pub enum ActionEnum {
     Raise(ChipType),
 }
 
+impl Default for ActionEnum {
+    fn default() -> Self {
+        ActionEnum::Fold
+    }
+}
+
 impl Display for ActionEnum {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -24,24 +30,25 @@ impl Display for ActionEnum {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Default)]
 pub struct PlayerAction {
     pub player_index: usize,
     pub action: ActionEnum,
     pub round: Round,
-
-    pub comment: Option<String>,
+    pub player_comment: Option<String>,
+    pub system_comment: Option<String>,
 }
 
 impl Display for PlayerAction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Player #{} {} in {} -- {}",
+            "Player #{} {} in {} -- {} ; {}",
             self.player_index,
             self.action,
             self.round,
-            self.comment.as_ref().unwrap_or(&"".to_string())
+            self.system_comment.as_ref().unwrap_or(&"".to_string()),
+            self.player_comment.as_ref().unwrap_or(&"".to_string())
         )
     }
 }

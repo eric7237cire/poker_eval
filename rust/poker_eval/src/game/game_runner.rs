@@ -440,10 +440,11 @@ impl GameRunner {
             self.game_state.current_round
         );
 
-        let action = self.game_runner_source.get_action(
+        let decision = self.game_runner_source.get_action(
             &self.game_state.player_states[player_index],
             &self.game_state,
         )?;
+        let action = decision.action;
 
         trace!(
             "Player #{} named {} does action {}",
@@ -465,33 +466,32 @@ impl GameRunner {
                 );
 
                 let pot_eq = 100.0 * self.game_state.current_to_call as f64
-                    / (self.game_state.current_to_call as f64
-                        + self.game_state.pot() as f64);
+                    / (self.game_state.current_to_call as f64 + self.game_state.pot() as f64);
 
                 self.game_state.actions.push(PlayerAction {
                     player_index,
                     action,
                     round: self.game_state.current_round,
-                    comment: Some(format!(
+                    system_comment: Some(format!(
                         "Player #{} {} folded to {:.1}% pot equity with {} in the pot",
                         player_index,
                         &self.game_state.player_states[player_index].player_name,
                         pot_eq,
-                        self.game_state.pot()
+                        self.game_state.pot(),
                     )),
+
+                    player_comment: decision.comment,
                 });
             }
             ActionEnum::Call => {
                 let amt_to_call = self.game_state.current_to_call;
-                
+
                 if amt_to_call == 0 {
-                    return Err(
-                    format!(
+                    return Err(format!(
                         "Player {} named {} tried to call but there is no current to call",
-                        player_index,
-                        &self.game_state.player_states[player_index].player_name
-                    ).into());
-                    
+                        player_index, &self.game_state.player_states[player_index].player_name
+                    )
+                    .into());
                 }
                 let actual_amt = self.handle_put_money_in_pot(player_index, amt_to_call)?;
 
@@ -525,7 +525,8 @@ impl GameRunner {
                     player_index,
                     action,
                     round: self.game_state.current_round,
-                    comment: Some(comment),
+                    system_comment: Some(comment),
+                    player_comment: decision.comment,
                 });
             }
             ActionEnum::Raise(raise_amt) => {
@@ -566,18 +567,19 @@ impl GameRunner {
                     player_index,
                     action,
                     round: self.game_state.current_round,
-                    comment: Some(comment),
+                    system_comment: Some(comment),
+                    player_comment: decision.comment,
                 });
             }
             ActionEnum::Check => {
                 if self.game_state.current_to_call > 0 {
                     return Err(format!(
                         "Player #{} {} tried to check but there is a current to call of {}",
-                        player_index, &self.game_state.player_states[player_index].player_name,
+                        player_index,
+                        &self.game_state.player_states[player_index].player_name,
                         self.game_state.current_to_call
                     )
                     .into());
-                    
                 }
 
                 self.game_state.current_to_call = 0;
@@ -587,7 +589,9 @@ impl GameRunner {
                     player_index,
                     action,
                     round: self.game_state.current_round,
-                    comment: None,
+                    system_comment: None,
+
+                    player_comment: decision.comment,
                 });
             }
             ActionEnum::Bet(bet_amt) => {
@@ -627,7 +631,9 @@ impl GameRunner {
                     player_index,
                     action,
                     round: self.game_state.current_round,
-                    comment: Some(comment),
+                    system_comment: Some(comment),
+
+                    player_comment: decision.comment,
                 });
             }
         }
@@ -752,7 +758,6 @@ impl GameRunner {
                 assert_eq!(cur_round.next().unwrap(), self.game_state.current_round);
             }
         }
-        
 
         Ok(false)
     }
@@ -873,11 +878,13 @@ impl GameRunner {
 
     pub fn to_game_log_string(&self) -> String {
         //Find longest player id width
-        let max_player_id_width = self.game_state.player_states
-        .iter()
-        .map(|player_state| player_state.player_name.len())
-        .max()
-        .unwrap_or(0);
+        let max_player_id_width = self
+            .game_state
+            .player_states
+            .iter()
+            .map(|player_state| player_state.player_name.len())
+            .max()
+            .unwrap_or(0);
 
         let mut s = String::new();
         s.push_str("*** Players ***\n");
@@ -886,7 +893,9 @@ impl GameRunner {
                 "{:width$} - {} - {}\n",
                 player_state.player_name,
                 player_state.initial_stack,
-                self.game_runner_source.get_hole_cards(player_state.player_index()).unwrap(),
+                self.game_runner_source
+                    .get_hole_cards(player_state.player_index())
+                    .unwrap(),
                 width = max_player_id_width
             ));
         }
@@ -895,13 +904,19 @@ impl GameRunner {
         s.push_str(&format!(
             "{:width$} - {}\n",
             self.game_state.player_states[0].player_name,
-            min(self.game_state.sb, self.game_state.player_states[0].initial_stack),
+            min(
+                self.game_state.sb,
+                self.game_state.player_states[0].initial_stack
+            ),
             width = max_player_id_width
         ));
         s.push_str(&format!(
             "{:width$} - {}\n",
             self.game_state.player_states[1].player_name,
-            min(self.game_state.bb, self.game_state.player_states[0].initial_stack),
+            min(
+                self.game_state.bb,
+                self.game_state.player_states[0].initial_stack
+            ),
             width = max_player_id_width
         ));
 
@@ -915,23 +930,20 @@ impl GameRunner {
                 if round == Round::Flop {
                     self.game_state.board[0..3].iter().for_each(|c| {
                         s.push_str(&format!("{} ", c));
-                    });                
+                    });
                     s.push_str("\n");
                 } else if round == Round::Turn {
                     s.push_str(&format!("{}\n", self.game_state.board[3]));
-                                   
                 } else if round == Round::River {
                     s.push_str(&format!("{}\n", self.game_state.board[4]));
                 }
             }
 
-            
-
             s.push_str(&format!(
                 "{:width$} {} # {}\n",
                 self.game_state.player_states[action.player_index].player_name,
                 action.action,
-                action.comment.as_ref().unwrap_or(&String::new()),
+                action.system_comment.as_ref().unwrap_or(&String::new()),
                 width = max_player_id_width
             ));
         }
@@ -948,7 +960,7 @@ impl GameRunner {
                 width = max_player_id_width
             ));
         }
-    
+
         s
     }
 }

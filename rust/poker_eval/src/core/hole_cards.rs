@@ -1,4 +1,7 @@
-use std::{str::FromStr, fmt::{Display, Formatter}};
+use std::{
+    fmt::{Display, Formatter},
+    str::FromStr,
+};
 
 use crate::{set_used_card, unset_used_card, CardUsedType};
 use postflop_solver::card_pair_to_index;

@@ -2,9 +2,9 @@ use std::io::Write;
 
 use log::{debug, info};
 
+use crate::game::game_runner_source::GameRunnerSourceEnum;
 use crate::game_log_source::GameLogSource;
-use crate::{GameRunner, GameLog, PokerError};
-use crate::game::game_runner_source::{GameRunnerSourceEnum, GameRunnerSource};
+use crate::{GameLog, GameRunner, PokerError};
 
 pub fn init_test_logger() {
     let _ = env_logger::builder()
@@ -77,7 +77,6 @@ pub fn test_game_runner(game_runner: &mut GameRunner) -> Result<(), PokerError> 
     info!("log2:\n{}", log2);
 
     assert_eq!(log, log2);
-
 
     Ok(())
 }

@@ -5,7 +5,7 @@ use crate::{
     PokerError,
 };
 
-use super::game_runner_source::GameRunnerSource;
+use super::{agents::AgentDecision, game_runner_source::GameRunnerSource};
 
 pub struct GameLogSource {
     game_log: GameLog,
@@ -40,7 +40,7 @@ impl GameRunnerSource for GameLogSource {
         &mut self,
         player_state: &PlayerState,
         game_state: &GameState,
-    ) -> Result<ActionEnum, PokerError> {
+    ) -> Result<AgentDecision, PokerError> {
         if self.cur_action >= self.game_log.actions.len() {
             return Err(PokerError::from_string(format!(
                 "Invalid action index {}",
@@ -66,7 +66,10 @@ impl GameRunnerSource for GameLogSource {
         }
 
         self.cur_action += 1;
-        Ok(action.action)
+        Ok(AgentDecision {
+            action: action.action,
+            comment: None,
+        })
     }
 
     fn get_hole_cards(&self, player_index: usize) -> Result<HoleCards, PokerError> {
