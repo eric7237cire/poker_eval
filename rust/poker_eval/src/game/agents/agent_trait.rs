@@ -1,5 +1,5 @@
 use crate::{
-    ActionEnum, AgentState, ChipType, GameState, HoleCards, OldGameState, PlayerState, Round,
+    ActionEnum, ChipType, GameState, HoleCards, PlayerState, Round,
 };
 
 //For convenience, also build a struct that gives agent relavant info

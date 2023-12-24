@@ -7,7 +7,7 @@ pub struct JustFold {
 }
 
 impl Agent for JustFold {
-    fn decide(&self, player_state: &PlayerState, game_state: &GameState) -> ActionEnum {
+    fn decide(&self, _player_state: &PlayerState, _game_state: &GameState) -> ActionEnum {
         ActionEnum::Fold
     }
 
