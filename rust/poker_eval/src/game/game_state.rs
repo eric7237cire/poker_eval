@@ -6,7 +6,6 @@ use crate::Position;
 use crate::ChipType;
 use crate::Round;
 
-
 pub struct PlayerState {
     pub position: Position,
     pub player_name: String,

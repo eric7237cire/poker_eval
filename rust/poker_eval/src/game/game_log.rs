@@ -59,7 +59,7 @@ impl FromStr for GameLog {
         if preflop_actions.len() < players.len() - 1 {
             return Err(PokerError::from_string(format!(
                 "Expected at least {} preflop actions, got {} in   {:.100}",
-                players.len()-1,
+                players.len() - 1,
                 preflop_actions.len(),
                 &remaining_str
             )));
@@ -100,9 +100,9 @@ impl FromStr for GameLog {
             board_cards.extend(cards);
 
             let round_actions = p.parse_round_actions(&players, *round, &mut remaining_str)?;
-            
+
             trace!("{} Round actions parsed for {}", round_actions.len(), round);
-            
+
             actions.extend(round_actions);
         }
 

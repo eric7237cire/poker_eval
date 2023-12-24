@@ -1,9 +1,11 @@
 use log::info;
 
-use crate::{Card, ChipType, InitialPlayerState, PlayerState, GameState, PokerError, ActionEnum, HoleCards};
+use crate::{
+    ActionEnum, Card, ChipType, GameState, HoleCards, InitialPlayerState, PlayerState, PokerError,
+};
 
-use crate::game::game_runner_source::GameRunnerSource;
 use crate::game::agents::Agent;
+use crate::game::game_runner_source::GameRunnerSource;
 pub struct AgentSource {
     agents: Vec<Box<dyn Agent>>,
     pub players: Vec<InitialPlayerState>,
@@ -65,7 +67,12 @@ impl GameRunnerSource for AgentSource {
         player_state: &PlayerState,
         comment: Option<String>,
     ) -> Result<(), PokerError> {
-        info!("set_final_player_state: {} stack {} comment {}", player_index, player_state.stack, comment.unwrap_or("".to_string()));
+        info!(
+            "set_final_player_state: {} stack {} comment {}",
+            player_index,
+            player_state.stack,
+            comment.unwrap_or("".to_string())
+        );
         //let agent = &mut self.agents[player_index];
         //agent.set_final_player_state(player_state, comment)
         Ok(())

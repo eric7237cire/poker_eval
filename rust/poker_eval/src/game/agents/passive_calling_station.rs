@@ -1,4 +1,4 @@
-use crate::{ActionEnum, AgentState, OldGameState, Round, PlayerState, GameState, HoleCards};
+use crate::{ActionEnum, AgentState, GameState, HoleCards, OldGameState, PlayerState, Round};
 use postflop_solver::Range;
 
 use super::Agent;
@@ -10,11 +10,7 @@ pub struct PassiveCallingStation {
 }
 
 impl Agent for PassiveCallingStation {
-    fn decide(
-        &self,
-        player_state: &PlayerState,
-        game_state: &GameState,
-    ) -> ActionEnum {
+    fn decide(&self, player_state: &PlayerState, game_state: &GameState) -> ActionEnum {
         match game_state.current_round {
             Round::Preflop => {
                 //poker_eval as a different idea of card
@@ -36,5 +32,4 @@ impl Agent for PassiveCallingStation {
     fn get_hole_cards(&self) -> HoleCards {
         self.hole_cards
     }
-    
 }

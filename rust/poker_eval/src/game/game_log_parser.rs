@@ -136,13 +136,13 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             .as_str();
 
         trace!(
-                "Parsed word {} Remaining string len: {} [{:.20}] and was {} [{:.20}]",
-                word,
-                remaining_str.len(),
-                &remaining_str,
-                orig_remaining_str.len(),
-                &orig_remaining_str,
-            );
+            "Parsed word {} Remaining string len: {} [{:.20}] and was {} [{:.20}]",
+            word,
+            remaining_str.len(),
+            &remaining_str,
+            orig_remaining_str.len(),
+            &orig_remaining_str,
+        );
 
         Ok(word)
     }
@@ -350,12 +350,15 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             let player_id = self.parse_player_id(remaining_str, Some(players));
 
             if !player_id.is_ok() {
-                trace!("No more actions for round {} as couldn't parse player id in {} {:.100}", round.to_string(),
-                remaining_str.len(),
-                remaining_str);
+                trace!(
+                    "No more actions for round {} as couldn't parse player id in {} {:.100}",
+                    round.to_string(),
+                    remaining_str.len(),
+                    remaining_str
+                );
                 break;
             }
-            let player_id = player_id.unwrap();   
+            let player_id = player_id.unwrap();
 
             trace!("Player id for action: {}", player_id);
 
@@ -387,9 +390,13 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
                 comment: None,
             });
 
-            trace!("Parsed {} for {}  Remaining str {} [{:.100}]", ret.last().unwrap(), player_id, 
-            remaining_str.len(),
-            remaining_str);
+            trace!(
+                "Parsed {} for {}  Remaining str {} [{:.100}]",
+                ret.last().unwrap(),
+                player_id,
+                remaining_str.len(),
+                remaining_str
+            );
         }
 
         Ok(ret)

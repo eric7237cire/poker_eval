@@ -6,13 +6,12 @@ use std::cmp::min;
 
 use crate::{rank_cards, set_used_card, PlayerAction, Rank};
 use crate::{
-    ActionEnum, CardUsedType, ChipType, GameState,
-    PlayerState, PokerError, Position, Round,
+    ActionEnum, CardUsedType, ChipType, GameState, PlayerState, PokerError, Position, Round,
 };
 
 use crate::game::game_runner_source::GameRunnerSource;
 use crate::game::game_runner_source::GameRunnerSourceEnum;
-use log::{trace, debug};
+use log::{debug, trace};
 
 // Enforces the poker rules
 pub struct GameRunner {
@@ -170,7 +169,6 @@ impl GameRunner {
 
         //Do some sanity checks, each player either folded or put in the same amount or is all in
         for player_state in &self.game_state.player_states {
-
             //we can have an active player that has not acted if there's only 1
             //So this check is just to see everyone has put in, not necesarily if they have acted
             let cur_round_putting_in_pot = player_state.cur_round_putting_in_pot.unwrap_or(0);
@@ -186,7 +184,6 @@ impl GameRunner {
                 )
                 .into());
             }
-        
         }
 
         if check_round_pot != self.game_state.round_pot {
@@ -250,7 +247,10 @@ impl GameRunner {
     }
 
     fn move_to_next_round(&mut self) -> Result<(), PokerError> {
-        trace!("Done with {}, Move to next round", self.game_state.current_round);
+        trace!(
+            "Done with {}, Move to next round",
+            self.game_state.current_round
+        );
 
         let player_count = self.game_state.player_states.len();
 
@@ -574,8 +574,7 @@ impl GameRunner {
                 }
 
                 self.game_state.current_to_call = Some(0);
-                self.game_state.player_states[player_index].cur_round_putting_in_pot =
-                    Some(0);
+                self.game_state.player_states[player_index].cur_round_putting_in_pot = Some(0);
 
                 self.game_state.actions.push(PlayerAction {
                     player_index,
@@ -663,7 +662,7 @@ impl GameRunner {
             if all_in_count == 0 {
                 return Err(format!(
                     "Only 1 player left to act, everyone else folded, but no one is all in, we should have finished then"
-                ).into());                
+                ).into());
             }
 
             //effectively act like a check without registering it
@@ -682,9 +681,10 @@ impl GameRunner {
             let active_player_pos = self.find_next_to_act().unwrap();
             let active_player_index: usize = active_player_pos.into();
             let active_player_state = &self.game_state.player_states[active_player_index];
-            let ret = active_player_state.cur_round_putting_in_pot.unwrap_or(0) == self.game_state.current_to_call.unwrap_or(0);
+            let ret = active_player_state.cur_round_putting_in_pot.unwrap_or(0)
+                == self.game_state.current_to_call.unwrap_or(0);
             trace!("Finish with 1 active player? {} ", ret);
-            ret 
+            ret
         } else {
             false
         };
@@ -707,8 +707,11 @@ impl GameRunner {
             self.finish()?;
             return Ok(true);
         }
-        trace!("{} active players left, any all in? {}", cur_active_player_count, any_all_in);
-        
+        trace!(
+            "{} active players left, any all in? {}",
+            cur_active_player_count,
+            any_all_in
+        );
 
         self.game_state.current_to_act = self
             .game_state
