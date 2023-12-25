@@ -8,6 +8,12 @@ export interface PercOrBetter {
 export interface StreetResults {
   equity: number;
   rank_family_count: Array<PercOrBetter>;
+
+  //index is simple range index, 0 to 169, 0 is AA, 1 is AKs, 2 is AQs, 13 is AKo, 14 is KK
+  eq_by_simple_range_idx: Array<null | number>;
+
+  it_num_by_simple_range_idx: Array<number>;
+
 }
 
 export interface ResultsInterface {

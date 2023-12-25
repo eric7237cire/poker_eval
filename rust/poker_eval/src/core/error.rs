@@ -2,8 +2,6 @@ use std::fmt::Display;
 
 use wasm_bindgen::JsValue;
 
-
-
 #[derive(Debug)]
 pub struct PokerError {
     details: String,
@@ -30,5 +28,11 @@ impl Display for PokerError {
 impl From<PokerError> for JsValue {
     fn from(failure: PokerError) -> Self {
         js_sys::Error::new(&failure.to_string()).into()
+    }
+}
+
+impl From<String> for PokerError {
+    fn from(failure: String) -> Self {
+        PokerError::from_string(failure)
     }
 }

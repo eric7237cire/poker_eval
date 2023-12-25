@@ -1,6 +1,5 @@
+use crate::HoleCards;
 use bitvec::prelude::*;
-use log::debug;
-use log::info;
 use postflop_solver::card_pair_to_index;
 use postflop_solver::Range;
 use std::cmp;
@@ -70,9 +69,9 @@ impl CardValue {
     /// Take a u32 and convert it to a value.
     ///
 
-    pub fn from_u8(v: u8) -> Self {
-        Self::from(v)
-    }
+    // pub fn from_u8(v: u8) -> Self {
+    //     Self::from(v)
+    // }
     /// Get all of the `Value`'s that are possible.
     /// This is used to iterate through all possible
     /// values when creating a new deck, or
@@ -112,7 +111,7 @@ impl CardValue {
         if next > 12 {
             CardValue::Two
         } else {
-            CardValue::from(next)
+            CardValue::try_from(next).unwrap()
         }
     }
 
@@ -120,14 +119,20 @@ impl CardValue {
         if self == CardValue::Two {
             CardValue::Ace
         } else {
-            CardValue::from(self as u8 - 1)
+            CardValue::try_from(self as u8 - 1).unwrap()
         }
     }
 }
 
-impl From<u8> for CardValue {
-    fn from(value: u8) -> Self {
-        unsafe { mem::transmute(cmp::min(value, Self::Ace as u8)) }
+impl TryFrom<u8> for CardValue {
+    type Error = PokerError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        if value > 12 {
+            return Err(PokerError::from_string(format!("Invalid value: {}", value)));
+        }
+
+        Ok(unsafe { mem::transmute(value) })
     }
 }
 
@@ -143,9 +148,11 @@ impl Into<usize> for CardValue {
     }
 }
 
-impl From<char> for CardValue {
-    fn from(value: char) -> Self {
-        match value.to_ascii_uppercase() {
+impl TryFrom<char> for CardValue {
+    type Error = PokerError;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        Ok(match value.to_ascii_uppercase() {
             'A' => Self::Ace,
             'K' => Self::King,
             'Q' => Self::Queen,
@@ -159,8 +166,8 @@ impl From<char> for CardValue {
             '4' => Self::Four,
             '3' => Self::Three,
             '2' => Self::Two,
-            _ => panic!("Unsupported char"),
-        }
+            c => return Err(PokerError::from_string(format!("Unsupported char {}", c))),
+        })
     }
 }
 
@@ -185,7 +192,6 @@ impl FromStr for CardValue {
             '3' => Ok(Self::Three),
             '2' => Ok(Self::Two),
             c => Err(PokerError::from_string(format!("Unsupported char: {}", c))),
-            
         }
     }
 }
@@ -246,35 +252,35 @@ impl Suit {
         SUITS
     }
 
-    /// Translate a Suit from a u8. If the u8 is above the expected value
-    /// then Diamond will be the result.
-    ///
-
-    pub fn from_u8(s: u8) -> Self {
-        Self::from(s)
-    }
-
     /// This Suit to a character.
     pub fn to_char(self) -> char {
         char::from(self)
     }
 }
 
-impl From<u8> for Suit {
-    fn from(value: u8) -> Self {
-        unsafe { mem::transmute(cmp::min(value, Self::Spade as u8)) }
+impl TryFrom<u8> for Suit {
+    type Error = PokerError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        if value > 3 {
+            return Err(PokerError::from_string(format!("Invalid value: {}", value)));
+        }
+
+        Ok(unsafe { mem::transmute(value) })
     }
 }
 
-impl From<char> for Suit {
-    fn from(value: char) -> Self {
-        match value.to_ascii_lowercase() {
+impl TryFrom<char> for Suit {
+    type Error = PokerError;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        Ok(match value.to_ascii_lowercase() {
             'd' => Self::Diamond,
             's' => Self::Spade,
             'h' => Self::Heart,
             'c' => Self::Club,
-            _ => panic!("Unsupported char"),
-        }
+            c => return Err(PokerError::from_string(format!("Unsupported char {}", c))),
+        })
     }
 }
 
@@ -289,7 +295,6 @@ impl From<Suit> for char {
     }
 }
 
-
 impl FromStr for Suit {
     type Err = PokerError;
 
@@ -302,11 +307,9 @@ impl FromStr for Suit {
             'h' => Ok(Self::Heart),
             'c' => Ok(Self::Club),
             c => Err(PokerError::from_string(format!("Unsupported char: {}", c))),
-            
         }
     }
 }
-
 
 /// The main struct of this library.
 /// This is a carrier for Suit and Value combined.
@@ -334,13 +337,13 @@ impl Card {
         ret
     }
 
-    pub fn from_range_index_part(index: usize) -> Self {
+    pub fn from_range_index_part(index: usize) -> Result<Self, PokerError> {
         let value = index >> 2;
         let suit = index & 0x3;
-        Self {
-            value: CardValue::from(value as u8),
-            suit: Suit::from(suit as u8),
-        }
+        Ok(Self {
+            value: CardValue::try_from(value as u8)?,
+            suit: Suit::try_from(suit as u8)?,
+        })
     }
 }
 
@@ -361,23 +364,37 @@ impl fmt::Display for Card {
     }
 }
 
-impl From<&str> for Card {
-    fn from(value: &str) -> Self {
-        let mut chars = value.chars();
-        let value_char = chars.next().unwrap();
-        let suit_char = chars.next().unwrap();
-        Self {
-            value: value_char.into(),
-            suit: suit_char.into(),
-        }
-    }
-}
+// impl From<&str> for Card {
+//     fn from(value: &str) -> Self {
+//         let mut chars = value.chars();
+//         let value_char = chars.next().unwrap();
+//         let suit_char = chars.next().unwrap();
+//         Self {
+//             value: value_char.into(),
+//             suit: suit_char.into(),
+//         }
+//     }
+// }
 
 impl FromStr for Card {
     type Err = PokerError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut chars = s.chars();
+        let value_char = chars.next().ok_or(PokerError::from_str("No character"))?;
+        let suit_char = chars.next().ok_or(PokerError::from_str("No character"))?;
+        Ok(Self {
+            value: value_char.to_string().parse()?,
+            suit: suit_char.to_string().parse()?,
+        })
+    }
+}
+
+impl TryFrom<&str> for Card {
+    type Error = PokerError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let mut chars = value.chars();
         let value_char = chars.next().ok_or(PokerError::from_str("No character"))?;
         let suit_char = chars.next().ok_or(PokerError::from_str("No character"))?;
         Ok(Self {
@@ -399,49 +416,91 @@ impl Into<usize> for Card {
     }
 }
 
-impl From<u8> for Card {
-    fn from(value: u8) -> Self {
-        Self {
-            value: CardValue::from_u8(value >> 2),
-            suit: Suit::from_u8(value & 0x3),
-        }
+impl TryFrom<u8> for Card {
+    type Error = PokerError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        Ok(Self {
+            value: CardValue::try_from(value >> 2)?,
+            suit: Suit::try_from(value & 0x3)?,
+        })
     }
 }
 
-impl From<usize> for Card {
-    fn from(value: usize) -> Self {
-        Self {
-            value: CardValue::from_u8((value >> 2) as u8),
-            suit: Suit::from_u8((value & 0x3) as u8),
-        }
+impl TryFrom<usize> for Card {
+    type Error = PokerError;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        Ok(Self {
+            value: CardValue::try_from((value >> 2) as u8)?,
+            suit: Suit::try_from((value & 0x3) as u8)?,
+        })
     }
 }
 
-pub fn cards_from_string(a_string: &str) -> Vec<Card> {
-    let mut cards = Vec::with_capacity(5);
-    let mut chars = a_string.chars().filter(|c| !c.is_whitespace());
-    while let Some(c) = chars.next() {
-        let value = c;
-        let suit = chars.next().unwrap();
-        cards.push(Card::new(value.into(), suit.into()));
+pub struct CardVec(pub Vec<Card>);
+
+impl TryFrom<&str> for CardVec {
+    type Error = PokerError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let mut cards = Vec::with_capacity(7);
+        let mut chars = value.chars().filter(|c| c.is_alphanumeric());
+        while let Some(c) = chars.next() {
+            let value = c;
+            let suit = chars.next().ok_or(PokerError::from_string(format!(
+                "Unable to parse suit from {}",
+                value
+            )))?;
+            cards.push(Card::new(value.try_into()?, suit.try_into()?));
+        }
+        Ok(CardVec(cards))
     }
-    cards
 }
-pub fn card_u8s_from_string(a_string: &str) -> Vec<u8> {
-    let mut cards = Vec::with_capacity(5);
-    let mut card_obs = cards_from_string(a_string);
-    for card in card_obs.drain(..) {
-        cards.push(card.into());
+
+impl FromStr for CardVec {
+    type Err = PokerError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        CardVec::try_from(s)
     }
-    cards
 }
+
+impl CardVec {
+    pub fn as_vec_u8(&self) -> Vec<u8> {
+        self.0
+            .iter()
+            .map(|c| {
+                let c_u8: u8 = (*c).into();
+                c_u8
+            })
+            .collect()
+    }
+}
+
+// pub fn cards_from_string(a_string: &str) -> Result<Vec<Card>, PokerError> {
+//     let mut cards = Vec::with_capacity(7);
+//     let mut chars = a_string.chars().filter(|c| c.is_alphanumeric());
+//     while let Some(c) = chars.next() {
+//         let value = c;
+//         let suit = chars.next().ok_or(PokerError::from_string(format!(
+//             "Unable to parse suit from {}",
+//             a_string
+//         )))?;
+//         cards.push(Card::new(value.try_into()?, suit.try_into()?));
+//     }
+//     Ok(cards)
+// }
 
 pub fn add_cards_from_string(cards: &mut Vec<Card>, a_string: &str) -> () {
     let mut chars = a_string.chars().filter(|c| !c.is_whitespace());
     while let Some(c) = chars.next() {
         let value = c;
         let suit = chars.next().unwrap();
-        cards.push(Card::new(value.into(), suit.into()));
+        cards.push(Card::new(
+            value.try_into().unwrap(),
+            suit.try_into().unwrap(),
+        ));
     }
 }
 
@@ -450,8 +509,14 @@ pub type InRangeType = BitArr!(for 1326, in usize, Lsb0);
 
 pub type CardUsedType = BitArr!(for 52, in usize, Lsb0);
 
-pub fn range_string_to_set(range_str: &str) -> InRangeType {
-    let range: Range = range_str.parse().unwrap();
+pub fn range_string_to_set(range_str: &str) -> Result<InRangeType, PokerError> {
+    let range: Range = range_str
+        .parse()
+        .ok()
+        .ok_or(PokerError::from_string(format!(
+            "Unable to parse range {}",
+            range_str
+        )))?;
     let mut set = InRangeType::default();
 
     for card1 in 0..52 {
@@ -468,7 +533,7 @@ pub fn range_string_to_set(range_str: &str) -> InRangeType {
         }
     }
 
-    set
+    Ok(set)
 }
 
 //returns in range / total
@@ -512,7 +577,7 @@ pub fn get_possible_hole_cards_count(
 pub fn get_possible_hole_cards(
     range_set: &InRangeType,
     used_card_set: CardUsedType,
-) -> Vec<(Card, Card)> {
+) -> Result<Vec<HoleCards>, PokerError> {
     //let range: Range = range_str.parse().unwrap();
     let mut vec = Vec::new();
 
@@ -533,12 +598,15 @@ pub fn get_possible_hole_cards(
             let in_range = range_set[range_index];
 
             if in_range {
-                vec.push((Card::from(card1), Card::from(card2)));
+                vec.push(HoleCards::new(
+                    Card::try_from(card1)?,
+                    Card::try_from(card2)?,
+                )?);
             }
         }
     }
 
-    vec
+    Ok(vec)
 }
 
 pub fn get_filtered_range_set(range_set: &InRangeType, used_card_set: CardUsedType) -> InRangeType {
@@ -603,7 +671,8 @@ mod tests {
             for value in VALUES {
                 let e = Card { suit, value };
                 let card_string = format!("{}{}", char::from(value), char::from(suit));
-                assert_eq!(e, Card::try_from(card_string.as_str()).unwrap());
+                let card: Card = card_string.parse().unwrap();
+                assert_eq!(e, card);
             }
         }
     }
@@ -639,8 +708,12 @@ mod tests {
 
     #[test]
     fn test_from_u8() {
-        assert_eq!(CardValue::Two, CardValue::from_u8(0));
-        assert_eq!(CardValue::Ace, CardValue::from_u8(12));
+        assert_eq!(CardValue::Two, CardValue::try_from(0u8).unwrap());
+        assert_eq!(CardValue::Three, CardValue::try_from(1u8).unwrap());
+        assert_eq!(CardValue::King, CardValue::try_from(11u8).unwrap());
+        assert_eq!(CardValue::Ace, CardValue::try_from(12u8).unwrap());
+
+        assert!(CardValue::try_from(13u8).is_err());
     }
 
     #[test]
@@ -711,25 +784,36 @@ mod tests {
         let range_str = "Q4o+";
         //let range: Range = Range::from_sanitized_str(rangeStr).unwrap();
 
-        let set = range_string_to_set(range_str);
+        let set = range_string_to_set(range_str).unwrap();
 
-        assert!(!set[card_pair_to_index(Card::from("Qs").into(), Card::from("3h").into())]);
-        assert!(set[card_pair_to_index(Card::from("Qs").into(), Card::from("4h").into())]);
-        assert!(set[card_pair_to_index(Card::from("5s").into(), Card::from("Qc").into())]);
-        assert!(!set[card_pair_to_index(Card::from("Qs").into(), Card::from("Qc").into())]);
-        assert!(!set[card_pair_to_index(Card::from("Qs").into(), Card::from("Kc").into())]);
-        assert!(set[card_pair_to_index(Card::from("Js").into(), Card::from("Qc").into())]);
+        let hc: HoleCards = "Qs 3h".parse().unwrap();
+        assert!(!set[hc.to_range_index()]);
+
+        let hc: HoleCards = "Qs 4h".parse().unwrap();
+        assert!(set[hc.to_range_index()]);
+
+        let hc: HoleCards = "Qs 5h".parse().unwrap();
+        assert!(set[hc.to_range_index()]);
+
+        let hc: HoleCards = "Qs Qc".parse().unwrap();
+        assert!(!set[hc.to_range_index()]);
+
+        let hc: HoleCards = "Qs Kc".parse().unwrap();
+        assert!(!set[hc.to_range_index()]);
+
+        let hc: HoleCards = "Js Qc".parse().unwrap();
+        assert!(set[hc.to_range_index()]);
 
         let range_str = "22+";
         //let range: Range = Range::from_sanitized_str(rangeStr).unwrap();
 
-        let set = range_string_to_set(range_str);
+        let set = range_string_to_set(range_str).unwrap();
 
         assert_eq!(set.count_ones(), 13 * 6);
 
         let range_str = "22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32";
 
-        let set = range_string_to_set(range_str);
+        let set = range_string_to_set(range_str).unwrap();
 
         assert_eq!(set.count_ones(), 52 * 51 / 2);
     }
@@ -749,10 +833,10 @@ mod tests {
     #[test]
     fn test_get_possible_hole_cards() {
         let range_str = "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o";
-        let range_set = range_string_to_set(range_str);
+        let range_set = range_string_to_set(range_str).unwrap();
 
         let mut used_cards = CardUsedType::default();
-        let cards = cards_from_string("8d 7s Qd 5c Qs Ts 7c");
+        let cards = CardVec::try_from("8d 7s Qd 5c Qs Ts 7c").unwrap().0;
 
         for card in cards.iter() {
             used_cards.set((*card).into(), true);

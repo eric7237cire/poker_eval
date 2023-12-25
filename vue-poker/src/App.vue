@@ -1,4 +1,7 @@
 <template>
+  <div class="user-messages">
+    {{ userMessage }}
+  </div>
   <div class="results-table-container">
     <Transition>
       <ResultTable :results="myResultsList" v-if="myResultsList.length > 0" />
@@ -29,6 +32,17 @@
         <Player :playerId="player.id" />
       </div>
     </div>
+
+    <div class="footer-container">
+      <Suspense>
+        <template v-slot:default>
+          <Footer />
+        </template>
+        <template v-slot:fallback>
+          <div>Loading...</div>
+        </template>
+      </Suspense>
+    </div>
   </div>
 </template>
 
@@ -39,6 +53,10 @@
 .board-selector-container div {
   grid-column-start: 4;
   grid-column-end: 6;
+}
+
+.results-table-container {
+    width: 100vw;
 }
 
 .fade-in {
@@ -82,6 +100,7 @@ import { useBoardStore } from './stores/board';
 import { useResultsStore } from './stores/results';
 import { useRangesStore } from './stores/ranges';
 import { useCssVar } from '@vueuse/core';
+import Footer from './components/Footer.vue';
 
 const navStore = useNavStore();
 const playerStore = usePlayerStore();
@@ -91,6 +110,7 @@ const rangeStore = useRangesStore();
 
 const iterationsPerTick = 1_000;
 const maxIterations = 50_000;
+const pauseAfterTickMs = 500;
 
 boardStore.$subscribe((board) => {
   console.log('boardStore.$subscribe', board);
@@ -107,14 +127,18 @@ onMounted(() => {
   console.log(`the component is now mounted.`);
   //init the worker
   init(1).then(() => {
-    console.log("worker initialized");
+    console.log('worker initialized');
   });
 
   //fetch the ranges
   rangeStore.init_ranges().then(() => {
-    console.log("ranges fetched");
+    console.log('ranges fetched');
   });
 });
+
+const userMessage = ref(
+  'Welcome, to get started, choose the flop, optionally the turn and river.  Then either specify the exact hole cards or a range for the players you want to simulate'
+);
 
 const players = [
   { id: 0, class: 'player0' },
@@ -140,30 +164,49 @@ async function go() {
 
   await handler.reset();
   await handler.setBoardCards(Uint8Array.from(boardStore.board.cards));
+
+  let activePlayerCount = 0;
+
   for (let i = 0; i < playerStore.players.length; i++) {
     const player = playerStore.players[i];
-    if (
-      player.state == PlayerState.USE_HOLE &&
-      Array.isArray(player.holeCards.cards) &&
-      player.holeCards.cards.length === 2
-    ) {
-      await handler.setPlayerCards(i, Uint8Array.from(player.holeCards.cards));
+    if (player.state == PlayerState.USE_HOLE) {
+      if (Array.isArray(player.holeCards.cards) && player.holeCards.cards.length === 2) {
+        await handler.setPlayerCards(i, Uint8Array.from(player.holeCards.cards));
+        activePlayerCount += 1;
+      } else {
+        userMessage.value = `Missing hole cards for player ${i}.  Either specify cards or click 'Off'`;
+        return;
+      }
     }
     if (player.state == PlayerState.USE_RANGE) {
       await handler.setPlayerRange(i, player.rangeStr);
+      activePlayerCount += 1;
     }
     //await handler.setPlayerRange(i, player.rangeStr);
     await handler.setPlayerState(i, player.state.valueOf());
   }
-  num_iterations.value = 0;
 
-  await handler.initResults();
+  if (activePlayerCount < 2) {
+    userMessage.value =
+      'You must specify at least 2 players.  Click Hole to select exact hole cards or Range to select a range';
+    return;
+  }
+
+  num_iterations.value = 0;
+  userMessage.value = `Simulating until ${maxIterations} or Stop is clicked...`;
+
+  const resultsOk = await handler.initResults();
+
+  if (!resultsOk) {
+    userMessage.value = `Error initializing results`;
+    return;
+  }
 
   setTimeoutReturn.value = setTimeout(() => tick(50), 100);
   stopping = false;
 }
 
-async function tick(numIterations: number = iterationsPerTick) {
+async function tick(numIterations: number) {
   if (!handler) {
     console.log('handler is not ready');
     return;
@@ -172,11 +215,18 @@ async function tick(numIterations: number = iterationsPerTick) {
 
   if (num_iterations.value >= maxIterations) {
     console.log(`max iterations reached ${maxIterations} > ${num_iterations.value}`);
+    userMessage.value = ``;
     stopping = true;
     return;
   }
 
-  await handler.simulateFlop(iterationsPerTick);
+  const ok = await handler.simulateFlop(numIterations);
+
+  if (!ok) {
+    userMessage.value = `Error simulating flop`;
+    stopping = true;
+    return;
+  }
 
   const resultList = await handler.getResults();
 
@@ -191,25 +241,16 @@ async function tick(numIterations: number = iterationsPerTick) {
 
   resultsStore.results = resultList;
 
-  //resultList[0].equity = num_iterations.value / maxIterations;
-
-  setTimeoutReturn.value = setTimeout(tick, 100);
-
-  // for(let i = 0; i < playerStore.players.length; i++) {
-  //   const result = await handler.getResult(i);
-  //   console.log(`player ${i}`, result);
-  //   console.log(`player ${i} win rate`, result.win_eq);
-  // }
-
-  // for(const r of result) {
-  //   console.log(r);
-  // }
+  setTimeoutReturn.value = setTimeout(()=>{
+    tick(iterationsPerTick);
+  }, pauseAfterTickMs);
 }
 
 async function stop() {
   stopping = true;
 
   num_iterations.value = 0;
+  userMessage.value = ``;
 
   resultsStore.results = [];
 
@@ -221,9 +262,4 @@ async function stop() {
     console.warn('Timeout is null');
   }
 }
-
-// playerStore.updateRangeStrForPlayer(PlayerIds.HERO, 'TT+');
-// playerStore.updateRangeStrForPlayer(PlayerIds.WEST, '83+');
-// playerStore.updateRangeStrForPlayer(PlayerIds.NORTH_WEST, '22+, 72+');
-// playerStore.updateRangeStrForPlayer(PlayerIds.NORTH_EAST, 'A2o+, Q3o+');
 </script>

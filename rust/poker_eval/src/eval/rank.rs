@@ -1,5 +1,7 @@
-use crate::core::Card;
+use crate::{core::Card, CardValue, Suit};
 use bitvec::prelude::*;
+use itertools::Itertools;
+use log::trace;
 
 /// All the different possible hand ranks.
 /// For each hand rank the u32 corresponds to
@@ -43,6 +45,237 @@ impl Rank {
             Rank::FullHouse(_) => 6,
             Rank::FourOfAKind(_) => 7,
             Rank::StraightFlush(_) => 8,
+        }
+    }
+
+    pub fn print_winning(&self, cards: &[Card]) -> String {
+        let low_set_mask : u32 = 0b1_1111_1111_1111;
+        match self {
+            Rank::HighCard(k) => {
+                let mut r = "High Card - ".to_string();
+                let bvs : ValueSetType = ValueSetType::new([*k]);
+                assert_eq!(5, bvs.count_ones());
+
+                for set_bit in bvs.iter_ones().rev() {
+                    let value: CardValue = set_bit.try_into().unwrap();
+                    let card = cards.iter().find(|c| c.value == value).unwrap();
+                    r.push_str(&format!("{} ", card));
+                }
+                
+                r.pop().unwrap();
+                r
+            }
+            Rank::OnePair(k) => {
+                let pair_value_u32 = (k >> 13).trailing_zeros();
+                let pair_value: CardValue = (pair_value_u32 as u8).try_into().unwrap();
+                let mut r = "One Pair - ".to_string();
+
+                let first_card = cards.iter().find(|c| c.value == pair_value).unwrap();
+                let second_card = cards.iter().rev().find(|c| c.value == pair_value).unwrap();
+
+                r.push_str(&format!("{} {}", first_card, second_card));
+
+                let bvs = ValueSetType::new([*k & low_set_mask]);
+
+                for set_bit in bvs.iter_ones().rev() {
+                    let value: CardValue = set_bit.try_into().unwrap();
+                    let card = cards.iter().find(|c| c.value == value).unwrap();
+                    r.push_str(&format!(" {}", card));
+                }
+
+                r
+            }
+            Rank::TwoPair(k) => {
+                let pair_values_u32 = k >> 13;
+                let pv_bvs = ValueSetType::new([pair_values_u32]);
+
+                let mut r = "Two Pair - ".to_string();
+
+                for set_bit in pv_bvs.iter_ones().rev() {
+                    let pair_value: CardValue = set_bit.try_into().unwrap();
+                    let first_card = cards.iter().find(|c| c.value == pair_value).unwrap();
+                    let second_card = cards.iter().rev().find(|c| c.value == pair_value).unwrap();
+
+                    r.push_str(&format!("{} {} ", first_card, second_card));
+                }
+
+                let last_kicker = (*k & low_set_mask).trailing_zeros();
+                let last_kicker_value: CardValue = (last_kicker as u8).try_into().unwrap();
+                let card = cards.iter().find(|c| c.value == last_kicker_value).unwrap();
+                r.push_str(&format!("{}", card));
+                
+                r
+                
+            }
+            Rank::ThreeOfAKind(k) => {
+                let trips_value_u32 = (k >> 13).trailing_zeros();
+                let trips_value: CardValue = (trips_value_u32 as u8).try_into().unwrap();
+                let mut r = "Trips - ".to_string();
+
+                let cards_str = cards.iter().filter(|c| c.value == trips_value)
+                .map(|c| c.to_string())
+                .join(" ");
+                
+                r.push_str(&cards_str);
+
+                let bvs = ValueSetType::new([*k & low_set_mask]);
+
+                for set_bit in bvs.iter_ones().rev() {
+                    let value: CardValue = set_bit.try_into().unwrap();
+                    let card = cards.iter().find(|c| c.value == value).unwrap();
+                    r.push_str(&format!(" {}", card));
+                }
+
+                r
+            }
+            Rank::Straight(k) => {
+                let straight_value = if *k == 0 {
+                    CardValue::Five
+                } else {
+                    //let straight_value_u32 = k.trailing_zeros();
+                    let straight_value: CardValue = ((*k + 3) as u8).try_into().unwrap();
+                    straight_value
+                };
+                
+                let mut r = "Straight - ".to_string();
+
+                
+                trace!("Straight value {}=={}, is wheel {}", straight_value, 
+                    straight_value as u8,
+                    straight_value == CardValue::Five);
+
+                if straight_value == CardValue::Five {
+                    //Find the ace
+                    let ace = cards.iter().find(|c| c.value == CardValue::Ace).unwrap();
+                    r.push_str(&format!("{} ", ace));
+
+                    let mut cv = CardValue::Two;
+                    for _ in 0..4 {
+                        let card = cards.iter().find(|c| c.value == cv).unwrap();
+                        r.push_str(&format!("{} ", card));
+                        cv = cv.next_card();
+                    }
+                } else {
+                    let mut cv = CardValue::try_from(straight_value as u8 - 4).unwrap();
+
+                    for _ in 0..5 {
+                        let card = cards.iter().find(|c| c.value == cv).unwrap();
+                        r.push_str(&format!("{} ", card));
+                        cv = cv.next_card();
+                    }
+                }
+
+                r.pop().unwrap();
+
+                r
+            }
+            Rank::Flush(k) => {
+                let mut r = "Flush - ".to_string();
+                let bvs : ValueSetType = ValueSetType::new([*k]);
+                assert_eq!(5, bvs.count_ones());
+
+                for set_bit in bvs.iter_ones().rev() {
+                    let value: CardValue = set_bit.try_into().unwrap();
+                    let card = cards.iter().find(|c| c.value == value).unwrap();
+                    r.push_str(&format!("{} ", card));
+                }
+                
+                r.pop().unwrap();
+                r
+                
+            }
+            Rank::FullHouse(k) => {
+                let trips_values_u32 = k >> 13;
+                let pair_value_u32 = k & low_set_mask;
+                let trips_value: CardValue = (trips_values_u32.trailing_zeros() as u8).try_into().unwrap();
+                let pair_value: CardValue = (pair_value_u32.trailing_zeros() as u8).try_into().unwrap();
+
+                let mut r = "Full House - ".to_string();
+
+                let trips_cards_str = cards.iter().filter(|c| c.value == trips_value)
+                .join(" ");
+                let pair_cards_str = cards.iter().filter(|c| c.value == pair_value)
+                .join(" ");
+
+                r.push_str(&format!("{} {}", trips_cards_str, pair_cards_str));
+                
+                r
+            }
+            Rank::FourOfAKind(k) => {
+                let quads_value_u32 = (k >> 13).trailing_zeros();
+                let quads_value: CardValue = (quads_value_u32 as u8).try_into().unwrap();
+                let mut r = "Quads - ".to_string();
+
+                let cards_str = cards.iter().filter(|c| c.value == quads_value)
+                .map(|c| c.to_string())
+                .join(" ");
+                
+                r.push_str(&cards_str);
+
+                let bvs = ValueSetType::new([*k & low_set_mask]);
+
+                for set_bit in bvs.iter_ones().rev() {
+                    let value: CardValue = set_bit.try_into().unwrap();
+                    let card = cards.iter().find(|c| c.value == value).unwrap();
+                    r.push_str(&format!(" {}", card));
+                }
+
+                r
+            }
+            Rank::StraightFlush(k) => {
+                let straight_value = if *k == 0 {
+                    CardValue::Five
+                } else {
+                    //let straight_value_u32 = k.trailing_zeros();
+                    let straight_value: CardValue = ((*k + 3) as u8).try_into().unwrap();
+                    straight_value
+                };
+                
+                let mut r = "Straight Flush - ".to_string();
+
+                //Find most common suit
+                let mut suit_counts = [0; 4];
+                for card in cards.iter() {
+                    suit_counts[card.suit as usize] += 1;
+                }
+                let (max_suit, max_suit_count) = suit_counts
+                    .iter()
+                    .enumerate()
+                    .max_by_key(|&(_, count)| count)
+                    .unwrap();
+                let max_suit_class: Suit = (max_suit as u8).try_into().unwrap();
+
+                let suited_cards = cards.iter().filter(|c| c.suit == max_suit_class).collect::<Vec<_>>();
+                
+                trace!("Straight value {}=={}, is wheel {}", straight_value, 
+                    straight_value as u8,
+                    straight_value == CardValue::Five);
+
+                if straight_value == CardValue::Five {
+                    //Find the ace
+                    let ace = suited_cards.iter().find(|c| c.value == CardValue::Ace ).unwrap();
+                    r.push_str(&format!("{} ", ace));
+
+                    let mut cv = CardValue::Two;
+                    for _ in 0..4 {
+                        let card = suited_cards.iter().find(|c| c.value == cv ).unwrap();
+                        r.push_str(&format!("{} ", card));
+                        cv = cv.next_card();
+                    }
+                } else {
+                    let mut cv = CardValue::try_from(straight_value as u8 - 4).unwrap();
+
+                    for _ in 0..5 {
+                        let card = suited_cards.iter().find(|c| c.value == cv).unwrap();
+                        r.push_str(&format!("{} ", card));
+                        cv = cv.next_card();
+                    }
+                }
+
+                r.pop().unwrap();
+
+                r
+            }
         }
     }
 }
@@ -272,25 +505,23 @@ pub fn rank_cards(cards: &[Card]) -> Rank {
 mod tests {
     use std::{collections::HashMap, io::Write};
 
+    use crate::{add_eval_card, get_unused_card, CardVec, init_test_logger};
     use itertools::Itertools;
-    use log::{info, debug};
-    use crate::{set_used_card, get_unused_card, add_eval_card};
     use postflop_solver::Hand;
     use rand::{rngs::StdRng, SeedableRng};
 
     use crate::{
-        cards_from_string, get_possible_hole_cards, range_string_to_set, rank_cards, CardUsedType,
-        Rank, HoleCards,
+        get_possible_hole_cards, range_string_to_set, rank_cards, CardUsedType, HoleCards, Rank,
     };
 
     #[test]
     fn test_flop_rank() {
         let range_str = "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o";
-        let range_set = range_string_to_set(range_str);
+        let range_set = range_string_to_set(range_str).unwrap();
 
         let mut used_cards = CardUsedType::default();
-        let flop = cards_from_string("Qs Ts 7c");
-        let other_cards = cards_from_string("8d 7s Qd 5c");
+        let flop = CardVec::try_from("Qs Ts 7c").unwrap().0;
+        let other_cards = CardVec::try_from("8d 7s Qd 5c").unwrap().0;
 
         for card in flop.iter() {
             used_cards.set((*card).into(), true);
@@ -299,7 +530,7 @@ mod tests {
             used_cards.set((*card).into(), true);
         }
 
-        let possible = get_possible_hole_cards(&range_set, used_cards);
+        let possible = get_possible_hole_cards(&range_set, used_cards).unwrap();
 
         assert_eq!(373, possible.len());
 
@@ -315,8 +546,8 @@ mod tests {
         let mut eval_cards = flop.clone();
 
         for hole_cards in possible.iter() {
-            eval_cards.push(hole_cards.0);
-            eval_cards.push(hole_cards.1);
+            eval_cards.push(hole_cards.get_hi_card());
+            eval_cards.push(hole_cards.get_lo_card());
 
             let rank = rank_cards(&eval_cards);
             match rank {
@@ -390,18 +621,18 @@ mod tests {
     #[test]
     fn test_enumerate_all_equity() {
         let range_str = "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o";
-        let range_set = range_string_to_set(range_str);
+        let range_set = range_string_to_set(range_str).unwrap();
 
         let mut used_cards = CardUsedType::default();
-        let flop = cards_from_string("Qs Ts 7c");
+        let flop = CardVec::try_from("Qs Ts 7c").unwrap().0;
 
         let flop_hand = Hand::new();
         let flop_hand = flop_hand.add_card(flop[0].into());
         let flop_hand = flop_hand.add_card(flop[1].into());
         let flop_hand = flop_hand.add_card(flop[2].into());
 
-        let p1_hole_cards = cards_from_string("8d 7s");
-        let p2_hole_cards = cards_from_string("Qd 5c");
+        let p1_hole_cards = CardVec::try_from("8d 7s").unwrap().0;
+        let p2_hole_cards = CardVec::try_from("Qd 5c").unwrap().0;
 
         for card in flop.iter() {
             used_cards.set((*card).into(), true);
@@ -414,7 +645,7 @@ mod tests {
         }
         assert_eq!(used_cards.count_ones(), 7);
 
-        let possible = get_possible_hole_cards(&range_set, used_cards);
+        let possible = get_possible_hole_cards(&range_set, used_cards).unwrap();
 
         assert_eq!(373, possible.len());
 
@@ -425,8 +656,7 @@ mod tests {
 
         //enumerate everything
         for p in possible.iter() {
-            used_cards.set(p.0.into(), true);
-            used_cards.set(p.1.into(), true);
+            p.set_used(&mut used_cards).unwrap();
             assert_eq!(used_cards.count_ones(), 9);
             let check_showndown = total_showdowns;
             for turn_card in 0..52 {
@@ -444,20 +674,20 @@ mod tests {
                     let mut p1_cards = flop.clone();
                     p1_cards.push(p1_hole_cards[0]);
                     p1_cards.push(p1_hole_cards[1]);
-                    p1_cards.push(turn_card.into());
-                    p1_cards.push(river_card.into());
+                    p1_cards.push(turn_card.try_into().unwrap());
+                    p1_cards.push(river_card.try_into().unwrap());
 
                     let mut p2_cards = flop.clone();
                     p2_cards.push(p2_hole_cards[0]);
                     p2_cards.push(p2_hole_cards[1]);
-                    p2_cards.push(turn_card.into());
-                    p2_cards.push(river_card.into());
+                    p2_cards.push(turn_card.try_into().unwrap());
+                    p2_cards.push(river_card.try_into().unwrap());
 
                     let mut p3_cards = flop.clone();
-                    p3_cards.push(p.0);
-                    p3_cards.push(p.1);
-                    p3_cards.push(turn_card.into());
-                    p3_cards.push(river_card.into());
+                    p3_cards.push(p.get_hi_card());
+                    p3_cards.push(p.get_lo_card());
+                    p3_cards.push(turn_card.try_into().unwrap());
+                    p3_cards.push(river_card.try_into().unwrap());
 
                     let p1_hand = flop_hand.add_card(p1_hole_cards[0].into());
                     let p1_hand = p1_hand.add_card(p1_hole_cards[1].into());
@@ -469,8 +699,8 @@ mod tests {
                     let p2_hand = p2_hand.add_card(turn_card.into());
                     let p2_hand = p2_hand.add_card(river_card.into());
 
-                    let p3_hand = flop_hand.add_card(p.0.into());
-                    let p3_hand = p3_hand.add_card(p.1.into());
+                    let p3_hand = flop_hand.add_card(p.get_hi_card().into());
+                    let p3_hand = p3_hand.add_card(p.get_lo_card().into());
                     let p3_hand = p3_hand.add_card(turn_card.into());
                     let p3_hand = p3_hand.add_card(river_card.into());
 
@@ -524,14 +754,14 @@ mod tests {
                 used_cards.set(turn_card, false);
             }
 
-            used_cards.set(p.0.into(), false);
-            used_cards.set(p.1.into(), false);
+            p.unset_used(&mut used_cards).unwrap();
+
             assert_eq!(used_cards.count_ones(), 7);
             //we used 9 cards, so there should be 43*42/2 showdowns total
             assert_eq!(total_showdowns - check_showndown, 43 * 42 / 2);
         }
 
-        //Values for Equilab
+        //Values from Equilab
         assert_equity(100.0 * tie_equity[0] / total_showdowns as f64, 0.12, 0.005);
         assert_equity(100.0 * win_equity[0] / total_showdowns as f64, 21.03, 0.005);
 
@@ -542,9 +772,10 @@ mod tests {
         assert_equity(100.0 * win_equity[2] / total_showdowns as f64, 26.14, 0.005);
     }
 
-    #[test]
+    //Slow
+    //#[test]
+    #[allow(dead_code)]
     fn test_heads_up_ranking() {
-
         //let mut range_idx_to_string: Vec<String> = Vec::new();
         //let mut range_idx_to_equity: Vec<f64> = Vec::new();
 
@@ -555,8 +786,9 @@ mod tests {
         let mut hole_range_strings = Vec::new();
 
         for card1 in 0..52usize {
-            for card2 in card1+1 .. 52 {
-                let hole_cards = HoleCards::new(card1.into(), card2.into()).unwrap();
+            for card2 in card1 + 1..52 {
+                let hole_cards =
+                    HoleCards::new(card1.try_into().unwrap(), card2.try_into().unwrap()).unwrap();
 
                 let hole_string = hole_cards.to_range_string();
 
@@ -565,7 +797,7 @@ mod tests {
                 // }
 
                 hole_card_list.push(hole_cards);
-                    //range_idx_to_equity.push(0.0);
+                //range_idx_to_equity.push(0.0);
 
                 let l = range_string_to_idx.len();
                 let range_str_index = range_string_to_idx.entry(hole_string.clone()).or_insert(l);
@@ -578,17 +810,16 @@ mod tests {
             }
         }
 
-        assert_eq!(13*13, range_string_to_idx.len());
+        assert_eq!(13 * 13, range_string_to_idx.len());
         assert_eq!(range_string_to_idx.len(), hole_range_strings.len());
 
         assert_eq!(hole_card_list.len(), hole_index_list.len());
-        assert_eq!(52*51/2, hole_card_list.len());
+        assert_eq!(52 * 51 / 2, hole_card_list.len());
 
         //let mut hole_idx_to_eq = vec![0.0; hole_card_list.len()];
 
-        let mut range_hole_idx_to_eq = vec![0.0; 13*13];
-        let mut range_hole_idx_showdown_count = vec![0; 13*13];
-
+        let mut range_hole_idx_to_eq = vec![0.0; 13 * 13];
+        let mut range_hole_idx_showdown_count = vec![0; 13 * 13];
 
         //change this to be higher for more accuracy, kept to 1 for speed
         let num_flops_per_matchup = 1;
@@ -596,8 +827,7 @@ mod tests {
         let mut rng = StdRng::seed_from_u64(42);
 
         for (h1_idx, h1) in hole_card_list.iter().enumerate() {
-            for h2_idx in h1_idx+1 .. hole_card_list.len() {
-
+            for h2_idx in h1_idx + 1..hole_card_list.len() {
                 let r1_idx = hole_index_list[h1_idx];
                 let r2_idx = hole_index_list[h2_idx];
 
@@ -626,22 +856,22 @@ mod tests {
                             get_unused_card(&mut rng, &cards_used).unwrap(),
                             &mut eval_cards,
                             &mut cards_used,
-                        ).unwrap();
+                        )
+                        .unwrap();
                     }
 
-                    assert_eq!(4+5, cards_used.count_ones());
+                    assert_eq!(4 + 5, cards_used.count_ones());
 
                     h1.add_to_eval(&mut eval_cards);
                     assert_eq!(7, eval_cards.len());
                     let rank1 = rank_cards(&eval_cards);
                     h1.remove_from_eval(&mut eval_cards).unwrap();
 
-
                     h2.add_to_eval(&mut eval_cards);
                     assert_eq!(7, eval_cards.len());
                     let rank2 = rank_cards(&eval_cards);
                     h2.remove_from_eval(&mut eval_cards).unwrap();
-                    
+
                     range_hole_idx_showdown_count[r1_idx] += 1;
                     range_hole_idx_showdown_count[r2_idx] += 1;
                     if rank1 == rank2 {
@@ -659,7 +889,6 @@ mod tests {
                         cards_used.set(c.into(), false);
                     }
                 }
-
             }
         }
 
@@ -668,20 +897,120 @@ mod tests {
         }
 
         let mut with_idx = range_hole_idx_to_eq.iter().enumerate().collect_vec();
-        with_idx.sort_by(|a,b| b.1.partial_cmp(a.1).unwrap());
+        with_idx.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
 
         for (rank, (r_idx, eq)) in with_idx.iter().enumerate().take(10) {
-            println!("#{} {} {} ", 1+rank, hole_range_strings[*r_idx], 100.0 * **eq );
+            println!(
+                "#{} {} {} ",
+                1 + rank,
+                hole_range_strings[*r_idx],
+                100.0 * **eq
+            );
         }
 
         //open a text file and write the results
-        
+
         let mut file = std::fs::File::create("/tmp/heads_up_equity.txt").unwrap();
-        for (r_idx,_) in with_idx.iter() {
-            let line = format!("{}\n", hole_range_strings[*r_idx] );
+        for (r_idx, _) in with_idx.iter() {
+            let line = format!("{}\n", hole_range_strings[*r_idx]);
             file.write_all(line.as_bytes()).unwrap();
         }
-            
-        assert_eq!(1, 2)
+    }
+
+    #[test]
+    fn test_print_winning() {
+
+        init_test_logger();
+
+        let cards: CardVec = "8h Js 3d Qd 2h Tc 7h".parse().unwrap();
+        let rank = rank_cards(&cards.0);
+        assert_eq!(
+            "High Card - Qd Js Tc 8h 7h",
+            rank.print_winning(&cards.0)
+        );
+
+        let cards: CardVec = "8h 2s 3d Qd 2h Tc 7h".parse().unwrap();
+        let rank = rank_cards(&cards.0);
+        assert_eq!(
+            "One Pair - 2s 2h Qd Tc 8h",
+            rank.print_winning(&cards.0)
+        );
+
+        let cards: CardVec = "8h 2s Td Qd 2h Tc 7h".parse().unwrap();
+        let rank = rank_cards(&cards.0);
+        assert_eq!(
+            "Two Pair - Td Tc 2s 2h Qd",
+            rank.print_winning(&cards.0)
+        );
+
+        let cards: CardVec = "8h 2s Td Qd 2h Ac 2c".parse().unwrap();
+        let rank = rank_cards(&cards.0);
+        assert_eq!(
+            "Trips - 2s 2h 2c Ac Qd",
+            rank.print_winning(&cards.0)
+        );
+
+        let cards: CardVec = "5h 3s 5d Ad 4h Ac 2c".parse().unwrap();
+        let rank = rank_cards(&cards.0);
+        assert_eq!(
+            "Straight - Ad 2c 3s 4h 5h",
+            rank.print_winning(&cards.0)
+        );
+
+        let cards: CardVec = "5h 3s 5d Ad 4h 6c 2c".parse().unwrap();
+        let rank = rank_cards(&cards.0);
+        assert_eq!(
+            "Straight - 2c 3s 4h 5h 6c",
+            rank.print_winning(&cards.0)
+        );
+
+        let cards: CardVec = "Kh Js 5d Ad Th Qc 2c".parse().unwrap();
+        let rank = rank_cards(&cards.0);
+        assert_eq!(
+            "Straight - Th Js Qc Kh Ad",
+            rank.print_winning(&cards.0)
+        );
+
+        let cards: CardVec = "2h Js 8h Ah Th 3h 7h".parse().unwrap();
+        let rank = rank_cards(&cards.0);
+        assert_eq!(
+            "Flush - Ah Th 8h 7h 3h",
+            rank.print_winning(&cards.0)
+        );
+
+        let cards: CardVec = "2h Js As Ah Th 2s 2c".parse().unwrap();
+        let rank = rank_cards(&cards.0);
+        assert_eq!(
+            "Full House - 2h 2s 2c As Ah",
+            rank.print_winning(&cards.0)
+        );
+
+        let cards: CardVec = "2h Js 2d 9h Th 2s 2c".parse().unwrap();
+        let rank = rank_cards(&cards.0);
+        assert_eq!(
+            "Quads - 2h 2d 2s 2c Js",
+            rank.print_winning(&cards.0)
+        );
+
+        let cards: CardVec = "2h Ah 2d 3h Th 4h 5h".parse().unwrap();
+        let rank = rank_cards(&cards.0);
+        assert_eq!(
+            "Straight Flush - Ah 2h 3h 4h 5h",
+            rank.print_winning(&cards.0)
+        );
+
+        let cards: CardVec = "2h As 2d 3h Ah 4h 5h".parse().unwrap();
+        let rank = rank_cards(&cards.0);
+        assert_eq!(
+            "Straight Flush - Ah 2h 3h 4h 5h",
+            rank.print_winning(&cards.0)
+        );
+
+        let cards: CardVec = "9s 7s As Js Qh Ts 8s".parse().unwrap();
+        let rank = rank_cards(&cards.0);
+        assert_eq!(
+            "Straight Flush - 7s 8s 9s Ts Js",
+            rank.print_winning(&cards.0)
+        );
     }
 }

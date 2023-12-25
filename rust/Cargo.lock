@@ -126,6 +126,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a26ae43d7bcc3b814de94796a5e736d4029efb0ee900c12e2d54c993ad1a1e07"
 
 [[package]]
+name = "enum_dispatch"
+version = "0.3.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f33313078bb8d4d05a2733a94ac4c2d8a0df9a2b84424ebf4f33bfc224a890e"
+dependencies = [
+ "once_cell",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "env_logger"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -268,6 +280,7 @@ version = "0.2.0"
 dependencies = [
  "bitvec",
  "console_error_panic_hook",
+ "enum_dispatch",
  "env_logger",
  "getrandom",
  "itertools",
@@ -275,6 +288,7 @@ dependencies = [
  "log",
  "postflop-solver 0.1.0",
  "rand",
+ "regex",
  "serde",
  "serde-wasm-bindgen",
  "wasm-bindgen",

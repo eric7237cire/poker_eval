@@ -4,11 +4,15 @@ on:
   push:
     branches:
       - main
-      - eval3
+      - fixes
 
 jobs:
+  
   build-and-deploy:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -36,6 +40,16 @@ jobs:
           # Optional version of wasm-pack to install(eg. 'v0.9.1', 'latest')
           version: 'latest'
 
+      - name: Setup Cargo 
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Run Rust tests  
+        run: |
+          cd rust
+          cargo test
+
       - name: Build Rust Wasm
         run: |
           cd vue-poker
@@ -45,4 +59,9 @@ jobs:
       - name: Build Vue.js app
         run: |
           cd vue-poker
-          npm run build2
+          npm run build
+
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: vue-poker/dist # The folder the action should deploy

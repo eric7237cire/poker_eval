@@ -1,6 +1,8 @@
 import * as Comlink from 'comlink';
-import { Draws, PlayerFlopResults } from '@pkg/poker_eval';
+import { Draws, FlopSimulationResults, PlayerFlopResults } from '@pkg/poker_eval';
 import { PercOrBetter, ResultsInterface, StreetResults } from './result_types';
+import * as _ from 'lodash';
+
 //import { detect } from "detect-browser";
 
 type Mod = typeof import('@pkg/poker_eval');
@@ -10,8 +12,7 @@ let rankIndexes = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 const createHandler = (mod: Mod) => {
   return {
     flop_analyzer: mod.flop_analyzer.new(),
-    player_flop_results: [] as Array<PlayerFlopResults>,
-    //player_flop_results: Array<PlayerFlopResults> = [],
+    results: null as null | FlopSimulationResults,
 
     reset() {
       this.flop_analyzer.reset();
@@ -32,50 +33,116 @@ const createHandler = (mod: Mod) => {
       this.flop_analyzer.clear_player_cards(player_idx);
     },
     initResults() {
-      this.player_flop_results = this.flop_analyzer.build_results();
-      console.log(`initResults ${this.player_flop_results.length}`);
+      this.results = this.flop_analyzer.build_results();
+      console.log(`initResults`);
+
+      if (!this.results) {
+        console.error('results not initialized');
+        return false;
+      } else {
+        return true;
+      }
     },
     simulateFlop(num_iterations: number) {
-      this.player_flop_results = this.flop_analyzer.simulate_flop(
-        num_iterations,
-        this.player_flop_results
-      );
+      if (!this.results) {
+        console.error('results not initialized');
+        return false;
+      }
+      this.results = this.flop_analyzer.simulate_flop(num_iterations, this.results);
+      return true;
     },
     getResults(): Array<ResultsInterface> {
       console.log('getResults');
       //const r = this.flop_analyzer.get_results();
-      const r = this.player_flop_results;
+      const r = this.results;
+      if (!r) {
+        console.error('results falsy');
+        return [];
+      }
       //console.log(`getResults ${r[0].num_iterations} ${r[0].get_perc_family_or_better(1)}`);
-      const ri = r.map((r) => {
-        const street_results: Array<StreetResults> = [];
-        const draw_results: Array<Draws> = [];
+      const n_active_players = r.get_num_players();
 
-        for (let i = 0; i < 3; i++) {
-          street_results.push({
-            equity: r.get_equity(i),
-            rank_family_count: rankIndexes.map((ri) => {
-              return {
-                perc: r.get_perc_family(i, ri),
-                better: r.get_perc_family_or_better(i, ri)
-              } as PercOrBetter;
-            })
-          } as StreetResults);
-        }
+      const ret = [] as Array<ResultsInterface>;
 
-        for (let i = 0; i < 2; ++i) {
-          draw_results.push(r.get_street_draw(i));
-        }
+      for (
+        let active_player_index = 0;
+        active_player_index < n_active_players;
+        ++active_player_index
+      ) {
+        let ri = buildResultsInterface(r, active_player_index);
+        ret.push(ri);
+      }
 
-        return {
-          player_index: r.player_index,
-          street_results,
-          draw_results
-        } as ResultsInterface;
-      });
-      return ri;
+      //Add villians
+      ret.push(buildResultsInterface(r, undefined));
+
+      return ret;
     }
   };
 };
+
+function buildResultsInterface(
+  r: FlopSimulationResults,
+  active_player_index: number | undefined
+): ResultsInterface {
+  const street_results: Array<StreetResults> = [];
+  const draw_results: Array<Draws> = [];
+
+  //flop/turn/river
+  for (let i = 0; i < 3; i++) {
+
+    const sr : StreetResults = {
+      equity: r.get_equity(active_player_index, i),
+      rank_family_count: rankIndexes.map((ri) => {
+        return {
+          perc: r.get_perc_family(active_player_index, i, ri),
+          better: r.get_perc_family_or_better(active_player_index, i, ri)
+        } as PercOrBetter;
+      }),
+      eq_by_simple_range_idx: [],
+      it_num_by_simple_range_idx:[]
+    };
+
+    if (!_.isNil(active_player_index)) {
+      const r_eq = r.get_range_equity(active_player_index, i);
+      const r_it = r.get_range_it_count(active_player_index, i);
+
+      //assert(r_eq.length === r_it.length);
+
+      const eq_range = [] as Array<number | null>;
+      
+      for(let ri = 0; ri < r_eq.length; ++ri) {
+        if (r_it[ri] > 0) {
+          eq_range.push(r_eq[ri] / r_it[ri]);
+        } else {
+          eq_range.push(null);
+        }
+      }
+
+      sr.eq_by_simple_range_idx = eq_range;
+      sr.it_num_by_simple_range_idx = r_it;
+    }
+
+    street_results.push(sr);
+  }
+
+  //flop & river
+  for (let street_idx = 0; street_idx < 2; ++street_idx) {
+    draw_results.push(r.get_street_draw(active_player_index, street_idx));
+  }
+
+  let player_index = -1;
+
+  if (active_player_index !== undefined) {
+    player_index = r.get_player_index(active_player_index);
+  }
+
+  return {
+    player_index,
+    street_results,
+    draw_results
+  };
+}
 
 // const isMTSupported = () => {
 //   const browser = detect();

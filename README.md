@@ -2,13 +2,7 @@
 
 ![Github Actions](https://github.com/eric7237cire/poker_eval/actions/workflows/build.yml/badge.svg)
 
-Equity and Draw Analysis.  
-
-To use: 
-
-Add the flop cards, optionally a turn & river card, then for each player, each choose a range or specific cards.
-
-Created the 'draw' analysis classes to calculate if player has a draw or not
+Equity and Draw Analysis.  Try it out on [Github pages](https://eric7237cire.github.io/poker_eval)
 
 ## Tech Stack
 
@@ -16,8 +10,6 @@ Created the 'draw' analysis classes to calculate if player has a draw or not
 * <img src="dev/v-logo.svg"  width=32/> Vue3
 
 ## Screenshot
-
-[Github pages](https://eric7237cire.github.io/)
 
 ![Screenshot](dev/screenshot.png)
 
@@ -50,6 +42,8 @@ For example:
 ``` 
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+cargo install cargo-watch
 ```
 
 This will watch rust & vue files

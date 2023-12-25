@@ -44,14 +44,14 @@ function initializePlayers(): Array<Player> {
       },
       percHands: 0,
       range: [],
-      state: PlayerState.USE_RANGE
+      state: PlayerState.DISABLED
     });
   }
   return players;
 }
 
 //private local to update some stats
-let range: RangeManager|null = null;
+let range: RangeManager | null = null;
 
 async function initRangeManager() {
   let mod = await import('@pkg/range');
@@ -61,7 +61,7 @@ async function initRangeManager() {
 }
 
 initRangeManager().then(() => {
-  console.log("Range initialized")
+  console.log('Range initialized');
 });
 
 export const usePlayerStore = defineStore('player', {
@@ -84,9 +84,8 @@ export const usePlayerStore = defineStore('player', {
       this.updateRangeStrForPlayer(this.currentPlayer, newRangeStr);
     },
     updateRangeStrForPlayer(playerId: PlayerIds, newRangeStr: string) {
-
       if (range == null) {
-        console.log("Range not initialized yet")
+        console.log('Range not initialized yet');
         return;
       }
       console.log('updateRangeStrForPlayer', playerId, newRangeStr);

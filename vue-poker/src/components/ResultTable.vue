@@ -34,11 +34,19 @@
             <template v-for="item in results" :key="item.player_index">
               <template v-for="street_index in 3" :key="street_index">
                 <tr class="relative" style="height: calc(1.9rem + 1px)">
-                  <td>Player {{ item.player_index }}</td>
-                  <td><PlayerPreflop :player-id="item.player_index"/></td>
+                  <td>
+                    <template v-if="item.player_index >= 0">
+                      Player {{ item.player_index }}
+                    </template>
+                    <template v-else> Player >= 1 </template>
+                  </td>
+                  <td><PlayerPreflop :player-id="item.player_index" /></td>
                   <td>{{ getStreetName(street_index) }}</td>
                   <td>
                     <Percentage :perc="item.street_results[street_index - 1].equity" />
+
+                    <RangeEquityViewer :range_it_num="item.street_results[street_index-1].it_num_by_simple_range_idx"
+                    :range_equity="item.street_results[street_index-1].eq_by_simple_range_idx"/>
                   </td>
                   <td v-for="index in 9" :key="index">
                     <!-- {{item.rank_family_count}}  -->
@@ -106,9 +114,14 @@
             <!--3 rows per flop result -->
             <template v-for="item in results" :key="item.player_index">
               <template v-for="draw_index in 2" :key="draw_index">
-                <tr :class="'relative ' " style="height: calc(1.9rem + 1px)">
-                  <td>Player {{ item.player_index }}</td>
-                  <td><PlayerPreflop :player-id="item.player_index"/></td>
+                <tr :class="'relative '" style="height: calc(1.9rem + 1px)">
+                  <td>
+                    <template v-if="item.player_index >= 0">
+                      Player {{ item.player_index }}
+                    </template>
+                    <template v-else> Player >= 1 </template>
+                  </td>
+                  <td><PlayerPreflop :player-id="item.player_index" /></td>
                   <td>{{ getStreetName(draw_index) }}</td>
                   <td>
                     <Percentage
@@ -211,6 +224,7 @@ import { computed, defineComponent, reactive, ref, toRefs, watch } from 'vue';
 import { RANK_FAMILY_NAMES, ResultsInterface } from '@src/worker/result_types';
 import Percentage from '@src/components/result/Percentage.vue';
 import PlayerPreflop from './result/PlayerPreflop.vue';
+import RangeEquityViewer from './result/RangeEquityViewer.vue';
 
 const props = defineProps<{
   results: Array<ResultsInterface>;
@@ -250,7 +264,6 @@ function getStreetName(street_index: number) {
 </script>
 
 <style scoped>
-
 .root {
   background-color: rgb(20, 20, 20);
 
@@ -261,17 +274,15 @@ function getStreetName(street_index: number) {
 
   tbody {
     tr {
-    color: white;
+      color: white;
+    }
   }
-}
 }
 .header-divider::before {
   content: '';
-  @apply absolute left-0 -bottom-px w-full border-b border-gray-300;
 }
 
 .row-divider::before {
   content: '';
-  @apply absolute left-0 top-0 w-full border-t border-gray-300;
 }
 </style>

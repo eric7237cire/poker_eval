@@ -1,4 +1,3 @@
-use itertools::Itertools;
 //use poker_rs::{core::Hand as CoreHand, holdem::MonteCarloGame};
 
 // const GAMES_COUNT: i32 = 3_000_000;
@@ -12,9 +11,6 @@ use postflop_solver::flop_from_str;
 use postflop_solver::Hand;
 use postflop_solver::Range;
 
-mod agent;
-mod agents;
-pub use agents::*;
 mod game;
 pub use game::*;
 mod eval;
@@ -59,43 +55,6 @@ fn main() {
     //try_ranges();
 
     run_simul();
-}
-
-//returns AA, AK, 76s
-// fn cards_to_simple_string(card1: Card, card2: Card) -> Result<String, String> {
-//     let rank1 = card1 >> 2;
-//     let rank2 = card2 >> 2;
-
-//     let suit1 = card1 & 3;
-//     let suit2 = card2 & 3;
-
-//     if suit1 == suit2 {
-//         return Ok(format!("{}{}s", rank_to_char(rank1)?, rank_to_char(rank2)?));
-//     } else {
-//         return Ok(format!("{}{}", rank_to_char(rank1)?, rank_to_char(rank2)?));
-
-//     }
-// }
-
-fn try_ranges() {
-    let range1 = "QQ+,AKs".parse::<Range>().unwrap();
-    let range2 =
-        "22+,A2+,K2+,Q2s+,Q4o+,J2s+,J5o+,T2s+,T6o+,94s+,97o+,85s+,87o,75s+,76o,65,54,43,32"
-            .parse::<Range>()
-            .unwrap();
-    //all
-    let range3: Range = "22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32"
-        .parse()
-        .unwrap();
-
-    let (range1_weights, _) = range1.get_hands_weights(0);
-    let (range2_weights, _) = range2.get_hands_weights(0);
-    let (range3_weights, _) = range3.get_hands_weights(0);
-
-    println!("Range1 num hands = {}", range1_weights.len());
-    println!("Range2 num hands = {}", range2_weights.len());
-    println!("Range3 num hands = {}", range3_weights.len());
-    println!("Total num hands = {}\n\n", 52 * 51 / 2);
 }
 
 fn run_simul() {
@@ -454,90 +413,5 @@ impl RangeEval {
     }
 }
 
-fn try_evaluate() {
-    //trying code from postflop solver
-
-    println!("Hello {}", card_from_str("Ad").unwrap().to_string());
-
-    let mut hand1 = Hand::new();
-    for chunk in &"AdAcTd9d2h3c4d".chars().chunks(2) {
-        let sub_str = chunk.collect::<String>();
-        println!("sub_str = {}", sub_str);
-
-        hand1 = hand1.add_card(card_from_str(&sub_str).unwrap() as usize);
-    }
-
-    println!(
-        "\n\n {}  rank {}",
-        hand1.evaluate(),
-        category_to_string(get_hand_category_rank(&hand1))
-    );
-
-    let mut hand2 = Hand::new();
-    for chunk in &"AdAcTd9d2h3c5h".chars().chunks(2) {
-        let sub_str = chunk.collect::<String>();
-        println!("sub_str = {}", sub_str);
-
-        hand2 = hand2.add_card(card_from_str(&sub_str).unwrap() as usize);
-    }
-
-    assert!(hand1.evaluate() < hand2.evaluate());
-}
-
-// fn old_main() {
-//     println!("Hello, world!");
-
-//     let hands = STARTING_HANDS
-//         .iter()
-//         .map(|s| CoreHand::new_from_str(s).expect("Should be able to create a hand."))
-//         .collect();
-//     let mut g = MonteCarloGame::new(hands).expect("Should be able to create a game.");
-//     let mut wins: [u64; 2] = [0, 0];
-//     for _ in 0..GAMES_COUNT {
-//         let r = g.simulate();
-//         g.reset();
-//         wins[r.0.ones().next().unwrap()] += 1
-//     }
-
-//     let normalized: Vec<f64> = wins
-//         .iter()
-//         .map(|cnt| *cnt as f64 / GAMES_COUNT as f64)
-//         .collect();
-
-//     println!("Starting Hands =\t{:?}", STARTING_HANDS);
-//     println!("Wins =\t\t\t{:?}", wins);
-//     println!("Normalized Wins =\t{:?}", normalized);
-// }
-
 #[cfg(test)]
-mod tests {
-    //use std::cmp::Ordering;
-
-    //use poker_rs::core::{Hand, Rankable, Rank};
-
-    // #[test]
-    // fn test_3rd_kicker() {
-    //     //AA pair, ten, nine, four vs 5
-    //     let hand1 =  Hand::new_from_str("AdAcTd9d2h3c4d").unwrap().rank();
-    //     let hand2 =  Hand::new_from_str("AdAcTd9d2h3c5h").unwrap().rank();
-
-    //     assert_eq!(hand2.cmp(&hand1), Ordering::Greater);
-    //     if let Rank::OnePair(_val) = hand2 {
-    //         assert!(true);
-    //     } else {
-    //         assert!(false);
-    //     }
-
-    //     //Test 4th kicker doesn't matter
-
-    //     //K Q T 9 8 7 vs 6
-    //     let hand1 = Hand::new_from_str("KdQcTd9d8h7c3d2c").unwrap().rank();
-
-    //     let hand2 = Hand::new_from_str("KhQcTd9d8h6c3d5c").unwrap().rank();
-
-    //     assert_eq!(hand2.cmp(&hand1), Ordering::Equal);
-
-    //     assert_eq!(1, 2);
-
-    // }
-}
+mod tests {}
