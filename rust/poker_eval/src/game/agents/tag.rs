@@ -57,6 +57,8 @@ impl Tag {
 
     fn decide_postflop(&self, player_state: &PlayerState, game_state: &GameState) -> AgentDecision {
 
+        let non_folded_players = game_state.player_states.iter().filter(|ps| !ps.folded).count();
+
         let hc = self.hole_cards.as_ref().unwrap();
         let prc = partial_rank_cards(hc, &game_state.board);
 
