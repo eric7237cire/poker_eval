@@ -19,8 +19,8 @@ pub struct PlayerState {
 
     //In current betting round, so == remaining stack
     pub all_in: bool,
-    //Used in all in, to see how much they can win
-    //pub max_pot: Option<ChipType>,
+    
+    pub final_eval_comment: Option<String>,
 }
 
 impl PlayerState {
@@ -33,6 +33,7 @@ impl PlayerState {
             cur_round_putting_in_pot: None,
             all_in: false,
             player_name: initial_player_state.player_name.clone(),
+            final_eval_comment: None,
         }
     }
 

@@ -302,16 +302,17 @@ impl GameRunner {
         }
 
         let mut hand_rankings: Vec<(Rank, usize)> = Vec::new();
+        //let mut hand_ranking_strings: Vec<Option<String>> = vec![None; self.game_state.player_states.len()];
 
         let mut eval_cards = self.game_state.board.clone();
 
         for player_index in 0..self.game_state.player_states.len() {
             if self.game_state.player_states[player_index].folded {
-                trace!(
-                    "Player #{} named {} folded, did not win, skipping",
-                    player_index,
-                    &self.game_state.player_states[player_index].player_name
-                );
+                // trace!(
+                //     "Player #{} named {} folded, did not win, skipping",
+                //     player_index,
+                //     &self.game_state.player_states[player_index].player_name
+                // );
                 continue;
             }
 
@@ -319,7 +320,12 @@ impl GameRunner {
 
             hole_cards.add_to_eval(&mut eval_cards);
             let rank = rank_cards(&eval_cards);
-            hand_rankings.push((rank, player_index));
+
+            self.game_state.player_states[player_index].final_eval_comment = Some(format!("{}", rank.print_winning(&eval_cards)));
+
+            if !self.game_state.player_states[player_index].folded {
+                hand_rankings.push((rank, player_index));
+            }
 
             hole_cards.remove_from_eval(&mut eval_cards)?;
         }
@@ -420,7 +426,7 @@ impl GameRunner {
             self.game_runner_source.set_final_player_state(
                 player_index,
                 &self.game_state.player_states[player_index],
-                None,
+                None
             )?;
         }
         Ok(())
@@ -963,9 +969,10 @@ impl GameRunner {
 
         for player_state in &self.game_state.player_states {
             s.push_str(&format!(
-                "{:width$} - {} # Started with {} change {}\n",
+                "{:width$} - {} # {} Started with {} change {}\n",
                 player_state.player_name,
                 player_state.stack,
+                player_state.final_eval_comment.as_deref().unwrap_or(""),
                 player_state.initial_stack,
                 (player_state.stack as i64) - (player_state.initial_stack as i64),
                 width = max_player_id_width

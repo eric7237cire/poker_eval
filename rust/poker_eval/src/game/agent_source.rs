@@ -108,7 +108,7 @@ mod tests {
         for i in 0..2 {
             let mut agent = PassiveCallingStation::default();
             agent.calling_range = Some(calling_75_range.clone());
-            agent.name = format!("{} Calling Station 75%", i + 1);
+            agent.name = format!("{} Cal Stn 75%", i + 1);
             agents.push(Box::new(agent));
         }
 
@@ -132,7 +132,7 @@ mod tests {
         
         let mut hero_winnings: i64 = 0;
 
-        for _ in 0..20 {
+        for it_num in 0..200 {
             agent_deck.reset();
 
             let mut agents = build_agents();
@@ -159,12 +159,21 @@ mod tests {
 
             hero_winnings += change;
 
-            if change < -50 {         
+            if it_num == 5 // change < -50 {     
+                {
+                for pi in 0..5 {
+                    game_runner.game_state.player_states[pi].player_name = 
+                    format!("{} ({})", 
+                        game_runner.game_state.player_states[pi].player_name ,
+                        game_runner.game_runner_source.get_hole_cards(pi).unwrap());
+                }    
                 game_runner.game_state.player_states[4].player_name = format!("Hero ({})", game_runner.game_runner_source.get_hole_cards(4).unwrap());
-                info!("Losing hand {}", game_runner.to_game_log_string(true));
+                info!("Losing hand #{}\n{}", 
+                it_num,
+                game_runner.to_game_log_string(true));
             }
         }
 
-        //assert_eq!(hero_winnings, 5836);
+        assert_eq!(hero_winnings, 5835);
     }
 }

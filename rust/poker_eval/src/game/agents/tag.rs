@@ -152,7 +152,7 @@ impl Tag {
 impl Agent for Tag {
     
     fn decide(&self, player_state: &PlayerState, game_state: &GameState) -> AgentDecision {
-        let action = match game_state.current_round {
+        match game_state.current_round {
             Round::Preflop => {
                 return self.decide_preflop(player_state, game_state);
             }
