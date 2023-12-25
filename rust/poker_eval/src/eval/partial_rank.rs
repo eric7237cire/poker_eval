@@ -115,6 +115,11 @@ impl Default for PartialRankContainer {
 // }
 
 impl PartialRankContainer {
+
+    // Convenience methods
+
+
+    //Private methods below
     fn handle_pocket_pairs(&mut self, hole_cards: &[Card], board_metrics: &BitSetCardsMetrics) {
         if hole_cards[0].value == hole_cards[1].value {
             //let number_above = board_metrics.value_set.iter_ones().filter(|&v| v > hole_cards[0].value as usize).count() as u8;

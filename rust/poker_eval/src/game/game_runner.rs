@@ -56,7 +56,7 @@ impl GameRunner {
             sb,
             bb,
             actions: Vec::new(),
-            min_raise: 0,
+            min_raise: bb,
         };
 
         let mut r = GameRunner {
@@ -241,7 +241,7 @@ impl GameRunner {
         self.game_state.prev_round_pot += self.game_state.round_pot;
         self.game_state.round_pot = 0;
         self.game_state.current_to_call = 0;
-        self.game_state.min_raise = 0;
+        self.game_state.min_raise = self.game_state.bb;
 
         Ok(())
     }
@@ -511,11 +511,12 @@ impl GameRunner {
                         self.game_state.pot())
                 } else {
                     format!(
-                        "Player #{} {} calls {} (of {}) with {:.1}% pot equity with {} in the pot",
+                        "Player #{} {} calls {} ({} total) into {} with {:.1}% pot equity with {} in the pot",
                         player_index,
                         &self.game_state.player_states[player_index].player_name,
                         actual_amt,
                         amt_to_call,
+                        self.game_state.pot() - actual_amt,
                         pot_eq,
                         self.game_state.pot()
                     )
@@ -784,13 +785,13 @@ impl GameRunner {
                 )
                 .into());
             }
-            if bet_amt % self.game_state.bb != 0 {
-                return Err(format!(
-                    "Player #{} {} tried to bet {} but must be a multiple of big blind {}",
-                    player_index, &player_state.player_name, bet_amt, self.game_state.bb
-                )
-                .into());
-            }
+            // if bet_amt % self.game_state.bb != 0 {
+            //     return Err(format!(
+            //         "Player #{} {} tried to bet {} but must be a multiple of big blind {}",
+            //         player_index, &player_state.player_name, bet_amt, self.game_state.bb
+            //     )
+            //     .into());
+            // }
         }
 
         if bet_amt > player_state.stack {
@@ -856,13 +857,13 @@ impl GameRunner {
             }
 
             //Also check multiple of bb
-            if (raise_amt - self.game_state.current_to_call) % self.game_state.bb != 0 {
-                return Err(format!(
-                    "Player #{} {} tried to raise {} but must be a multiple of big blind {}",
-                    player_index, &player_state.player_name, raise_amt, self.game_state.bb
-                )
-                .into());
-            }
+            // if (raise_amt - self.game_state.current_to_call) % self.game_state.bb != 0 {
+            //     return Err(format!(
+            //         "Player #{} {} tried to raise {} but must be a multiple of big blind {}",
+            //         player_index, &player_state.player_name, raise_amt, self.game_state.bb
+            //     )
+            //     .into());
+            // }
         }
 
         if actual_increase > player_state.stack {
@@ -876,7 +877,7 @@ impl GameRunner {
         Ok(())
     }
 
-    pub fn to_game_log_string(&self) -> String {
+    pub fn to_game_log_string(&self, with_player_comments: bool) -> String {
         //Find longest player id width
         let max_player_id_width = self
             .game_state
@@ -940,9 +941,19 @@ impl GameRunner {
             }
 
             s.push_str(&format!(
-                "{:width$} {} # {}\n",
+                "{:width$} {} # {}{}{}\n",
                 self.game_state.player_states[action.player_index].player_name,
                 action.action,
+                if with_player_comments {
+                    action.player_comment.as_deref().unwrap_or("")
+                } else {
+                    ""
+                },
+                if with_player_comments && action.player_comment.is_some() && action.system_comment.is_some() {
+                    " - "
+                } else {
+                    ""
+                },
                 action.system_comment.as_ref().unwrap_or(&String::new()),
                 width = max_player_id_width
             ));

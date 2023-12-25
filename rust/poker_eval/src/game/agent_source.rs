@@ -43,8 +43,10 @@ impl GameRunnerSource for AgentSource {
 
     //get cards for player?
     fn get_hole_cards(&self, player_index: usize) -> Result<HoleCards, PokerError> {
-        let agent = &self.agents[player_index];
-        Ok(agent.get_hole_cards())
+        //Agents shouldn't say what cards they have, get it from player data
+        self.players[player_index].cards.ok_or_else(|| {
+            PokerError::from_string(format!("No hole cards for player {}", player_index))
+        })
     }
 
     //get board cards?
@@ -79,6 +81,7 @@ impl GameRunnerSource for AgentSource {
 #[cfg(test)]
 mod tests {
 
+    use log::info;
     use postflop_solver::Range;
 
     use crate::{
@@ -88,7 +91,7 @@ mod tests {
             },
             game_runner_source::GameRunnerSourceEnum,
         },
-        init_test_logger, test_game_runner, Card, GameRunner, InitialPlayerState,
+        init_test_logger, test_game_runner, Card, GameRunner, InitialPlayerState, game_runner_source::GameRunnerSource,
     };
 
     use super::AgentSource;
@@ -151,8 +154,15 @@ mod tests {
 
             test_game_runner(&mut game_runner).unwrap();
 
-            hero_winnings += game_runner.game_state.player_states[4].stack as i64;
-            hero_winnings -= game_runner.game_state.player_states[4].initial_stack as i64;
+            let change = game_runner.game_state.player_states[4].stack as i64
+             - game_runner.game_state.player_states[4].initial_stack as i64;
+
+            hero_winnings += change;
+
+            if change < -50 {         
+                game_runner.game_state.player_states[4].player_name = format!("Hero ({})", game_runner.game_runner_source.get_hole_cards(4).unwrap());
+                info!("Losing hand {}", game_runner.to_game_log_string(true));
+            }
         }
 
         assert_eq!(hero_winnings, 20);

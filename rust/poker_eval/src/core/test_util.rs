@@ -56,11 +56,12 @@ pub fn test_game_runner(game_runner: &mut GameRunner) -> Result<(), PokerError> 
         assert_eq!(action_count_before + 1, action_count_after);
     }
 
-    let log = game_runner.to_game_log_string();
+    //let log_display = game_runner.to_game_log_string(true);
 
-    info!("log1\n{}", log);
+    let check_log = game_runner.to_game_log_string(false);
+    //info!("log\n{}", log_display);
 
-    let parsed_game_log: GameLog = log.parse().unwrap();
+    let parsed_game_log: GameLog = check_log.parse().unwrap();
     let game_log_source: GameLogSource = GameLogSource::new(parsed_game_log);
 
     //Run the game again with the log
@@ -76,11 +77,11 @@ pub fn test_game_runner(game_runner: &mut GameRunner) -> Result<(), PokerError> 
         assert_eq!(action_count_before + 1, action_count_after);
     }
 
-    let log2 = game_runner2.to_game_log_string();
+    let log2 = game_runner2.to_game_log_string(false);
 
     //info!("log2:\n{}", log2);
 
-    assert_eq!(log, log2);
+    assert_eq!(check_log, log2);
 
     Ok(())
 }
