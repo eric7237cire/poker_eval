@@ -965,7 +965,18 @@ impl GameRunner {
             ));
         }
 
-        s.push_str("*** Summary ***\n");
+        //Create a link with board and hero cards
+        //http://localhost:5173/?board=2s7c8s2h2d&hole=As2c
+
+        let board_url_param=self.game_state.board.iter().map(|c| format!("{}", c)).collect::<Vec<String>>().join("");
+        //Hard code hero as button
+        let hero_cards = self.game_runner_source.get_hole_cards(self.game_state.player_states.len()-1).unwrap();
+        let hero_url_param = format!("{}{}", hero_cards.get_hi_card(), hero_cards.get_lo_card());
+
+        let url = format!("http://localhost:5173/?board={}&hero={}", board_url_param, hero_url_param);
+        s.push_str("*** Summary *** # ");
+        s.push_str(&url);
+        s.push_str("\n");
 
         for player_state in &self.game_state.player_states {
             s.push_str(&format!(

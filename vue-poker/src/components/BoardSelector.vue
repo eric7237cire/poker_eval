@@ -1,9 +1,9 @@
 <template>
   <div ref="root_element" class="template_root">
-    <template v-if="!isEditing && cardList">
+    <template v-if="!isEditing && cardListRef">
       <div ref="not_editing" class="not_editing">
         <BoardSelectorCard
-          v-for="card in cardList.cards"
+          v-for="card in cardListRef.cards"
           :key="card"
           class="m-1"
           :card-id="card"
@@ -12,13 +12,13 @@
         <button
           class="button-base button-blue"
           @click="startEditing"
-          v-if="cardList.cards.length == 0"
+          v-if="cardListRef.cards.length == 0"
         >
           Edit {{ props.expected_length == 2 ? 'Hole Cards' : 'Board' }}
         </button>
       </div>
     </template>
-    <template v-if="isEditing && cardList">
+    <template v-if="isEditing && cardListRef">
       <div ref="editor" class="editor" :style="editorStyle">
         <div v-for="suit in 4" :key="suit" class="flex">
           <BoardSelectorCard
@@ -109,11 +109,17 @@ const emit = defineEmits<{
   updateModelValue: [value: CardList];
 }>();
 
-const cardList = props.modelValue;
+//Be responsive to model changes, not sure if this is 
+//really needed
+const cardListRef = computed( () => {
+    const cardListComputed = props.modelValue;
 
-if (cardList && !Array.isArray(cardList.cards)) {
-  cardList.cards = [];
-}
+    if (cardListComputed && !Array.isArray(cardListComputed.cards)) {
+        cardListComputed.cards = [];
+    }
+    console.log('cardListComputed', cardListComputed.cards);
+    return cardListComputed;
+});
 
 const isEditing = ref(false);
 
@@ -185,6 +191,7 @@ function positionEditor() {
 }
 
 function toggleCard(cardId: number, updateText = true) {
+    const cardList = cardListRef.value;
   if (cardList.cards.includes(cardId)) {
     //removes the card
     cardList.cards = cardList.cards.filter((card) => card !== cardId);
@@ -209,14 +216,14 @@ function toggleCard(cardId: number, updateText = true) {
 }
 
 function setBoardTextFromButtons() {
+    const cardList = cardListRef.value;
   cardList.cardText = cardList.cards
     .map(cardText)
     .map(({ rank, suitLetter }) => rank + suitLetter)
     .join(', ');
 
   console.log('boardText.value', cardList.cardText);
-  //TODO update
-  //cardList.cardsText = boardText.value;
+  
 }
 
 function editDone() {
@@ -229,6 +236,7 @@ function startEditing() {
 }
 
 function onBoardTextChange() {
+    const cardList = cardListRef.value;
   cardList.cards = [];
 
   const cardIds = cardList.cardText
@@ -245,11 +253,13 @@ function onBoardTextChange() {
 }
 
 function clearBoard() {
+    const cardList = cardListRef.value;
   cardList.cards = [];
   setBoardTextFromButtons();
 }
 
 function generateRandomBoard() {
+    const cardList = cardListRef.value;
   cardList.cards = [];
 
   while (cardList.cards.length < props.expected_length) {

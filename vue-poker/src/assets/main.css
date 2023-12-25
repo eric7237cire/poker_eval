@@ -82,6 +82,9 @@ input.input-error {
 .suit-spades {
     color: black;
 }
+.card-text.suit-spades {
+    color: white;
+}
 .suit-hearts {
     @apply text-pink-600;
 }

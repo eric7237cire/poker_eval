@@ -1,4 +1,5 @@
 // stores/counter.js
+import { parseCardString } from '@src/utils';
 import { useLocalStorage } from '@vueuse/core';
 import { defineStore } from 'pinia';
 

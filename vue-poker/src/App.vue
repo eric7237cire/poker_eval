@@ -101,6 +101,7 @@ import { useResultsStore } from './stores/results';
 import { useRangesStore } from './stores/ranges';
 import { useCssVar } from '@vueuse/core';
 import Footer from './components/Footer.vue';
+import { loadCardsFromUrl } from './utils';
 
 const navStore = useNavStore();
 const playerStore = usePlayerStore();
@@ -134,6 +135,22 @@ onMounted(() => {
   rangeStore.init_ranges().then(() => {
     console.log('ranges fetched');
   });
+
+  const board = loadCardsFromUrl('board');
+  if (board) {
+    console.log('board loaded from url', board);
+    boardStore.board = board;
+  } else {
+    console.log('no board loaded from url');
+  }
+
+  const heroCards = loadCardsFromUrl('hero');
+    if (heroCards) {
+        console.log('hero cards loaded from url', heroCards);
+        playerStore.playerDataForId(0).holeCards = heroCards;
+    } else {
+        console.log('no hero cards loaded from url');
+    }
 });
 
 const userMessage = ref(
