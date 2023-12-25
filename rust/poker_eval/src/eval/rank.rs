@@ -1,4 +1,4 @@
-use crate::{core::Card, CardValue};
+use crate::{core::Card, CardValue, Suit};
 use bitvec::prelude::*;
 use itertools::Itertools;
 use log::trace;
@@ -201,8 +201,81 @@ impl Rank {
                 
                 r
             }
-            Rank::FourOfAKind(_) => format!("Four of a Kind {}", cards[0]),
-            Rank::StraightFlush(_) => format!("Straight Flush {}", cards[0]),
+            Rank::FourOfAKind(k) => {
+                let quads_value_u32 = (k >> 13).trailing_zeros();
+                let quads_value: CardValue = (quads_value_u32 as u8).try_into().unwrap();
+                let mut r = "Quads - ".to_string();
+
+                let cards_str = cards.iter().filter(|c| c.value == quads_value)
+                .map(|c| c.to_string())
+                .join(" ");
+                
+                r.push_str(&cards_str);
+
+                let bvs = ValueSetType::new([*k & low_set_mask]);
+
+                for set_bit in bvs.iter_ones().rev() {
+                    let value: CardValue = set_bit.try_into().unwrap();
+                    let card = cards.iter().find(|c| c.value == value).unwrap();
+                    r.push_str(&format!(" {}", card));
+                }
+
+                r
+            }
+            Rank::StraightFlush(k) => {
+                let straight_value = if *k == 0 {
+                    CardValue::Five
+                } else {
+                    //let straight_value_u32 = k.trailing_zeros();
+                    let straight_value: CardValue = ((*k + 3) as u8).try_into().unwrap();
+                    straight_value
+                };
+                
+                let mut r = "Straight Flush - ".to_string();
+
+                //Find most common suit
+                let mut suit_counts = [0; 4];
+                for card in cards.iter() {
+                    suit_counts[card.suit as usize] += 1;
+                }
+                let (max_suit, max_suit_count) = suit_counts
+                    .iter()
+                    .enumerate()
+                    .max_by_key(|&(_, count)| count)
+                    .unwrap();
+                let max_suit_class: Suit = (max_suit as u8).try_into().unwrap();
+
+                let suited_cards = cards.iter().filter(|c| c.suit == max_suit_class).collect::<Vec<_>>();
+                
+                trace!("Straight value {}=={}, is wheel {}", straight_value, 
+                    straight_value as u8,
+                    straight_value == CardValue::Five);
+
+                if straight_value == CardValue::Five {
+                    //Find the ace
+                    let ace = suited_cards.iter().find(|c| c.value == CardValue::Ace ).unwrap();
+                    r.push_str(&format!("{} ", ace));
+
+                    let mut cv = CardValue::Two;
+                    for _ in 0..4 {
+                        let card = suited_cards.iter().find(|c| c.value == cv ).unwrap();
+                        r.push_str(&format!("{} ", card));
+                        cv = cv.next_card();
+                    }
+                } else {
+                    let mut cv = CardValue::try_from(straight_value as u8 - 4).unwrap();
+
+                    for _ in 0..5 {
+                        let card = suited_cards.iter().find(|c| c.value == cv).unwrap();
+                        r.push_str(&format!("{} ", card));
+                        cv = cv.next_card();
+                    }
+                }
+
+                r.pop().unwrap();
+
+                r
+            }
         }
     }
 }
@@ -915,14 +988,28 @@ mod tests {
         let cards: CardVec = "2h Js 2d 9h Th 2s 2c".parse().unwrap();
         let rank = rank_cards(&cards.0);
         assert_eq!(
-            "Quads - 2h 2d 2s 2c Th",
+            "Quads - 2h 2d 2s 2c Js",
             rank.print_winning(&cards.0)
         );
 
-        let cards: CardVec = "2h Ah 2d 3h Th 2s 5h".parse().unwrap();
+        let cards: CardVec = "2h Ah 2d 3h Th 4h 5h".parse().unwrap();
         let rank = rank_cards(&cards.0);
         assert_eq!(
             "Straight Flush - Ah 2h 3h 4h 5h",
+            rank.print_winning(&cards.0)
+        );
+
+        let cards: CardVec = "2h As 2d 3h Ah 4h 5h".parse().unwrap();
+        let rank = rank_cards(&cards.0);
+        assert_eq!(
+            "Straight Flush - Ah 2h 3h 4h 5h",
+            rank.print_winning(&cards.0)
+        );
+
+        let cards: CardVec = "9s 7s As Js Qh Ts 8s".parse().unwrap();
+        let rank = rank_cards(&cards.0);
+        assert_eq!(
+            "Straight Flush - 7s 8s 9s Ts Js",
             rank.print_winning(&cards.0)
         );
     }
