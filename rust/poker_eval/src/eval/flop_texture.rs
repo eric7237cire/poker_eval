@@ -129,64 +129,13 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
     texture
 }
 
-fn compute_cum_sum(dimension: usize, total_dimensions: usize) -> Vec<usize> {
-
-    assert!(total_dimensions >= 2 && total_dimensions <= 7);
-
-    assert!(dimension <= total_dimensions);
-    assert!(dimension >= 2);
-
-    //For dimension 1 of 5, the minimum card is 4 because order is increasing
-    // 0   1   2   3   4 ; the mins/max values are
-    //[0-47]    [1-48]     [2-49]    [3-50]    [4-51]
-    //Dim5 Dim4  Dim3  Dim2  Dim1
-
-    //For dimension 1 of 2, the minimum card is 1
-    // 0 1
-
-    let min_card_value = total_dimensions - dimension;
-    let max_card_value = 52 - dimension;
-
-
-    let mut cumul_sum = Vec::with_capacity(52);
-    //cumul_sum.push(num_this_one);
-
-    for card_value in 0..=min_card_value {
-        cumul_sum.push(0);
-    }
-
-    //Lets say total dimension = 3, dimension = 2
-    // So we have 3 cards total -- X card_value Y
-    // 0 1 2 is the index == 0, where card_value == minuvalue
-    // 0 1 3 is 1, so @ min value we add nothing
-
-    for card_value in min_card_value+1..=max_card_value {
-        let n = 52 - card_value;
-        let count = binomial(n, dimension-1);
-        let prev_sum = cumul_sum[card_value-1];
-        // trace!("Calculating dim {} of {}.  Count of {} x == {} choose {} == {}.  Adding to prev value {}",
-        // dimension, total_dimensions, card_value, n, dimension-1, count, prev_sum
-        // );
-        cumul_sum.push(prev_sum + count);
-    }
-
-    for cs in cumul_sum.iter_mut() {
-        if *cs > 0 {
-           // *cs -= 1;
-        }
-    }
-
-    cumul_sum
-}
-
 fn combinatorial_index(cards: &[usize]) -> usize {
 
     //we want the smallest index 1st
     let mut cards = cards.to_vec();
     cards.sort();
 
-    //index = Σ ( card[i] * C(remaining_cards - 1, n - i - 1) ) for i = 0 to n-1
-
+    
     //so if I have 7 x, I want to add
     //how many combinations of C(6, 2) to add 
 
@@ -201,36 +150,16 @@ fn combinatorial_index(cards: &[usize]) -> usize {
         // # of ways to choose cards 0-49 in  3 cards
         // # of ways to choose cards 0-11 in  2 cards
         // # of ways to choose cards 0-4  in  1 card
-        let ncr = combinations(num_possible_before, dim);
+        let ncr = binomial(num_possible_before, dim);
         //trace!("Adding {} choose {} == {} to index", num_possible_before, dim, ncr);
         index += ncr;
     }
 
     // https://en.wikipedia.org/wiki/Combinatorial_number_system
+    // https://math.stackexchange.com/questions/1227409/indexing-all-combinations-without-making-list
     
 
     index
-}
-
-fn combinations(n: usize, r: usize) -> usize {
-    (0..r).fold(1, |acc, i| acc * (n - i) / (i + 1))
-}
-
-fn main() {
-    let cards_3 = [10, 22, 3];
-    println!("Index for 3 cards: {}", combinatorial_index(&cards_3));
-
-    let cards_4 = [10, 22, 3, 45];
-    println!("Index for 4 cards: {}", combinatorial_index(&cards_4));
-
-    let cards_5 = [10, 22, 3, 45, 11];
-    println!("Index for 5 cards: {}", combinatorial_index(&cards_5));
-
-    let cards_6 = [10, 22, 3, 45, 11, 0];
-    println!("Index for 6 cards: {}", combinatorial_index(&cards_6));
-
-    let cards_7 = [10, 22, 3, 45, 11, 0, 51];
-    println!("Index for 7 cards: {}", combinatorial_index(&cards_7));
 }
 
 #[cfg(test)]
@@ -266,21 +195,7 @@ mod tests {
         // }
 
         //0 X Y has 51 Choose 2 -- 1275
-        let cs = compute_cum_sum(3, 3);
-        assert_eq!(cs[0], 0);
-        assert_eq!(cs[1], 1275); //what's before 1 X Y
-        //1 X Y has 50 Choose 2 -- 1225
-        assert_eq!(cs[2], 1225+1275); //what's before 2 X Y
-        //2 X Y has 49 Choose 2 -- 1176
-        assert_eq!(cs[3], 1176+1225+1275); //what's before 3 X Y
-
-        //- 1 X has 50 (52 - 2)
-        //- 2 X has 49 (52 - 3)
-        let cs = compute_cum_sum(2, 3);
-        assert_eq!(cs[0], 0);
-        assert_eq!(cs[1], 0);
-        assert_eq!(cs[2], 50);
-        assert_eq!(cs[3], 50+49);
+       
 
         let mut index_check = 0;
         // 2 1 0
