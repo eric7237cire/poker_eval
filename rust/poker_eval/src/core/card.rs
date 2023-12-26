@@ -2,6 +2,8 @@ use crate::HoleCards;
 use bitvec::prelude::*;
 use postflop_solver::card_pair_to_index;
 use postflop_solver::Range;
+use serde::Deserialize;
+use serde::Serialize;
 use std::cmp;
 use std::convert::TryFrom;
 use std::fmt;
@@ -17,7 +19,7 @@ use crate::PokerError;
 /// Card rank or value.
 /// This is basically the face value - 2
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(PartialEq, PartialOrd, Eq, Ord, Debug, Clone, Copy, Hash)]
+#[derive(PartialEq, PartialOrd, Eq, Ord, Debug, Clone, Copy, Hash, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum CardValue {
     /// 2

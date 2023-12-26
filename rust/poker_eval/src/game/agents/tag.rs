@@ -1,6 +1,6 @@
 use crate::{
     partial_rank_cards, ActionEnum, FlushDrawType, GameState, HoleCards, PlayerState, Round,
-    StraightDrawType, board_hc_eval_cache_redb::{EvalCacheReDb, FLOP_TEXTURE_PATH}, ProduceFlopTexture, BoardTexture,
+    StraightDrawType, board_eval_cache_redb::{EvalCacheReDb, FLOP_TEXTURE_PATH}, ProduceFlopTexture, BoardTexture,
 };
 
 use postflop_solver::Range;
@@ -13,7 +13,7 @@ pub struct Tag {
     pub pfr_range: Range,
     pub hole_cards: Option<HoleCards>,
     pub name: String,
-    flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture, u32>
+    flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture>
 }
 
 impl Tag {

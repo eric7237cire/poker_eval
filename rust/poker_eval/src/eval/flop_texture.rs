@@ -39,7 +39,7 @@ use serde::{Deserialize, Serialize};
 // use rmps crate to serialize structs using the MessagePack format
 use crate::{
     calc_cards_metrics, partial_rank_cards, rank_cards, Card, CardValue, CombinatorialIndex,
-    HoleCards, StraightDrawType, board_hc_eval_cache_redb::ProduceEvalResult, CardVec,
+    HoleCards, StraightDrawType, CardVec, board_eval_cache_redb::ProduceEvalResult,
 };
 
 
@@ -207,25 +207,22 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
 }
 
 pub struct ProduceFlopTexture {
-    c_index: CombinatorialIndex,
+
 }
 
 impl ProduceFlopTexture {
     pub fn new() -> Self {
         ProduceFlopTexture {
-            c_index: CombinatorialIndex::new(),
+
         }
     }
 }
 
-impl ProduceEvalResult<BoardTexture, u32> for ProduceFlopTexture {
-    fn produce_eval_result(cards: &[Card], hole_cards: Option<HoleCards>) -> BoardTexture {
+impl ProduceEvalResult<BoardTexture> for ProduceFlopTexture {
+    fn produce_eval_result(cards: &[Card]) -> BoardTexture {
         calc_board_texture(cards)
     }
 
-    fn get_key(&mut self, cards: &[Card], _hole_cards: Option<HoleCards>) -> u32 {
-        self.c_index.get_index(cards)
-    }
 }
 
 #[cfg(test)]
@@ -235,7 +232,7 @@ mod tests {
 
     use log::{info, debug};
 
-    use crate::{init_test_logger, AgentDeck, CardVec, board_hc_eval_cache_redb::{EvalCacheReDb, FLOP_TEXTURE_PATH}};
+    use crate::{init_test_logger, AgentDeck, CardVec, board_eval_cache_redb::{EvalCacheReDb, FLOP_TEXTURE_PATH}};
 
     use super::*;
 
@@ -249,27 +246,7 @@ mod tests {
 
         let mut agent_deck = AgentDeck::new();
         let mut cards: Vec<Card> = Vec::new();
-        //cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
-        // let now = Instant::now();
-        // let iter_count = 1_000;
-        // // Code block to measure.
-        // {
-        //     for _ in 0..iter_count {
-        //         cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
-        //         cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
-        //         let _texture = calc_board_texture(&cards);
-        //         agent_deck.clear_used_card(cards[1]);
-        //         agent_deck.clear_used_card(cards[2]);
-        //         cards.pop();
-        //         cards.pop();
-        //     }
-        // }
-
-        // let elapsed = now.elapsed();
-        // println!("Elapsed: {:.2?}", elapsed);
-
-        let _db_name = "/home/eric/git/poker_eval/data/flop_texture.db";
-
+       
         cards.clear();
         agent_deck.reset();
         //delete if exists

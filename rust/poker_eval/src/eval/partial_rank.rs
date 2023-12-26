@@ -3,20 +3,22 @@ use std::{
     ops::BitOr,
 };
 
+use serde::{Deserialize, Serialize};
+
 use crate::{
     calc_bitset_cards_metrics, count_higher, count_lower, rank_straight, value_set_iterator,
-    BitSetCardsMetrics, Card, CardValue, HoleCards, ValueSetType,
+    BitSetCardsMetrics, Card, CardValue, HoleCards, ValueSetType, board_hc_eval_cache_redb::ProduceEvalWithHcResult,
 };
 
 //for pairs, 2 pair, sets, quads, full houses
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct PairFamilyRank {
     pub number_above: u8,
     pub number_below: u8,
 }
 
 #[repr(u8)]
-#[derive(PartialEq, Eq, Debug, Clone, Copy, Ord, PartialOrd)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum FlushDrawType {
     BackdoorFlushDraw = 0,
     //Higher is better
@@ -24,7 +26,7 @@ pub enum FlushDrawType {
 }
 
 #[repr(u8)]
-#[derive(PartialEq, Eq, Debug, Copy, Clone, Ord, PartialOrd)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Ord, PartialOrd,  Serialize, Deserialize)]
 pub enum StraightDrawType {
     //The card that makes the straight, it's not the highest card in the straight
     GutShot(CardValue),
@@ -43,13 +45,13 @@ pub enum StraightDrawType {
 //     TwoOverCards(TwoOverCards),
 // }
 
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct FlushDraw {
     pub hole_card_value: CardValue,
     pub flush_draw_type: FlushDrawType,
 }
 
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct StraightDraw {
     pub straight_draw_type: StraightDrawType,
 
@@ -57,7 +59,7 @@ pub struct StraightDraw {
     pub number_above: u8,
 }
 
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct PairInfo {
     pub number_above: u8,
     pub number_below: u8,
@@ -67,6 +69,7 @@ pub struct PairInfo {
 
 //Tracking basically what our hole cards are doing
 //Meant to be combined with rank to make decisions
+#[derive(Serialize, Deserialize)]
 pub struct PartialRankContainer {
     pub flush_draw: Option<FlushDraw>,
     pub straight_draw: Option<StraightDraw>,
@@ -610,10 +613,25 @@ pub fn partial_rank_cards(hole_cards: &HoleCards, board: &[Card]) -> PartialRank
     partial_ranks
 }
 
+pub struct ProducePartialRankCards {
+
+}
+
+impl ProduceEvalWithHcResult<PartialRankContainer> for ProducePartialRankCards {
+    
+    fn produce_eval_result(board: &[Card], hole_cards: HoleCards, ) -> PartialRankContainer {
+        partial_rank_cards(&hole_cards, board)
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
-    use crate::CardVec;
+    use std::time::Instant;
+
+    use log::info;
+
+    use crate::{CardVec, AgentDeck, init_test_logger, board_hc_eval_cache_redb::{EvalCacheWithHcReDb, PARTIAL_RANK_PATH}};
 
     use super::*;
 
@@ -1081,6 +1099,70 @@ mod tests {
                 number_above: 2,
                 number_below: 1
             })
+        );
+    }
+
+    #[test]
+    fn test_cache_partial_rank() {
+        init_test_logger();
+
+        let mut agent_deck = AgentDeck::new();
+        let mut cards: Vec<Card> = Vec::new();
+        
+        cards.clear();
+        agent_deck.reset();
+        //delete if exists
+        //std::fs::remove_file(db_name).unwrap_or_default();
+
+        //let mut flop_texture_db = FlopTextureJamDb::new(db_name).unwrap();
+
+        
+        //let mut flop_texture_db = FlopTextureReDb::new(re_db_name).unwrap();
+        let mut partial_rank_db =
+        EvalCacheWithHcReDb::new(PARTIAL_RANK_PATH, ProducePartialRankCards{}).unwrap();
+        let now = Instant::now();
+        let iter_count = 10_000_000;
+        // Code block to measure.
+        {
+            for i in 0..iter_count {
+                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
+                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
+                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
+                let hole1: Card = agent_deck.get_unused_card().unwrap().try_into().unwrap();
+                let hole2: Card = agent_deck.get_unused_card().unwrap().try_into().unwrap();
+                let holeCards: HoleCards = HoleCards::new(hole1, hole2).unwrap();
+                let _texture = partial_rank_db.get_put(&cards, holeCards).unwrap();
+                agent_deck.clear_used_card(cards[0]);
+                agent_deck.clear_used_card(cards[1]);
+                agent_deck.clear_used_card(cards[2]);
+                cards.pop();
+                cards.pop();
+                cards.pop();
+                agent_deck.clear_used_card(hole1);
+                agent_deck.clear_used_card(hole2);
+
+                if partial_rank_db.cache_misses > 0 && partial_rank_db.cache_misses % 1000 == 0 {
+                    println!("Iter {}", i);
+                    info!(
+                        "Cache hits {} misses {}",
+                        partial_rank_db.cache_hits, partial_rank_db.cache_misses
+                    );
+                }
+                if partial_rank_db.cache_hits > 0 && partial_rank_db.cache_hits % 100_000 == 0 {
+                    println!("Iter {}", i);
+                    info!(
+                        "Cache hits {} misses {}",
+                        partial_rank_db.cache_hits, partial_rank_db.cache_misses
+                    );
+                }
+            }
+        }
+
+        let elapsed = now.elapsed();
+        println!("Elapsed: {:.2?}", elapsed);
+        info!(
+            "Cache hits {} misses {}",
+            partial_rank_db.cache_hits, partial_rank_db.cache_misses
         );
     }
 }
