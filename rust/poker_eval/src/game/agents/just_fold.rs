@@ -9,7 +9,7 @@ pub struct JustFold {
 }
 
 impl Agent for JustFold {
-    fn decide(&self, _player_state: &PlayerState, _game_state: &GameState) -> AgentDecision {
+    fn decide(&mut self, _player_state: &PlayerState, _game_state: &GameState) -> AgentDecision {
         AgentDecision {
             action: ActionEnum::Fold,
             comment: None,

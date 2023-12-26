@@ -39,7 +39,7 @@ use serde::{Deserialize, Serialize};
 // use rmps crate to serialize structs using the MessagePack format
 use crate::{
     calc_cards_metrics, partial_rank_cards, rank_cards, Card, CardValue, CombinatorialIndex,
-    HoleCards, StraightDrawType, eval_cache_redb::ProduceEvalResult, CardVec,
+    HoleCards, StraightDrawType, board_hc_eval_cache_redb::ProduceEvalResult, CardVec,
 };
 
 
@@ -181,9 +181,9 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
                         num_str8_draw += 1;
                     }
                     StraightDrawType::GutShot(_) => {
-                        trace!("{} gut shot with board {} and hole cards {} {}", 
-                        num_gut_shot,
-                        CardVec(cards.to_vec()), hole_card1, hole_card2);
+                        // trace!("{} gut shot with board {} and hole cards {} {}", 
+                        // num_gut_shot,
+                        // CardVec(cards.to_vec()), hole_card1, hole_card2);
 
                         num_gut_shot += 1;
                     }
@@ -206,13 +206,25 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
     texture
 }
 
-struct ProduceFlopTexture {
-
+pub struct ProduceFlopTexture {
+    c_index: CombinatorialIndex,
 }
 
-impl ProduceEvalResult<BoardTexture> for ProduceFlopTexture {
-    fn produce_eval_result(cards: &[Card]) -> BoardTexture {
+impl ProduceFlopTexture {
+    pub fn new() -> Self {
+        ProduceFlopTexture {
+            c_index: CombinatorialIndex::new(),
+        }
+    }
+}
+
+impl ProduceEvalResult<BoardTexture, u32> for ProduceFlopTexture {
+    fn produce_eval_result(cards: &[Card], hole_cards: Option<HoleCards>) -> BoardTexture {
         calc_board_texture(cards)
+    }
+
+    fn get_key(&mut self, cards: &[Card], _hole_cards: Option<HoleCards>) -> u32 {
+        self.c_index.get_index(cards)
     }
 }
 
@@ -223,13 +235,15 @@ mod tests {
 
     use log::{info, debug};
 
-    use crate::{init_test_logger, AgentDeck, CardVec, eval_cache_redb::{EvalCacheReDb, FLOP_TEXTURE_PATH}};
+    use crate::{init_test_logger, AgentDeck, CardVec, board_hc_eval_cache_redb::{EvalCacheReDb, FLOP_TEXTURE_PATH}};
 
     use super::*;
 
     // cargo test cache_perf --lib --release -- --nocapture
 
+    //a bit slow
     #[test]
+    //#[allow(dead_code)]
     fn test_cache_perf() {
         init_test_logger();
 
@@ -265,7 +279,8 @@ mod tests {
 
         
         //let mut flop_texture_db = FlopTextureReDb::new(re_db_name).unwrap();
-        let mut flop_texture_db = EvalCacheReDb::new(FLOP_TEXTURE_PATH, ProduceFlopTexture{}).unwrap();
+        let mut flop_texture_db =
+             EvalCacheReDb::new(FLOP_TEXTURE_PATH, ProduceFlopTexture::new()).unwrap();
         let now = Instant::now();
         let iter_count = 10_000_000;
         // Code block to measure.
@@ -274,7 +289,7 @@ mod tests {
                 cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
                 cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
                 cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
-                let _texture = flop_texture_db.get_put(&cards).unwrap();
+                let _texture = flop_texture_db.get_put(&cards, None).unwrap();
                 agent_deck.clear_used_card(cards[0]);
                 agent_deck.clear_used_card(cards[1]);
                 agent_deck.clear_used_card(cards[2]);
@@ -427,5 +442,25 @@ mod tests {
         assert_eq!(texture.num_with_str8, 16);
         assert_eq!(texture.num_with_str8_draw, 64);
         assert_eq!(texture.num_with_gut_shot, 308);
+
+        let cards = CardVec::try_from("6c 8h Td 9d").unwrap().0;
+        let texture = calc_board_texture(&cards);
+        
+        trace!("Texture\n{:#?}", &texture);
+        
+        assert_eq!(texture.num_hole_cards, 48*47/2); 
+        assert_eq!(texture.num_with_str8, 198);
+        assert_eq!(texture.num_with_str8_draw, 166);
+        assert_eq!(texture.num_with_gut_shot, 268);
+
+        let cards = CardVec::try_from("Ac 2h 4d 5d").unwrap().0;
+        let texture = calc_board_texture(&cards);
+        
+        trace!("Texture\n{:#?}", &texture);
+        
+        assert_eq!(texture.num_hole_cards, 48*47/2); 
+        assert_eq!(texture.num_with_str8,  182);
+        assert_eq!(texture.num_with_str8_draw, 32);
+        assert_eq!(texture.num_with_gut_shot, 150);
     }
 }

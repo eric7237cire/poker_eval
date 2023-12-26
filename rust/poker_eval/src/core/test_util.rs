@@ -14,6 +14,7 @@ pub fn init_test_logger() {
         .filter_module("poker_eval::game::agent_source", log::LevelFilter::Debug)
         .filter_module("poker_eval::game::game_log", log::LevelFilter::Debug)
         .filter_module("poker_eval::eval::rank", log::LevelFilter::Debug)
+        .filter_module("poker_eval::eval::flop_texture", log::LevelFilter::Debug)
         .format(|buf, record| {
             writeln!(
                 buf,

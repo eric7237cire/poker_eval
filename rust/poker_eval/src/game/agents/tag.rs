@@ -1,21 +1,40 @@
 use crate::{
     partial_rank_cards, ActionEnum, FlushDrawType, GameState, HoleCards, PlayerState, Round,
-    StraightDrawType,
+    StraightDrawType, board_hc_eval_cache_redb::{EvalCacheReDb, FLOP_TEXTURE_PATH}, ProduceFlopTexture, BoardTexture,
 };
 
 use postflop_solver::Range;
 
 use super::{Agent, AgentDecision};
 
-#[derive(Default)]
+//#[derive(Default)]
 pub struct Tag {
     pub three_bet_range: Range,
     pub pfr_range: Range,
     pub hole_cards: Option<HoleCards>,
     pub name: String,
+    flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture, u32>
 }
 
 impl Tag {
+
+    pub fn new(three_bet_range_str: &str,
+        pfr_range_str: &str,
+        name: &str,
+
+    ) -> Self {
+        let flop_texture_db = EvalCacheReDb::new(FLOP_TEXTURE_PATH, 
+            ProduceFlopTexture::new()).unwrap();
+        
+        Tag {
+            three_bet_range: three_bet_range_str.parse().unwrap(),
+            pfr_range: pfr_range_str.parse().unwrap(),
+            hole_cards: None,
+            name: name.to_string(),
+            flop_texture_db,
+        }
+    }
+
     fn decide_preflop(&self, _player_state: &PlayerState, game_state: &GameState) -> AgentDecision {
         let ri = self.hole_cards.unwrap().to_range_index();
 
@@ -57,7 +76,7 @@ impl Tag {
     }
 
     fn decide_postflop(
-        &self,
+        &mut self,
         _player_state: &PlayerState,
         game_state: &GameState,
     ) -> AgentDecision {
@@ -69,6 +88,7 @@ impl Tag {
 
         let hc = self.hole_cards.as_ref().unwrap();
         let prc = partial_rank_cards(hc, &game_state.board);
+        let ft = self.flop_texture_db.get_put(&game_state.board, None).unwrap();
 
         let mut likes_hand_comments: Vec<String> = Vec::new();
 
@@ -172,7 +192,7 @@ impl Tag {
 }
 
 impl Agent for Tag {
-    fn decide(&self, player_state: &PlayerState, game_state: &GameState) -> AgentDecision {
+    fn decide(&mut self, player_state: &PlayerState, game_state: &GameState) -> AgentDecision {
         match game_state.current_round {
             Round::Preflop => {
                 return self.decide_preflop(player_state, game_state);

@@ -9,7 +9,7 @@ pub trait Agent {
     //Get hand cards with index_to_card_pair
     fn decide(
         //To be able to mutate internal state
-        &self,
+        &mut self,
         player_state: &PlayerState,
         game_state: &GameState,
     ) -> AgentDecision;

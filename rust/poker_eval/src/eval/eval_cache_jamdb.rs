@@ -20,7 +20,7 @@ struct EvalCacheJamDb<P, R>  {
 
 #[allow(dead_code)]
 impl <P, R> EvalCacheJamDb<P, R> 
-where P : ProduceEvalResult<R>, R :  Serialize + DeserializeOwned {
+where P : ProduceEvalResult<R, u32>, R :  Serialize + DeserializeOwned {
     pub fn new(db_name: &str, producer: P) -> Result<Self, JammDbError> {
         let db = DB::open(db_name)?;
 

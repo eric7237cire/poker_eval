@@ -11,5 +11,7 @@ pub use value_set_iterator::*;
 mod combinatorial_index;
 pub use combinatorial_index::*;
 
-pub mod eval_cache_redb;
-mod eval_cache_jamdb;
+pub mod board_eval_cache_redb;
+pub mod board_hc_eval_cache_redb;
+
+//mod eval_cache_jamdb;

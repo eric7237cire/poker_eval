@@ -113,14 +113,10 @@ mod tests {
             agents.push(Box::new(agent));
         }
 
-        let tag = Tag {
-            three_bet_range: "JJ+,AJs+,AQo+,KQs".parse().unwrap(),
-            pfr_range: "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+"
-                .parse()
-                .unwrap(),
-            name: "Hero".to_string(),
-            hole_cards: None,
-        };
+        let tag = Tag::new(
+             "JJ+,AJs+,AQo+,KQs",
+             "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+",
+                 "Hero");
         agents.push(Box::new(tag));
 
         agents

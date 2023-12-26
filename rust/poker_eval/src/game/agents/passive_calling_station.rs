@@ -11,7 +11,7 @@ pub struct PassiveCallingStation {
 }
 
 impl Agent for PassiveCallingStation {
-    fn decide(&self, _player_state: &PlayerState, game_state: &GameState) -> AgentDecision {
+    fn decide(&mut self, _player_state: &PlayerState, game_state: &GameState) -> AgentDecision {
         let action = match game_state.current_round {
             Round::Preflop => {
                 let ri = self.hole_cards.unwrap().to_range_index();
