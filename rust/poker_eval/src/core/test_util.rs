@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use log::{info};
+use log::info;
 
 use crate::game::game_runner_source::GameRunnerSourceEnum;
 use crate::game_log_source::GameLogSource;
@@ -40,7 +40,6 @@ fn take_after_last_slash(s: &str) -> &str {
     }
     &s[last_slash + 1..]
 }
-
 
 pub fn test_game_runner(game_runner: &mut GameRunner) -> Result<(), PokerError> {
     for _ in 0..200 {

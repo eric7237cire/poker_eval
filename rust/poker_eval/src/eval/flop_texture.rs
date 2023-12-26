@@ -31,13 +31,23 @@
 
 // Best 2 pair, 2nd best, etc.
 
-use std::cmp::max;
+use std::{cmp::max, collections::HashMap};
 
+use jammdb::{Data, Error as JammDbError, DB};
 use log::trace;
 use num_integer::binomial;
+use serde::{Deserialize, Serialize};
+// use rmps crate to serialize structs using the MessagePack format
+use crate::{
+    calc_cards_metrics, partial_rank_cards, rank_cards, Card, CardValue, HoleCards,
+    StraightDrawType,
+};
+use redb::{Database, Error as ReDbError, ReadableTable, TableDefinition};
+use rmp_serde::{Deserializer, Serializer};
 
-use crate::{calc_cards_metrics, Card, CardValue};
+const TABLE: TableDefinition<u32, &[u8]> = TableDefinition::new("flop_texture");
 
+#[derive(Serialize, Deserialize)]
 pub struct BoardTexture {
     // Highest same suited count, 1 is a raindbow board
     pub same_suited_max_count: u8,
@@ -48,6 +58,9 @@ pub struct BoardTexture {
     //43 and 78 and 4 7
     //5 7 gives straight draw to 46, 68
     //5 8 gives straight draw to 67
+    pub perc_with_str8: f64,
+    pub perc_with_str8_draw: f64,
+    pub perc_with_gut_shot: f64,
 
     pub has_trips: bool,
     pub has_pair: bool,
@@ -70,6 +83,9 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
         high_value_count: 0,
         med_value_count: 0,
         low_value_count: 0,
+        perc_with_str8: 0.0,
+        perc_with_str8_draw: 0.0,
+        perc_with_gut_shot: 0.0,
     };
 
     let cards_metrics = calc_cards_metrics(cards);
@@ -126,68 +142,311 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
         texture.has_pair = true;
     }
 
+    //Calculate expensive fields
+    let mut eval_cards = cards.to_vec();
+    let mut total_eval = 0;
+    let mut num_str8 = 0;
+    let mut num_str8_draw = 0;
+    let mut num_gut_shot = 0;
+    for hole_card1_u8 in 0..52u8 {
+        let hole_card1: Card = hole_card1_u8.try_into().unwrap();
+        if cards.contains(&hole_card1) {
+            continue;
+        }
+        for hole_card2_u8 in hole_card1_u8 + 1..52u8 {
+            let hole_card2: Card = hole_card2_u8.try_into().unwrap();
+            if cards.contains(&hole_card2) {
+                continue;
+            }
+            let hc = HoleCards::new(hole_card1, hole_card2).unwrap();
+            let prc = partial_rank_cards(&hc, cards);
+            eval_cards.push(hole_card1);
+            eval_cards.push(hole_card2);
+
+            let rank = rank_cards(&eval_cards);
+
+            eval_cards.pop();
+            eval_cards.pop();
+
+            total_eval += 1;
+
+            if rank.get_family_index() == 4 {
+                num_str8 += 1;
+                continue;
+            }
+            if let Some(s) = prc.straight_draw {
+                match s.straight_draw_type {
+                    StraightDrawType::OpenEnded => {
+                        num_str8_draw += 1;
+                    }
+                    StraightDrawType::GutShot(_) => {
+                        num_gut_shot += 1;
+                    }
+                    StraightDrawType::DoubleGutShot => {
+                        num_str8_draw += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    texture.perc_with_str8 = num_str8 as f64 / total_eval as f64;
+    texture.perc_with_str8_draw = num_str8_draw as f64 / total_eval as f64;
+    texture.perc_with_gut_shot = num_gut_shot as f64 / total_eval as f64;
+
     texture
 }
 
-fn combinatorial_index(cards: &[usize]) -> usize {
+struct CombinatorialIndex {
+    cache: HashMap<u16, u32>,
+}
 
-    //we want the smallest index 1st
-    let mut cards = cards.to_vec();
-    cards.sort();
-
-    
-    //so if I have 7 x, I want to add
-    //how many combinations of C(6, 2) to add 
-
-    let mut index = 0;
-
-    for i in 0..cards.len() {
-        //trace!("Card {} is {}", i, cards[i]);
-        let num_possible_before = cards[i]; // 0 to card[i] - 1 
-        let dim = i+1;
-        //Example cards 50 12 5
-        // (50 C 3) + (12 C 2) + (5 C 1)
-        // # of ways to choose cards 0-49 in  3 cards
-        // # of ways to choose cards 0-11 in  2 cards
-        // # of ways to choose cards 0-4  in  1 card
-        let ncr = binomial(num_possible_before, dim);
-        //trace!("Adding {} choose {} == {} to index", num_possible_before, dim, ncr);
-        index += ncr;
+impl CombinatorialIndex {
+    pub fn new() -> Self {
+        CombinatorialIndex {
+            cache: HashMap::new(),
+        }
     }
 
-    // https://en.wikipedia.org/wiki/Combinatorial_number_system
-    // https://math.stackexchange.com/questions/1227409/indexing-all-combinations-without-making-list
-    
+    fn get_binomial(&mut self, n: u16, k: u16) -> u32 {
+        let key = (n << 8) | k;
+        if let Some(val) = self.cache.get(&key) {
+            return *val;
+        }
 
-    index
+        let val = binomial(n as usize, k as usize) as u32;
+        self.cache.insert(key, val);
+        val
+    }
+
+    pub fn get_index(&mut self, cards: &[Card]) -> u32 {
+        let mut cards = cards.to_vec();
+        cards.sort();
+
+        let mut index = 0;
+
+        for i in 0..cards.len() {
+            let num_possible_before: u8 = cards[i].into(); // 0 to card[i] - 1
+            let dim = i + 1;
+            let ncr = self.get_binomial(num_possible_before as u16, dim as u16);
+            index += ncr;
+        }
+
+        index
+    }
+
+    // fn combinatorial_index(cards: &[usize]) -> usize {
+
+    //     //we want the smallest index 1st
+    //     let mut cards = cards.to_vec();
+    //     cards.sort();
+
+    //     //so if I have 7 x, I want to add
+    //     //how many combinations of C(6, 2) to add
+
+    //     let mut index = 0;
+
+    //     for i in 0..cards.len() {
+    //         //trace!("Card {} is {}", i, cards[i]);
+    //         let num_possible_before = cards[i]; // 0 to card[i] - 1
+    //         let dim = i+1;
+    //         //Example cards 50 12 5
+    //         // (50 C 3) + (12 C 2) + (5 C 1)
+    //         // # of ways to choose cards 0-49 in  3 cards
+    //         // # of ways to choose cards 0-11 in  2 cards
+    //         // # of ways to choose cards 0-4  in  1 card
+    //         let ncr = binomial(num_possible_before, dim);
+    //         //trace!("Adding {} choose {} == {} to index", num_possible_before, dim, ncr);
+    //         index += ncr;
+    //     }
+
+    //     // https://en.wikipedia.org/wiki/Combinatorial_number_system
+    //     // https://math.stackexchange.com/questions/1227409/indexing-all-combinations-without-making-list
+
+    //     index
+    // }
+}
+
+struct FlopTextureJamDb {
+    db_name: String,
+    db: DB,
+    c_index: CombinatorialIndex,
+    cache_hits: u32,
+    cache_misses: u32,
+}
+
+impl FlopTextureJamDb {
+    pub fn new(db_name: &str) -> Result<Self, JammDbError> {
+        let db = DB::open(db_name)?;
+
+        {
+            let tx = db.tx(true)?;
+            let bucket = tx.get_bucket("flop_texture");
+
+            if bucket.is_err() {
+                tx.create_bucket("flop_texture")?;
+                tx.commit()?;
+            }
+        }
+
+        Ok(FlopTextureJamDb {
+            db_name: db_name.to_string(),
+            db,
+            c_index: CombinatorialIndex::new(),
+            cache_hits: 0,
+            cache_misses: 0,
+        })
+    }
+
+    pub fn get_put(&mut self, cards: &[Card]) -> Result<BoardTexture, JammDbError> {
+        let opt = self.get(cards)?;
+        if opt.is_some() {
+            self.cache_hits += 1;
+            return Ok(opt.unwrap());
+        }
+
+        let texture = calc_board_texture(cards);
+        self.cache_misses += 1;
+        self.put(cards, &texture)?;
+
+        Ok(texture)
+    }
+
+    pub fn get(&mut self, cards: &[Card]) -> Result<Option<BoardTexture>, JammDbError> {
+        let tx = self.db.tx(false)?;
+        let bucket = tx.get_bucket("flop_texture")?;
+        let index = self.c_index.get_index(cards);
+        if let Some(data) = bucket.get(index.to_be_bytes()) {
+            let texture: BoardTexture = rmp_serde::from_slice(data.kv().value()).unwrap();
+            Ok(Some(texture))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn put(&mut self, cards: &[Card], texture: &BoardTexture) -> Result<(), JammDbError> {
+        let tx = self.db.tx(true)?;
+        let bucket = tx.get_bucket("flop_texture")?;
+        let index = self.c_index.get_index(cards);
+        let texture_bytes = rmp_serde::to_vec(texture).unwrap();
+        bucket.put(index.to_be_bytes(), texture_bytes)?;
+        tx.commit()?;
+        Ok(())
+    }
+}
+
+struct FlopTextureReDb {
+    db_name: String,
+    db: Database,
+    c_index: CombinatorialIndex,
+    cache_hits: u32,
+    cache_misses: u32,
+}
+
+impl FlopTextureReDb {
+    pub fn new(db_name: &str) -> Result<Self, ReDbError> {
+        let db = Database::create(db_name)?;
+
+        {
+            let write_txn = db.begin_write()?;
+            {
+                let mut table = write_txn.open_table(TABLE)?;
+            }
+            write_txn.commit()?;
+        }
+
+        Ok(Self {
+            db_name: db_name.to_string(),
+            db,
+            c_index: CombinatorialIndex::new(),
+            cache_hits: 0,
+            cache_misses: 0,
+        })
+    }
+
+    pub fn get_put(&mut self, cards: &[Card]) -> Result<BoardTexture, ReDbError> {
+        let opt = self.get(cards)?;
+        if opt.is_some() {
+            self.cache_hits += 1;
+            return Ok(opt.unwrap());
+        }
+
+        let texture = calc_board_texture(cards);
+        self.cache_misses += 1;
+        self.put(cards, &texture)?;
+
+        Ok(texture)
+    }
+
+    /*
+    let write_txn = db.begin_write()?;
+    {
+        let mut table = write_txn.open_table(TABLE)?;
+        table.insert("my_key", &123)?;
+    }
+    write_txn.commit()?;
+
+    let read_txn = db.begin_read()?;
+    let table = read_txn.open_table(TABLE)?;
+    assert_eq!(table.get("my_key")?.unwrap().value(), 123);
+     */
+
+    pub fn get(&mut self, cards: &[Card]) -> Result<Option<BoardTexture>, ReDbError> {
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(TABLE)?;
+
+        let index = self.c_index.get_index(cards);
+        let data = table.get(index)?;
+        if let Some(data) = data {
+            let texture: BoardTexture = rmp_serde::from_slice(data.value()).unwrap();
+            Ok(Some(texture))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn put(&mut self, cards: &[Card], texture: &BoardTexture) -> Result<(), ReDbError> {
+        let write_txn = self.db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(TABLE)?;
+
+            let index = self.c_index.get_index(cards);
+            let texture_bytes = rmp_serde::to_vec(texture).unwrap();
+            table.insert(index, texture_bytes.as_slice())?;
+        }
+
+        write_txn.commit()?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
 
+    use std::time::Instant;
+
+    use log::info;
     use postflop_solver::card_pair_to_index;
 
-    use crate::{CardVec, init_test_logger};
+    use crate::{init_test_logger, AgentDeck, CardVec};
 
     use super::*;
 
     #[test]
     fn test_cache_indexing() {
-
         init_test_logger();
 
         // let mut index_check = 0;
         // for card1 in 0..52 {
         //     for card2 in card1 + 1.. 52 {
-                
 
         //         let idx = combinatorial_index(&vec![card1 as usize, card2 as usize]);
-        //         println!("card1: {} card 2: {} == {}, {} == {} + {}", 
+        //         println!("card1: {} card 2: {} == {}, {} == {} + {}",
         //         card1, card2, card_pair_to_index(card1, card2), index_check,
         //         //THis is the sum formula (51+50 / 2)
         //         card1 as usize * (101 - card1 as usize) / 2 ,
         //         card2
-        //         );  
+        //         );
         //         println!("Idx is {} but should be {}", idx, index_check);
         //         assert_eq!(idx, index_check);
         //         index_check += 1;
@@ -195,59 +454,155 @@ mod tests {
         // }
 
         //0 X Y has 51 Choose 2 -- 1275
-       
 
         let mut index_check = 0;
         // 2 1 0
         // 3 1 0
-        for card1 in 0..52 {            
-            for card2 in 0 .. card1 {
-                for card3 in 0..card2  {
-                    let idx = combinatorial_index(&vec![card1 as usize, card2 as usize, card3 as usize]);
-                    // println!("{} {} {} ==> Idx is {} but should be {}", 
+        let mut ci = CombinatorialIndex::new();
+        for card1 in 0..52u8 {
+            let card1_obj: Card = card1.try_into().unwrap();
+            for card2 in 0..card1 {
+                let card2_obj: Card = card2.try_into().unwrap();
+                for card3 in 0..card2 {
+                    let card3_obj: Card = card3.try_into().unwrap();
+                    let idx = ci.get_index(&vec![card1_obj, card2_obj, card3_obj]);
+                    // println!("{} {} {} ==> Idx is {} but should be {}",
                     //     card1, card2, card3,
                     //     idx, index_check);
                     assert_eq!(idx, index_check);
                     index_check += 1;
-                    
                 }
             }
             //println!("For card {}, we have {} combos", card1, count);
         }
 
+        let mut ci = CombinatorialIndex::new();
         let mut index_check = 0;
-        for card1 in 0..52 {            
-            for card2 in 0 .. card1 {
-                for card3 in 0..card2  {
+        for card1 in 0..52u8 {
+            let card1_obj: Card = card1.try_into().unwrap();
+            for card2 in 0..card1 {
+                let card2_obj: Card = card2.try_into().unwrap();
+                for card3 in 0..card2 {
+                    let card3_obj: Card = card3.try_into().unwrap();
                     for card4 in 0..card3 {
+                        let card4_obj: Card = card4.try_into().unwrap();
                         for card5 in 0..card4 {
+                            let card5_obj: Card = card5.try_into().unwrap();
                             for card6 in 0..card5 {
+                                let card6_obj: Card = card6.try_into().unwrap();
                                 for card7 in 0..card6 {
+                                    let card7_obj: Card = card7.try_into().unwrap();
 
-                                    let idx = combinatorial_index(&vec![card1 as usize, card2 as usize, card3 as usize,
-                                        card4 as usize, card5 as usize, card6 as usize, card7 as usize]);
+                                    // let idx = combinatorial_index(&vec![card1 as usize, card2 as usize, card3 as usize,
+                                    //     card4 as usize, card5 as usize, card6 as usize, card7 as usize]);
+                                    let idx = ci.get_index(&vec![
+                                        card1_obj, card2_obj, card3_obj, card4_obj, card5_obj,
+                                        card6_obj, card7_obj,
+                                    ]);
                                     assert_eq!(idx, index_check);
                                     index_check += 1;
 
                                     if index_check % 1_000_000 == 0 {
-                                        println!("Index is {}", index_check);
+                                        println!(
+                                            "Index is {} cache size {}",
+                                            index_check,
+                                            ci.cache.len()
+                                        );
                                     }
 
-                                    assert!( index_check < 100_000_000);
+                                    assert!(index_check < 400_000_000);
                                 }
                             }
                         }
                     }
-                    
-                    
                 }
             }
             //println!("For card {}, we have {} combos", card1, count);
         }
 
-        assert_eq!(3000, index_check);
+        //52 choose 5 == 2_598_960 ; 47 choose 2 == 1081 ; produce = 2_810_503_360
+        //52 choose 7 -- 133_784_560
+        //7 choose 5 == 21
+        assert_eq!(133_784_560, index_check);
+    }
 
+    // cargo test cache_perf --lib --release -- --nocapture
 
+    #[test]
+    fn test_cache_perf() {
+        init_test_logger();
+
+        let mut agent_deck = AgentDeck::new();
+        let mut cards: Vec<Card> = Vec::new();
+        cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
+        let now = Instant::now();
+        let iter_count = 1_000;
+        // Code block to measure.
+        {
+            for _ in 0..iter_count {
+                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
+                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
+                let texture = calc_board_texture(&cards);
+                agent_deck.clear_used_card(cards[1]);
+                agent_deck.clear_used_card(cards[2]);
+                cards.pop();
+                cards.pop();
+            }
+        }
+
+        let elapsed = now.elapsed();
+        println!("Elapsed: {:.2?}", elapsed);
+
+        let db_name = "/home/eric/git/poker_eval/data/flop_texture.db";
+
+        cards.clear();
+        agent_deck.reset();
+        //delete if exists
+        //std::fs::remove_file(db_name).unwrap_or_default();
+
+        //let mut flop_texture_db = FlopTextureJamDb::new(db_name).unwrap();
+
+        let re_db_name = "/home/eric/git/poker_eval/data/flop_texture_re.db";
+        let mut flop_texture_db = FlopTextureReDb::new(re_db_name).unwrap();
+        let now = Instant::now();
+        let iter_count = 1_000_000;
+        // Code block to measure.
+        {
+            for i in 0..iter_count {
+                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
+                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
+                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
+                let texture = flop_texture_db.get_put(&cards).unwrap();
+                agent_deck.clear_used_card(cards[0]);
+                agent_deck.clear_used_card(cards[1]);
+                agent_deck.clear_used_card(cards[2]);
+                cards.pop();
+                cards.pop();
+                cards.pop();
+
+                if flop_texture_db.cache_misses > 0 && flop_texture_db.cache_misses % 1000 == 0 {
+                    println!("Iter {}", i);
+                    info!(
+                        "Cache hits {} misses {}",
+                        flop_texture_db.cache_hits, flop_texture_db.cache_misses
+                    );
+                }
+                if flop_texture_db.cache_hits > 0 && flop_texture_db.cache_hits % 100_000 == 0 {
+                    println!("Iter {}", i);
+                    info!(
+                        "Cache hits {} misses {}",
+                        flop_texture_db.cache_hits, flop_texture_db.cache_misses
+                    );
+                }
+            }
+        }
+
+        let elapsed = now.elapsed();
+        println!("Elapsed: {:.2?}", elapsed);
+        info!(
+            "Cache hits {} misses {}",
+            flop_texture_db.cache_hits, flop_texture_db.cache_misses
+        );
     }
 
     #[test]

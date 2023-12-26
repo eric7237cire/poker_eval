@@ -115,9 +115,7 @@ impl Default for PartialRankContainer {
 // }
 
 impl PartialRankContainer {
-
     // Convenience methods
-
 
     //Private methods below
     fn handle_pocket_pairs(&mut self, hole_cards: &[Card], board_metrics: &BitSetCardsMetrics) {

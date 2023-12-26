@@ -19,7 +19,7 @@ pub struct PlayerState {
 
     //In current betting round, so == remaining stack
     pub all_in: bool,
-    
+
     pub final_eval_comment: Option<String>,
 }
 

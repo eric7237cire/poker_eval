@@ -1,3 +1,4 @@
+use log::warn;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{Card, CardUsedType, HoleCards, InitialPlayerState, Position};
@@ -9,7 +10,7 @@ pub struct AgentDeck {
     used_cards: CardUsedType, //= CardUsedType::default();
 }
 
-const MAX_RAND_NUMBER_ATTEMPS: usize = 1000;
+const MAX_RAND_NUMBER_ATTEMPS: usize = 10_000;
 
 impl AgentDeck {
     pub fn new() -> Self {
@@ -49,7 +50,15 @@ impl AgentDeck {
         board
     }
 
-    fn get_unused_card(&mut self) -> Option<usize> {
+    pub fn clear_used_card(&mut self, card: Card) {
+        let card_index: usize = card.into();
+        let count_before = self.used_cards.count_ones();
+        self.used_cards.set(card_index, false);
+        let count_after = self.used_cards.count_ones();
+        assert_eq!(count_after + 1, count_before);
+    }
+
+    pub fn get_unused_card(&mut self) -> Option<usize> {
         let mut attempts = 0;
         loop {
             let rand_int: usize = self.rng.gen_range(0..52);
@@ -61,6 +70,11 @@ impl AgentDeck {
             }
             attempts += 1;
             if attempts > MAX_RAND_NUMBER_ATTEMPS {
+                warn!(
+                    "Unable to find unused card after {} attempts, # of used cards {}",
+                    attempts,
+                    self.used_cards.count_ones()
+                );
                 return None;
             }
         }

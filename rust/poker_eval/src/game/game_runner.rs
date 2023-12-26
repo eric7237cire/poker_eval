@@ -11,7 +11,7 @@ use crate::{
 
 use crate::game::game_runner_source::GameRunnerSource;
 use crate::game::game_runner_source::GameRunnerSourceEnum;
-use log::{trace};
+use log::trace;
 
 // Enforces the poker rules
 pub struct GameRunner {
@@ -321,7 +321,8 @@ impl GameRunner {
             hole_cards.add_to_eval(&mut eval_cards);
             let rank = rank_cards(&eval_cards);
 
-            self.game_state.player_states[player_index].final_eval_comment = Some(format!("{}", rank.print_winning(&eval_cards)));
+            self.game_state.player_states[player_index].final_eval_comment =
+                Some(format!("{}", rank.print_winning(&eval_cards)));
 
             if !self.game_state.player_states[player_index].folded {
                 hand_rankings.push((rank, player_index));
@@ -426,7 +427,7 @@ impl GameRunner {
             self.game_runner_source.set_final_player_state(
                 player_index,
                 &self.game_state.player_states[player_index],
-                None
+                None,
             )?;
         }
         Ok(())
@@ -955,7 +956,10 @@ impl GameRunner {
                 } else {
                     ""
                 },
-                if with_player_comments && action.player_comment.is_some() && action.system_comment.is_some() {
+                if with_player_comments
+                    && action.player_comment.is_some()
+                    && action.system_comment.is_some()
+                {
                     " - "
                 } else {
                     ""
@@ -968,12 +972,24 @@ impl GameRunner {
         //Create a link with board and hero cards
         //http://localhost:5173/?board=2s7c8s2h2d&hole=As2c
 
-        let board_url_param=self.game_state.board.iter().map(|c| format!("{}", c)).collect::<Vec<String>>().join("");
+        let board_url_param = self
+            .game_state
+            .board
+            .iter()
+            .map(|c| format!("{}", c))
+            .collect::<Vec<String>>()
+            .join("");
         //Hard code hero as button
-        let hero_cards = self.game_runner_source.get_hole_cards(self.game_state.player_states.len()-1).unwrap();
+        let hero_cards = self
+            .game_runner_source
+            .get_hole_cards(self.game_state.player_states.len() - 1)
+            .unwrap();
         let hero_url_param = format!("{}{}", hero_cards.get_hi_card(), hero_cards.get_lo_card());
 
-        let url = format!("http://localhost:5173/?board={}&hero={}", board_url_param, hero_url_param);
+        let url = format!(
+            "http://localhost:5173/?board={}&hero={}",
+            board_url_param, hero_url_param
+        );
         s.push_str("*** Summary *** # ");
         s.push_str(&url);
         s.push_str("\n");

@@ -49,11 +49,11 @@ impl Rank {
     }
 
     pub fn print_winning(&self, cards: &[Card]) -> String {
-        let low_set_mask : u32 = 0b1_1111_1111_1111;
+        let low_set_mask: u32 = 0b1_1111_1111_1111;
         match self {
             Rank::HighCard(k) => {
                 let mut r = "High Card - ".to_string();
-                let bvs : ValueSetType = ValueSetType::new([*k]);
+                let bvs: ValueSetType = ValueSetType::new([*k]);
                 assert_eq!(5, bvs.count_ones());
 
                 for set_bit in bvs.iter_ones().rev() {
@@ -61,7 +61,7 @@ impl Rank {
                     let card = cards.iter().find(|c| c.value == value).unwrap();
                     r.push_str(&format!("{} ", card));
                 }
-                
+
                 r.pop().unwrap();
                 r
             }
@@ -103,19 +103,20 @@ impl Rank {
                 let last_kicker_value: CardValue = (last_kicker as u8).try_into().unwrap();
                 let card = cards.iter().find(|c| c.value == last_kicker_value).unwrap();
                 r.push_str(&format!("{}", card));
-                
+
                 r
-                
             }
             Rank::ThreeOfAKind(k) => {
                 let trips_value_u32 = (k >> 13).trailing_zeros();
                 let trips_value: CardValue = (trips_value_u32 as u8).try_into().unwrap();
                 let mut r = "Trips - ".to_string();
 
-                let cards_str = cards.iter().filter(|c| c.value == trips_value)
-                .map(|c| c.to_string())
-                .join(" ");
-                
+                let cards_str = cards
+                    .iter()
+                    .filter(|c| c.value == trips_value)
+                    .map(|c| c.to_string())
+                    .join(" ");
+
                 r.push_str(&cards_str);
 
                 let bvs = ValueSetType::new([*k & low_set_mask]);
@@ -136,13 +137,15 @@ impl Rank {
                     let straight_value: CardValue = ((*k + 3) as u8).try_into().unwrap();
                     straight_value
                 };
-                
+
                 let mut r = "Straight - ".to_string();
 
-                
-                trace!("Straight value {}=={}, is wheel {}", straight_value, 
+                trace!(
+                    "Straight value {}=={}, is wheel {}",
+                    straight_value,
                     straight_value as u8,
-                    straight_value == CardValue::Five);
+                    straight_value == CardValue::Five
+                );
 
                 if straight_value == CardValue::Five {
                     //Find the ace
@@ -171,7 +174,7 @@ impl Rank {
             }
             Rank::Flush(k) => {
                 let mut r = "Flush - ".to_string();
-                let bvs : ValueSetType = ValueSetType::new([*k]);
+                let bvs: ValueSetType = ValueSetType::new([*k]);
                 assert_eq!(5, bvs.count_ones());
 
                 for set_bit in bvs.iter_ones().rev() {
@@ -179,26 +182,26 @@ impl Rank {
                     let card = cards.iter().find(|c| c.value == value).unwrap();
                     r.push_str(&format!("{} ", card));
                 }
-                
+
                 r.pop().unwrap();
                 r
-                
             }
             Rank::FullHouse(k) => {
                 let trips_values_u32 = k >> 13;
                 let pair_value_u32 = k & low_set_mask;
-                let trips_value: CardValue = (trips_values_u32.trailing_zeros() as u8).try_into().unwrap();
-                let pair_value: CardValue = (pair_value_u32.trailing_zeros() as u8).try_into().unwrap();
+                let trips_value: CardValue = (trips_values_u32.trailing_zeros() as u8)
+                    .try_into()
+                    .unwrap();
+                let pair_value: CardValue =
+                    (pair_value_u32.trailing_zeros() as u8).try_into().unwrap();
 
                 let mut r = "Full House - ".to_string();
 
-                let trips_cards_str = cards.iter().filter(|c| c.value == trips_value)
-                .join(" ");
-                let pair_cards_str = cards.iter().filter(|c| c.value == pair_value)
-                .join(" ");
+                let trips_cards_str = cards.iter().filter(|c| c.value == trips_value).join(" ");
+                let pair_cards_str = cards.iter().filter(|c| c.value == pair_value).join(" ");
 
                 r.push_str(&format!("{} {}", trips_cards_str, pair_cards_str));
-                
+
                 r
             }
             Rank::FourOfAKind(k) => {
@@ -206,10 +209,12 @@ impl Rank {
                 let quads_value: CardValue = (quads_value_u32 as u8).try_into().unwrap();
                 let mut r = "Quads - ".to_string();
 
-                let cards_str = cards.iter().filter(|c| c.value == quads_value)
-                .map(|c| c.to_string())
-                .join(" ");
-                
+                let cards_str = cards
+                    .iter()
+                    .filter(|c| c.value == quads_value)
+                    .map(|c| c.to_string())
+                    .join(" ");
+
                 r.push_str(&cards_str);
 
                 let bvs = ValueSetType::new([*k & low_set_mask]);
@@ -230,7 +235,7 @@ impl Rank {
                     let straight_value: CardValue = ((*k + 3) as u8).try_into().unwrap();
                     straight_value
                 };
-                
+
                 let mut r = "Straight Flush - ".to_string();
 
                 //Find most common suit
@@ -245,20 +250,29 @@ impl Rank {
                     .unwrap();
                 let max_suit_class: Suit = (max_suit as u8).try_into().unwrap();
 
-                let suited_cards = cards.iter().filter(|c| c.suit == max_suit_class).collect::<Vec<_>>();
-                
-                trace!("Straight value {}=={}, is wheel {}", straight_value, 
+                let suited_cards = cards
+                    .iter()
+                    .filter(|c| c.suit == max_suit_class)
+                    .collect::<Vec<_>>();
+
+                trace!(
+                    "Straight value {}=={}, is wheel {}",
+                    straight_value,
                     straight_value as u8,
-                    straight_value == CardValue::Five);
+                    straight_value == CardValue::Five
+                );
 
                 if straight_value == CardValue::Five {
                     //Find the ace
-                    let ace = suited_cards.iter().find(|c| c.value == CardValue::Ace ).unwrap();
+                    let ace = suited_cards
+                        .iter()
+                        .find(|c| c.value == CardValue::Ace)
+                        .unwrap();
                     r.push_str(&format!("{} ", ace));
 
                     let mut cv = CardValue::Two;
                     for _ in 0..4 {
-                        let card = suited_cards.iter().find(|c| c.value == cv ).unwrap();
+                        let card = suited_cards.iter().find(|c| c.value == cv).unwrap();
                         r.push_str(&format!("{} ", card));
                         cv = cv.next_card();
                     }
@@ -505,7 +519,7 @@ pub fn rank_cards(cards: &[Card]) -> Rank {
 mod tests {
     use std::{collections::HashMap, io::Write};
 
-    use crate::{add_eval_card, get_unused_card, CardVec, init_test_logger};
+    use crate::{add_eval_card, get_unused_card, init_test_logger, CardVec};
     use itertools::Itertools;
     use postflop_solver::Hand;
     use rand::{rngs::StdRng, SeedableRng};
@@ -919,78 +933,47 @@ mod tests {
 
     #[test]
     fn test_print_winning() {
-
         init_test_logger();
 
         let cards: CardVec = "8h Js 3d Qd 2h Tc 7h".parse().unwrap();
         let rank = rank_cards(&cards.0);
-        assert_eq!(
-            "High Card - Qd Js Tc 8h 7h",
-            rank.print_winning(&cards.0)
-        );
+        assert_eq!("High Card - Qd Js Tc 8h 7h", rank.print_winning(&cards.0));
 
         let cards: CardVec = "8h 2s 3d Qd 2h Tc 7h".parse().unwrap();
         let rank = rank_cards(&cards.0);
-        assert_eq!(
-            "One Pair - 2s 2h Qd Tc 8h",
-            rank.print_winning(&cards.0)
-        );
+        assert_eq!("One Pair - 2s 2h Qd Tc 8h", rank.print_winning(&cards.0));
 
         let cards: CardVec = "8h 2s Td Qd 2h Tc 7h".parse().unwrap();
         let rank = rank_cards(&cards.0);
-        assert_eq!(
-            "Two Pair - Td Tc 2s 2h Qd",
-            rank.print_winning(&cards.0)
-        );
+        assert_eq!("Two Pair - Td Tc 2s 2h Qd", rank.print_winning(&cards.0));
 
         let cards: CardVec = "8h 2s Td Qd 2h Ac 2c".parse().unwrap();
         let rank = rank_cards(&cards.0);
-        assert_eq!(
-            "Trips - 2s 2h 2c Ac Qd",
-            rank.print_winning(&cards.0)
-        );
+        assert_eq!("Trips - 2s 2h 2c Ac Qd", rank.print_winning(&cards.0));
 
         let cards: CardVec = "5h 3s 5d Ad 4h Ac 2c".parse().unwrap();
         let rank = rank_cards(&cards.0);
-        assert_eq!(
-            "Straight - Ad 2c 3s 4h 5h",
-            rank.print_winning(&cards.0)
-        );
+        assert_eq!("Straight - Ad 2c 3s 4h 5h", rank.print_winning(&cards.0));
 
         let cards: CardVec = "5h 3s 5d Ad 4h 6c 2c".parse().unwrap();
         let rank = rank_cards(&cards.0);
-        assert_eq!(
-            "Straight - 2c 3s 4h 5h 6c",
-            rank.print_winning(&cards.0)
-        );
+        assert_eq!("Straight - 2c 3s 4h 5h 6c", rank.print_winning(&cards.0));
 
         let cards: CardVec = "Kh Js 5d Ad Th Qc 2c".parse().unwrap();
         let rank = rank_cards(&cards.0);
-        assert_eq!(
-            "Straight - Th Js Qc Kh Ad",
-            rank.print_winning(&cards.0)
-        );
+        assert_eq!("Straight - Th Js Qc Kh Ad", rank.print_winning(&cards.0));
 
         let cards: CardVec = "2h Js 8h Ah Th 3h 7h".parse().unwrap();
         let rank = rank_cards(&cards.0);
-        assert_eq!(
-            "Flush - Ah Th 8h 7h 3h",
-            rank.print_winning(&cards.0)
-        );
+        assert_eq!("Flush - Ah Th 8h 7h 3h", rank.print_winning(&cards.0));
 
         let cards: CardVec = "2h Js As Ah Th 2s 2c".parse().unwrap();
         let rank = rank_cards(&cards.0);
-        assert_eq!(
-            "Full House - 2h 2s 2c As Ah",
-            rank.print_winning(&cards.0)
-        );
+        assert_eq!("Full House - 2h 2s 2c As Ah", rank.print_winning(&cards.0));
 
         let cards: CardVec = "2h Js 2d 9h Th 2s 2c".parse().unwrap();
         let rank = rank_cards(&cards.0);
-        assert_eq!(
-            "Quads - 2h 2d 2s 2c Js",
-            rank.print_winning(&cards.0)
-        );
+        assert_eq!("Quads - 2h 2d 2s 2c Js", rank.print_winning(&cards.0));
 
         let cards: CardVec = "2h Ah 2d 3h Th 4h 5h".parse().unwrap();
         let rank = rank_cards(&cards.0);

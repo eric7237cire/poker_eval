@@ -25,3 +25,5 @@ pub mod game_runner_source;
 
 mod agent_source;
 mod agents;
+
+pub use agents::AgentDeck;

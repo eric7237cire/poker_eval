@@ -1,4 +1,4 @@
-use log::{trace};
+use log::trace;
 
 use crate::{Card, ChipType, GameState, HoleCards, InitialPlayerState, PlayerState, PokerError};
 
@@ -91,7 +91,8 @@ mod tests {
             },
             game_runner_source::GameRunnerSourceEnum,
         },
-        init_test_logger, test_game_runner, Card, GameRunner, InitialPlayerState, game_runner_source::GameRunnerSource,
+        game_runner_source::GameRunnerSource,
+        init_test_logger, test_game_runner, Card, GameRunner, InitialPlayerState,
     };
 
     use super::AgentSource;
@@ -114,7 +115,9 @@ mod tests {
 
         let tag = Tag {
             three_bet_range: "JJ+,AJs+,AQo+,KQs".parse().unwrap(),
-            pfr_range: "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+".parse().unwrap(),
+            pfr_range: "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+"
+                .parse()
+                .unwrap(),
             name: "Hero".to_string(),
             hole_cards: None,
         };
@@ -129,7 +132,6 @@ mod tests {
 
         let mut agent_deck = AgentDeck::new();
 
-        
         let mut hero_winnings: i64 = 0;
 
         for it_num in 0..200 {
@@ -155,22 +157,29 @@ mod tests {
             test_game_runner(&mut game_runner).unwrap();
 
             let change = game_runner.game_state.player_states[4].stack as i64
-             - game_runner.game_state.player_states[4].initial_stack as i64;
+                - game_runner.game_state.player_states[4].initial_stack as i64;
 
             hero_winnings += change;
 
-            if it_num == 5 // change < -50 {     
-                {
+            if it_num == 5
+            // change < -50 {
+            {
                 for pi in 0..5 {
-                    game_runner.game_state.player_states[pi].player_name = 
-                    format!("{} ({})", 
-                        game_runner.game_state.player_states[pi].player_name ,
-                        game_runner.game_runner_source.get_hole_cards(pi).unwrap());
-                }    
-                game_runner.game_state.player_states[4].player_name = format!("Hero ({})", game_runner.game_runner_source.get_hole_cards(4).unwrap());
-                info!("Losing hand #{}\n{}", 
-                it_num,
-                game_runner.to_game_log_string(true));
+                    game_runner.game_state.player_states[pi].player_name = format!(
+                        "{} ({})",
+                        game_runner.game_state.player_states[pi].player_name,
+                        game_runner.game_runner_source.get_hole_cards(pi).unwrap()
+                    );
+                }
+                game_runner.game_state.player_states[4].player_name = format!(
+                    "Hero ({})",
+                    game_runner.game_runner_source.get_hole_cards(4).unwrap()
+                );
+                info!(
+                    "Losing hand #{}\n{}",
+                    it_num,
+                    game_runner.to_game_log_string(true)
+                );
             }
         }
 

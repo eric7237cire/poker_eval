@@ -393,6 +393,6 @@ Agent 1               - 495 # Started with 500 change -5
 2 Calling Station 75% - 520 # Started with 500 change 20
 Agent 4               - 495 # Started with 500 change -5
 ";
-let _game_log: GameLog = hh.parse().unwrap();
-}
+        let _game_log: GameLog = hh.parse().unwrap();
+    }
 }
