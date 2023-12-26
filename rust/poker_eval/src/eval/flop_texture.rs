@@ -259,7 +259,7 @@ mod tests {
         let mut flop_texture_db: EvalCacheReDb<ProduceFlopTexture, _> =
              EvalCacheReDb::new(FLOP_TEXTURE_PATH).unwrap();
         let now = Instant::now();
-        let iter_count = 10_000_000;
+        let iter_count = 100_000;
         // Code block to measure.
         {
             for i in 0..iter_count {

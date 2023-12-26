@@ -29,6 +29,16 @@ impl CombinatorialIndex {
     }
 
     pub fn get_index(&mut self, cards: &[Card]) -> u32 {
+
+        //we want the index to be unique for each set of cards
+        //7 cards is 133_784_560 which fits in 27 bits 
+        // 0b111_1111_1001_0110_0011_1111_0000
+        //                                 111 
+        //111 
+        //we put the cards length in bits 30,29,28
+
+        assert!(cards.len() <= 7);
+
         let mut cards = cards.to_vec();
         cards.sort();
 
@@ -40,6 +50,11 @@ impl CombinatorialIndex {
             let ncr = self.get_binomial(num_possible_before as u16, dim as u16);
             index += ncr;
         }
+
+        let cards_len_bits = (cards.len() as u32) << 27;
+        //should be 0 overlap 
+        assert!(cards_len_bits & index == 0);
+        index += cards_len_bits;
 
         index
     }
@@ -108,6 +123,10 @@ mod tests {
 
         //0 X Y has 51 Choose 2 -- 1275
 
+        
+        //27 bits
+        let index_mask = 0b111_1111_1111_1111_1111_1111_1111;
+        
         let mut index_check = 0;
         // 2 1 0
         // 3 1 0
@@ -122,7 +141,9 @@ mod tests {
                     // println!("{} {} {} ==> Idx is {} but should be {}",
                     //     card1, card2, card3,
                     //     idx, index_check);
-                    assert_eq!(idx, index_check);
+                    let len = idx >> 27;
+                    assert_eq!(len, 3);
+                    assert_eq!(idx & index_mask, index_check);
                     index_check += 1;
                 }
             }
@@ -131,6 +152,7 @@ mod tests {
 
         let mut ci = CombinatorialIndex::new();
         let mut index_check = 0;
+
         for card1 in 0..52u8 {
             let card1_obj: Card = card1.try_into().unwrap();
             for card2 in 0..card1 {
@@ -152,7 +174,10 @@ mod tests {
                                         card1_obj, card2_obj, card3_obj, card4_obj, card5_obj,
                                         card6_obj, card7_obj,
                                     ]);
-                                    assert_eq!(idx, index_check);
+
+                                    let len = idx >> 27;
+                                    assert_eq!(len, 7);
+                                    assert_eq!(idx & index_mask, index_check);
                                     index_check += 1;
 
                                     if index_check % 1_000_000 == 0 {

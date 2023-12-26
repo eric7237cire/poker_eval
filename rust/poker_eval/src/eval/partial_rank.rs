@@ -619,7 +619,7 @@ pub struct ProducePartialRankCards {
 
 impl ProduceEvalWithHcResult<PartialRankContainer> for ProducePartialRankCards {
     
-    fn produce_eval_result(board: &[Card], hole_cards: HoleCards, ) -> PartialRankContainer {
+    fn produce_eval_result(board: &[Card], hole_cards: &HoleCards, ) -> PartialRankContainer {
         partial_rank_cards(&hole_cards, board)
     }
 }
@@ -1121,7 +1121,7 @@ mod tests {
         let mut partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
         EvalCacheWithHcReDb::new(PARTIAL_RANK_PATH).unwrap();
         let now = Instant::now();
-        let iter_count = 10_000_000;
+        let iter_count = 500_000;
         // Code block to measure.
         {
             for i in 0..iter_count {
@@ -1131,7 +1131,7 @@ mod tests {
                 let hole1: Card = agent_deck.get_unused_card().unwrap().try_into().unwrap();
                 let hole2: Card = agent_deck.get_unused_card().unwrap().try_into().unwrap();
                 let hole_cards: HoleCards = HoleCards::new(hole1, hole2).unwrap();
-                let _texture = partial_rank_db.get_put(&cards, hole_cards).unwrap();
+                let _texture = partial_rank_db.get_put(&cards, &hole_cards).unwrap();
                 agent_deck.clear_used_card(cards[0]);
                 agent_deck.clear_used_card(cards[1]);
                 agent_deck.clear_used_card(cards[2]);

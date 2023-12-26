@@ -1,6 +1,6 @@
 use crate::{
     partial_rank_cards, ActionEnum, FlushDrawType, GameState, HoleCards, PlayerState, Round,
-    StraightDrawType, board_eval_cache_redb::{EvalCacheReDb, FLOP_TEXTURE_PATH}, ProduceFlopTexture, BoardTexture,
+    StraightDrawType, board_eval_cache_redb::{EvalCacheReDb, FLOP_TEXTURE_PATH}, ProduceFlopTexture, BoardTexture, board_hc_eval_cache_redb::{EvalCacheWithHcReDb, PARTIAL_RANK_PATH}, ProducePartialRankCards, PartialRankContainer,
 };
 
 use postflop_solver::Range;
@@ -13,7 +13,8 @@ pub struct Tag {
     pub pfr_range: Range,
     pub hole_cards: Option<HoleCards>,
     pub name: String,
-    flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture>
+    flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture>,
+    partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>,
 }
 
 impl Tag {
@@ -25,6 +26,10 @@ impl Tag {
     ) -> Self {
         let flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture> = EvalCacheReDb::new(FLOP_TEXTURE_PATH 
            ).unwrap();
+
+        let partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
+        EvalCacheWithHcReDb::new(PARTIAL_RANK_PATH).unwrap();
+        
         
         Tag {
             three_bet_range: three_bet_range_str.parse().unwrap(),
@@ -32,6 +37,7 @@ impl Tag {
             hole_cards: None,
             name: name.to_string(),
             flop_texture_db,
+            partial_rank_db
         }
     }
 
@@ -80,14 +86,14 @@ impl Tag {
         _player_state: &PlayerState,
         game_state: &GameState,
     ) -> AgentDecision {
-        let _non_folded_players = game_state
+        let non_folded_players = game_state
             .player_states
             .iter()
             .filter(|ps| !ps.folded)
             .count();
 
         let hc = self.hole_cards.as_ref().unwrap();
-        let prc = partial_rank_cards(hc, &game_state.board);
+        let prc = self.partial_rank_db.get_put( &game_state.board, hc).unwrap();
         let ft = self.flop_texture_db.get_put(&game_state.board).unwrap();
 
         let mut likes_hand_comments: Vec<String> = Vec::new();
@@ -136,6 +142,17 @@ impl Tag {
         let third_pot = current_pot / 3;
 
         if game_state.current_to_call == 0 {
+
+            if non_folded_players >= 4 && ft.num_with_str8 > 150 {
+                return AgentDecision {
+                    action: ActionEnum::Check,
+                    comment: Some(format!(
+                        "Worried someone ({} players) has a straight, {} / {} not betting",
+                        non_folded_players, ft.num_with_str8, ft.num_hole_cards
+                    )),
+                };
+            }
+
             if likes_hand_comments.len() > 0 {
                 return AgentDecision {
                     action: ActionEnum::Bet(third_pot),

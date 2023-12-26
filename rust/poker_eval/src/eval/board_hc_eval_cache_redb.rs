@@ -15,7 +15,7 @@ pub const PARTIAL_RANK_PATH :&str = "/home/eric/git/poker_eval/data/partial_rank
 const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("eval_cache");
 
 pub trait ProduceEvalWithHcResult<R> {
-    fn produce_eval_result(cards: &[Card], hole_cards: HoleCards) -> R;
+    fn produce_eval_result(cards: &[Card], hole_cards: &HoleCards) -> R;
 
 }
 
@@ -61,7 +61,7 @@ where P : ProduceEvalWithHcResult<R>, R :  Serialize + DeserializeOwned,
         })
     }
 
-    pub fn get_put(&mut self, cards: &[Card], hole_cards: HoleCards   ) -> Result<R, ReDbError> {
+    pub fn get_put(&mut self, cards: &[Card], hole_cards: &HoleCards   ) -> Result<R, ReDbError> {
         let index = self.c_index.get_index(cards);
 
         let mut index_bytes: [u8;6] = [0;6];
