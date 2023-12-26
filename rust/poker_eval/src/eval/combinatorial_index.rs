@@ -81,12 +81,12 @@ impl CombinatorialIndex {
 #[cfg(test)]
 mod tests {
 
-    use std::time::Instant;
+    
 
-    use log::info;
-    use postflop_solver::card_pair_to_index;
+    
+    
 
-    use crate::{init_test_logger, AgentDeck, CardVec, Card};
+    use crate::{init_test_logger, Card};
 
     use super::*;
 

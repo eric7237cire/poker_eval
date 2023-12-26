@@ -2,7 +2,7 @@ use crate::{
     partial_rank_cards, ActionEnum, FlushDrawType, GameState, HoleCards, PlayerState, Round,
     StraightDrawType,
 };
-use bitvec::vec;
+
 use postflop_solver::Range;
 
 use super::{Agent, AgentDecision};
@@ -16,7 +16,7 @@ pub struct Tag {
 }
 
 impl Tag {
-    fn decide_preflop(&self, player_state: &PlayerState, game_state: &GameState) -> AgentDecision {
+    fn decide_preflop(&self, _player_state: &PlayerState, game_state: &GameState) -> AgentDecision {
         let ri = self.hole_cards.unwrap().to_range_index();
 
         //Anyone bet so far?
@@ -56,8 +56,8 @@ impl Tag {
         }
     }
 
-    fn decide_postflop(&self, player_state: &PlayerState, game_state: &GameState) -> AgentDecision {
-        let non_folded_players = game_state
+    fn decide_postflop(&self, _player_state: &PlayerState, game_state: &GameState) -> AgentDecision {
+        let _non_folded_players = game_state
             .player_states
             .iter()
             .filter(|ps| !ps.folded)

@@ -31,11 +31,11 @@
 
 // Best 2 pair, 2nd best, etc.
 
-use std::{cmp::max, collections::HashMap};
+use std::{cmp::max};
 
-use jammdb::{Data, Error as JammDbError, DB};
-use log::trace;
-use num_integer::binomial;
+use jammdb::{Error as JammDbError, DB};
+
+
 use serde::{Deserialize, Serialize};
 // use rmps crate to serialize structs using the MessagePack format
 use crate::{
@@ -43,7 +43,7 @@ use crate::{
     StraightDrawType, CombinatorialIndex,
 };
 use redb::{Database, Error as ReDbError, ReadableTable, TableDefinition};
-use rmp_serde::{Deserializer, Serializer};
+
 
 const TABLE: TableDefinition<u32, &[u8]> = TableDefinition::new("flop_texture");
 
@@ -283,7 +283,7 @@ impl FlopTextureReDb {
         {
             let write_txn = db.begin_write()?;
             {
-                let mut table = write_txn.open_table(TABLE)?;
+                let _table = write_txn.open_table(TABLE)?;
             }
             write_txn.commit()?;
         }
@@ -385,7 +385,7 @@ mod tests {
             for _ in 0..iter_count {
                 cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
                 cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
-                let texture = calc_board_texture(&cards);
+                let _texture = calc_board_texture(&cards);
                 agent_deck.clear_used_card(cards[1]);
                 agent_deck.clear_used_card(cards[2]);
                 cards.pop();
@@ -396,7 +396,7 @@ mod tests {
         let elapsed = now.elapsed();
         println!("Elapsed: {:.2?}", elapsed);
 
-        let db_name = "/home/eric/git/poker_eval/data/flop_texture.db";
+        let _db_name = "/home/eric/git/poker_eval/data/flop_texture.db";
 
         cards.clear();
         agent_deck.reset();
@@ -415,7 +415,7 @@ mod tests {
                 cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
                 cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
                 cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
-                let texture = flop_texture_db.get_put(&cards).unwrap();
+                let _texture = flop_texture_db.get_put(&cards).unwrap();
                 agent_deck.clear_used_card(cards[0]);
                 agent_deck.clear_used_card(cards[1]);
                 agent_deck.clear_used_card(cards[2]);

@@ -243,7 +243,7 @@ impl Rank {
                 for card in cards.iter() {
                     suit_counts[card.suit as usize] += 1;
                 }
-                let (max_suit, max_suit_count) = suit_counts
+                let (max_suit, _max_suit_count) = suit_counts
                     .iter()
                     .enumerate()
                     .max_by_key(|&(_, count)| count)
