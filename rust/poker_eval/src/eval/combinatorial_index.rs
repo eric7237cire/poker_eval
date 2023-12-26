@@ -4,7 +4,6 @@ use num_integer::binomial;
 
 use crate::Card;
 
-
 pub struct CombinatorialIndex {
     //Our key is like 0-52 and 0-7 so it fits in a u16
     //Value max is 133_784_560 so it fits in a u32
@@ -77,14 +76,8 @@ impl CombinatorialIndex {
     // }
 }
 
-
 #[cfg(test)]
 mod tests {
-
-    
-
-    
-    
 
     use crate::{init_test_logger, Card};
 
@@ -185,4 +178,4 @@ mod tests {
     }
 
     // cargo test cache_perf --lib --release -- --nocapture
-                }
+}

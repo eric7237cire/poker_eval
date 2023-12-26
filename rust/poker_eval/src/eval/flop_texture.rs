@@ -31,19 +31,17 @@
 
 // Best 2 pair, 2nd best, etc.
 
-use std::{cmp::max};
+use std::cmp::max;
 
 use jammdb::{Error as JammDbError, DB};
-
 
 use serde::{Deserialize, Serialize};
 // use rmps crate to serialize structs using the MessagePack format
 use crate::{
-    calc_cards_metrics, partial_rank_cards, rank_cards, Card, CardValue, HoleCards,
-    StraightDrawType, CombinatorialIndex,
+    calc_cards_metrics, partial_rank_cards, rank_cards, Card, CardValue, CombinatorialIndex,
+    HoleCards, StraightDrawType,
 };
 use redb::{Database, Error as ReDbError, ReadableTable, TableDefinition};
-
 
 const TABLE: TableDefinition<u32, &[u8]> = TableDefinition::new("flop_texture");
 
@@ -193,8 +191,8 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
     }
 
     texture.num_with_str8 = num_str8;
-    texture.num_with_str8_draw = num_str8_draw ;
-    texture.num_with_gut_shot = num_gut_shot ;
+    texture.num_with_str8_draw = num_str8_draw;
+    texture.num_with_gut_shot = num_gut_shot;
     texture.num_hole_cards = total_eval;
 
     texture
@@ -363,12 +361,11 @@ mod tests {
     use std::time::Instant;
 
     use log::info;
-    
+
     use crate::{init_test_logger, AgentDeck, CardVec};
 
     use super::*;
 
-    
     // cargo test cache_perf --lib --release -- --nocapture
 
     #[test]

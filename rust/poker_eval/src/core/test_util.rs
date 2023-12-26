@@ -1,7 +1,5 @@
 use std::io::Write;
 
-
-
 use crate::game::game_runner_source::GameRunnerSourceEnum;
 use crate::game_log_source::GameLogSource;
 use crate::{GameLog, GameRunner, PokerError};

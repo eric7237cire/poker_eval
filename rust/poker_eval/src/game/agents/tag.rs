@@ -56,7 +56,11 @@ impl Tag {
         }
     }
 
-    fn decide_postflop(&self, _player_state: &PlayerState, game_state: &GameState) -> AgentDecision {
+    fn decide_postflop(
+        &self,
+        _player_state: &PlayerState,
+        game_state: &GameState,
+    ) -> AgentDecision {
         let _non_folded_players = game_state
             .player_states
             .iter()
