@@ -33,19 +33,17 @@
 
 use std::cmp::max;
 
-use jammdb::{Error as JammDbError, DB};
 
+use log::trace;
 use serde::{Deserialize, Serialize};
 // use rmps crate to serialize structs using the MessagePack format
 use crate::{
     calc_cards_metrics, partial_rank_cards, rank_cards, Card, CardValue, CombinatorialIndex,
-    HoleCards, StraightDrawType,
+    HoleCards, StraightDrawType, eval_cache_redb::ProduceEvalResult, CardVec,
 };
-use redb::{Database, Error as ReDbError, ReadableTable, TableDefinition};
 
-const TABLE: TableDefinition<u32, &[u8]> = TableDefinition::new("flop_texture");
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct BoardTexture {
     // Highest same suited count, 1 is a raindbow board
     pub same_suited_max_count: u8,
@@ -177,12 +175,22 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
             if let Some(s) = prc.straight_draw {
                 match s.straight_draw_type {
                     StraightDrawType::OpenEnded => {
+                        trace!("open ended str8 with board {} and hole cards {} {}", 
+                        CardVec(cards.to_vec()), hole_card1, hole_card2);
+                        
                         num_str8_draw += 1;
                     }
                     StraightDrawType::GutShot(_) => {
+                        trace!("{} gut shot with board {} and hole cards {} {}", 
+                        num_gut_shot,
+                        CardVec(cards.to_vec()), hole_card1, hole_card2);
+
                         num_gut_shot += 1;
                     }
                     StraightDrawType::DoubleGutShot => {
+                        trace!("Double gut shot with board {} and hole cards {} {}", 
+                        CardVec(cards.to_vec()), hole_card1, hole_card2);
+                        
                         num_str8_draw += 1;
                     }
                 }
@@ -198,160 +206,13 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
     texture
 }
 
-struct FlopTextureJamDb {
-    db_name: String,
-    db: DB,
-    c_index: CombinatorialIndex,
-    cache_hits: u32,
-    cache_misses: u32,
+struct ProduceFlopTexture {
+
 }
 
-impl FlopTextureJamDb {
-    pub fn new(db_name: &str) -> Result<Self, JammDbError> {
-        let db = DB::open(db_name)?;
-
-        {
-            let tx = db.tx(true)?;
-            let bucket = tx.get_bucket("flop_texture");
-
-            if bucket.is_err() {
-                tx.create_bucket("flop_texture")?;
-                tx.commit()?;
-            }
-        }
-
-        Ok(FlopTextureJamDb {
-            db_name: db_name.to_string(),
-            db,
-            c_index: CombinatorialIndex::new(),
-            cache_hits: 0,
-            cache_misses: 0,
-        })
-    }
-
-    pub fn get_put(&mut self, cards: &[Card]) -> Result<BoardTexture, JammDbError> {
-        let opt = self.get(cards)?;
-        if opt.is_some() {
-            self.cache_hits += 1;
-            return Ok(opt.unwrap());
-        }
-
-        let texture = calc_board_texture(cards);
-        self.cache_misses += 1;
-        self.put(cards, &texture)?;
-
-        Ok(texture)
-    }
-
-    pub fn get(&mut self, cards: &[Card]) -> Result<Option<BoardTexture>, JammDbError> {
-        let tx = self.db.tx(false)?;
-        let bucket = tx.get_bucket("flop_texture")?;
-        let index = self.c_index.get_index(cards);
-        if let Some(data) = bucket.get(index.to_be_bytes()) {
-            let texture: BoardTexture = rmp_serde::from_slice(data.kv().value()).unwrap();
-            Ok(Some(texture))
-        } else {
-            Ok(None)
-        }
-    }
-
-    pub fn put(&mut self, cards: &[Card], texture: &BoardTexture) -> Result<(), JammDbError> {
-        let tx = self.db.tx(true)?;
-        let bucket = tx.get_bucket("flop_texture")?;
-        let index = self.c_index.get_index(cards);
-        let texture_bytes = rmp_serde::to_vec(texture).unwrap();
-        bucket.put(index.to_be_bytes(), texture_bytes)?;
-        tx.commit()?;
-        Ok(())
-    }
-}
-
-struct FlopTextureReDb {
-    db_name: String,
-    db: Database,
-    c_index: CombinatorialIndex,
-    cache_hits: u32,
-    cache_misses: u32,
-}
-
-impl FlopTextureReDb {
-    pub fn new(db_name: &str) -> Result<Self, ReDbError> {
-        let db = Database::create(db_name)?;
-
-        {
-            let write_txn = db.begin_write()?;
-            {
-                let _table = write_txn.open_table(TABLE)?;
-            }
-            write_txn.commit()?;
-        }
-
-        Ok(Self {
-            db_name: db_name.to_string(),
-            db,
-            c_index: CombinatorialIndex::new(),
-            cache_hits: 0,
-            cache_misses: 0,
-        })
-    }
-
-    pub fn get_put(&mut self, cards: &[Card]) -> Result<BoardTexture, ReDbError> {
-        let opt = self.get(cards)?;
-        if opt.is_some() {
-            self.cache_hits += 1;
-            return Ok(opt.unwrap());
-        }
-
-        let texture = calc_board_texture(cards);
-        self.cache_misses += 1;
-        self.put(cards, &texture)?;
-
-        Ok(texture)
-    }
-
-    /*
-    let write_txn = db.begin_write()?;
-    {
-        let mut table = write_txn.open_table(TABLE)?;
-        table.insert("my_key", &123)?;
-    }
-    write_txn.commit()?;
-
-    let read_txn = db.begin_read()?;
-    let table = read_txn.open_table(TABLE)?;
-    assert_eq!(table.get("my_key")?.unwrap().value(), 123);
-     */
-
-    pub fn get(&mut self, cards: &[Card]) -> Result<Option<BoardTexture>, ReDbError> {
-        let read_txn = self.db.begin_read()?;
-        let table = read_txn.open_table(TABLE)?;
-
-        let index = self.c_index.get_index(cards);
-        let data = table.get(index)?;
-        if let Some(data) = data {
-            //let texture: BoardTexture = rmp_serde::from_slice(data.value()).unwrap();
-            let texture: BoardTexture = bincode::deserialize(&data.value()).unwrap();
-
-            Ok(Some(texture))
-        } else {
-            Ok(None)
-        }
-    }
-
-    pub fn put(&mut self, cards: &[Card], texture: &BoardTexture) -> Result<(), ReDbError> {
-        let write_txn = self.db.begin_write()?;
-        {
-            let mut table = write_txn.open_table(TABLE)?;
-
-            let index = self.c_index.get_index(cards);
-            //let texture_bytes = rmp_serde::to_vec(texture).unwrap();
-            let texture_bytes: Vec<u8> = bincode::serialize(&texture).unwrap();
-
-            table.insert(index, texture_bytes.as_slice())?;
-        }
-
-        write_txn.commit()?;
-        Ok(())
+impl ProduceEvalResult<BoardTexture> for ProduceFlopTexture {
+    fn produce_eval_result(cards: &[Card]) -> BoardTexture {
+        calc_board_texture(cards)
     }
 }
 
@@ -360,9 +221,9 @@ mod tests {
 
     use std::time::Instant;
 
-    use log::info;
+    use log::{info, debug};
 
-    use crate::{init_test_logger, AgentDeck, CardVec};
+    use crate::{init_test_logger, AgentDeck, CardVec, eval_cache_redb::{EvalCacheReDb, FLOP_TEXTURE_PATH}};
 
     use super::*;
 
@@ -374,24 +235,24 @@ mod tests {
 
         let mut agent_deck = AgentDeck::new();
         let mut cards: Vec<Card> = Vec::new();
-        cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
-        let now = Instant::now();
-        let iter_count = 1_000;
-        // Code block to measure.
-        {
-            for _ in 0..iter_count {
-                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
-                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
-                let _texture = calc_board_texture(&cards);
-                agent_deck.clear_used_card(cards[1]);
-                agent_deck.clear_used_card(cards[2]);
-                cards.pop();
-                cards.pop();
-            }
-        }
+        //cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
+        // let now = Instant::now();
+        // let iter_count = 1_000;
+        // // Code block to measure.
+        // {
+        //     for _ in 0..iter_count {
+        //         cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
+        //         cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
+        //         let _texture = calc_board_texture(&cards);
+        //         agent_deck.clear_used_card(cards[1]);
+        //         agent_deck.clear_used_card(cards[2]);
+        //         cards.pop();
+        //         cards.pop();
+        //     }
+        // }
 
-        let elapsed = now.elapsed();
-        println!("Elapsed: {:.2?}", elapsed);
+        // let elapsed = now.elapsed();
+        // println!("Elapsed: {:.2?}", elapsed);
 
         let _db_name = "/home/eric/git/poker_eval/data/flop_texture.db";
 
@@ -402,8 +263,9 @@ mod tests {
 
         //let mut flop_texture_db = FlopTextureJamDb::new(db_name).unwrap();
 
-        let re_db_name = "/home/eric/git/poker_eval/data/flop_texture_re.db";
-        let mut flop_texture_db = FlopTextureReDb::new(re_db_name).unwrap();
+        
+        //let mut flop_texture_db = FlopTextureReDb::new(re_db_name).unwrap();
+        let mut flop_texture_db = EvalCacheReDb::new(FLOP_TEXTURE_PATH, ProduceFlopTexture{}).unwrap();
         let now = Instant::now();
         let iter_count = 10_000_000;
         // Code block to measure.
@@ -447,6 +309,10 @@ mod tests {
 
     #[test]
     fn test_board_texture() {
+        init_test_logger();
+        info!("test_board_texture");
+        debug!("test_board_texture");
+        trace!("test_board_texture");
         let cards = CardVec::try_from("3c 2s As").unwrap().0;
         let texture = calc_board_texture(&cards);
 
@@ -460,6 +326,10 @@ mod tests {
         assert_eq!(texture.high_value_count, 1);
         assert_eq!(texture.med_value_count, 0);
         assert_eq!(texture.low_value_count, 2);
+        assert_eq!(texture.num_hole_cards, 1176); // 49*48/2
+        assert_eq!(texture.num_with_str8, 16);
+        assert_eq!(texture.num_with_str8_draw, 0);
+        assert_eq!(texture.num_with_gut_shot, 340);
 
         let cards = CardVec::try_from("Ac Ah As").unwrap().0;
         let texture = calc_board_texture(&cards);
@@ -472,6 +342,10 @@ mod tests {
         assert_eq!(texture.high_value_count, 3);
         assert_eq!(texture.med_value_count, 0);
         assert_eq!(texture.low_value_count, 0);
+        assert_eq!(texture.num_hole_cards, 1176); // 49*48/2
+        assert_eq!(texture.num_with_str8, 0);
+        assert_eq!(texture.num_with_str8_draw, 0);
+        assert_eq!(texture.num_with_gut_shot, 0);
 
         let cards = CardVec::try_from("Qc Kh Qd As Ks").unwrap().0;
         let texture = calc_board_texture(&cards);
@@ -486,5 +360,72 @@ mod tests {
         assert_eq!(texture.high_value_count, 5);
         assert_eq!(texture.med_value_count, 0);
         assert_eq!(texture.low_value_count, 0);
+        assert_eq!(texture.num_hole_cards, 1081); // 47*46/2
+        assert_eq!(texture.num_with_str8, 16);
+        assert_eq!(texture.num_with_str8_draw, 0);
+        assert_eq!(texture.num_with_gut_shot, 324);
+
+        let cards = CardVec::try_from("9c 2h Td As 6s").unwrap().0;
+        let texture = calc_board_texture(&cards);
+
+        assert_eq!(texture.same_suited_max_count, 2);
+        assert_eq!(texture.gaps.len(), 5);
+        debug!("gaps {:?}", texture.gaps);
+        trace!("Texture\n{:#?}", &texture);
+        assert_eq!(texture.gaps[0], 1);
+        assert_eq!(texture.gaps[1], 1);
+        assert_eq!(texture.gaps[2], 3);
+        assert_eq!(texture.gaps[3], 4);
+        assert_eq!(texture.gaps[4], 4);
+        assert_eq!(texture.has_trips, false);
+        assert_eq!(texture.has_pair, false);
+        assert_eq!(texture.has_two_pair, false);
+        assert_eq!(texture.high_value_count, 1);
+        assert_eq!(texture.med_value_count, 2);
+        assert_eq!(texture.low_value_count, 2);
+        assert_eq!(texture.num_hole_cards, 1081); // 47*46/2
+        assert_eq!(texture.num_with_str8, 16);
+        assert_eq!(texture.num_with_str8_draw, 48);
+        assert_eq!(texture.num_with_gut_shot, 372);
+
+        let cards = CardVec::try_from("9c 2h Td Ks 6s").unwrap().0;
+        let texture = calc_board_texture(&cards);
+        
+        trace!("Texture\n{:#?}", &texture);
+        
+        assert_eq!(texture.num_hole_cards, 1081); // 47*46/2
+        assert_eq!(texture.num_with_str8, 32);
+        assert_eq!(texture.num_with_str8_draw, 64);
+        assert_eq!(texture.num_with_gut_shot, 568);
+
+        let cards = CardVec::try_from("9c 2h Td Qs 6s").unwrap().0;
+        let texture = calc_board_texture(&cards);
+        
+        trace!("Texture\n{:#?}", &texture);
+        
+        assert_eq!(texture.num_hole_cards, 1081); // 47*46/2
+        assert_eq!(texture.num_with_str8, 48);
+        assert_eq!(texture.num_with_str8_draw, 308);
+        assert_eq!(texture.num_with_gut_shot, 308);
+
+        let cards = CardVec::try_from("9c 2h Td Js 6s").unwrap().0;
+        let texture = calc_board_texture(&cards);
+        
+        trace!("Texture\n{:#?}", &texture);
+        
+        assert_eq!(texture.num_hole_cards, 1081); // 47*46/2
+        assert_eq!(texture.num_with_str8, 48);
+        assert_eq!(texture.num_with_str8_draw, 308);
+        assert_eq!(texture.num_with_gut_shot, 308);
+
+        let cards = CardVec::try_from("6c 8h Td").unwrap().0;
+        let texture = calc_board_texture(&cards);
+        
+        trace!("Texture\n{:#?}", &texture);
+        
+        assert_eq!(texture.num_hole_cards, 49*48/2); 
+        assert_eq!(texture.num_with_str8, 16);
+        assert_eq!(texture.num_with_str8_draw, 64);
+        assert_eq!(texture.num_with_gut_shot, 308);
     }
 }

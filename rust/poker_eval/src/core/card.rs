@@ -5,6 +5,7 @@ use postflop_solver::Range;
 use std::cmp;
 use std::convert::TryFrom;
 use std::fmt;
+use std::fmt::Display;
 use std::mem;
 use std::str::FromStr;
 
@@ -475,6 +476,16 @@ impl CardVec {
                 c_u8
             })
             .collect()
+    }
+}
+
+impl Display for CardVec {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut s = String::new();
+        for card in self.0.iter() {
+            s.push_str(&format!("{} ", card));
+        }
+        write!(f, "{}", s.trim())
     }
 }
 

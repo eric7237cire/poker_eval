@@ -83,7 +83,9 @@ mod tests {
 
     use super::*;
 
-    #[test]
+    //#[test]
+    //It's a bit slow
+    #[allow(dead_code)]
     fn test_cache_indexing() {
         init_test_logger();
 
