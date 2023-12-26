@@ -7,3 +7,6 @@ pub use flop_texture::*;
 pub use partial_rank::*;
 pub use rank::*;
 pub use value_set_iterator::*;
+
+mod combinatorial_index;
+pub use combinatorial_index::*;

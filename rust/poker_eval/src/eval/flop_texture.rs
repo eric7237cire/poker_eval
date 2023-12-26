@@ -40,7 +40,7 @@ use serde::{Deserialize, Serialize};
 // use rmps crate to serialize structs using the MessagePack format
 use crate::{
     calc_cards_metrics, partial_rank_cards, rank_cards, Card, CardValue, HoleCards,
-    StraightDrawType,
+    StraightDrawType, CombinatorialIndex,
 };
 use redb::{Database, Error as ReDbError, ReadableTable, TableDefinition};
 use rmp_serde::{Deserializer, Serializer};
@@ -58,9 +58,10 @@ pub struct BoardTexture {
     //43 and 78 and 4 7
     //5 7 gives straight draw to 46, 68
     //5 8 gives straight draw to 67
-    pub perc_with_str8: f64,
-    pub perc_with_str8_draw: f64,
-    pub perc_with_gut_shot: f64,
+    pub num_with_str8: u16,
+    pub num_with_str8_draw: u16,
+    pub num_with_gut_shot: u16,
+    pub num_hole_cards: u16,
 
     pub has_trips: bool,
     pub has_pair: bool,
@@ -83,9 +84,10 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
         high_value_count: 0,
         med_value_count: 0,
         low_value_count: 0,
-        perc_with_str8: 0.0,
-        perc_with_str8_draw: 0.0,
-        perc_with_gut_shot: 0.0,
+        num_with_str8: 0,
+        num_with_str8_draw: 0,
+        num_with_gut_shot: 0,
+        num_hole_cards: 0,
     };
 
     let cards_metrics = calc_cards_metrics(cards);
@@ -190,81 +192,12 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
         }
     }
 
-    texture.perc_with_str8 = num_str8 as f64 / total_eval as f64;
-    texture.perc_with_str8_draw = num_str8_draw as f64 / total_eval as f64;
-    texture.perc_with_gut_shot = num_gut_shot as f64 / total_eval as f64;
+    texture.num_with_str8 = num_str8;
+    texture.num_with_str8_draw = num_str8_draw ;
+    texture.num_with_gut_shot = num_gut_shot ;
+    texture.num_hole_cards = total_eval;
 
     texture
-}
-
-struct CombinatorialIndex {
-    cache: HashMap<u16, u32>,
-}
-
-impl CombinatorialIndex {
-    pub fn new() -> Self {
-        CombinatorialIndex {
-            cache: HashMap::new(),
-        }
-    }
-
-    fn get_binomial(&mut self, n: u16, k: u16) -> u32 {
-        let key = (n << 8) | k;
-        if let Some(val) = self.cache.get(&key) {
-            return *val;
-        }
-
-        let val = binomial(n as usize, k as usize) as u32;
-        self.cache.insert(key, val);
-        val
-    }
-
-    pub fn get_index(&mut self, cards: &[Card]) -> u32 {
-        let mut cards = cards.to_vec();
-        cards.sort();
-
-        let mut index = 0;
-
-        for i in 0..cards.len() {
-            let num_possible_before: u8 = cards[i].into(); // 0 to card[i] - 1
-            let dim = i + 1;
-            let ncr = self.get_binomial(num_possible_before as u16, dim as u16);
-            index += ncr;
-        }
-
-        index
-    }
-
-    // fn combinatorial_index(cards: &[usize]) -> usize {
-
-    //     //we want the smallest index 1st
-    //     let mut cards = cards.to_vec();
-    //     cards.sort();
-
-    //     //so if I have 7 x, I want to add
-    //     //how many combinations of C(6, 2) to add
-
-    //     let mut index = 0;
-
-    //     for i in 0..cards.len() {
-    //         //trace!("Card {} is {}", i, cards[i]);
-    //         let num_possible_before = cards[i]; // 0 to card[i] - 1
-    //         let dim = i+1;
-    //         //Example cards 50 12 5
-    //         // (50 C 3) + (12 C 2) + (5 C 1)
-    //         // # of ways to choose cards 0-49 in  3 cards
-    //         // # of ways to choose cards 0-11 in  2 cards
-    //         // # of ways to choose cards 0-4  in  1 card
-    //         let ncr = binomial(num_possible_before, dim);
-    //         //trace!("Adding {} choose {} == {} to index", num_possible_before, dim, ncr);
-    //         index += ncr;
-    //     }
-
-    //     // https://en.wikipedia.org/wiki/Combinatorial_number_system
-    //     // https://math.stackexchange.com/questions/1227409/indexing-all-combinations-without-making-list
-
-    //     index
-    // }
 }
 
 struct FlopTextureJamDb {
@@ -398,7 +331,9 @@ impl FlopTextureReDb {
         let index = self.c_index.get_index(cards);
         let data = table.get(index)?;
         if let Some(data) = data {
-            let texture: BoardTexture = rmp_serde::from_slice(data.value()).unwrap();
+            //let texture: BoardTexture = rmp_serde::from_slice(data.value()).unwrap();
+            let texture: BoardTexture = bincode::deserialize(&data.value()).unwrap();
+
             Ok(Some(texture))
         } else {
             Ok(None)
@@ -411,7 +346,9 @@ impl FlopTextureReDb {
             let mut table = write_txn.open_table(TABLE)?;
 
             let index = self.c_index.get_index(cards);
-            let texture_bytes = rmp_serde::to_vec(texture).unwrap();
+            //let texture_bytes = rmp_serde::to_vec(texture).unwrap();
+            let texture_bytes: Vec<u8> = bincode::serialize(&texture).unwrap();
+
             table.insert(index, texture_bytes.as_slice())?;
         }
 
@@ -426,106 +363,12 @@ mod tests {
     use std::time::Instant;
 
     use log::info;
-    use postflop_solver::card_pair_to_index;
-
+    
     use crate::{init_test_logger, AgentDeck, CardVec};
 
     use super::*;
 
-    #[test]
-    fn test_cache_indexing() {
-        init_test_logger();
-
-        // let mut index_check = 0;
-        // for card1 in 0..52 {
-        //     for card2 in card1 + 1.. 52 {
-
-        //         let idx = combinatorial_index(&vec![card1 as usize, card2 as usize]);
-        //         println!("card1: {} card 2: {} == {}, {} == {} + {}",
-        //         card1, card2, card_pair_to_index(card1, card2), index_check,
-        //         //THis is the sum formula (51+50 / 2)
-        //         card1 as usize * (101 - card1 as usize) / 2 ,
-        //         card2
-        //         );
-        //         println!("Idx is {} but should be {}", idx, index_check);
-        //         assert_eq!(idx, index_check);
-        //         index_check += 1;
-        //     }
-        // }
-
-        //0 X Y has 51 Choose 2 -- 1275
-
-        let mut index_check = 0;
-        // 2 1 0
-        // 3 1 0
-        let mut ci = CombinatorialIndex::new();
-        for card1 in 0..52u8 {
-            let card1_obj: Card = card1.try_into().unwrap();
-            for card2 in 0..card1 {
-                let card2_obj: Card = card2.try_into().unwrap();
-                for card3 in 0..card2 {
-                    let card3_obj: Card = card3.try_into().unwrap();
-                    let idx = ci.get_index(&vec![card1_obj, card2_obj, card3_obj]);
-                    // println!("{} {} {} ==> Idx is {} but should be {}",
-                    //     card1, card2, card3,
-                    //     idx, index_check);
-                    assert_eq!(idx, index_check);
-                    index_check += 1;
-                }
-            }
-            //println!("For card {}, we have {} combos", card1, count);
-        }
-
-        let mut ci = CombinatorialIndex::new();
-        let mut index_check = 0;
-        for card1 in 0..52u8 {
-            let card1_obj: Card = card1.try_into().unwrap();
-            for card2 in 0..card1 {
-                let card2_obj: Card = card2.try_into().unwrap();
-                for card3 in 0..card2 {
-                    let card3_obj: Card = card3.try_into().unwrap();
-                    for card4 in 0..card3 {
-                        let card4_obj: Card = card4.try_into().unwrap();
-                        for card5 in 0..card4 {
-                            let card5_obj: Card = card5.try_into().unwrap();
-                            for card6 in 0..card5 {
-                                let card6_obj: Card = card6.try_into().unwrap();
-                                for card7 in 0..card6 {
-                                    let card7_obj: Card = card7.try_into().unwrap();
-
-                                    // let idx = combinatorial_index(&vec![card1 as usize, card2 as usize, card3 as usize,
-                                    //     card4 as usize, card5 as usize, card6 as usize, card7 as usize]);
-                                    let idx = ci.get_index(&vec![
-                                        card1_obj, card2_obj, card3_obj, card4_obj, card5_obj,
-                                        card6_obj, card7_obj,
-                                    ]);
-                                    assert_eq!(idx, index_check);
-                                    index_check += 1;
-
-                                    if index_check % 1_000_000 == 0 {
-                                        println!(
-                                            "Index is {} cache size {}",
-                                            index_check,
-                                            ci.cache.len()
-                                        );
-                                    }
-
-                                    assert!(index_check < 400_000_000);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            //println!("For card {}, we have {} combos", card1, count);
-        }
-
-        //52 choose 5 == 2_598_960 ; 47 choose 2 == 1081 ; produce = 2_810_503_360
-        //52 choose 7 -- 133_784_560
-        //7 choose 5 == 21
-        assert_eq!(133_784_560, index_check);
-    }
-
+    
     // cargo test cache_perf --lib --release -- --nocapture
 
     #[test]
@@ -565,7 +408,7 @@ mod tests {
         let re_db_name = "/home/eric/git/poker_eval/data/flop_texture_re.db";
         let mut flop_texture_db = FlopTextureReDb::new(re_db_name).unwrap();
         let now = Instant::now();
-        let iter_count = 1_000_000;
+        let iter_count = 10_000_000;
         // Code block to measure.
         {
             for i in 0..iter_count {
