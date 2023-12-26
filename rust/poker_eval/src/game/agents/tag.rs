@@ -23,8 +23,8 @@ impl Tag {
         name: &str,
 
     ) -> Self {
-        let flop_texture_db = EvalCacheReDb::new(FLOP_TEXTURE_PATH, 
-            ProduceFlopTexture::new()).unwrap();
+        let flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture> = EvalCacheReDb::new(FLOP_TEXTURE_PATH 
+           ).unwrap();
         
         Tag {
             three_bet_range: three_bet_range_str.parse().unwrap(),
@@ -88,7 +88,7 @@ impl Tag {
 
         let hc = self.hole_cards.as_ref().unwrap();
         let prc = partial_rank_cards(hc, &game_state.board);
-        let ft = self.flop_texture_db.get_put(&game_state.board, None).unwrap();
+        let ft = self.flop_texture_db.get_put(&game_state.board).unwrap();
 
         let mut likes_hand_comments: Vec<String> = Vec::new();
 

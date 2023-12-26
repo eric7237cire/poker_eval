@@ -1118,8 +1118,8 @@ mod tests {
 
         
         //let mut flop_texture_db = FlopTextureReDb::new(re_db_name).unwrap();
-        let mut partial_rank_db =
-        EvalCacheWithHcReDb::new(PARTIAL_RANK_PATH, ProducePartialRankCards{}).unwrap();
+        let mut partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
+        EvalCacheWithHcReDb::new(PARTIAL_RANK_PATH).unwrap();
         let now = Instant::now();
         let iter_count = 10_000_000;
         // Code block to measure.
@@ -1130,8 +1130,8 @@ mod tests {
                 cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
                 let hole1: Card = agent_deck.get_unused_card().unwrap().try_into().unwrap();
                 let hole2: Card = agent_deck.get_unused_card().unwrap().try_into().unwrap();
-                let holeCards: HoleCards = HoleCards::new(hole1, hole2).unwrap();
-                let _texture = partial_rank_db.get_put(&cards, holeCards).unwrap();
+                let hole_cards: HoleCards = HoleCards::new(hole1, hole2).unwrap();
+                let _texture = partial_rank_db.get_put(&cards, hole_cards).unwrap();
                 agent_deck.clear_used_card(cards[0]);
                 agent_deck.clear_used_card(cards[1]);
                 agent_deck.clear_used_card(cards[2]);

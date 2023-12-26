@@ -1,5 +1,5 @@
-use redb::{Database, Error as ReDbError, ReadableTable, TableDefinition, ReadTransaction, RedbKey};
-use serde::{Deserializer, Serialize, Deserialize, de::DeserializeOwned};
+use redb::{Database, Error as ReDbError, ReadableTable, TableDefinition, ReadTransaction};
+use serde::{ Serialize, de::DeserializeOwned};
 
 use crate::{CombinatorialIndex, Card, HoleCards};
 
@@ -25,14 +25,13 @@ pub trait ProduceEvalWithHcResult<R> {
 //K is the key type
 pub struct EvalCacheWithHcReDb< P, R> 
 {
-    db_name: String,
     db: Database,
     c_index: CombinatorialIndex,
     pub cache_hits: u32,
     pub cache_misses: u32,
 
-    producer: P,
-    phantom: std::marker::PhantomData<R>
+    phantom1: std::marker::PhantomData<P>,
+    phantom2: std::marker::PhantomData<R>
 }
 
 
@@ -40,7 +39,7 @@ impl <P, R> EvalCacheWithHcReDb< P, R>
 where P : ProduceEvalWithHcResult<R>, R :  Serialize + DeserializeOwned,
 {
     //each different struct should get its own db path
-    pub fn new(db_name: &str, producer: P) -> Result<Self, ReDbError> {
+    pub fn new(db_name: &str) -> Result<Self, ReDbError> {
         let db = Database::create(db_name)?;
         {
             //Make sure table exists
@@ -52,12 +51,11 @@ where P : ProduceEvalWithHcResult<R>, R :  Serialize + DeserializeOwned,
         }
 
         Ok(Self {
-            db_name: db_name.to_string(),
             db,
             cache_hits: 0,
             cache_misses: 0,
-            producer,
-            phantom: std::marker::PhantomData,
+            phantom1: std::marker::PhantomData,
+            phantom2: std::marker::PhantomData,
             c_index: CombinatorialIndex::new(),
 
         })

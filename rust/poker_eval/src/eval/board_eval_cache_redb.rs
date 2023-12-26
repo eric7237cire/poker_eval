@@ -1,7 +1,7 @@
-use redb::{Database, Error as ReDbError, ReadableTable, TableDefinition, ReadTransaction, RedbKey};
-use serde::{Deserializer, Serialize, Deserialize, de::DeserializeOwned};
+use redb::{Database, Error as ReDbError, ReadableTable, TableDefinition, ReadTransaction};
+use serde::{Serialize, de::DeserializeOwned};
 
-use crate::{CombinatorialIndex, Card, HoleCards};
+use crate::{CombinatorialIndex, Card,};
 
 //u32 is usually  enough
 //In the worst case we have 5 cards * 2 cards
@@ -25,14 +25,14 @@ pub trait ProduceEvalResult<R> {
 //K is the key type
 pub struct EvalCacheReDb< P, R> 
 {
-    db_name: String,
     db: Database,
     c_index: CombinatorialIndex,
     pub cache_hits: u32,
     pub cache_misses: u32,
 
-    producer: P,
-    phantom: std::marker::PhantomData<R>
+    //We don't actually need an instance
+    phantom1: std::marker::PhantomData<P>,
+    phantom2: std::marker::PhantomData<R>
 }
 
 
@@ -40,7 +40,7 @@ impl <P, R> EvalCacheReDb< P, R>
 where P : ProduceEvalResult<R>, R :  Serialize + DeserializeOwned,
 {
     //each different struct should get its own db path
-    pub fn new(db_name: &str, producer: P) -> Result<Self, ReDbError> {
+    pub fn new(db_name: &str) -> Result<Self, ReDbError> {
         let db = Database::create(db_name)?;
         {
             //Make sure table exists
@@ -52,18 +52,17 @@ where P : ProduceEvalResult<R>, R :  Serialize + DeserializeOwned,
         }
 
         Ok(Self {
-            db_name: db_name.to_string(),
             db,
             cache_hits: 0,
             cache_misses: 0,
-            producer,
-            phantom: std::marker::PhantomData,
+            phantom1: std::marker::PhantomData,
+            phantom2: std::marker::PhantomData,
             c_index: CombinatorialIndex::new(),
 
         })
     }
 
-    pub fn get_put(&mut self, cards: &[Card], hole_cards: Option<HoleCards>   ) -> Result<R, ReDbError> {
+    pub fn get_put(&mut self, cards: &[Card]  ) -> Result<R, ReDbError> {
         let index = self.c_index.get_index(cards);
         
         let opt = self.get(index)?;

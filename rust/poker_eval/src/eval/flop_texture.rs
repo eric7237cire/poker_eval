@@ -38,7 +38,7 @@ use log::trace;
 use serde::{Deserialize, Serialize};
 // use rmps crate to serialize structs using the MessagePack format
 use crate::{
-    calc_cards_metrics, partial_rank_cards, rank_cards, Card, CardValue, CombinatorialIndex,
+    calc_cards_metrics, partial_rank_cards, rank_cards, Card, CardValue, 
     HoleCards, StraightDrawType, CardVec, board_eval_cache_redb::ProduceEvalResult,
 };
 
@@ -256,8 +256,8 @@ mod tests {
 
         
         //let mut flop_texture_db = FlopTextureReDb::new(re_db_name).unwrap();
-        let mut flop_texture_db =
-             EvalCacheReDb::new(FLOP_TEXTURE_PATH, ProduceFlopTexture::new()).unwrap();
+        let mut flop_texture_db: EvalCacheReDb<ProduceFlopTexture, _> =
+             EvalCacheReDb::new(FLOP_TEXTURE_PATH).unwrap();
         let now = Instant::now();
         let iter_count = 10_000_000;
         // Code block to measure.
@@ -266,7 +266,7 @@ mod tests {
                 cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
                 cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
                 cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
-                let _texture = flop_texture_db.get_put(&cards, None).unwrap();
+                let _texture = flop_texture_db.get_put(&cards).unwrap();
                 agent_deck.clear_used_card(cards[0]);
                 agent_deck.clear_used_card(cards[1]);
                 agent_deck.clear_used_card(cards[2]);
