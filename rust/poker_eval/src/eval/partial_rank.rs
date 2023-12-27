@@ -26,7 +26,7 @@ pub enum FlushDrawType {
 }
 
 #[repr(u8)]
-#[derive(PartialEq, Eq, Debug, Copy, Clone, Ord, PartialOrd,  Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum StraightDrawType {
     //The card that makes the straight, it's not the highest card in the straight
     GutShot(CardValue),
@@ -616,11 +616,7 @@ pub fn partial_rank_cards(hole_cards: &HoleCards, board: &[Card]) -> PartialRank
 #[cfg(test)]
 mod tests {
 
-    use std::time::Instant;
-
-    use log::info;
-
-    use crate::{CardVec, Deck, init_test_logger, board_hc_eval_cache_redb::{EvalCacheWithHcReDb, PARTIAL_RANK_PATH}};
+    use crate::CardVec;
 
     use super::*;
 
@@ -1090,5 +1086,4 @@ mod tests {
             })
         );
     }
-
 }

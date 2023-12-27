@@ -1,6 +1,9 @@
 use log::trace;
 
-use crate::{Card, ChipType, GameState, HoleCards, InitialPlayerState, PlayerState, PokerError, CommentedAction};
+use crate::{
+    Card, ChipType, CommentedAction, GameState, HoleCards, InitialPlayerState, PlayerState,
+    PokerError,
+};
 
 use crate::game::agents::Agent;
 use crate::game::game_runner_source::GameRunnerSource;
@@ -80,43 +83,64 @@ impl GameRunnerSource for AgentSource {
 #[cfg(test)]
 mod tests {
 
+    use std::{cell::RefCell, rc::Rc};
+
     use log::info;
     use postflop_solver::Range;
 
     use crate::{
+        board_hc_eval_cache_redb::{
+            EvalCacheWithHcReDb, ProducePartialRankCards, PARTIAL_RANK_PATH,
+        },
         game::{
             agents::{
-                build_initial_players_from_agents, Agent,  PassiveCallingStation, Tag, set_agent_hole_cards,
+                build_initial_players_from_agents, set_agent_hole_cards, Agent,
+                PassiveCallingStation, Tag,
             },
             game_runner_source::GameRunnerSourceEnum,
         },
         game_runner_source::GameRunnerSource,
-        init_test_logger, test_game_runner, Card, GameRunner, InitialPlayerState, Deck,
+        init_test_logger, test_game_runner, Card, Deck, GameRunner, InitialPlayerState,
+        PartialRankContainer,
     };
 
     use super::AgentSource;
 
-    fn build_agents() -> Vec<Box<dyn Agent>> {
+    fn build_agents(
+        partial_rank_db: Rc<
+            RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
+        >,
+    ) -> Vec<Box<dyn Agent + '_>> {
         let calling_75 = "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+";
-        
+
         let mut agents: Vec<Box<dyn Agent>> = Vec::new();
 
-        agents.push(Box::new(PassiveCallingStation::new(None, "Call 100% A")));
-        agents.push(Box::new(PassiveCallingStation::new(None, "Call 100% B")));
+        agents.push(Box::new(PassiveCallingStation::new(
+            None,
+            "Call 100% A",
+            partial_rank_db.clone(),
+        )));
+        agents.push(Box::new(PassiveCallingStation::new(
+            None,
+            "Call 100% B",
+            partial_rank_db.clone(),
+        )));
 
         for i in 0..2 {
-            
             let agent = PassiveCallingStation::new(
                 Some(calling_75),
-                &format!("{} Cal Stn 75%", i + 1)
+                &format!("{} Cal Stn 75%", i + 1),
+                partial_rank_db.clone(),
             );
             agents.push(Box::new(agent));
         }
 
         let tag = Tag::new(
-             "JJ+,AJs+,AQo+,KQs",
-             "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+",
-                 "Hero");
+            "JJ+,AJs+,AQo+,KQs",
+            "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+",
+            "Hero",
+            partial_rank_db.clone(),
+        );
         agents.push(Box::new(tag));
 
         agents
@@ -126,59 +150,66 @@ mod tests {
     fn test_agents() {
         init_test_logger();
 
-        let mut agent_deck = Deck::new();
+        let mut partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
+            EvalCacheWithHcReDb::new(PARTIAL_RANK_PATH).unwrap();
 
-        let mut hero_winnings: i64 = 0;
+        {
+            let mut rcref_pdb = Rc::new(RefCell::new(partial_rank_db));
+            let mut agent_deck = Deck::new();
 
-        for it_num in 0..200 {
-            agent_deck.reset();
+            let mut hero_winnings: i64 = 0;
 
-            let mut agents = build_agents();
-            set_agent_hole_cards(&mut agent_deck, &mut agents);
+            for it_num in 0..200 {
+                agent_deck.reset();
 
-            let players: Vec<InitialPlayerState> = build_initial_players_from_agents(&agents);
+                let mut agents = build_agents(rcref_pdb.clone());
+                set_agent_hole_cards(&mut agent_deck, &mut agents);
 
-            let board: Vec<Card> = agent_deck.get_board();
-            let agent_source = AgentSource {
-                agents,
-                players,
-                sb: 2,
-                bb: 5,
-                board,
-            };
+                let players: Vec<InitialPlayerState> = build_initial_players_from_agents(&agents);
 
-            let mut game_runner =
-                GameRunner::new(GameRunnerSourceEnum::from(agent_source)).unwrap();
+                let board: Vec<Card> = agent_deck.get_board();
+                let agent_source = AgentSource {
+                    agents,
+                    players,
+                    sb: 2,
+                    bb: 5,
+                    board,
+                };
 
-            test_game_runner(&mut game_runner).unwrap();
+                let mut game_runner =
+                    GameRunner::new(GameRunnerSourceEnum::from(agent_source)).unwrap();
 
-            let change = game_runner.game_state.player_states[4].stack as i64
-                - game_runner.game_state.player_states[4].initial_stack as i64;
+                test_game_runner(&mut game_runner).unwrap();
 
-            hero_winnings += change;
+                let change = game_runner.game_state.player_states[4].stack as i64
+                    - game_runner.game_state.player_states[4].initial_stack as i64;
 
-            if it_num == 5
-            // change < -50 {
-            {
-                for pi in 0..5 {
-                    game_runner.game_state.player_states[pi].player_name = format!(
-                        "{} ({})",
-                        game_runner.game_state.player_states[pi].player_name,
-                        game_runner.game_runner_source.get_hole_cards(pi).unwrap()
+                hero_winnings += change;
+
+                if it_num == 5
+                // change < -50 {
+                {
+                    for pi in 0..5 {
+                        game_runner.game_state.player_states[pi].player_name = format!(
+                            "{} ({})",
+                            game_runner.game_state.player_states[pi].player_name,
+                            game_runner.game_runner_source.get_hole_cards(pi).unwrap()
+                        );
+                    }
+                    game_runner.game_state.player_states[4].player_name = format!(
+                        "Hero ({})",
+                        game_runner.game_runner_source.get_hole_cards(4).unwrap()
+                    );
+                    info!(
+                        "Losing hand #{}\n{}",
+                        it_num,
+                        game_runner.to_game_log_string(true)
                     );
                 }
-                game_runner.game_state.player_states[4].player_name = format!(
-                    "Hero ({})",
-                    game_runner.game_runner_source.get_hole_cards(4).unwrap()
-                );
-                info!(
-                    "Losing hand #{}\n{}",
-                    it_num,
-                    game_runner.to_game_log_string(true)
-                );
             }
-        }
 
-        assert_eq!(hero_winnings, 5835);
+            
+            assert_eq!(hero_winnings, 5835);
+        }
     }
 }

@@ -33,15 +33,13 @@
 
 use std::cmp::max;
 
-
 use log::trace;
 use serde::{Deserialize, Serialize};
 // use rmps crate to serialize structs using the MessagePack format
 use crate::{
-    calc_cards_metrics, partial_rank_cards, rank_cards, Card, CardValue, 
-    HoleCards, StraightDrawType, CardVec, 
+    calc_cards_metrics, partial_rank_cards, rank_cards, Card, CardValue, CardVec, HoleCards,
+    StraightDrawType,
 };
-
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct BoardTexture {
@@ -175,22 +173,30 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
             if let Some(s) = prc.straight_draw {
                 match s.straight_draw_type {
                     StraightDrawType::OpenEnded => {
-                        trace!("open ended str8 with board {} and hole cards {} {}", 
-                        CardVec(cards.to_vec()), hole_card1, hole_card2);
-                        
+                        trace!(
+                            "open ended str8 with board {} and hole cards {} {}",
+                            CardVec(cards.to_vec()),
+                            hole_card1,
+                            hole_card2
+                        );
+
                         num_str8_draw += 1;
                     }
                     StraightDrawType::GutShot(_) => {
-                        // trace!("{} gut shot with board {} and hole cards {} {}", 
+                        // trace!("{} gut shot with board {} and hole cards {} {}",
                         // num_gut_shot,
                         // CardVec(cards.to_vec()), hole_card1, hole_card2);
 
                         num_gut_shot += 1;
                     }
                     StraightDrawType::DoubleGutShot => {
-                        trace!("Double gut shot with board {} and hole cards {} {}", 
-                        CardVec(cards.to_vec()), hole_card1, hole_card2);
-                        
+                        trace!(
+                            "Double gut shot with board {} and hole cards {} {}",
+                            CardVec(cards.to_vec()),
+                            hole_card1,
+                            hole_card2
+                        );
+
                         num_str8_draw += 1;
                     }
                 }
@@ -206,19 +212,15 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
     texture
 }
 
-
 #[cfg(test)]
 mod tests {
 
-    use log::{info, debug};
+    use log::{debug, info};
 
     use crate::{init_test_logger, CardVec};
 
     use super::*;
 
-    
-
-    
     #[test]
     fn test_board_texture() {
         init_test_logger();
@@ -302,9 +304,9 @@ mod tests {
 
         let cards = CardVec::try_from("9c 2h Td Ks 6s").unwrap().0;
         let texture = calc_board_texture(&cards);
-        
+
         trace!("Texture\n{:#?}", &texture);
-        
+
         assert_eq!(texture.num_hole_cards, 1081); // 47*46/2
         assert_eq!(texture.num_with_str8, 32);
         assert_eq!(texture.num_with_str8_draw, 64);
@@ -312,9 +314,9 @@ mod tests {
 
         let cards = CardVec::try_from("9c 2h Td Qs 6s").unwrap().0;
         let texture = calc_board_texture(&cards);
-        
+
         trace!("Texture\n{:#?}", &texture);
-        
+
         assert_eq!(texture.num_hole_cards, 1081); // 47*46/2
         assert_eq!(texture.num_with_str8, 48);
         assert_eq!(texture.num_with_str8_draw, 308);
@@ -322,9 +324,9 @@ mod tests {
 
         let cards = CardVec::try_from("9c 2h Td Js 6s").unwrap().0;
         let texture = calc_board_texture(&cards);
-        
+
         trace!("Texture\n{:#?}", &texture);
-        
+
         assert_eq!(texture.num_hole_cards, 1081); // 47*46/2
         assert_eq!(texture.num_with_str8, 48);
         assert_eq!(texture.num_with_str8_draw, 308);
@@ -332,31 +334,31 @@ mod tests {
 
         let cards = CardVec::try_from("6c 8h Td").unwrap().0;
         let texture = calc_board_texture(&cards);
-        
+
         trace!("Texture\n{:#?}", &texture);
-        
-        assert_eq!(texture.num_hole_cards, 49*48/2); 
+
+        assert_eq!(texture.num_hole_cards, 49 * 48 / 2);
         assert_eq!(texture.num_with_str8, 16);
         assert_eq!(texture.num_with_str8_draw, 64);
         assert_eq!(texture.num_with_gut_shot, 308);
 
         let cards = CardVec::try_from("6c 8h Td 9d").unwrap().0;
         let texture = calc_board_texture(&cards);
-        
+
         trace!("Texture\n{:#?}", &texture);
-        
-        assert_eq!(texture.num_hole_cards, 48*47/2); 
+
+        assert_eq!(texture.num_hole_cards, 48 * 47 / 2);
         assert_eq!(texture.num_with_str8, 198);
         assert_eq!(texture.num_with_str8_draw, 166);
         assert_eq!(texture.num_with_gut_shot, 268);
 
         let cards = CardVec::try_from("Ac 2h 4d 5d").unwrap().0;
         let texture = calc_board_texture(&cards);
-        
+
         trace!("Texture\n{:#?}", &texture);
-        
-        assert_eq!(texture.num_hole_cards, 48*47/2); 
-        assert_eq!(texture.num_with_str8,  182);
+
+        assert_eq!(texture.num_hole_cards, 48 * 47 / 2);
+        assert_eq!(texture.num_with_str8, 182);
         assert_eq!(texture.num_with_str8_draw, 32);
         assert_eq!(texture.num_with_gut_shot, 150);
     }

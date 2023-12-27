@@ -1,6 +1,6 @@
-use crate::{ActionEnum, GameState, HoleCards, PlayerState, CommentedAction};
+use crate::{ActionEnum, CommentedAction, GameState, HoleCards, PlayerState};
 
-use super::{Agent};
+use super::Agent;
 
 #[derive(Default)]
 pub struct JustFold {

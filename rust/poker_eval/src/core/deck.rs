@@ -1,7 +1,7 @@
 use log::warn;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
-use crate::{Card, CardUsedType,  };
+use crate::{Card, CardUsedType};
 
 pub struct Deck {
     rng: StdRng,
@@ -22,8 +22,6 @@ impl Deck {
     pub fn reset(&mut self) {
         self.used_cards = CardUsedType::default();
     }
-
-    
 
     pub fn get_board(&mut self) -> Vec<Card> {
         let mut board = Vec::new();

@@ -1,7 +1,7 @@
-use redb::{Database, Error as ReDbError, ReadableTable, TableDefinition, ReadTransaction};
-use serde::{ Serialize, de::DeserializeOwned};
+use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDefinition};
+use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{CombinatorialIndex, Card, HoleCards, PartialRankContainer, partial_rank_cards};
+use crate::{partial_rank_cards, Card, CombinatorialIndex, HoleCards, PartialRankContainer};
 
 //u32 is usually  enough
 //In the worst case we have 5 cards * 2 cards
@@ -10,33 +10,31 @@ use crate::{CombinatorialIndex, Card, HoleCards, PartialRankContainer, partial_r
 // need 22 bits for 52 choose 5
 // need 11 bits for 52 choose 2
 
-pub const PARTIAL_RANK_PATH :&str = "/home/eric/git/poker_eval/data/partial_rank_re.db";
+pub const PARTIAL_RANK_PATH: &str = "/home/eric/git/poker_eval/data/partial_rank_re.db";
 
 const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("eval_cache");
 
 pub trait ProduceEvalWithHcResult<R> {
     fn produce_eval_result(cards: &[Card], hole_cards: &HoleCards) -> R;
-
 }
-
 
 //P is producer type
 //R is result
 //K is the key type
-pub struct EvalCacheWithHcReDb< P, R> 
-{
+pub struct EvalCacheWithHcReDb<P, R> {
     db: Database,
     c_index: CombinatorialIndex,
     pub cache_hits: u32,
     pub cache_misses: u32,
 
     phantom1: std::marker::PhantomData<P>,
-    phantom2: std::marker::PhantomData<R>
+    phantom2: std::marker::PhantomData<R>,
 }
 
-
-impl <P, R> EvalCacheWithHcReDb< P, R> 
-where P : ProduceEvalWithHcResult<R>, R :  Serialize + DeserializeOwned,
+impl<P, R> EvalCacheWithHcReDb<P, R>
+where
+    P: ProduceEvalWithHcResult<R>,
+    R: Serialize + DeserializeOwned,
 {
     //each different struct should get its own db path
     pub fn new(db_name: &str) -> Result<Self, ReDbError> {
@@ -57,22 +55,21 @@ where P : ProduceEvalWithHcResult<R>, R :  Serialize + DeserializeOwned,
             phantom1: std::marker::PhantomData,
             phantom2: std::marker::PhantomData,
             c_index: CombinatorialIndex::new(),
-
         })
     }
 
-    pub fn get_put(&mut self, cards: &[Card], hole_cards: &HoleCards   ) -> Result<R, ReDbError> {
+    pub fn get_put(&mut self, cards: &[Card], hole_cards: &HoleCards) -> Result<R, ReDbError> {
         let index = self.c_index.get_index(cards);
 
-        let mut index_bytes: [u8;6] = [0;6];
-         // Packing the u32 into the first 4 bytes of the array
-         index_bytes[0] = (index >> 24) as u8; // Extracts the first byte
-            index_bytes[1] = (index >> 16) as u8; // Extracts the second byte
-            index_bytes[2] = (index >> 8) as u8;  // Extracts the third byte
-            index_bytes[3] = index as u8;         // Extracts the fourth byte
-            index_bytes[4] = hole_cards.get_hi_card().into();
-            index_bytes[5] = hole_cards.get_lo_card().into();
-        
+        let mut index_bytes: [u8; 6] = [0; 6];
+        // Packing the u32 into the first 4 bytes of the array
+        index_bytes[0] = (index >> 24) as u8; // Extracts the first byte
+        index_bytes[1] = (index >> 16) as u8; // Extracts the second byte
+        index_bytes[2] = (index >> 8) as u8; // Extracts the third byte
+        index_bytes[3] = index as u8; // Extracts the fourth byte
+        index_bytes[4] = hole_cards.get_hi_card().into();
+        index_bytes[5] = hole_cards.get_lo_card().into();
+
         let opt = self.get(&index_bytes)?;
         if opt.is_some() {
             self.cache_hits += 1;
@@ -81,12 +78,11 @@ where P : ProduceEvalWithHcResult<R>, R :  Serialize + DeserializeOwned,
 
         let result = P::produce_eval_result(cards, hole_cards);
         self.cache_misses += 1;
-        
+
         self.put(&index_bytes, &result)?;
 
         Ok(result)
     }
-
 
     fn get(&mut self, index: &[u8]) -> Result<Option<R>, ReDbError> {
         let read_txn: ReadTransaction = self.db.begin_read()?;
@@ -118,18 +114,13 @@ where P : ProduceEvalWithHcResult<R>, R :  Serialize + DeserializeOwned,
     }
 }
 
-
-pub struct ProducePartialRankCards {
-
-}
+pub struct ProducePartialRankCards {}
 
 impl ProduceEvalWithHcResult<PartialRankContainer> for ProducePartialRankCards {
-    
-    fn produce_eval_result(board: &[Card], hole_cards: &HoleCards, ) -> PartialRankContainer {
+    fn produce_eval_result(board: &[Card], hole_cards: &HoleCards) -> PartialRankContainer {
         partial_rank_cards(&hole_cards, board)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -137,17 +128,22 @@ mod tests {
 
     use log::info;
 
-    use crate::{init_test_logger, Deck, Card, board_hc_eval_cache_redb::{EvalCacheWithHcReDb, PARTIAL_RANK_PATH, ProducePartialRankCards}, HoleCards};
+    use crate::{
+        board_hc_eval_cache_redb::{
+            EvalCacheWithHcReDb, ProducePartialRankCards, PARTIAL_RANK_PATH,
+        },
+        init_test_logger, Card, Deck, HoleCards,
+    };
 
     //// cargo test cache_perf --lib --release -- --nocapture
-    
+
     #[test]
     fn test_cache_partial_rank() {
         init_test_logger();
 
         let mut agent_deck = Deck::new();
         let mut cards: Vec<Card> = Vec::new();
-        
+
         cards.clear();
         agent_deck.reset();
         //delete if exists
@@ -155,10 +151,9 @@ mod tests {
 
         //let mut flop_texture_db = FlopTextureJamDb::new(db_name).unwrap();
 
-        
         //let mut flop_texture_db = FlopTextureReDb::new(re_db_name).unwrap();
         let mut partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
-        EvalCacheWithHcReDb::new(PARTIAL_RANK_PATH).unwrap();
+            EvalCacheWithHcReDb::new(PARTIAL_RANK_PATH).unwrap();
         let now = Instant::now();
         let iter_count = 500_000;
         // Code block to measure.

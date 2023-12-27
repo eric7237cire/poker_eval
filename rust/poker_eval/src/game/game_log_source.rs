@@ -1,10 +1,11 @@
 use log::trace;
 
 use crate::{
-    Card, ChipType, GameLog, GameState, HoleCards, InitialPlayerState, PlayerState, PokerError, CommentedAction,
+    Card, ChipType, CommentedAction, GameLog, GameState, HoleCards, InitialPlayerState,
+    PlayerState, PokerError,
 };
 
-use super::{game_runner_source::GameRunnerSource};
+use super::game_runner_source::GameRunnerSource;
 
 pub struct GameLogSource {
     game_log: GameLog,

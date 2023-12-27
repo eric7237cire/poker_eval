@@ -1,47 +1,54 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
-    ActionEnum, FlushDrawType, GameState, HoleCards, PlayerState, Round,
-    StraightDrawType, board_eval_cache_redb::{EvalCacheReDb, FLOP_TEXTURE_PATH, ProduceFlopTexture}, BoardTexture, board_hc_eval_cache_redb::{EvalCacheWithHcReDb, PARTIAL_RANK_PATH, ProducePartialRankCards},  PartialRankContainer, CommentedAction,
+    board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture, FLOP_TEXTURE_PATH},
+    board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards, PARTIAL_RANK_PATH},
+    ActionEnum, BoardTexture, CommentedAction, FlushDrawType, GameState, HoleCards,
+    PartialRankContainer, PlayerState, Round, StraightDrawType,
 };
 
 use postflop_solver::Range;
 
-use super::{Agent};
+use super::Agent;
 
 //#[derive(Default)]
-pub struct Tag {
+pub struct Tag<'a> {
     pub three_bet_range: Range,
     pub pfr_range: Range,
     pub hole_cards: Option<HoleCards>,
     pub name: String,
     flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture>,
-    partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>,
+    partial_rank_db:
+        Rc<RefCell<&'a mut EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>>,
 }
 
-impl Tag {
-
-    pub fn new(three_bet_range_str: &str,
+impl<'a> Tag<'a> {
+    pub fn new(
+        three_bet_range_str: &str,
         pfr_range_str: &str,
         name: &str,
-
+        partial_rank_db: Rc<
+            RefCell<&'a mut EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
+        >,
     ) -> Self {
-        let flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture> = EvalCacheReDb::new(FLOP_TEXTURE_PATH 
-           ).unwrap();
+        let flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture> =
+            EvalCacheReDb::new(FLOP_TEXTURE_PATH).unwrap();
 
-        let partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
-        EvalCacheWithHcReDb::new(PARTIAL_RANK_PATH).unwrap();
-        
-        
         Tag {
             three_bet_range: three_bet_range_str.parse().unwrap(),
             pfr_range: pfr_range_str.parse().unwrap(),
             hole_cards: None,
             name: name.to_string(),
             flop_texture_db,
-            partial_rank_db
+            partial_rank_db,
         }
     }
 
-    fn decide_preflop(&self, _player_state: &PlayerState, game_state: &GameState) -> CommentedAction {
+    fn decide_preflop(
+        &self,
+        _player_state: &PlayerState,
+        game_state: &GameState,
+    ) -> CommentedAction {
         let ri = self.hole_cards.unwrap().to_range_index();
 
         //Anyone bet so far?
@@ -93,11 +100,20 @@ impl Tag {
             .count();
 
         let hc = self.hole_cards.as_ref().unwrap();
-        let prc = self.partial_rank_db.get_put( &game_state.board, hc).unwrap();
+        let mut pdb = self.partial_rank_db.borrow_mut();
+        let prc = pdb.get_put(&game_state.board, hc).unwrap();
         let ft = self.flop_texture_db.get_put(&game_state.board).unwrap();
 
         let mut likes_hand_comments: Vec<String> = Vec::new();
 
+        if let Some(p) = prc.lo_pair {
+            if p.made_quads {
+                likes_hand_comments.push(format!("lo pair Quads {}", hc.get_hi_card().value));
+            }
+            if p.made_set {
+                likes_hand_comments.push(format!("lo pair Set {}", hc.get_hi_card().value));
+            }
+        }
         if let Some(p) = prc.hi_pair {
             if p.number_above == 0 {
                 likes_hand_comments.push(format!("Top pair {}", hc.get_hi_card().value));
@@ -142,7 +158,6 @@ impl Tag {
         let third_pot = current_pot / 3;
 
         if game_state.current_to_call == 0 {
-
             if non_folded_players >= 4 && ft.num_with_str8 > 150 {
                 return CommentedAction {
                     action: ActionEnum::Check,
@@ -208,7 +223,7 @@ impl Tag {
     }
 }
 
-impl Agent for Tag {
+impl<'a> Agent for Tag<'a> {
     fn decide(&mut self, player_state: &PlayerState, game_state: &GameState) -> CommentedAction {
         match game_state.current_round {
             Round::Preflop => {
