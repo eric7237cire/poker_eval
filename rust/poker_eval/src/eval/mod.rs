@@ -11,7 +11,10 @@ pub use value_set_iterator::*;
 mod combinatorial_index;
 pub use combinatorial_index::*;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod board_eval_cache_redb;
+
+#[cfg(not(target_arch = "wasm32"))]
 pub mod board_hc_eval_cache_redb;
 
 //mod eval_cache_jamdb;

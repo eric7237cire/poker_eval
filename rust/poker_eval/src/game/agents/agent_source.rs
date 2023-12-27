@@ -1,11 +1,10 @@
 use log::trace;
 
-use crate::{Card, ChipType, GameState, HoleCards, InitialPlayerState, PlayerState, PokerError};
+use crate::{Card, ChipType, GameState, HoleCards, InitialPlayerState, PlayerState, PokerError, CommentedAction};
 
 use crate::game::agents::Agent;
 use crate::game::game_runner_source::GameRunnerSource;
 
-use super::agents::AgentDecision;
 pub struct AgentSource {
     agents: Vec<Box<dyn Agent>>,
     pub players: Vec<InitialPlayerState>,
@@ -35,7 +34,7 @@ impl GameRunnerSource for AgentSource {
         &mut self,
         player_state: &PlayerState,
         game_state: &GameState,
-    ) -> Result<AgentDecision, PokerError> {
+    ) -> Result<CommentedAction, PokerError> {
         let player_index: usize = player_state.position.into();
         let agent = &mut self.agents[player_index];
         Ok(agent.decide(player_state, game_state))
@@ -87,29 +86,30 @@ mod tests {
     use crate::{
         game::{
             agents::{
-                build_initial_players_from_agents, Agent, AgentDeck, PassiveCallingStation, Tag,
+                build_initial_players_from_agents, Agent,  PassiveCallingStation, Tag, set_agent_hole_cards,
             },
             game_runner_source::GameRunnerSourceEnum,
         },
         game_runner_source::GameRunnerSource,
-        init_test_logger, test_game_runner, Card, GameRunner, InitialPlayerState,
+        init_test_logger, test_game_runner, Card, GameRunner, InitialPlayerState, Deck,
     };
 
     use super::AgentSource;
 
     fn build_agents() -> Vec<Box<dyn Agent>> {
         let calling_75 = "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+";
-        let calling_75_range: Range = calling_75.parse().unwrap();
-
+        
         let mut agents: Vec<Box<dyn Agent>> = Vec::new();
 
-        agents.push(Box::new(PassiveCallingStation::default()));
-        agents.push(Box::new(PassiveCallingStation::default()));
+        agents.push(Box::new(PassiveCallingStation::new(None, "Call 100% A")));
+        agents.push(Box::new(PassiveCallingStation::new(None, "Call 100% B")));
 
         for i in 0..2 {
-            let mut agent = PassiveCallingStation::default();
-            agent.calling_range = Some(calling_75_range.clone());
-            agent.name = format!("{} Cal Stn 75%", i + 1);
+            
+            let agent = PassiveCallingStation::new(
+                Some(calling_75),
+                &format!("{} Cal Stn 75%", i + 1)
+            );
             agents.push(Box::new(agent));
         }
 
@@ -126,7 +126,7 @@ mod tests {
     fn test_agents() {
         init_test_logger();
 
-        let mut agent_deck = AgentDeck::new();
+        let mut agent_deck = Deck::new();
 
         let mut hero_winnings: i64 = 0;
 
@@ -134,7 +134,7 @@ mod tests {
             agent_deck.reset();
 
             let mut agents = build_agents();
-            agent_deck.set_agent_hole_cards(&mut agents);
+            set_agent_hole_cards(&mut agent_deck, &mut agents);
 
             let players: Vec<InitialPlayerState> = build_initial_players_from_agents(&agents);
 

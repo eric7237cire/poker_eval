@@ -11,3 +11,6 @@ pub use card_util::*;
 
 mod test_util;
 pub use test_util::*;
+
+mod deck;
+pub use deck::*;

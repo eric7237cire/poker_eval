@@ -1,7 +1,7 @@
 use redb::{Database, Error as ReDbError, ReadableTable, TableDefinition, ReadTransaction};
 use serde::{ Serialize, de::DeserializeOwned};
 
-use crate::{CombinatorialIndex, Card, HoleCards};
+use crate::{CombinatorialIndex, Card, HoleCards, PartialRankContainer, partial_rank_cards};
 
 //u32 is usually  enough
 //In the worst case we have 5 cards * 2 cards
@@ -115,5 +115,93 @@ where P : ProduceEvalWithHcResult<R>, R :  Serialize + DeserializeOwned,
 
         write_txn.commit()?;
         Ok(())
+    }
+}
+
+
+pub struct ProducePartialRankCards {
+
+}
+
+impl ProduceEvalWithHcResult<PartialRankContainer> for ProducePartialRankCards {
+    
+    fn produce_eval_result(board: &[Card], hole_cards: &HoleCards, ) -> PartialRankContainer {
+        partial_rank_cards(&hole_cards, board)
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use std::time::Instant;
+
+    use log::info;
+
+    use crate::{init_test_logger, Deck, Card, board_hc_eval_cache_redb::{EvalCacheWithHcReDb, PARTIAL_RANK_PATH, ProducePartialRankCards}, HoleCards};
+
+    //// cargo test cache_perf --lib --release -- --nocapture
+    
+    #[test]
+    fn test_cache_partial_rank() {
+        init_test_logger();
+
+        let mut agent_deck = Deck::new();
+        let mut cards: Vec<Card> = Vec::new();
+        
+        cards.clear();
+        agent_deck.reset();
+        //delete if exists
+        //std::fs::remove_file(db_name).unwrap_or_default();
+
+        //let mut flop_texture_db = FlopTextureJamDb::new(db_name).unwrap();
+
+        
+        //let mut flop_texture_db = FlopTextureReDb::new(re_db_name).unwrap();
+        let mut partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
+        EvalCacheWithHcReDb::new(PARTIAL_RANK_PATH).unwrap();
+        let now = Instant::now();
+        let iter_count = 500_000;
+        // Code block to measure.
+        {
+            for i in 0..iter_count {
+                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
+                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
+                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
+                let hole1: Card = agent_deck.get_unused_card().unwrap().try_into().unwrap();
+                let hole2: Card = agent_deck.get_unused_card().unwrap().try_into().unwrap();
+                let hole_cards: HoleCards = HoleCards::new(hole1, hole2).unwrap();
+                let _texture = partial_rank_db.get_put(&cards, &hole_cards).unwrap();
+                agent_deck.clear_used_card(cards[0]);
+                agent_deck.clear_used_card(cards[1]);
+                agent_deck.clear_used_card(cards[2]);
+                cards.pop();
+                cards.pop();
+                cards.pop();
+                agent_deck.clear_used_card(hole1);
+                agent_deck.clear_used_card(hole2);
+
+                if partial_rank_db.cache_misses > 0 && partial_rank_db.cache_misses % 1000 == 0 {
+                    println!("Iter {}", i);
+                    info!(
+                        "Cache hits {} misses {}",
+                        partial_rank_db.cache_hits, partial_rank_db.cache_misses
+                    );
+                }
+                if partial_rank_db.cache_hits > 0 && partial_rank_db.cache_hits % 100_000 == 0 {
+                    println!("Iter {}", i);
+                    info!(
+                        "Cache hits {} misses {}",
+                        partial_rank_db.cache_hits, partial_rank_db.cache_misses
+                    );
+                }
+            }
+        }
+
+        let elapsed = now.elapsed();
+        println!("Elapsed: {:.2?}", elapsed);
+        info!(
+            "Cache hits {} misses {}",
+            partial_rank_db.cache_hits, partial_rank_db.cache_misses
+        );
     }
 }

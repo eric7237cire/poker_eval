@@ -1,6 +1,6 @@
-use crate::{ActionEnum, GameState, HoleCards, PlayerState};
+use crate::{ActionEnum, GameState, HoleCards, PlayerState, CommentedAction};
 
-use super::{Agent, AgentDecision};
+use super::{Agent};
 
 #[derive(Default)]
 pub struct JustFold {
@@ -9,8 +9,8 @@ pub struct JustFold {
 }
 
 impl Agent for JustFold {
-    fn decide(&mut self, _player_state: &PlayerState, _game_state: &GameState) -> AgentDecision {
-        AgentDecision {
+    fn decide(&mut self, _player_state: &PlayerState, _game_state: &GameState) -> CommentedAction {
+        CommentedAction {
             action: ActionEnum::Fold,
             comment: None,
         }

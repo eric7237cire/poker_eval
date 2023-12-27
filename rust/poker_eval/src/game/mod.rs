@@ -23,7 +23,6 @@ mod game_log_parser;
 pub mod game_log_source;
 pub mod game_runner_source;
 
-mod agent_source;
+#[cfg(not(target_arch = "wasm32"))]
 mod agents;
 
-pub use agents::AgentDeck;

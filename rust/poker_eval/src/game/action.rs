@@ -30,6 +30,11 @@ impl Display for ActionEnum {
     }
 }
 
+pub struct CommentedAction {
+    pub action: ActionEnum,
+    pub comment: Option<String>,
+}
+
 #[derive(Debug, PartialEq, Eq, Default)]
 pub struct PlayerAction {
     pub player_index: usize,

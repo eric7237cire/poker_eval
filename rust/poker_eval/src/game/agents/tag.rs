@@ -1,11 +1,11 @@
 use crate::{
-    partial_rank_cards, ActionEnum, FlushDrawType, GameState, HoleCards, PlayerState, Round,
-    StraightDrawType, board_eval_cache_redb::{EvalCacheReDb, FLOP_TEXTURE_PATH}, ProduceFlopTexture, BoardTexture, board_hc_eval_cache_redb::{EvalCacheWithHcReDb, PARTIAL_RANK_PATH}, ProducePartialRankCards, PartialRankContainer,
+    ActionEnum, FlushDrawType, GameState, HoleCards, PlayerState, Round,
+    StraightDrawType, board_eval_cache_redb::{EvalCacheReDb, FLOP_TEXTURE_PATH, ProduceFlopTexture}, BoardTexture, board_hc_eval_cache_redb::{EvalCacheWithHcReDb, PARTIAL_RANK_PATH, ProducePartialRankCards},  PartialRankContainer, CommentedAction,
 };
 
 use postflop_solver::Range;
 
-use super::{Agent, AgentDecision};
+use super::{Agent};
 
 //#[derive(Default)]
 pub struct Tag {
@@ -41,7 +41,7 @@ impl Tag {
         }
     }
 
-    fn decide_preflop(&self, _player_state: &PlayerState, game_state: &GameState) -> AgentDecision {
+    fn decide_preflop(&self, _player_state: &PlayerState, game_state: &GameState) -> CommentedAction {
         let ri = self.hole_cards.unwrap().to_range_index();
 
         //Anyone bet so far?
@@ -49,18 +49,18 @@ impl Tag {
 
         if !any_raises {
             if self.pfr_range.data[ri] > 0.0 {
-                AgentDecision {
+                CommentedAction {
                     action: ActionEnum::Raise(game_state.bb * 3),
                     comment: Some("Opening raise".to_string()),
                 }
             } else {
                 if game_state.current_to_call == 0 {
-                    AgentDecision {
+                    CommentedAction {
                         action: ActionEnum::Check,
                         comment: Some("Checking the big blind".to_string()),
                     }
                 } else {
-                    AgentDecision {
+                    CommentedAction {
                         action: ActionEnum::Fold,
                         comment: Some("Not in opening range".to_string()),
                     }
@@ -68,12 +68,12 @@ impl Tag {
             }
         } else {
             if self.pfr_range.data[ri] > 0.0 {
-                AgentDecision {
+                CommentedAction {
                     action: ActionEnum::Raise(game_state.current_to_call * 3),
                     comment: Some("3-betting".to_string()),
                 }
             } else {
-                AgentDecision {
+                CommentedAction {
                     action: ActionEnum::Fold,
                     comment: Some("Not in 3-bet range, folding to pfr".to_string()),
                 }
@@ -85,7 +85,7 @@ impl Tag {
         &mut self,
         _player_state: &PlayerState,
         game_state: &GameState,
-    ) -> AgentDecision {
+    ) -> CommentedAction {
         let non_folded_players = game_state
             .player_states
             .iter()
@@ -144,7 +144,7 @@ impl Tag {
         if game_state.current_to_call == 0 {
 
             if non_folded_players >= 4 && ft.num_with_str8 > 150 {
-                return AgentDecision {
+                return CommentedAction {
                     action: ActionEnum::Check,
                     comment: Some(format!(
                         "Worried someone ({} players) has a straight, {} / {} not betting",
@@ -154,7 +154,7 @@ impl Tag {
             }
 
             if likes_hand_comments.len() > 0 {
-                return AgentDecision {
+                return CommentedAction {
                     action: ActionEnum::Bet(third_pot),
                     comment: Some(format!(
                         "Bets 1/3 pot because likes hand: {}",
@@ -162,7 +162,7 @@ impl Tag {
                     )),
                 };
             } else {
-                return AgentDecision {
+                return CommentedAction {
                     action: ActionEnum::Check,
                     comment: Some("Checking because does not like hand".to_string()),
                 };
@@ -172,7 +172,7 @@ impl Tag {
                 / ((current_pot + game_state.pot()) as f64);
 
             if likes_hand_comments.is_empty() {
-                return AgentDecision {
+                return CommentedAction {
                     action: ActionEnum::Fold,
                     comment: Some(
                         "Folding because does not like hand and facing bet/raise".to_string(),
@@ -180,7 +180,7 @@ impl Tag {
                 };
             }
             if game_state.current_to_call < third_pot {
-                return AgentDecision {
+                return CommentedAction {
                     action: ActionEnum::Raise(third_pot),
                     comment: Some(format!(
                         "Raising because wants 1/3 pot bet and likes hand: {}",
@@ -189,7 +189,7 @@ impl Tag {
                 };
             }
             if game_state.current_to_call < half_pot {
-                return AgentDecision {
+                return CommentedAction {
                     action: ActionEnum::Call,
                     comment: Some(format!(
                         "Calling because likes hand and willing to call a 1/2 pot bet: {}",
@@ -197,7 +197,7 @@ impl Tag {
                     )),
                 };
             }
-            return AgentDecision {
+            return CommentedAction {
                 action: ActionEnum::Fold,
                 comment: Some(format!(
                     "Folding because likes hand but bet is too high. {:.2}",
@@ -209,7 +209,7 @@ impl Tag {
 }
 
 impl Agent for Tag {
-    fn decide(&mut self, player_state: &PlayerState, game_state: &GameState) -> AgentDecision {
+    fn decide(&mut self, player_state: &PlayerState, game_state: &GameState) -> CommentedAction {
         match game_state.current_round {
             Round::Preflop => {
                 return self.decide_preflop(player_state, game_state);
