@@ -17,3 +17,6 @@ pub use deck::*;
 
 mod bool_range;
 pub use bool_range::*;
+
+mod board;
+pub use board::*;

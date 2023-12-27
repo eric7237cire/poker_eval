@@ -259,7 +259,7 @@ mod tests {
     use log::info;
 
     use super::*;
-    use crate::{init_test_logger, board_hc_eval_cache_redb::{EvalCacheWithHcReDb, PARTIAL_RANK_PATH}, CardVec};
+    use crate::{init_test_logger, board_hc_eval_cache_redb::{EvalCacheWithHcReDb, PARTIAL_RANK_PATH}, Board};
 
 
     #[test]
@@ -318,7 +318,7 @@ mod tests {
             round_pot: 0,
             current_to_call: 0,
             min_raise: 5,
-            board: CardVec::try_from("2s 3c 8h 5d 6c").unwrap().0,
+            board: Board::try_from("2s 3c 8h 5d 6c").unwrap(),
             sb: 2,
             bb: 5,
             actions: vec![]

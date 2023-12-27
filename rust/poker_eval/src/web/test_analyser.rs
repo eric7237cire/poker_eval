@@ -4,7 +4,7 @@ mod tests {
 
     use crate::{
         web::{flop_analyzer, PlayerPreFlopState},
-        CardVec, HoleCards, Rank,
+        HoleCards, Rank, Board,
     };
 
     fn assert_equity(equity: f64, target: f64, tolerance: f64) {
@@ -25,15 +25,15 @@ mod tests {
         analyzer.set_player_state(3, PlayerPreFlopState::UseHoleCards as u8);
 
         analyzer
-            .set_player_cards(0, &CardVec::try_from("7h 6s").unwrap().as_vec_u8())
+            .set_player_cards(0, &Board::try_from("7h 6s").unwrap().as_vec_u8())
             .unwrap();
 
         analyzer
-            .set_player_cards(3, &CardVec::try_from("Th 9h").unwrap().as_vec_u8())
+            .set_player_cards(3, &Board::try_from("Th 9h").unwrap().as_vec_u8())
             .unwrap();
 
         analyzer
-            .set_board_cards(&CardVec::try_from("Qs Ts 7c").unwrap().as_vec_u8())
+            .set_board_cards(&Board::try_from("Qs Ts 7c").unwrap().as_vec_u8())
             .unwrap();
 
         let num_it = 10_000;
@@ -76,11 +76,11 @@ mod tests {
         analyzer.set_player_state(3, PlayerPreFlopState::UseHoleCards as u8);
 
         analyzer
-            .set_player_cards(0, &CardVec::try_from("8d 7s").unwrap().as_vec_u8())
+            .set_player_cards(0, &Board::try_from("8d 7s").unwrap().as_vec_u8())
             .unwrap();
 
         analyzer
-            .set_player_cards(3, &CardVec::try_from("Qd 5c").unwrap().as_vec_u8())
+            .set_player_cards(3, &Board::try_from("Qd 5c").unwrap().as_vec_u8())
             .unwrap();
 
         analyzer
@@ -91,7 +91,7 @@ mod tests {
             .unwrap();
 
         analyzer
-            .set_board_cards(&CardVec::try_from("Qs Ts 7c").unwrap().as_vec_u8())
+            .set_board_cards(&Board::try_from("Qs Ts 7c").unwrap().as_vec_u8())
             .unwrap();
 
         let num_it = 4_000;
@@ -166,21 +166,21 @@ mod tests {
         analyzer.set_player_state(2, PlayerPreFlopState::UseHoleCards as u8);
 
         analyzer
-            .set_player_cards(0, &CardVec::try_from("Td 8s").unwrap().as_vec_u8())
+            .set_player_cards(0, &Board::try_from("Td 8s").unwrap().as_vec_u8())
             .unwrap();
 
         analyzer
-            .set_player_cards(3, &CardVec::try_from("Ad Kc").unwrap().as_vec_u8())
+            .set_player_cards(3, &Board::try_from("Ad Kc").unwrap().as_vec_u8())
             .unwrap();
         analyzer
-            .set_player_cards(4, &CardVec::try_from("5s 5c").unwrap().as_vec_u8())
+            .set_player_cards(4, &Board::try_from("5s 5c").unwrap().as_vec_u8())
             .unwrap();
         analyzer
-            .set_player_cards(2, &CardVec::try_from("Qd 7d").unwrap().as_vec_u8())
+            .set_player_cards(2, &Board::try_from("Qd 7d").unwrap().as_vec_u8())
             .unwrap();
 
         analyzer
-            .set_board_cards(&CardVec::try_from("9s 8c Ah 5h 6h").unwrap().as_vec_u8())
+            .set_board_cards(&Board::try_from("9s 8c Ah 5h 6h").unwrap().as_vec_u8())
             .unwrap();
 
         let num_it = 1;
@@ -244,21 +244,21 @@ mod tests {
         analyzer.set_player_state(2, PlayerPreFlopState::UseHoleCards as u8);
 
         analyzer
-            .set_player_cards(0, &CardVec::try_from("Tc 8s").unwrap().as_vec_u8())
+            .set_player_cards(0, &Board::try_from("Tc 8s").unwrap().as_vec_u8())
             .unwrap();
 
         analyzer
-            .set_player_cards(3, &CardVec::try_from("Ad Jc").unwrap().as_vec_u8())
+            .set_player_cards(3, &Board::try_from("Ad Jc").unwrap().as_vec_u8())
             .unwrap();
         analyzer
-            .set_player_cards(4, &CardVec::try_from("Ks Qc").unwrap().as_vec_u8())
+            .set_player_cards(4, &Board::try_from("Ks Qc").unwrap().as_vec_u8())
             .unwrap();
         analyzer
-            .set_player_cards(2, &CardVec::try_from("Jd Td").unwrap().as_vec_u8())
+            .set_player_cards(2, &Board::try_from("Jd Td").unwrap().as_vec_u8())
             .unwrap();
 
         analyzer
-            .set_board_cards(&CardVec::try_from("2s 4c 7h Qh Ah").unwrap().as_vec_u8())
+            .set_board_cards(&Board::try_from("2s 4c 7h Qh Ah").unwrap().as_vec_u8())
             .unwrap();
 
         let num_it = 1;
@@ -319,14 +319,14 @@ mod tests {
         analyzer.set_player_state(4, PlayerPreFlopState::UseRange as u8);
 
         analyzer
-            .set_player_cards(0, &CardVec::try_from("2d 8s").unwrap().as_vec_u8())
+            .set_player_cards(0, &Board::try_from("2d 8s").unwrap().as_vec_u8())
             .unwrap();
 
         analyzer.set_player_range(3, "87, KJo, T2s").unwrap();
         analyzer.set_player_range(4, "22, 99").unwrap();
 
         // analyzer
-        //     .set_board_cards(&CardVec::try_from("9s 8c Ah 5h 6h").unwrap().as_vec_u8())
+        //     .set_board_cards(&Board::try_from("9s 8c Ah 5h 6h").unwrap().as_vec_u8())
         //     .unwrap();
 
         let num_it = 200;

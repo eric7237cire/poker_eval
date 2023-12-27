@@ -1,3 +1,4 @@
+use crate::Board;
 use crate::Card;
 use crate::InitialPlayerState;
 use crate::PlayerAction;
@@ -65,7 +66,7 @@ pub struct GameState {
     //Initial bet is also considered a raise for this value
     pub min_raise: ChipType,
 
-    pub board: Vec<Card>,
+    pub board: Board,
 
     pub sb: ChipType,
     pub bb: ChipType,

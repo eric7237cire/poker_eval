@@ -3,8 +3,9 @@
 // via trait that will do
 
 use std::cmp::min;
+use std::iter;
 
-use crate::{rank_cards, set_used_card, PlayerAction, Rank};
+use crate::{rank_cards, set_used_card, PlayerAction, Rank, Board};
 use crate::{
     ActionEnum, CardUsedType, ChipType, GameState, PlayerState, PokerError, Position, Round,
 };
@@ -52,7 +53,7 @@ impl GameRunner {
             round_pot: 0,
             current_to_call: bb,
             current_round: Round::Preflop,
-            board: Vec::new(),
+            board: Board::new(),
             sb,
             bb,
             actions: Vec::new(),
@@ -284,8 +285,11 @@ impl GameRunner {
         for _ in 0..cards_needed {
             let card = self.game_runner_source.get_next_board_card()?;
             set_used_card(card.into(), &mut self.used_cards)?;
-            self.game_state.board.push(card);
+            self.game_state.board.add_card(card);
         }
+
+        //to have it calculated
+        let index_ = self.game_state.board.get_index();
 
         Ok(())
     }
@@ -304,7 +308,7 @@ impl GameRunner {
         let mut hand_rankings: Vec<(Rank, usize)> = Vec::new();
         //let mut hand_ranking_strings: Vec<Option<String>> = vec![None; self.game_state.player_states.len()];
 
-        let mut eval_cards = self.game_state.board.clone();
+        let mut eval_cards = self.game_state.board.as_slice_card().to_vec();
 
         for player_index in 0..self.game_state.player_states.len() {
             if self.game_state.player_states[player_index].folded {
@@ -317,9 +321,11 @@ impl GameRunner {
             }
 
             let hole_cards = self.game_runner_source.get_hole_cards(player_index)?;
-
             hole_cards.add_to_eval(&mut eval_cards);
-            let rank = rank_cards(&eval_cards);
+            // let eval_iter = iter::once(hole_cards.get_hi_card())
+            //     .chain(iter::once(hole_cards.get_lo_card()))
+            //     .chain(eval_cards.iter());
+            let rank = rank_cards(eval_cards.iter());
 
             self.game_state.player_states[player_index].final_eval_comment =
                 Some(format!("{}", rank.print_winning(&eval_cards)));
@@ -943,14 +949,14 @@ impl GameRunner {
                 s.push_str(&format!("*** {} ***\n", round));
 
                 if round == Round::Flop {
-                    self.game_state.board[0..3].iter().for_each(|c| {
+                    self.game_state.board.as_slice_card()[0..3].iter().for_each(|c| {
                         s.push_str(&format!("{} ", c));
                     });
                     s.push_str("\n");
                 } else if round == Round::Turn {
-                    s.push_str(&format!("{}\n", self.game_state.board[3]));
+                    s.push_str(&format!("{}\n", self.game_state.board.as_slice_card()[3]));
                 } else if round == Round::River {
-                    s.push_str(&format!("{}\n", self.game_state.board[4]));
+                    s.push_str(&format!("{}\n", self.game_state.board.as_slice_card()[4]));
                 }
             }
 
@@ -982,6 +988,7 @@ impl GameRunner {
         let board_url_param = self
             .game_state
             .board
+            .as_slice_card()
             .iter()
             .map(|c| format!("{}", c))
             .collect::<Vec<String>>()
@@ -1021,7 +1028,7 @@ impl GameRunner {
 mod tests {
     use log::debug;
 
-    use crate::{game::game_log_source::GameLogSource, init_test_logger, CardVec, GameLog};
+    use crate::{game::game_log_source::GameLogSource, init_test_logger, GameLog};
 
     use super::*;
 
@@ -1094,8 +1101,8 @@ Plyr D - 15 # Lost 30, 10
         assert_eq!(game_runner.game_state.prev_round_pot, 12 + 30 * 2 + 10);
         assert_eq!(game_runner.game_state.round_pot, 0);
         assert_eq!(
-            game_runner.game_state.board,
-            CardVec::try_from("2s 7c 8s").unwrap().0
+            game_runner.game_state.board.as_slice_card(),
+            Board::try_from("2s 7c 8s").unwrap().as_slice_card()
         );
 
         //flop actions
@@ -1108,8 +1115,8 @@ Plyr D - 15 # Lost 30, 10
         assert_eq!(game_runner.game_state.prev_round_pot, 12 + 30 * 2 + 10 + 20);
         assert_eq!(game_runner.game_state.round_pot, 0);
         assert_eq!(
-            game_runner.game_state.board,
-            CardVec::try_from("2s 7c 8s 2h").unwrap().0
+            game_runner.game_state.board.as_slice_card(),
+            Board::try_from("2s 7c 8s 2h").unwrap().as_slice_card()
         );
 
         //turn actions
@@ -1122,8 +1129,8 @@ Plyr D - 15 # Lost 30, 10
         assert_eq!(game_runner.game_state.prev_round_pot, 12 + 30 * 2 + 10 + 30);
         assert_eq!(game_runner.game_state.round_pot, 0);
         assert_eq!(
-            game_runner.game_state.board,
-            CardVec::try_from("2s 7c 8s 2h 2d").unwrap().0
+            game_runner.game_state.board.as_slice_card(),
+            Board::try_from("2s 7c 8s 2h 2d").unwrap().as_slice_card(),
         );
 
         //river actions

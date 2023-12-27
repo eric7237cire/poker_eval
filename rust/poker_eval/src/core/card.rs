@@ -441,55 +441,55 @@ impl TryFrom<usize> for Card {
     }
 }
 
-pub struct CardVec(pub Vec<Card>);
+// pub struct CardVec(pub Vec<Card>);
 
-impl TryFrom<&str> for CardVec {
-    type Error = PokerError;
+// impl TryFrom<&str> for CardVec {
+//     type Error = PokerError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let mut cards = Vec::with_capacity(7);
-        let mut chars = value.chars().filter(|c| c.is_alphanumeric());
-        while let Some(c) = chars.next() {
-            let value = c;
-            let suit = chars.next().ok_or(PokerError::from_string(format!(
-                "Unable to parse suit from {}",
-                value
-            )))?;
-            cards.push(Card::new(value.try_into()?, suit.try_into()?));
-        }
-        Ok(CardVec(cards))
-    }
-}
+//     fn try_from(value: &str) -> Result<Self, Self::Error> {
+//         let mut cards = Vec::with_capacity(7);
+//         let mut chars = value.chars().filter(|c| c.is_alphanumeric());
+//         while let Some(c) = chars.next() {
+//             let value = c;
+//             let suit = chars.next().ok_or(PokerError::from_string(format!(
+//                 "Unable to parse suit from {}",
+//                 value
+//             )))?;
+//             cards.push(Card::new(value.try_into()?, suit.try_into()?));
+//         }
+//         Ok(CardVec(cards))
+//     }
+// }
 
-impl FromStr for CardVec {
-    type Err = PokerError;
+// impl FromStr for CardVec {
+//     type Err = PokerError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        CardVec::try_from(s)
-    }
-}
+//     fn from_str(s: &str) -> Result<Self, Self::Err> {
+//         CardVec::try_from(s)
+//     }
+// }
 
-impl CardVec {
-    pub fn as_vec_u8(&self) -> Vec<u8> {
-        self.0
-            .iter()
-            .map(|c| {
-                let c_u8: u8 = (*c).into();
-                c_u8
-            })
-            .collect()
-    }
-}
+// impl CardVec {
+//     pub fn as_vec_u8(&self) -> Vec<u8> {
+//         self.0
+//             .iter()
+//             .map(|c| {
+//                 let c_u8: u8 = (*c).into();
+//                 c_u8
+//             })
+//             .collect()
+//     }
+// }
 
-impl Display for CardVec {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut s = String::new();
-        for card in self.0.iter() {
-            s.push_str(&format!("{} ", card));
-        }
-        write!(f, "{}", s.trim())
-    }
-}
+// impl Display for CardVec {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         let mut s = String::new();
+//         for card in self.0.iter() {
+//             s.push_str(&format!("{} ", card));
+//         }
+//         write!(f, "{}", s.trim())
+//     }
+// }
 
 // pub fn cards_from_string(a_string: &str) -> Result<Vec<Card>, PokerError> {
 //     let mut cards = Vec::with_capacity(7);
@@ -654,6 +654,8 @@ pub fn get_filtered_range_set(range_set: &InRangeType, used_card_set: CardUsedTy
 #[cfg(test)]
 mod tests {
     use postflop_solver::{card_from_str, index_to_card_pair};
+
+    use crate::Board;
 
     use super::*;
     use std::mem;
@@ -849,7 +851,7 @@ mod tests {
         let range_set = range_string_to_set(range_str).unwrap();
 
         let mut used_cards = CardUsedType::default();
-        let cards = CardVec::try_from("8d 7s Qd 5c Qs Ts 7c").unwrap().0;
+        let cards = Board::try_from("8d 7s Qd 5c Qs Ts 7c").unwrap().as_slice_card().to_vec();
 
         for card in cards.iter() {
             used_cards.set((*card).into(), true);

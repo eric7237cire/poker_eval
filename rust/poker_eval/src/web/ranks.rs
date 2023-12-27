@@ -71,7 +71,7 @@ pub fn eval_current(
 
         player_cards[active_index].add_to_eval(eval_cards);
 
-        let rank = rank_cards(&eval_cards);
+        let rank = rank_cards(eval_cards.iter());
 
         update_results_from_rank(
             &mut flop_results[active_index].street_rank_results[street_index],

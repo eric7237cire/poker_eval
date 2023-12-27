@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::InRangeType;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct BoolRange {
     pub data: InRangeType,
 }

@@ -1,7 +1,7 @@
 use log::warn;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
-use crate::{Card, CardUsedType};
+use crate::{Card, CardUsedType, PokerError};
 
 pub struct Deck {
     rng: StdRng,
@@ -40,7 +40,7 @@ impl Deck {
         assert_eq!(count_after + 1, count_before);
     }
 
-    pub fn get_unused_card(&mut self) -> Option<usize> {
+    pub fn get_unused_card(&mut self) -> Result<Card, PokerError> {
         let mut attempts = 0;
         loop {
             let rand_int: usize = self.rng.gen_range(0..52);
@@ -48,16 +48,15 @@ impl Deck {
             //let card = Card::from(rand_int);
             if !self.used_cards[rand_int] {
                 self.used_cards.set(rand_int, true);
-                return Some(rand_int);
+                return Ok(rand_int.try_into()?);
             }
             attempts += 1;
             if attempts > MAX_RAND_NUMBER_ATTEMPS {
-                warn!(
+                return Err(format!(
                     "Unable to find unused card after {} attempts, # of used cards {}",
                     attempts,
                     self.used_cards.count_ones()
-                );
-                return None;
+                ).into());
             }
         }
     }

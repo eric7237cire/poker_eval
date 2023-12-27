@@ -1,7 +1,7 @@
 use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{calc_board_texture, BoardTexture, Card, CombinatorialIndex};
+use crate::{calc_board_texture, BoardTexture, Card, CombinatorialIndex, Board};
 
 //u32 is usually  enough
 //In the worst case we have 5 cards * 2 cards
@@ -23,7 +23,6 @@ pub trait ProduceEvalResult<R> {
 //K is the key type
 pub struct EvalCacheReDb<P, R> {
     db: Database,
-    c_index: CombinatorialIndex,
     pub cache_hits: u32,
     pub cache_misses: u32,
 
@@ -55,23 +54,21 @@ where
             cache_misses: 0,
             phantom1: std::marker::PhantomData,
             phantom2: std::marker::PhantomData,
-            c_index: CombinatorialIndex::new(),
         })
     }
 
-    pub fn get_put(&mut self, cards: &[Card]) -> Result<R, ReDbError> {
-        let index = self.c_index.get_index(cards);
-
-        let opt = self.get(index)?;
+    pub fn get_put(&mut self, board: &Board) -> Result<R, ReDbError> {
+        
+        let opt = self.get(board.get_precalc_index().unwrap())?;
         if opt.is_some() {
             self.cache_hits += 1;
             return Ok(opt.unwrap());
         }
 
-        let result = P::produce_eval_result(cards);
+        let result = P::produce_eval_result(board.as_slice_card());
         self.cache_misses += 1;
 
-        self.put(index, &result)?;
+        self.put(board.get_precalc_index().unwrap(), &result)?;
 
         Ok(result)
     }
@@ -143,9 +140,8 @@ mod tests {
         init_test_logger();
 
         let mut agent_deck = Deck::new();
-        let mut cards: Vec<Card> = Vec::new();
-
-        cards.clear();
+        let mut cards = Board::new();
+        
         agent_deck.reset();
         //delete if exists
         //std::fs::remove_file(db_name).unwrap_or_default();
@@ -160,16 +156,10 @@ mod tests {
         // Code block to measure.
         {
             for i in 0..iter_count {
-                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
-                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
-                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
-                let _texture = flop_texture_db.get_put(&cards).unwrap();
-                agent_deck.clear_used_card(cards[0]);
-                agent_deck.clear_used_card(cards[1]);
-                agent_deck.clear_used_card(cards[2]);
-                cards.pop();
-                cards.pop();
-                cards.pop();
+                cards.add_cards_from_deck(&mut agent_deck, 3).unwrap();
+                let _texture = flop_texture_db.get_put(&mut cards).unwrap();
+                
+                cards.clear_cards_from_deck(&mut agent_deck);
 
                 if flop_texture_db.cache_misses > 0 && flop_texture_db.cache_misses % 1000 == 0 {
                     println!("Iter {}", i);

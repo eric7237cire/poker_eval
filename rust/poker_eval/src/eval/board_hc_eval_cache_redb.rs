@@ -2,7 +2,7 @@ use log::debug;
 use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{partial_rank_cards, Card, CombinatorialIndex, HoleCards, PartialRankContainer};
+use crate::{partial_rank_cards, Card, HoleCards, PartialRankContainer, Board};
 
 //u32 is usually  enough
 //In the worst case we have 5 cards * 2 cards
@@ -24,7 +24,6 @@ pub trait ProduceEvalWithHcResult<R> {
 //K is the key type
 pub struct EvalCacheWithHcReDb<P, R> {
     db: Database,
-    c_index: CombinatorialIndex,
     pub cache_hits: u32,
     pub cache_misses: u32,
 
@@ -55,12 +54,11 @@ where
             cache_misses: 0,
             phantom1: std::marker::PhantomData,
             phantom2: std::marker::PhantomData,
-            c_index: CombinatorialIndex::new(),
         })
     }
 
-    pub fn get_put(&mut self, cards: &[Card], hole_cards: &HoleCards) -> Result<R, ReDbError> {
-        let index = self.c_index.get_index(cards);
+    pub fn get_put(&mut self, cards: &Board, hole_cards: &HoleCards) -> Result<R, ReDbError> {
+        let index = cards.get_precalc_index().unwrap();
 
         let mut index_bytes: [u8; 6] = [0; 6];
         // Packing the u32 into the first 4 bytes of the array
@@ -77,7 +75,7 @@ where
             return Ok(opt.unwrap());
         }
 
-        let result = P::produce_eval_result(cards, hole_cards);
+        let result = P::produce_eval_result(cards.as_slice_card(), hole_cards);
         self.cache_misses += 1;
 
         self.put(&index_bytes, &result)?;
@@ -143,7 +141,7 @@ mod tests {
         board_hc_eval_cache_redb::{
             EvalCacheWithHcReDb, ProducePartialRankCards, PARTIAL_RANK_PATH,
         },
-        init_test_logger, Card, Deck, HoleCards,
+        init_test_logger, Card, Deck, HoleCards, Board,
     };
 
     //// cargo test cache_perf --lib --release -- --nocapture
@@ -155,9 +153,8 @@ mod tests {
         init_test_logger();
 
         let mut agent_deck = Deck::new();
-        let mut cards: Vec<Card> = Vec::new();
+        let mut cards = Board::new();
 
-        cards.clear();
         agent_deck.reset();
         //delete if exists
         //std::fs::remove_file(db_name).unwrap_or_default();
@@ -172,19 +169,14 @@ mod tests {
         // Code block to measure.
         {
             for i in 0..iter_count {
-                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
-                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
-                cards.push(agent_deck.get_unused_card().unwrap().try_into().unwrap());
+                
+                cards.add_cards_from_deck(&mut agent_deck, 3);
                 let hole1: Card = agent_deck.get_unused_card().unwrap().try_into().unwrap();
                 let hole2: Card = agent_deck.get_unused_card().unwrap().try_into().unwrap();
                 let hole_cards: HoleCards = HoleCards::new(hole1, hole2).unwrap();
-                let _texture = partial_rank_db.get_put(&cards, &hole_cards).unwrap();
-                agent_deck.clear_used_card(cards[0]);
-                agent_deck.clear_used_card(cards[1]);
-                agent_deck.clear_used_card(cards[2]);
-                cards.pop();
-                cards.pop();
-                cards.pop();
+                let _texture = partial_rank_db.get_put(&mut cards, &hole_cards).unwrap();
+                cards.clear_cards_from_deck(&mut agent_deck);
+                
                 agent_deck.clear_used_card(hole1);
                 agent_deck.clear_used_card(hole2);
 

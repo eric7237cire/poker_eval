@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use crate::{core::Card, CardValue, Suit};
 use bitvec::prelude::*;
 use itertools::Itertools;
@@ -432,12 +434,16 @@ impl Default for CardsMetrics {
     }
 }
 
-pub fn calc_cards_metrics(cards: &[Card]) -> CardsMetrics {
+pub fn calc_cards_metrics<I, B>(cards: I) -> CardsMetrics 
+where I: Iterator<Item=B>,
+//to accept both Card and &Card
+B: Borrow<Card>,
+{
     let mut card_metrics = CardsMetrics::default();
 
-    for c in cards.iter() {
-        let v = c.value as u8;
-        let s = c.suit as u8;
+    for c in cards {
+        let v = c.borrow().value as u8;
+        let s = c.borrow().suit as u8;
         card_metrics.value_set |= 1 << v;
         card_metrics.value_to_count[v as usize] += 1;
         card_metrics.suit_value_sets[s as usize] |= 1 << v;
@@ -451,8 +457,12 @@ pub fn calc_cards_metrics(cards: &[Card]) -> CardsMetrics {
     card_metrics
 }
 
-pub fn rank_cards(cards: &[Card]) -> Rank {
-    assert!(cards.len() <= 7);
+pub fn rank_cards<I, B>(cards: I) -> Rank 
+where I: Iterator<Item=B>,
+//to accept both Card and &Card
+B: Borrow<Card>
+{
+    //assert!(cards.len() <= 7);
     let cards_metrics = calc_cards_metrics(cards);
 
     // Find out if there's a flush
@@ -519,7 +529,7 @@ pub fn rank_cards(cards: &[Card]) -> Rank {
 mod tests {
     use std::{collections::HashMap, io::Write};
 
-    use crate::{add_eval_card, get_unused_card, init_test_logger, CardVec};
+    use crate::{add_eval_card, get_unused_card, init_test_logger, Board};
     use itertools::Itertools;
     use postflop_solver::Hand;
     use rand::{rngs::StdRng, SeedableRng};
@@ -534,8 +544,8 @@ mod tests {
         let range_set = range_string_to_set(range_str).unwrap();
 
         let mut used_cards = CardUsedType::default();
-        let flop = CardVec::try_from("Qs Ts 7c").unwrap().0;
-        let other_cards = CardVec::try_from("8d 7s Qd 5c").unwrap().0;
+        let flop = Board::try_from("Qs Ts 7c").unwrap().as_slice_card().to_vec();
+        let other_cards = Board::try_from("8d 7s Qd 5c").unwrap().as_slice_card().to_vec();
 
         for card in flop.iter() {
             used_cards.set((*card).into(), true);
@@ -557,13 +567,13 @@ mod tests {
         let mut ace_high = 0;
         let mut king_high = 0;*/
 
-        let mut eval_cards = flop.clone();
+        let mut eval_cards = flop.clone().to_vec();
 
         for hole_cards in possible.iter() {
             eval_cards.push(hole_cards.get_hi_card());
             eval_cards.push(hole_cards.get_lo_card());
 
-            let rank = rank_cards(&eval_cards);
+            let rank = rank_cards(eval_cards.iter());
             match rank {
                 Rank::HighCard(_) => {
                     num_high_card += 1;
@@ -638,15 +648,15 @@ mod tests {
         let range_set = range_string_to_set(range_str).unwrap();
 
         let mut used_cards = CardUsedType::default();
-        let flop = CardVec::try_from("Qs Ts 7c").unwrap().0;
+        let flop = Board::try_from("Qs Ts 7c").unwrap().as_slice_card().to_vec();
 
         let flop_hand = Hand::new();
         let flop_hand = flop_hand.add_card(flop[0].into());
         let flop_hand = flop_hand.add_card(flop[1].into());
         let flop_hand = flop_hand.add_card(flop[2].into());
 
-        let p1_hole_cards = CardVec::try_from("8d 7s").unwrap().0;
-        let p2_hole_cards = CardVec::try_from("Qd 5c").unwrap().0;
+        let p1_hole_cards = Board::try_from("8d 7s").unwrap().as_slice_card().to_vec();
+        let p2_hole_cards = Board::try_from("Qd 5c").unwrap().as_slice_card().to_vec();
 
         for card in flop.iter() {
             used_cards.set((*card).into(), true);
@@ -685,19 +695,19 @@ mod tests {
 
                     total_showdowns += 1;
 
-                    let mut p1_cards = flop.clone();
+                    let mut p1_cards = flop.clone().to_vec();
                     p1_cards.push(p1_hole_cards[0]);
                     p1_cards.push(p1_hole_cards[1]);
                     p1_cards.push(turn_card.try_into().unwrap());
                     p1_cards.push(river_card.try_into().unwrap());
 
-                    let mut p2_cards = flop.clone();
+                    let mut p2_cards = flop.clone().to_vec();
                     p2_cards.push(p2_hole_cards[0]);
                     p2_cards.push(p2_hole_cards[1]);
                     p2_cards.push(turn_card.try_into().unwrap());
                     p2_cards.push(river_card.try_into().unwrap());
 
-                    let mut p3_cards = flop.clone();
+                    let mut p3_cards = flop.clone().to_vec();
                     p3_cards.push(p.get_hi_card());
                     p3_cards.push(p.get_lo_card());
                     p3_cards.push(turn_card.try_into().unwrap());
@@ -718,9 +728,9 @@ mod tests {
                     let p3_hand = p3_hand.add_card(turn_card.into());
                     let p3_hand = p3_hand.add_card(river_card.into());
 
-                    let p1_rank = rank_cards(&p1_cards);
-                    let p2_rank = rank_cards(&p2_cards);
-                    let p3_rank = rank_cards(&p3_cards);
+                    let p1_rank = rank_cards(p1_cards.iter());
+                    let p2_rank = rank_cards(p2_cards.iter());
+                    let p3_rank = rank_cards(p3_cards.iter());
 
                     let p1_eval = p1_hand.evaluate_internal();
                     let p2_eval = p2_hand.evaluate_internal();
@@ -878,12 +888,12 @@ mod tests {
 
                     h1.add_to_eval(&mut eval_cards);
                     assert_eq!(7, eval_cards.len());
-                    let rank1 = rank_cards(&eval_cards);
+                    let rank1 = rank_cards(eval_cards.iter());
                     h1.remove_from_eval(&mut eval_cards).unwrap();
 
                     h2.add_to_eval(&mut eval_cards);
                     assert_eq!(7, eval_cards.len());
-                    let rank2 = rank_cards(&eval_cards);
+                    let rank2 = rank_cards(eval_cards.iter());
                     h2.remove_from_eval(&mut eval_cards).unwrap();
 
                     range_hole_idx_showdown_count[r1_idx] += 1;
@@ -935,65 +945,62 @@ mod tests {
     fn test_print_winning() {
         init_test_logger();
 
-        let cards: CardVec = "8h Js 3d Qd 2h Tc 7h".parse().unwrap();
-        let rank = rank_cards(&cards.0);
-        assert_eq!("High Card - Qd Js Tc 8h 7h", rank.print_winning(&cards.0));
+        let cards: Board = "8h Js 3d Qd 2h Tc 7h".parse().unwrap();
+        let rank = rank_cards(cards.as_slice_card().iter());
+        assert_eq!("High Card - Qd Js Tc 8h 7h", rank.print_winning(cards.as_slice_card()));
 
-        let cards: CardVec = "8h 2s 3d Qd 2h Tc 7h".parse().unwrap();
-        let rank = rank_cards(&cards.0);
-        assert_eq!("One Pair - 2s 2h Qd Tc 8h", rank.print_winning(&cards.0));
+        let cards: Board = "8h 2s 3d Qd 2h Tc 7h".parse().unwrap();
+        let rank = rank_cards(cards.as_slice_card().iter());
+        assert_eq!("One Pair - 2s 2h Qd Tc 8h", rank.print_winning(cards.as_slice_card()));
 
-        let cards: CardVec = "8h 2s Td Qd 2h Tc 7h".parse().unwrap();
-        let rank = rank_cards(&cards.0);
-        assert_eq!("Two Pair - Td Tc 2s 2h Qd", rank.print_winning(&cards.0));
+        let cards: Board = "8h 2s Td Qd 2h Tc 7h".parse().unwrap();
+        let rank = rank_cards(cards.as_slice_card().iter());
+        assert_eq!("Two Pair - Td Tc 2s 2h Qd", rank.print_winning(cards.as_slice_card()));
 
-        let cards: CardVec = "8h 2s Td Qd 2h Ac 2c".parse().unwrap();
-        let rank = rank_cards(&cards.0);
-        assert_eq!("Trips - 2s 2h 2c Ac Qd", rank.print_winning(&cards.0));
+        let cards: Board = "8h 2s Td Qd 2h Ac 2c".parse().unwrap();
+        let rank = rank_cards(cards.as_slice_card().iter());
+        assert_eq!("Trips - 2s 2h 2c Ac Qd", rank.print_winning(cards.as_slice_card()));
 
-        let cards: CardVec = "5h 3s 5d Ad 4h Ac 2c".parse().unwrap();
-        let rank = rank_cards(&cards.0);
-        assert_eq!("Straight - Ad 2c 3s 4h 5h", rank.print_winning(&cards.0));
+        let cards: Board = "5h 3s 5d Ad 4h Ac 2c".parse().unwrap();
+        let rank = rank_cards(cards.as_slice_card().iter());
+        assert_eq!("Straight - Ad 2c 3s 4h 5h", rank.print_winning(cards.as_slice_card()));
 
-        let cards: CardVec = "5h 3s 5d Ad 4h 6c 2c".parse().unwrap();
-        let rank = rank_cards(&cards.0);
-        assert_eq!("Straight - 2c 3s 4h 5h 6c", rank.print_winning(&cards.0));
+        let cards: Board = "5h 3s 5d Ad 4h 6c 2c".parse().unwrap();
+        let rank = rank_cards(cards.as_slice_card().iter());
+        assert_eq!("Straight - 2c 3s 4h 5h 6c", rank.print_winning(cards.as_slice_card()));
 
-        let cards: CardVec = "Kh Js 5d Ad Th Qc 2c".parse().unwrap();
-        let rank = rank_cards(&cards.0);
-        assert_eq!("Straight - Th Js Qc Kh Ad", rank.print_winning(&cards.0));
+        let cards: Board = "Kh Js 5d Ad Th Qc 2c".parse().unwrap();
+        let rank = rank_cards(cards.as_slice_card().iter());
+        assert_eq!("Straight - Th Js Qc Kh Ad", rank.print_winning(cards.as_slice_card()));
 
-        let cards: CardVec = "2h Js 8h Ah Th 3h 7h".parse().unwrap();
-        let rank = rank_cards(&cards.0);
-        assert_eq!("Flush - Ah Th 8h 7h 3h", rank.print_winning(&cards.0));
+        let cards: Board = "2h Js 8h Ah Th 3h 7h".parse().unwrap();
+        let rank = rank_cards(cards.as_slice_card().iter());
+        assert_eq!("Flush - Ah Th 8h 7h 3h", rank.print_winning(&cards.as_slice_card()));
 
-        let cards: CardVec = "2h Js As Ah Th 2s 2c".parse().unwrap();
-        let rank = rank_cards(&cards.0);
-        assert_eq!("Full House - 2h 2s 2c As Ah", rank.print_winning(&cards.0));
+        let cards: Board = "2h Js As Ah Th 2s 2c".parse().unwrap();
+        let rank = rank_cards(cards.as_slice_card().iter());
+        assert_eq!("Full House - 2h 2s 2c As Ah", rank.print_winning(cards.as_slice_card()));
 
-        let cards: CardVec = "2h Js 2d 9h Th 2s 2c".parse().unwrap();
-        let rank = rank_cards(&cards.0);
-        assert_eq!("Quads - 2h 2d 2s 2c Js", rank.print_winning(&cards.0));
+        let cards: Board = "2h Js 2d 9h Th 2s 2c".parse().unwrap();
+        let rank = rank_cards(cards.as_slice_card().iter());
+        assert_eq!("Quads - 2h 2d 2s 2c Js", rank.print_winning(cards.as_slice_card()));
 
-        let cards: CardVec = "2h Ah 2d 3h Th 4h 5h".parse().unwrap();
-        let rank = rank_cards(&cards.0);
+        let cards: Board = "2h Ah 2d 3h Th 4h 5h".parse().unwrap();
+        let rank = rank_cards(cards.as_slice_card().iter());
         assert_eq!(
             "Straight Flush - Ah 2h 3h 4h 5h",
-            rank.print_winning(&cards.0)
-        );
+            rank.print_winning(cards.as_slice_card()));
 
-        let cards: CardVec = "2h As 2d 3h Ah 4h 5h".parse().unwrap();
-        let rank = rank_cards(&cards.0);
+        let cards: Board = "2h As 2d 3h Ah 4h 5h".parse().unwrap();
+        let rank = rank_cards(cards.as_slice_card().iter());
         assert_eq!(
             "Straight Flush - Ah 2h 3h 4h 5h",
-            rank.print_winning(&cards.0)
-        );
+            rank.print_winning(cards.as_slice_card()));
 
-        let cards: CardVec = "9s 7s As Js Qh Ts 8s".parse().unwrap();
-        let rank = rank_cards(&cards.0);
+        let cards: Board = "9s 7s As Js Qh Ts 8s".parse().unwrap();
+        let rank = rank_cards(cards.as_slice_card().iter());
         assert_eq!(
             "Straight Flush - 7s 8s 9s Ts Js",
-            rank.print_winning(&cards.0)
-        );
+            rank.print_winning(cards.as_slice_card()));
     }
 }
