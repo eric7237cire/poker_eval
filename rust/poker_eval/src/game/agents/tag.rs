@@ -247,3 +247,85 @@ impl Agent for Tag {
         &self.name
     }
 }
+
+
+
+#[cfg(test)]
+mod tests {
+    use std::rc::Rc;
+
+    use log::info;
+
+    use super::*;
+    use crate::{init_test_logger, board_hc_eval_cache_redb::{EvalCacheWithHcReDb, PARTIAL_RANK_PATH}, CardVec};
+
+
+    #[test]
+    fn test_doesnt_bet_river() {
+        init_test_logger();
+
+        let partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
+            EvalCacheWithHcReDb::new(PARTIAL_RANK_PATH).unwrap();
+
+        let rcref_pdb = Rc::new(RefCell::new(partial_rank_db));
+        
+        let mut tag = Tag::new(
+            "JJ+,AJs+,AQo+,KQs",
+            "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+",
+            "Hero",
+            rcref_pdb.clone(),
+        );
+
+        let player_state = PlayerState {
+            stack: 410,
+            folded: false,
+            position: 4.try_into().unwrap(),
+            player_name: "Hero".to_string(),
+            initial_stack: 500,
+            cur_round_putting_in_pot: None,
+            all_in: false,
+            final_eval_comment: None
+        };
+
+        let mut other_players: Vec<PlayerState> = Vec::with_capacity(5);
+
+        for pos in 0..4 {
+            other_players.push(PlayerState {
+                stack: 500,
+                folded: false,
+                position: pos.try_into().unwrap(),
+                player_name: "Villian".to_string(),
+                initial_stack: 500,
+                cur_round_putting_in_pot: None,
+                all_in: false,
+                final_eval_comment: None
+            });
+        }
+
+        let game_state: GameState = GameState {
+            player_states: other_players,
+            current_to_act: player_state.position,
+            current_round: Round::River,
+            prev_round_pot: 400,
+            round_pot: 0,
+            current_to_call: 0,
+            min_raise: 5,
+            board: CardVec::try_from("2s 3c 8h 5d 6c").unwrap().0,
+            sb: 2,
+            bb: 5,
+            actions: vec![]
+        };
+
+        tag.set_hole_cards("8d 7d".parse().unwrap());
+
+
+        let action = tag.decide(&player_state, &game_state);
+
+        info!("Action: {}", action);
+        assert_eq!(action.action, ActionEnum::Check);
+
+        
+            
+        
+    }
+}

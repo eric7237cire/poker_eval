@@ -83,9 +83,9 @@ impl GameRunnerSource for AgentSource {
 #[cfg(test)]
 mod tests {
 
-    use std::{cell::RefCell, rc::Rc};
+    use std::{cell::RefCell, rc::Rc, collections::BinaryHeap};
 
-    use log::info;
+    use log::{info, debug};
 
     use crate::{
         board_hc_eval_cache_redb::{
@@ -100,7 +100,7 @@ mod tests {
         },
         game_runner_source::GameRunnerSource,
         init_test_logger, test_game_runner, Card, Deck, GameRunner, InitialPlayerState,
-        PartialRankContainer,
+        PartialRankContainer, GameLog,
     };
 
     use super::AgentSource;
@@ -157,7 +157,11 @@ mod tests {
 
         let mut hero_winnings: i64 = 0;
 
+        //we want to track the worst loses
+        let mut heap: BinaryHeap<(i64, String)> = BinaryHeap::new();
+
         for it_num in 0..200 {
+            
             agent_deck.reset();
 
             let mut agents = build_agents(rcref_pdb.clone());
@@ -184,6 +188,12 @@ mod tests {
 
             hero_winnings += change;
 
+            heap.push( (change, game_runner.to_game_log_string(true)));
+
+            if heap.len() > 5 {
+                heap.pop();
+            }
+
             if it_num == 5
             // change < -50 {
             {
@@ -205,7 +215,9 @@ mod tests {
                 );
             }
 
-            assert_eq!(hero_winnings, 5835);
         }
+            
+        assert_eq!(hero_winnings, 5835);
+        
     }
 }

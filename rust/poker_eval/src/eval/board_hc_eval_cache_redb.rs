@@ -137,7 +137,9 @@ mod tests {
 
     //// cargo test cache_perf --lib --release -- --nocapture
 
-    #[test]
+    //a bit slow
+    //#[test]
+    #[allow(dead_code)]
     fn test_cache_partial_rank() {
         init_test_logger();
 

@@ -92,6 +92,11 @@ impl PassiveCallingStation {
                 likes_hand_comments.push(format!("Pocket Pair Quads {}", hc.get_hi_card().value));
             }
         }
+        if let Some(p) = prc.hi_card {
+            if p.number_above == 0 {
+                likes_hand_comments.push(format!("hi card is overpair {}", hc.get_hi_card().value));
+            }
+        }
         if game_state.current_round != Round::River {
             if let Some(p) = prc.flush_draw {
                 if p.flush_draw_type == FlushDrawType::FlushDraw {

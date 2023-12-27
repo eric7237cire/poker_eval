@@ -137,7 +137,8 @@ mod tests {
     // cargo test cache_perf --lib --release -- --nocapture
 
     //a bit slow
-    #[test]
+    //#[test]
+    #[allow(dead_code)]
     fn test_cache_perf() {
         init_test_logger();
 
