@@ -1,3 +1,4 @@
+use log::debug;
 use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -111,6 +112,16 @@ where
 
         write_txn.commit()?;
         Ok(())
+    }
+
+    
+
+}
+
+impl <P,R> Drop for EvalCacheWithHcReDb<P,R> {
+    fn drop(&mut self) {
+        println!("Dropping EvalCacheWithHcReDb!");
+        debug!("Dropping EvalCacheWithHcReDb!");
     }
 }
 

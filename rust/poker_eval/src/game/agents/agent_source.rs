@@ -100,12 +100,13 @@ mod tests {
         },
         game_runner_source::GameRunnerSource,
         init_test_logger, test_game_runner, Card, Deck, GameRunner, InitialPlayerState,
-        PartialRankContainer, GameLog,
+        PartialRankContainer, GameLog, board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture, FLOP_TEXTURE_PATH}, BoardTexture,
     };
 
     use super::AgentSource;
 
     fn build_agents(
+        flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture, BoardTexture>>>,
         partial_rank_db: Rc<
             RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
         >,
@@ -117,11 +118,13 @@ mod tests {
         agents.push(Box::new(PassiveCallingStation::new(
             None,
             "Call 100% A",
+            flop_texture_db.clone(),
             partial_rank_db.clone(),
         )));
         agents.push(Box::new(PassiveCallingStation::new(
             None,
             "Call 100% B",
+            flop_texture_db.clone(),
             partial_rank_db.clone(),
         )));
 
@@ -129,6 +132,7 @@ mod tests {
             let agent = PassiveCallingStation::new(
                 Some(calling_75),
                 &format!("{} Cal Stn 75%", i + 1),
+                flop_texture_db.clone(),
                 partial_rank_db.clone(),
             );
             agents.push(Box::new(agent));
@@ -138,6 +142,7 @@ mod tests {
             "JJ+,AJs+,AQo+,KQs",
             "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+",
             "Hero",
+            flop_texture_db.clone(),
             partial_rank_db.clone(),
         );
         agents.push(Box::new(tag));
@@ -149,22 +154,34 @@ mod tests {
     fn test_agents() {
         init_test_logger();
 
+        /*
+        cargo test  agent --lib --release -- --nocapture --test-threads=1
+        */
+
         let partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
             EvalCacheWithHcReDb::new(PARTIAL_RANK_PATH).unwrap();
 
         let rcref_pdb = Rc::new(RefCell::new(partial_rank_db));
+
+        let flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture> =
+            EvalCacheReDb::new(FLOP_TEXTURE_PATH).unwrap();
+
+        let rcref_ftdb = Rc::new(RefCell::new(flop_texture_db));
+
         let mut agent_deck = Deck::new();
 
         let mut hero_winnings: i64 = 0;
 
         //we want to track the worst loses
-        let mut heap: BinaryHeap<(i64, String)> = BinaryHeap::new();
+        let mut heap: BinaryHeap<(i64, i32, String)> = BinaryHeap::new();
 
         for it_num in 0..200 {
             
             agent_deck.reset();
 
-            let mut agents = build_agents(rcref_pdb.clone());
+            let mut agents = build_agents(
+                rcref_ftdb.clone(),
+                rcref_pdb.clone());
             set_agent_hole_cards(&mut agent_deck, &mut agents);
 
             let players: Vec<InitialPlayerState> = build_initial_players_from_agents(&agents);
@@ -188,34 +205,29 @@ mod tests {
 
             hero_winnings += change;
 
-            heap.push( (change, game_runner.to_game_log_string(true)));
+            
+            heap.push( (change, it_num, game_runner.to_game_log_string(true, true)));
 
             if heap.len() > 5 {
                 heap.pop();
             }
 
-            if it_num == 5
+            if it_num == 5 || it_num == 36
             // change < -50 {
-            {
-                for pi in 0..5 {
-                    game_runner.game_state.player_states[pi].player_name = format!(
-                        "{} ({})",
-                        game_runner.game_state.player_states[pi].player_name,
-                        game_runner.game_runner_source.get_hole_cards(pi).unwrap()
-                    );
-                }
-                game_runner.game_state.player_states[4].player_name = format!(
-                    "Hero ({})",
-                    game_runner.game_runner_source.get_hole_cards(4).unwrap()
-                );
+            {               
+                
                 info!(
                     "Losing hand #{}\n{}",
                     it_num,
-                    game_runner.to_game_log_string(true)
+                    game_runner.to_game_log_string(true, true)
                 );
             }
 
         }
+
+        // for (i, (change, it_num, log)) in heap.into_iter().enumerate() {
+        //     debug!("Losing hand #{} (iteration {})\nLoss: {}\n{}", i, it_num, change, log);
+        // }
             
         assert_eq!(hero_winnings, 5835);
         

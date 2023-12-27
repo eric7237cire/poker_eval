@@ -884,22 +884,29 @@ impl GameRunner {
         Ok(())
     }
 
-    pub fn to_game_log_string(&self, with_player_comments: bool) -> String {
+    pub fn to_game_log_string(&self, with_player_comments: bool, with_hole_cards_in_name: bool) -> String {
+
+        let player_names = self.game_state.player_states.iter().map(|p| {
+            if with_hole_cards_in_name {
+                format!("{} ({})", p.player_name, self.game_runner_source.get_hole_cards(p.player_index()).unwrap())
+            } else {
+                p.player_name.clone()
+            }
+        }).collect::<Vec<String>>();
+
+
         //Find longest player id width
-        let max_player_id_width = self
-            .game_state
-            .player_states
-            .iter()
-            .map(|player_state| player_state.player_name.len())
+        let max_player_id_width = player_names.iter()
+            .map(|player_name| player_name.len())
             .max()
             .unwrap_or(0);
 
         let mut s = String::new();
         s.push_str("*** Players ***\n");
-        for player_state in &self.game_state.player_states {
+        for (pi, player_state) in self.game_state.player_states.iter().enumerate() {
             s.push_str(&format!(
                 "{:width$} - {} - {}\n",
-                player_state.player_name,
+                player_names[pi],
                 player_state.initial_stack,
                 self.game_runner_source
                     .get_hole_cards(player_state.player_index())
@@ -911,7 +918,7 @@ impl GameRunner {
         s.push_str("*** Blinds ***\n");
         s.push_str(&format!(
             "{:width$} - {}\n",
-            self.game_state.player_states[0].player_name,
+            &player_names[0],
             min(
                 self.game_state.sb,
                 self.game_state.player_states[0].initial_stack
@@ -920,7 +927,7 @@ impl GameRunner {
         ));
         s.push_str(&format!(
             "{:width$} - {}\n",
-            self.game_state.player_states[1].player_name,
+            &player_names[1],
             min(
                 self.game_state.bb,
                 self.game_state.player_states[0].initial_stack
@@ -949,7 +956,7 @@ impl GameRunner {
 
             s.push_str(&format!(
                 "{:width$} {} # {}{}{}\n",
-                self.game_state.player_states[action.player_index].player_name,
+                &player_names[action.player_index],
                 action.action,
                 if with_player_comments {
                     action.player_comment.as_deref().unwrap_or("")
@@ -994,10 +1001,10 @@ impl GameRunner {
         s.push_str(&url);
         s.push_str("\n");
 
-        for player_state in &self.game_state.player_states {
+        for (pi, player_state) in self.game_state.player_states.iter().enumerate() {
             s.push_str(&format!(
                 "{:width$} - {} # {} Started with {} change {}\n",
-                player_state.player_name,
+                &player_names[pi],
                 player_state.stack,
                 player_state.final_eval_comment.as_deref().unwrap_or(""),
                 player_state.initial_stack,

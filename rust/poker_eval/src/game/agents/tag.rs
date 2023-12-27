@@ -17,7 +17,7 @@ pub struct Tag {
     pub pfr_range: Range,
     pub hole_cards: Option<HoleCards>,
     pub name: String,
-    flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture>,
+    flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture, BoardTexture>>>,
     partial_rank_db:
         Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>>,
 }
@@ -27,12 +27,12 @@ impl Tag {
         three_bet_range_str: &str,
         pfr_range_str: &str,
         name: &str,
+        flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture, BoardTexture>>>,
         partial_rank_db: Rc<
             RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
         >,
     ) -> Self {
-        let flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture> =
-            EvalCacheReDb::new(FLOP_TEXTURE_PATH).unwrap();
+        
 
         Tag {
             three_bet_range: three_bet_range_str.parse().unwrap(),
@@ -102,7 +102,9 @@ impl Tag {
         let hc = self.hole_cards.as_ref().unwrap();
         let mut pdb = self.partial_rank_db.borrow_mut();
         let prc = pdb.get_put(&game_state.board, hc).unwrap();
-        let ft = self.flop_texture_db.get_put(&game_state.board).unwrap();
+        
+        let mut ft_db = self.flop_texture_db.borrow_mut();
+        let ft = ft_db.get_put(&game_state.board).unwrap();
 
         let mut likes_hand_comments: Vec<String> = Vec::new();
 
@@ -269,10 +271,16 @@ mod tests {
 
         let rcref_pdb = Rc::new(RefCell::new(partial_rank_db));
         
+        let flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture> =
+            EvalCacheReDb::new(FLOP_TEXTURE_PATH).unwrap();
+
+        let rcref_ftdb = Rc::new(RefCell::new(flop_texture_db));
+
         let mut tag = Tag::new(
             "JJ+,AJs+,AQo+,KQs",
             "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+",
             "Hero",
+            rcref_ftdb.clone(),
             rcref_pdb.clone(),
         );
 
@@ -324,7 +332,7 @@ mod tests {
         info!("Action: {}", action);
         assert_eq!(action.action, ActionEnum::Check);
 
-        
+        drop(rcref_pdb.borrow_mut());
             
         
     }

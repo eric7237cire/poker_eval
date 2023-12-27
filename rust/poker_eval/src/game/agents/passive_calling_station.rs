@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use crate::{
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
     ActionEnum, CommentedAction, FlushDrawType, GameState, HoleCards, PartialRankContainer,
-    PlayerState, Round, StraightDrawType,
+    PlayerState, Round, StraightDrawType, board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture}, BoardTexture, CardValue,
 };
 use postflop_solver::Range;
 
@@ -14,7 +14,7 @@ pub struct PassiveCallingStation {
     pub calling_range: Option<Range>,
     pub hole_cards: Option<HoleCards>,
     pub name: String,
-
+    flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture, BoardTexture>>>,
     partial_rank_db:
         Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>>,
 }
@@ -23,6 +23,7 @@ impl PassiveCallingStation {
     pub fn new(
         calling_range_str: Option<&str>,
         name: &str,
+        flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture, BoardTexture>>>,
         partial_rank_db: Rc<
             RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
         >,
@@ -37,6 +38,7 @@ impl PassiveCallingStation {
             hole_cards: None,
             name: name.to_string(),
             partial_rank_db,
+            flop_texture_db,
         }
     }
 
@@ -56,8 +58,10 @@ impl PassiveCallingStation {
         let hc = self.hole_cards.as_ref().unwrap();
         let mut pr_db = self.partial_rank_db.borrow_mut();
         let prc = pr_db.get_put(&game_state.board, hc).unwrap();
-
+        let mut ft_db = self.flop_texture_db.borrow_mut();
+        let ft = ft_db.get_put(&game_state.board).unwrap();
         let mut likes_hand_comments: Vec<String> = Vec::new();
+        let mut not_like_hand_comments: Vec<String> = Vec::new();
 
         if let Some(p) = prc.lo_pair {
             //if p.number_above == 0 {
@@ -93,8 +97,18 @@ impl PassiveCallingStation {
             }
         }
         if let Some(p) = prc.hi_card {
+
+            //if the board is paired, then only stay in with an ace or king
             if p.number_above == 0 {
-                likes_hand_comments.push(format!("hi card is overpair {}", hc.get_hi_card().value));
+                if ft.has_pair || ft.has_trips || ft.has_two_pair {
+                    if hc.get_hi_card().value >= CardValue::King {
+                        likes_hand_comments.push(format!("hi card overcard is ace or king with paired board {}", hc.get_hi_card().value));
+                    } else {
+                        not_like_hand_comments.push(format!("hi card overcard is not ace or king with paired board {}", hc.get_hi_card().value));
+                    }
+                } else {
+                    likes_hand_comments.push(format!("hi card is overpair {}", hc.get_hi_card().value));
+                }
             }
         }
         if game_state.current_round != Round::River {
@@ -121,7 +135,7 @@ impl PassiveCallingStation {
         } else {
             return CommentedAction {
                 action: ActionEnum::Fold,
-                comment: Some("Folding, nothing interesting".to_string()),
+                comment: Some("Folding ".to_string() + not_like_hand_comments.join(", ").as_str()),
             };
         }
     }
