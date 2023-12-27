@@ -149,10 +149,10 @@ mod tests {
     fn test_agents() {
         init_test_logger();
 
-        let mut partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
+        let partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
             EvalCacheWithHcReDb::new(PARTIAL_RANK_PATH).unwrap();
 
-        let mut rcref_pdb = Rc::new(RefCell::new(partial_rank_db));
+        let rcref_pdb = Rc::new(RefCell::new(partial_rank_db));
         let mut agent_deck = Deck::new();
 
         let mut hero_winnings: i64 = 0;

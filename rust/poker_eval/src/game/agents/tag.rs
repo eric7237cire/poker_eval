@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture, FLOP_TEXTURE_PATH},
-    board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards, PARTIAL_RANK_PATH},
+    board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
     ActionEnum, BoardTexture, CommentedAction, FlushDrawType, GameState, HoleCards,
     PartialRankContainer, PlayerState, Round, StraightDrawType,
 };
