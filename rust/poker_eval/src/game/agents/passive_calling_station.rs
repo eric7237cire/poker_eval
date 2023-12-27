@@ -10,21 +10,21 @@ use postflop_solver::Range;
 use super::Agent;
 
 //#[derive(Default)]
-pub struct PassiveCallingStation<'a> {
+pub struct PassiveCallingStation {
     pub calling_range: Option<Range>,
     pub hole_cards: Option<HoleCards>,
     pub name: String,
 
     partial_rank_db:
-        Rc<RefCell<&'a mut EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>>,
+        Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>>,
 }
 
-impl<'a> PassiveCallingStation<'a> {
+impl PassiveCallingStation {
     pub fn new(
         calling_range_str: Option<&str>,
         name: &str,
         partial_rank_db: Rc<
-            RefCell<&'a mut EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
+            RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
         >,
     ) -> Self {
         let calling_range = match calling_range_str {
@@ -122,7 +122,7 @@ impl<'a> PassiveCallingStation<'a> {
     }
 }
 
-impl<'a> Agent for PassiveCallingStation<'a> {
+impl Agent for PassiveCallingStation {
     fn decide(&mut self, player_state: &PlayerState, game_state: &GameState) -> CommentedAction {
         let action = match game_state.current_round {
             Round::Preflop => {

@@ -11,7 +11,10 @@ pub fn init_test_logger() {
         .filter_module("poker_eval::game::game_log_parser", log::LevelFilter::Debug)
         .filter_module("poker_eval::game::game_log_source", log::LevelFilter::Debug)
         .filter_module("poker_eval::game::game_runner", log::LevelFilter::Debug)
-        .filter_module("poker_eval::game::agent_source", log::LevelFilter::Debug)
+        .filter_module(
+            "poker_eval::game::agents::agent_source",
+            log::LevelFilter::Debug,
+        )
         .filter_module("poker_eval::game::game_log", log::LevelFilter::Debug)
         .filter_module("poker_eval::eval::rank", log::LevelFilter::Debug)
         .filter_module("poker_eval::eval::flop_texture", log::LevelFilter::Debug)

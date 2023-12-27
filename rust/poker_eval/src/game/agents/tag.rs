@@ -12,23 +12,23 @@ use postflop_solver::Range;
 use super::Agent;
 
 //#[derive(Default)]
-pub struct Tag<'a> {
+pub struct Tag {
     pub three_bet_range: Range,
     pub pfr_range: Range,
     pub hole_cards: Option<HoleCards>,
     pub name: String,
     flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture>,
     partial_rank_db:
-        Rc<RefCell<&'a mut EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>>,
+        Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>>,
 }
 
-impl<'a> Tag<'a> {
+impl Tag {
     pub fn new(
         three_bet_range_str: &str,
         pfr_range_str: &str,
         name: &str,
         partial_rank_db: Rc<
-            RefCell<&'a mut EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
+            RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
         >,
     ) -> Self {
         let flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture> =
@@ -223,7 +223,7 @@ impl<'a> Tag<'a> {
     }
 }
 
-impl<'a> Agent for Tag<'a> {
+impl Agent for Tag {
     fn decide(&mut self, player_state: &PlayerState, game_state: &GameState) -> CommentedAction {
         match game_state.current_round {
             Round::Preflop => {
