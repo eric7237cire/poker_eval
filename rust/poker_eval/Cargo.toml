@@ -20,7 +20,7 @@ path = "src/bin.rs"
 [dependencies]
 # poker_rs = { path = "../poker_rs", features=["arena"] }
 postflop-solver = {path = "../postflop-solver"}
-bitvec = "1"
+bitvec = {version = "1.0.1", features=["serde"]}
 itertools = "*"
 log = "*"
 env_logger = "*"
