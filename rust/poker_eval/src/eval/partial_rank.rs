@@ -624,7 +624,10 @@ mod tests {
     fn test_pairs() {
         //Normal 2 pair
         let hole_cards: HoleCards = "6c 8h".parse().unwrap();
-        let board_cards = Board::try_from("6s 8c 2d 9h").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("6s 8c 2d 9h")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.flush_draw, None);
@@ -655,7 +658,10 @@ mod tests {
     #[test]
     fn test_pocket_pairs() {
         let hole_cards = "Ac Ah".parse().unwrap();
-        let board_cards = Board::try_from("3c 2s As").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("3c 2s As")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.flush_draw, None);
@@ -676,7 +682,10 @@ mod tests {
         assert_eq!(prc.lo_card, None);
 
         let hole_cards = "2c 2h".parse().unwrap();
-        let board_cards = Board::try_from("3c 2s As 3d Ac").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("3c 2s As 3d Ac")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.flush_draw, None);
@@ -697,7 +706,10 @@ mod tests {
         assert_eq!(prc.lo_card, None);
 
         let hole_cards = "7c 7h".parse().unwrap();
-        let board_cards = Board::try_from("3c 7s Ks 7d Ac").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("3c 7s Ks 7d Ac")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.flush_draw, None);
@@ -718,7 +730,10 @@ mod tests {
         assert_eq!(prc.lo_card, None);
 
         let hole_cards = "7c 7h".parse().unwrap();
-        let board_cards = Board::try_from("3c 4s Ks 5d Ac").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("3c 4s Ks 5d Ac")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.flush_draw, None);
@@ -750,7 +765,10 @@ mod tests {
     #[test]
     fn test_straights() {
         let hole_cards = "Ac 2h".parse().unwrap();
-        let board_cards = Board::try_from("3c 7s 5s Td Ac").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("3c 7s 5s Td Ac")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.flush_draw, None);
@@ -790,7 +808,10 @@ mod tests {
         );
 
         let hole_cards = "2c 6h".parse().unwrap();
-        let board_cards = Board::try_from("3c 4s 7d Ac").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("3c 4s 7d Ac")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.flush_draw, None);
@@ -828,7 +849,10 @@ mod tests {
 
         //Not a straight draw ?  hmmm
         let hole_cards = "7c 8h".parse().unwrap();
-        let board_cards = Board::try_from("Ah Ts Kd Qc Jd").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("Ah Ts Kd Qc Jd")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.flush_draw, None);
@@ -852,7 +876,10 @@ mod tests {
         );
 
         let hole_cards = "7c 8h".parse().unwrap();
-        let board_cards = Board::try_from("2c Ts Kd Qc Jd").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("2c Ts Kd Qc Jd")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.flush_draw, None);
@@ -887,7 +914,10 @@ mod tests {
         );
 
         let hole_cards = "Kc Jh".parse().unwrap();
-        let board_cards = Board::try_from("Ts Qc 8d").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("Ts Qc 8d")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.flush_draw, None);
@@ -918,7 +948,10 @@ mod tests {
         );
 
         let hole_cards = "6c 8h".parse().unwrap();
-        let board_cards = Board::try_from("7s 9c 2d").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("7s 9c 2d")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.flush_draw, None);
@@ -950,7 +983,10 @@ mod tests {
         );
 
         let hole_cards = "7c Kh".parse().unwrap();
-        let board_cards = Board::try_from("9s Jc Td").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("9s Jc Td")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.flush_draw, None);
@@ -981,7 +1017,10 @@ mod tests {
         );
 
         let hole_cards = "8c 6h".parse().unwrap();
-        let board_cards = Board::try_from("4s Td 7c").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("4s Td 7c")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.flush_draw, None);
@@ -1016,7 +1055,10 @@ mod tests {
     #[test]
     fn test_flush_draws() {
         let hole_cards = "6c 8c".parse().unwrap();
-        let board_cards = Board::try_from("4c 9c 2s").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("4c 9c 2s")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(
@@ -1028,14 +1070,20 @@ mod tests {
         );
 
         let hole_cards = "6c 8c".parse().unwrap();
-        let board_cards = Board::try_from("4c 9c 2s Ac").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("4c 9c 2s Ac")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         //not a draw if you hit the flush
         assert_eq!(prc.flush_draw, None);
 
         let hole_cards = "Ac 8h".parse().unwrap();
-        let board_cards = Board::try_from("4c 9c 2s").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("4c 9c 2s")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(
@@ -1047,7 +1095,10 @@ mod tests {
         );
 
         let hole_cards = "Ac 8h".parse().unwrap();
-        let board_cards = Board::try_from("4c 9c 2s 3c").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("4c 9c 2s 3c")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(
@@ -1059,7 +1110,10 @@ mod tests {
         );
 
         let hole_cards = "Ah 8h".parse().unwrap();
-        let board_cards = Board::try_from("4c 9c 2s 3c").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("4c 9c 2s 3c")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.flush_draw, None);
@@ -1068,7 +1122,10 @@ mod tests {
     #[test]
     fn test_overcards() {
         let hole_cards = "Kc 7s".parse().unwrap();
-        let board_cards = Board::try_from("Js 8c 6d").unwrap().as_slice_card().to_vec();
+        let board_cards = Board::try_from("Js 8c 6d")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(

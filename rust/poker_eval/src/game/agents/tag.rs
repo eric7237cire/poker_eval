@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture,},
+    board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
     ActionEnum, BoardTexture, CommentedAction, FlushDrawType, GameState, HoleCards,
     PartialRankContainer, PlayerState, Round, StraightDrawType,
@@ -32,8 +32,6 @@ impl Tag {
             RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
         >,
     ) -> Self {
-        
-
         Tag {
             three_bet_range: three_bet_range_str.parse().unwrap(),
             pfr_range: pfr_range_str.parse().unwrap(),
@@ -102,7 +100,7 @@ impl Tag {
         let hc = self.hole_cards.as_ref().unwrap();
         let mut pdb = self.partial_rank_db.borrow_mut();
         let prc = pdb.get_put(&game_state.board, hc).unwrap();
-        
+
         let mut ft_db = self.flop_texture_db.borrow_mut();
         let ft = ft_db.get_put(&game_state.board).unwrap();
 
@@ -250,8 +248,6 @@ impl Agent for Tag {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use std::rc::Rc;
@@ -259,8 +255,7 @@ mod tests {
     use log::info;
 
     use super::*;
-    use crate::{init_test_logger, board_hc_eval_cache_redb::{EvalCacheWithHcReDb}, Board,};
-
+    use crate::{board_hc_eval_cache_redb::EvalCacheWithHcReDb, init_test_logger, Board};
 
     #[test]
     fn test_doesnt_bet_river() {
@@ -270,9 +265,8 @@ mod tests {
             EvalCacheWithHcReDb::new().unwrap();
 
         let rcref_pdb = Rc::new(RefCell::new(partial_rank_db));
-        
-        let flop_texture_db: EvalCacheReDb<ProduceFlopTexture> =
-            EvalCacheReDb::new().unwrap();
+
+        let flop_texture_db: EvalCacheReDb<ProduceFlopTexture> = EvalCacheReDb::new().unwrap();
 
         let rcref_ftdb = Rc::new(RefCell::new(flop_texture_db));
 
@@ -292,7 +286,7 @@ mod tests {
             initial_stack: 500,
             cur_round_putting_in_pot: None,
             all_in: false,
-            final_eval_comment: None
+            final_eval_comment: None,
         };
 
         let mut other_players: Vec<PlayerState> = Vec::with_capacity(5);
@@ -306,7 +300,7 @@ mod tests {
                 initial_stack: 500,
                 cur_round_putting_in_pot: None,
                 all_in: false,
-                final_eval_comment: None
+                final_eval_comment: None,
             });
         }
 
@@ -321,11 +315,10 @@ mod tests {
             board: Board::try_from("2s 3c 8h 5d 6c").unwrap(),
             sb: 2,
             bb: 5,
-            actions: vec![]
+            actions: vec![],
         };
 
         tag.set_hole_cards("8d 7d".parse().unwrap());
-
 
         let action = tag.decide(&player_state, &game_state);
 
@@ -333,7 +326,5 @@ mod tests {
         assert_eq!(action.action, ActionEnum::Check);
 
         drop(rcref_pdb.borrow_mut());
-            
-        
     }
 }

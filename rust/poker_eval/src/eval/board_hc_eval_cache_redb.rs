@@ -2,7 +2,10 @@ use log::{debug, info};
 use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{partial_rank_cards, Card, HoleCards, PartialRankContainer, Board, board_eval_cache_redb::{ EvalCacheEnum, get_data_path}};
+use crate::{
+    board_eval_cache_redb::{get_data_path, EvalCacheEnum},
+    partial_rank_cards, Board, Card, HoleCards, PartialRankContainer,
+};
 
 //u32 is usually  enough
 //In the worst case we have 5 cards * 2 cards
@@ -10,7 +13,6 @@ use crate::{partial_rank_cards, Card, HoleCards, PartialRankContainer, Board, bo
 //To do the above though needs an ordering, which is a pain
 // need 22 bits for 52 choose 5
 // need 11 bits for 52 choose 2
-
 
 const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("eval_cache");
 
@@ -40,7 +42,7 @@ where
     //each different struct should get its own db path
     pub fn new() -> Result<Self, ReDbError> {
         let db_name = get_data_path(P::get_cache_name());
-        info!("Opening db {}", db_name	);
+        info!("Opening db {}", db_name);
         let db = Database::create(db_name)?;
         {
             //Make sure table exists
@@ -114,12 +116,9 @@ where
         write_txn.commit()?;
         Ok(())
     }
-
-    
-
 }
 
-impl <P,R> Drop for EvalCacheWithHcReDb<P,R> {
+impl<P, R> Drop for EvalCacheWithHcReDb<P, R> {
     fn drop(&mut self) {
         println!("Dropping EvalCacheWithHcReDb!");
         debug!("Dropping EvalCacheWithHcReDb!");
@@ -145,10 +144,9 @@ mod tests {
     use log::info;
 
     use crate::{
-        board_hc_eval_cache_redb::{
-            EvalCacheWithHcReDb, ProducePartialRankCards, 
-        },
-        init_test_logger, Card, Deck, HoleCards, Board, board_eval_cache_redb::{EvalCacheEnum},
+        board_eval_cache_redb::EvalCacheEnum,
+        board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
+        init_test_logger, Board, Card, Deck, HoleCards,
     };
 
     //// cargo test cache_perf --lib --release -- --nocapture
@@ -176,14 +174,13 @@ mod tests {
         // Code block to measure.
         {
             for i in 0..iter_count {
-                
                 cards.add_cards_from_deck(&mut agent_deck, 3);
                 let hole1: Card = agent_deck.get_unused_card().unwrap().try_into().unwrap();
                 let hole2: Card = agent_deck.get_unused_card().unwrap().try_into().unwrap();
                 let hole_cards: HoleCards = HoleCards::new(hole1, hole2).unwrap();
                 let _texture = partial_rank_db.get_put(&mut cards, &hole_cards).unwrap();
                 cards.clear_cards_from_deck(&mut agent_deck);
-                
+
                 agent_deck.clear_used_card(hole1);
                 agent_deck.clear_used_card(hole2);
 

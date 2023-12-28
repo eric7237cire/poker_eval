@@ -83,14 +83,13 @@ impl GameRunnerSource for AgentSource {
 #[cfg(test)]
 mod tests {
 
-    use std::{cell::RefCell, rc::Rc, collections::BinaryHeap};
+    use std::{cell::RefCell, collections::BinaryHeap, rc::Rc};
 
-    use log::{info, debug};
+    use log::{debug, info};
 
     use crate::{
-        board_hc_eval_cache_redb::{
-            EvalCacheWithHcReDb, ProducePartialRankCards, 
-        },
+        board_eval_cache_redb::{EvalCacheEnum, EvalCacheReDb, ProduceFlopTexture},
+        board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
         game::{
             agents::{
                 build_initial_players_from_agents, set_agent_hole_cards, Agent,
@@ -98,8 +97,8 @@ mod tests {
             },
             game_runner_source::GameRunnerSourceEnum,
         },
-        init_test_logger, test_game_runner, Card, Deck, GameRunner, InitialPlayerState,
-        PartialRankContainer, GameLog, board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture,  EvalCacheEnum,  }, BoardTexture,
+        init_test_logger, test_game_runner, BoardTexture, Card, Deck, GameLog, GameRunner,
+        InitialPlayerState, PartialRankContainer,
     };
 
     use super::AgentSource;
@@ -162,8 +161,7 @@ mod tests {
 
         let rcref_pdb = Rc::new(RefCell::new(partial_rank_db));
 
-        let flop_texture_db: EvalCacheReDb<ProduceFlopTexture> =
-            EvalCacheReDb::new().unwrap();
+        let flop_texture_db: EvalCacheReDb<ProduceFlopTexture> = EvalCacheReDb::new().unwrap();
 
         let rcref_ftdb = Rc::new(RefCell::new(flop_texture_db));
 
@@ -175,12 +173,9 @@ mod tests {
         let mut heap: BinaryHeap<(i64, i32, String)> = BinaryHeap::new();
 
         for it_num in 0..200 {
-            
             agent_deck.reset();
 
-            let mut agents = build_agents(
-                rcref_ftdb.clone(),
-                rcref_pdb.clone());
+            let mut agents = build_agents(rcref_ftdb.clone(), rcref_pdb.clone());
             set_agent_hole_cards(&mut agent_deck, &mut agents);
 
             let players: Vec<InitialPlayerState> = build_initial_players_from_agents(&agents);
@@ -204,8 +199,7 @@ mod tests {
 
             hero_winnings += change;
 
-            
-            heap.push( (change, it_num, game_runner.to_game_log_string(true, true)));
+            heap.push((change, it_num, game_runner.to_game_log_string(true, true)));
 
             if heap.len() > 5 {
                 heap.pop();
@@ -213,22 +207,19 @@ mod tests {
 
             if it_num == 5 || it_num == 36
             // change < -50 {
-            {               
-                
+            {
                 info!(
                     "Losing hand #{}\n{}",
                     it_num,
                     game_runner.to_game_log_string(true, true)
                 );
             }
-
         }
 
         // for (i, (change, it_num, log)) in heap.into_iter().enumerate() {
         //     debug!("Losing hand #{} (iteration {})\nLoss: {}\n{}", i, it_num, change, log);
         // }
-            
+
         assert_eq!(hero_winnings, 5835);
-        
     }
 }

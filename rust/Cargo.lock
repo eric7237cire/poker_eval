@@ -444,6 +444,7 @@ dependencies = [
  "js-sys",
  "log",
  "num-integer",
+ "once_cell",
  "postflop-solver 0.1.0",
  "rand",
  "redb",

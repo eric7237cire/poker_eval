@@ -3,7 +3,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::{set_used_card, unset_used_card, CardUsedType, core::card};
+use crate::{core::card, set_used_card, unset_used_card, CardUsedType};
 use postflop_solver::card_pair_to_index;
 
 use crate::{Card, PokerError};
@@ -43,7 +43,6 @@ impl HoleCards {
 
     //This converts our exact hole cards to the range index from 0 to 52*51/2
     pub fn to_range_index(&self) -> usize {
-        
         let lo_card: usize = self.card_hi_lo[1].into();
         let hi_card: usize = self.card_hi_lo[0].into();
 

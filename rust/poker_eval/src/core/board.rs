@@ -1,13 +1,11 @@
 use core::fmt;
-use std::{str::FromStr, fmt::Display};
+use std::{fmt::Display, str::FromStr};
 
 use num_integer::binomial;
 
-use crate::{Card, PokerError, Deck, Round};
+use crate::{Card, Deck, PokerError, Round};
 
-
-
-pub struct Board{
+pub struct Board {
     cards: Vec<Card>,
 
     //unique index for # of cards and which combination it represents
@@ -28,7 +26,7 @@ impl TryFrom<&str> for Board {
             )))?;
             cards.push(Card::new(value.try_into()?, suit.try_into()?));
         }
-        Ok(Board::new_from_cards(cards))
+        Ok(Board::new_from_cards(&cards))
     }
 }
 
@@ -41,19 +39,17 @@ impl FromStr for Board {
 }
 
 impl Board {
-
     pub fn new() -> Self {
-        
         Board {
             cards: Vec::with_capacity(7),
-            index: None
+            index: None,
         }
     }
 
-    pub fn new_from_cards(cards: Vec<Card>) -> Self {
+    pub fn new_from_cards(cards: &[Card]) -> Self {
         let mut s = Board::new();
         for card in cards {
-            s.add_card(card).unwrap();
+            s.add_card(*card).unwrap();
         }
         s
     }
@@ -71,13 +67,17 @@ impl Board {
         Ok(())
     }
 
-    pub fn add_cards_from_deck(&mut self, deck: &mut Deck, num_cards: usize) -> Result<(), PokerError> {
+    pub fn add_cards_from_deck(
+        &mut self,
+        deck: &mut Deck,
+        num_cards: usize,
+    ) -> Result<(), PokerError> {
         self.cards.clear();
 
         for _ in 0..num_cards {
             self.cards.push(deck.get_unused_card()?);
         }
-        
+
         self.index = None;
         Ok(())
     }
@@ -97,15 +97,16 @@ impl Board {
         )))
     }
 
+    //This is the u32 that uniquely identifies the board
+    //27 bits (enough for 7 cards) 2^27=134_217_728 and 52 choose 5 = 133_784_560
+    //bits 30-28 are the length
     pub fn get_index(&mut self) -> u32 {
-
         if let Some(index) = self.index {
             return index;
         }
 
         let mut sorted_cards = self.cards.clone();
         sorted_cards.sort();
-
 
         let mut index = 0;
 
@@ -146,8 +147,12 @@ impl Board {
             3 => Round::Flop,
             4 => Round::Turn,
             5 => Round::River,
-            _ => return Err(format!("Invalid number of cards {}", self.cards.len()).into())
+            _ => return Err(format!("Invalid number of cards {}", self.cards.len()).into()),
         })
+    }
+
+    pub fn get_num_cards(&self) -> usize {
+        self.cards.len()
     }
 }
 

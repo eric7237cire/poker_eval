@@ -1,9 +1,10 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
+    board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
-    ActionEnum, CommentedAction, FlushDrawType, GameState, HoleCards, PartialRankContainer,
-    PlayerState, Round, StraightDrawType, board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture}, BoardTexture, CardValue,
+    ActionEnum, BoardTexture, CardValue, CommentedAction, FlushDrawType, GameState, HoleCards,
+    PartialRankContainer, PlayerState, Round, StraightDrawType,
 };
 use postflop_solver::Range;
 
@@ -97,17 +98,23 @@ impl PassiveCallingStation {
             }
         }
         if let Some(p) = prc.hi_card {
-
             //if the board is paired, then only stay in with an ace or king
             if p.number_above == 0 {
                 if ft.has_pair || ft.has_trips || ft.has_two_pair {
                     if hc.get_hi_card().value >= CardValue::King {
-                        likes_hand_comments.push(format!("hi card overcard is ace or king with paired board {}", hc.get_hi_card().value));
+                        likes_hand_comments.push(format!(
+                            "hi card overcard is ace or king with paired board {}",
+                            hc.get_hi_card().value
+                        ));
                     } else {
-                        not_like_hand_comments.push(format!("hi card overcard is not ace or king with paired board {}", hc.get_hi_card().value));
+                        not_like_hand_comments.push(format!(
+                            "hi card overcard is not ace or king with paired board {}",
+                            hc.get_hi_card().value
+                        ));
                     }
                 } else {
-                    likes_hand_comments.push(format!("hi card is overpair {}", hc.get_hi_card().value));
+                    likes_hand_comments
+                        .push(format!("hi card is overpair {}", hc.get_hi_card().value));
                 }
             }
         }

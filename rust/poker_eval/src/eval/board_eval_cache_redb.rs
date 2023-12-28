@@ -1,7 +1,7 @@
 use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{calc_board_texture, BoardTexture, Card, Board, Rank, rank_cards};
+use crate::{calc_board_texture, rank_cards, Board, BoardTexture, Card, Rank};
 
 //u32 is usually  enough
 //In the worst case we have 5 cards * 2 cards
@@ -21,23 +21,19 @@ pub enum EvalCacheEnum {
 }
 
 pub fn get_data_path(cache_name: EvalCacheEnum) -> String {
-
     let file_name = match cache_name {
         EvalCacheEnum::PartialRank => PARTIAL_RANK_FILENAME,
         EvalCacheEnum::FlopTexture => FLOP_TEXTURE_FILENAME,
         EvalCacheEnum::HandRank => HAND_RANK_FILENAME,
     };
 
-
-    
-    let ret : String = "".to_string();
+    let ret: String = "".to_string();
     ret + file!() + "../../data/" + file_name
 }
 
 const TABLE: TableDefinition<u32, &[u8]> = TableDefinition::new("eval_cache");
 
 pub trait ProduceEvalResult {
-
     type Result;
 
     fn produce_eval_result(cards: &[Card]) -> Self::Result;
@@ -86,7 +82,6 @@ where
     }
 
     pub fn get_put(&mut self, board: &Board) -> Result<P::Result, ReDbError> {
-        
         let opt = self.get(board.get_precalc_index().unwrap())?;
         if opt.is_some() {
             self.cache_hits += 1;
@@ -140,7 +135,6 @@ impl ProduceFlopTexture {
 }
 
 impl ProduceEvalResult for ProduceFlopTexture {
-
     type Result = BoardTexture;
 
     fn produce_eval_result(cards: &[Card]) -> BoardTexture {
@@ -152,7 +146,6 @@ impl ProduceEvalResult for ProduceFlopTexture {
     }
 }
 
-
 pub struct ProduceRank {}
 
 impl ProduceRank {
@@ -162,7 +155,6 @@ impl ProduceRank {
 }
 
 impl ProduceEvalResult for ProduceRank {
-
     type Result = Rank;
 
     fn produce_eval_result(cards: &[Card]) -> Rank {
@@ -182,7 +174,7 @@ mod tests {
     use log::info;
 
     use crate::{
-        board_eval_cache_redb::{EvalCacheReDb, get_data_path},
+        board_eval_cache_redb::{get_data_path, EvalCacheReDb},
         init_test_logger, Deck,
     };
 
@@ -198,7 +190,7 @@ mod tests {
 
         let mut agent_deck = Deck::new();
         let mut cards = Board::new();
-        
+
         agent_deck.reset();
         //delete if exists
         //std::fs::remove_file(db_name).unwrap_or_default();
@@ -206,9 +198,8 @@ mod tests {
         //let mut flop_texture_db = FlopTextureJamDb::new(db_name).unwrap();
 
         //let mut flop_texture_db = FlopTextureReDb::new(re_db_name).unwrap();
-        
-        let mut flop_texture_db: EvalCacheReDb<ProduceFlopTexture> =
-            EvalCacheReDb::new().unwrap();
+
+        let mut flop_texture_db: EvalCacheReDb<ProduceFlopTexture> = EvalCacheReDb::new().unwrap();
         let now = Instant::now();
         let iter_count = 100_000;
         // Code block to measure.
@@ -216,7 +207,7 @@ mod tests {
             for i in 0..iter_count {
                 cards.add_cards_from_deck(&mut agent_deck, 3).unwrap();
                 let _texture = flop_texture_db.get_put(&mut cards).unwrap();
-                
+
                 cards.clear_cards_from_deck(&mut agent_deck);
 
                 if flop_texture_db.cache_misses > 0 && flop_texture_db.cache_misses % 1000 == 0 {

@@ -37,8 +37,8 @@ use log::trace;
 use serde::{Deserialize, Serialize};
 // use rmps crate to serialize structs using the MessagePack format
 use crate::{
-    calc_cards_metrics, partial_rank_cards, rank_cards, Card, CardValue, HoleCards,
-    StraightDrawType, Board,
+    calc_cards_metrics, partial_rank_cards, rank_cards, Board, Card, CardValue, HoleCards,
+    StraightDrawType,
 };
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -217,7 +217,7 @@ mod tests {
 
     use log::{debug, info};
 
-    use crate::{init_test_logger};
+    use crate::init_test_logger;
 
     use super::*;
 
@@ -227,7 +227,10 @@ mod tests {
         info!("test_board_texture");
         debug!("test_board_texture");
         trace!("test_board_texture");
-        let cards = Board::try_from("3c 2s As").unwrap().as_slice_card().to_vec();
+        let cards = Board::try_from("3c 2s As")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let texture = calc_board_texture(&cards);
 
         assert_eq!(texture.same_suited_max_count, 2);
@@ -245,7 +248,10 @@ mod tests {
         assert_eq!(texture.num_with_str8_draw, 0);
         assert_eq!(texture.num_with_gut_shot, 340);
 
-        let cards = Board::try_from("Ac Ah As").unwrap().as_slice_card().to_vec();
+        let cards = Board::try_from("Ac Ah As")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let texture = calc_board_texture(&cards);
 
         assert_eq!(texture.same_suited_max_count, 1);
@@ -261,7 +267,10 @@ mod tests {
         assert_eq!(texture.num_with_str8_draw, 0);
         assert_eq!(texture.num_with_gut_shot, 0);
 
-        let cards = Board::try_from("Qc Kh Qd As Ks").unwrap().as_slice_card().to_vec();
+        let cards = Board::try_from("Qc Kh Qd As Ks")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let texture = calc_board_texture(&cards);
 
         assert_eq!(texture.same_suited_max_count, 2);
@@ -279,7 +288,10 @@ mod tests {
         assert_eq!(texture.num_with_str8_draw, 0);
         assert_eq!(texture.num_with_gut_shot, 324);
 
-        let cards = Board::try_from("9c 2h Td As 6s").unwrap().as_slice_card().to_vec();
+        let cards = Board::try_from("9c 2h Td As 6s")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let texture = calc_board_texture(&cards);
 
         assert_eq!(texture.same_suited_max_count, 2);
@@ -302,7 +314,10 @@ mod tests {
         assert_eq!(texture.num_with_str8_draw, 48);
         assert_eq!(texture.num_with_gut_shot, 372);
 
-        let cards = Board::try_from("9c 2h Td Ks 6s").unwrap().as_slice_card().to_vec();
+        let cards = Board::try_from("9c 2h Td Ks 6s")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let texture = calc_board_texture(&cards);
 
         trace!("Texture\n{:#?}", &texture);
@@ -312,7 +327,10 @@ mod tests {
         assert_eq!(texture.num_with_str8_draw, 64);
         assert_eq!(texture.num_with_gut_shot, 568);
 
-        let cards = Board::try_from("9c 2h Td Qs 6s").unwrap().as_slice_card().to_vec();
+        let cards = Board::try_from("9c 2h Td Qs 6s")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let texture = calc_board_texture(&cards);
 
         trace!("Texture\n{:#?}", &texture);
@@ -322,7 +340,10 @@ mod tests {
         assert_eq!(texture.num_with_str8_draw, 308);
         assert_eq!(texture.num_with_gut_shot, 308);
 
-        let cards = Board::try_from("9c 2h Td Js 6s").unwrap().as_slice_card().to_vec();
+        let cards = Board::try_from("9c 2h Td Js 6s")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let texture = calc_board_texture(&cards);
 
         trace!("Texture\n{:#?}", &texture);
@@ -332,7 +353,10 @@ mod tests {
         assert_eq!(texture.num_with_str8_draw, 308);
         assert_eq!(texture.num_with_gut_shot, 308);
 
-        let cards = Board::try_from("6c 8h Td").unwrap().as_slice_card().to_vec();
+        let cards = Board::try_from("6c 8h Td")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let texture = calc_board_texture(&cards);
 
         trace!("Texture\n{:#?}", &texture);
@@ -342,7 +366,10 @@ mod tests {
         assert_eq!(texture.num_with_str8_draw, 64);
         assert_eq!(texture.num_with_gut_shot, 308);
 
-        let cards = Board::try_from("6c 8h Td 9d").unwrap().as_slice_card().to_vec();
+        let cards = Board::try_from("6c 8h Td 9d")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let texture = calc_board_texture(&cards);
 
         trace!("Texture\n{:#?}", &texture);
@@ -352,7 +379,10 @@ mod tests {
         assert_eq!(texture.num_with_str8_draw, 166);
         assert_eq!(texture.num_with_gut_shot, 268);
 
-        let cards = Board::try_from("Ac 2h 4d 5d").unwrap().as_slice_card().to_vec();
+        let cards = Board::try_from("Ac 2h 4d 5d")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let texture = calc_board_texture(&cards);
 
         trace!("Texture\n{:#?}", &texture);

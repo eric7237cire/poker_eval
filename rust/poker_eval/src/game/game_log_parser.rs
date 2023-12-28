@@ -1,4 +1,4 @@
-use crate::{HoleCards, Board};
+use crate::{Board, HoleCards};
 use log::trace;
 use regex::Regex;
 

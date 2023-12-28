@@ -5,7 +5,7 @@
 use std::cmp::min;
 use std::iter;
 
-use crate::{rank_cards, set_used_card, PlayerAction, Rank, Board};
+use crate::{rank_cards, set_used_card, Board, PlayerAction, Rank};
 use crate::{
     ActionEnum, CardUsedType, ChipType, GameState, PlayerState, PokerError, Position, Round,
 };
@@ -890,19 +890,33 @@ impl GameRunner {
         Ok(())
     }
 
-    pub fn to_game_log_string(&self, with_player_comments: bool, with_hole_cards_in_name: bool) -> String {
-
-        let player_names = self.game_state.player_states.iter().map(|p| {
-            if with_hole_cards_in_name {
-                format!("{} ({})", p.player_name, self.game_runner_source.get_hole_cards(p.player_index()).unwrap())
-            } else {
-                p.player_name.clone()
-            }
-        }).collect::<Vec<String>>();
-
+    pub fn to_game_log_string(
+        &self,
+        with_player_comments: bool,
+        with_hole_cards_in_name: bool,
+    ) -> String {
+        let player_names = self
+            .game_state
+            .player_states
+            .iter()
+            .map(|p| {
+                if with_hole_cards_in_name {
+                    format!(
+                        "{} ({})",
+                        p.player_name,
+                        self.game_runner_source
+                            .get_hole_cards(p.player_index())
+                            .unwrap()
+                    )
+                } else {
+                    p.player_name.clone()
+                }
+            })
+            .collect::<Vec<String>>();
 
         //Find longest player id width
-        let max_player_id_width = player_names.iter()
+        let max_player_id_width = player_names
+            .iter()
             .map(|player_name| player_name.len())
             .max()
             .unwrap_or(0);
@@ -949,9 +963,11 @@ impl GameRunner {
                 s.push_str(&format!("*** {} ***\n", round));
 
                 if round == Round::Flop {
-                    self.game_state.board.as_slice_card()[0..3].iter().for_each(|c| {
-                        s.push_str(&format!("{} ", c));
-                    });
+                    self.game_state.board.as_slice_card()[0..3]
+                        .iter()
+                        .for_each(|c| {
+                            s.push_str(&format!("{} ", c));
+                        });
                     s.push_str("\n");
                 } else if round == Round::Turn {
                     s.push_str(&format!("{}\n", self.game_state.board.as_slice_card()[3]));

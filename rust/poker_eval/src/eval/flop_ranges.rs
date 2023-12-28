@@ -25,7 +25,7 @@ sb, sb,
 sb, no bet
 lb, lb
 lb, sb
-lb, no bet 
+lb, no bet
 no bet, sb
 no bet, lb
 no bet, no bet
@@ -49,16 +49,20 @@ Maybe have this take a decision profile, but we'll start with what
 seems reasonable and the most 'fishy'
 */
 
-use std::{rc::Rc, cell::RefCell};
+use std::{cell::RefCell, rc::Rc};
 
-use postflop_solver::{Range, Hand};
+use crate::{
+    board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
+    core::BoolRange,
+    Board, Card, HoleCards, PartialRankContainer, PokerError,
+};
+use postflop_solver::{Hand, Range};
 use serde::{Deserialize, Serialize};
-use crate::{core::BoolRange, Card, board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards}, PartialRankContainer, HoleCards, PokerError, Board};
-const BET_SIZE_COUNT : usize = 3;
+const BET_SIZE_COUNT: usize = 3;
 
-const BET_ZERO : usize = 0;
-const BET_SMALL : usize = 1;
-const BET_LARGE : usize = 2;
+const BET_ZERO: usize = 0;
+const BET_SMALL: usize = 1;
+const BET_LARGE: usize = 2;
 
 #[derive(Serialize, Deserialize)]
 pub struct FlopRangeContainer {
@@ -77,11 +81,14 @@ pub struct FlopRanges {
     pub top_50: FlopRangeContainer,
 }
 
-fn narrow_range(board: &Board, in_range: &BoolRange, bet_size: usize, 
+fn narrow_range(
+    board: &Board,
+    in_range: &BoolRange,
+    bet_size: usize,
     partial_rank_db: Rc<
-    RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
->,) -> Result<BoolRange, PokerError> {
-
+        RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
+    >,
+) -> Result<BoolRange, PokerError> {
     //bet 0 is nothing, 1 is small bet
     let out_range = BoolRange::default();
 
@@ -89,10 +96,9 @@ fn narrow_range(board: &Board, in_range: &BoolRange, bet_size: usize,
 
     let mut index_check = 0;
     for lo_card in 0..52u8 {
-        for hi_card in lo_card+1..52u8 {
-            let hc = HoleCards::new(Card::try_from(lo_card)?, 
-            Card::try_from(hi_card)?)?;
-            
+        for hi_card in lo_card + 1..52u8 {
+            let hc = HoleCards::new(Card::try_from(lo_card)?, Card::try_from(hi_card)?)?;
+
             let hc_index = hc.to_range_index();
             assert_eq!(hc_index, index_check);
             index_check += 1;
@@ -103,12 +109,9 @@ fn narrow_range(board: &Board, in_range: &BoolRange, bet_size: usize,
 
             let prc = p_db.get_put(board, &hc).unwrap();
 
-            
-
             //out_range.set(hc_index);
         }
     }
 
     Ok(out_range)
-
 }

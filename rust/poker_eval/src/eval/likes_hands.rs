@@ -1,4 +1,7 @@
-use crate::{PartialRankContainer, BoardTexture, Rank, HoleCards, Card, CardValue, Round, PokerError, Board, FlushDrawType, StraightDrawType};
+use crate::{
+    Board, BoardTexture, Card, CardValue, FlushDrawType, HoleCards, PartialRankContainer,
+    PokerError, Rank, Round, StraightDrawType,
+};
 
 #[repr(u8)]
 pub enum LikesHandLevel {
@@ -21,7 +24,6 @@ pub fn likes_hand(
     board: &Board,
     hc: &HoleCards,
 ) -> Result<LikesHandResponse, PokerError> {
-
     let round = board.get_round()?;
 
     let mut likes_hand_comments: Vec<String> = Vec::new();
@@ -61,14 +63,19 @@ pub fn likes_hand(
         }
     }
     if let Some(p) = prc.hi_card {
-
         //if the board is paired, then only stay in with an ace or king
         if p.number_above == 0 {
             if ft.has_pair || ft.has_trips || ft.has_two_pair {
                 if hc.get_hi_card().value >= CardValue::King {
-                    likes_hand_comments.push(format!("hi card overcard is ace or king with paired board {}", hc.get_hi_card().value));
+                    likes_hand_comments.push(format!(
+                        "hi card overcard is ace or king with paired board {}",
+                        hc.get_hi_card().value
+                    ));
                 } else {
-                    not_like_hand_comments.push(format!("hi card overcard is not ace or king with paired board {}", hc.get_hi_card().value));
+                    not_like_hand_comments.push(format!(
+                        "hi card overcard is not ace or king with paired board {}",
+                        hc.get_hi_card().value
+                    ));
                 }
             } else {
                 likes_hand_comments.push(format!("hi card is overpair {}", hc.get_hi_card().value));

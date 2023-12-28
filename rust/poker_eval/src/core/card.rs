@@ -851,7 +851,10 @@ mod tests {
         let range_set = range_string_to_set(range_str).unwrap();
 
         let mut used_cards = CardUsedType::default();
-        let cards = Board::try_from("8d 7s Qd 5c Qs Ts 7c").unwrap().as_slice_card().to_vec();
+        let cards = Board::try_from("8d 7s Qd 5c Qs Ts 7c")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
 
         for card in cards.iter() {
             used_cards.set((*card).into(), true);
