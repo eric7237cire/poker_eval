@@ -1,7 +1,10 @@
+use std::{env, path::PathBuf};
+
 use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{calc_board_texture, rank_cards, Board, BoardTexture, Card, Rank};
+use dotenv::dotenv;
 
 //u32 is usually  enough
 //In the worst case we have 5 cards * 2 cards
@@ -20,15 +23,19 @@ pub enum EvalCacheEnum {
     HandRank,
 }
 
-pub fn get_data_path(cache_name: EvalCacheEnum) -> String {
+pub fn get_data_path(cache_name: EvalCacheEnum) -> PathBuf {
     let file_name = match cache_name {
         EvalCacheEnum::PartialRank => PARTIAL_RANK_FILENAME,
         EvalCacheEnum::FlopTexture => FLOP_TEXTURE_FILENAME,
         EvalCacheEnum::HandRank => HAND_RANK_FILENAME,
     };
 
-    let ret: String = "".to_string();
-    ret + file!() + "../../data/" + file_name
+    dotenv().ok();
+
+    let data_dir = env::var("DATA_DIR").unwrap();
+
+    let path = PathBuf::from(data_dir).join(file_name);
+    path
 }
 
 const TABLE: TableDefinition<u32, &[u8]> = TableDefinition::new("eval_cache");

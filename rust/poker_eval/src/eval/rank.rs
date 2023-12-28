@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 
-use crate::{core::Card, CardValue, Suit};
+use crate::{core::Card, CardValue, Suit, CardValueRange};
 use bitvec::prelude::*;
 use itertools::Itertools;
 use log::trace;
@@ -155,19 +155,16 @@ impl Rank {
                     let ace = cards.iter().find(|c| c.value == CardValue::Ace).unwrap();
                     r.push_str(&format!("{} ", ace));
 
-                    let mut cv = CardValue::Two;
-                    for _ in 0..4 {
-                        let card = cards.iter().find(|c| c.value == cv).unwrap();
+                    for card_value in CardValueRange::new(CardValue::Two, CardValue::Five) {
+                        let card = cards.iter().find(|c| c.value == card_value).unwrap();
                         r.push_str(&format!("{} ", card));
-                        cv = cv.next_card();
                     }
                 } else {
-                    let mut cv = CardValue::try_from(straight_value as u8 - 4).unwrap();
+                    let start = CardValue::try_from(straight_value as u8 - 4).unwrap();
 
-                    for _ in 0..5 {
-                        let card = cards.iter().find(|c| c.value == cv).unwrap();
-                        r.push_str(&format!("{} ", card));
-                        cv = cv.next_card();
+                    for card_value in CardValueRange::new(start, straight_value) {
+                        let card = cards.iter().find(|c| c.value == card_value).unwrap();
+                        r.push_str(&format!("{} ", card));                        
                     }
                 }
 
@@ -273,19 +270,16 @@ impl Rank {
                         .unwrap();
                     r.push_str(&format!("{} ", ace));
 
-                    let mut cv = CardValue::Two;
-                    for _ in 0..4 {
+                    for cv in CardValueRange::new(CardValue::Two, CardValue::Five) {
                         let card = suited_cards.iter().find(|c| c.value == cv).unwrap();
                         r.push_str(&format!("{} ", card));
-                        cv = cv.next_card();
                     }
                 } else {
-                    let mut cv = CardValue::try_from(straight_value as u8 - 4).unwrap();
+                    let start = CardValue::try_from(straight_value as u8 - 4).unwrap();
 
-                    for _ in 0..5 {
+                    for cv in CardValueRange::new(start, straight_value) {
                         let card = suited_cards.iter().find(|c| c.value == cv).unwrap();
                         r.push_str(&format!("{} ", card));
-                        cv = cv.next_card();
                     }
                 }
 

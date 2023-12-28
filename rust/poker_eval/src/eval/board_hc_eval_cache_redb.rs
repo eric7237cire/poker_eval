@@ -42,7 +42,7 @@ where
     //each different struct should get its own db path
     pub fn new() -> Result<Self, ReDbError> {
         let db_name = get_data_path(P::get_cache_name());
-        info!("Opening db {}", db_name);
+        info!("Opening db {:?}", db_name);
         let db = Database::create(db_name)?;
         {
             //Make sure table exists
@@ -173,7 +173,7 @@ mod tests {
         // Code block to measure.
         {
             for i in 0..iter_count {
-                cards.add_cards_from_deck(&mut agent_deck, 3);
+                cards.add_cards_from_deck(&mut agent_deck, 3).unwrap();
                 let hole1: Card = agent_deck.get_unused_card().unwrap().try_into().unwrap();
                 let hole2: Card = agent_deck.get_unused_card().unwrap().try_into().unwrap();
                 let hole_cards: HoleCards = HoleCards::new(hole1, hole2).unwrap();

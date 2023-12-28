@@ -284,7 +284,7 @@ impl GameRunner {
         for _ in 0..cards_needed {
             let card = self.game_runner_source.get_next_board_card()?;
             set_used_card(card.into(), &mut self.used_cards)?;
-            self.game_state.board.add_card(card);
+            self.game_state.board.add_card(card).unwrap();
         }
 
         //to have it calculated

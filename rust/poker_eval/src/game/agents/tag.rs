@@ -304,6 +304,9 @@ mod tests {
             });
         }
 
+        let mut board = Board::try_from("2s 3c 8h 5d 6c").unwrap();
+        board.get_index();
+
         let game_state: GameState = GameState {
             player_states: other_players,
             current_to_act: player_state.position,
@@ -312,7 +315,7 @@ mod tests {
             round_pot: 0,
             current_to_call: 0,
             min_raise: 5,
-            board: Board::try_from("2s 3c 8h 5d 6c").unwrap(),
+            board,
             sb: 2,
             bb: 5,
             actions: vec![],
@@ -325,6 +328,5 @@ mod tests {
         info!("Action: {}", action);
         assert_eq!(action.action, ActionEnum::Check);
 
-        drop(rcref_pdb.borrow_mut());
     }
 }

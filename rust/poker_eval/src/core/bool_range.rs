@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::{Card, CardValue, HoleCards, InRangeType, PokerError, Suit};
+use crate::{Card, CardValue, HoleCards, InRangeType, PokerError, Suit, CardValueRange};
 
 #[derive(Serialize, Deserialize, Default, PartialEq, Eq, Debug)]
 pub struct BoolRange {
@@ -35,6 +35,11 @@ impl BoolRange {
         for &i in indices {
             self.data.set(i, enabled);
         }
+    }
+
+    fn is_enabled_for_indices(&self, indices: &[usize]) -> bool {
+        
+        indices.iter().all(|&i| self.data[i] )
     }
 
     #[inline]
@@ -104,6 +109,185 @@ impl BoolRange {
         } else {
             Err(format!("Invalid range: {range}").into())
         }
+    }
+
+    fn pairs_strings(&self, result: &mut Vec<String>) {
+
+        let mut start: Option<CardValue> = None;
+
+        for rank in CardValueRange::new(CardValue::Two, CardValue::Ace).rev() {
+            
+            let has_all_pairs = self.is_enabled_for_indices(&pair_indices(rank));
+
+            if start.is_none() && rank == CardValue::Two && has_all_pairs {
+                result.push("22".to_string());
+                continue;
+            }
+
+            if start.is_some() && !has_all_pairs {
+                let s = start.unwrap();
+                let e = rank.next_card();
+
+                let tmp = if s == rank {
+                    format!("{s}{s}")
+                } else if s == CardValue::Ace {
+                    format!("{e}{e}+")
+                } else {
+                    format!("{s}{s}-{e}{e}")
+                };
+                result.push(tmp);
+                start = None;
+            }
+
+           
+        }
+    }
+
+    fn nonpairs_strings(&self, result: &mut Vec<String>) {
+        for rank1 in (1..13).rev() {
+            if self.can_unsuit(rank1) {
+                self.high_cards_strings(result, rank1, Suitedness::All);
+            } else {
+                self.high_cards_strings(result, rank1, Suitedness::Suited);
+                self.high_cards_strings(result, rank1, Suitedness::Offsuit);
+            }
+        }
+    }
+
+    fn suit_specified_strings(&self, result: &mut Vec<String>) {
+        // pairs
+        for rank in (0..13).rev() {
+            if !self.is_enabled_for_indices(&pair_indices(rank)) {
+                for suit1 in (0..4).rev() {
+                    for suit2 in (0..suit1).rev() {
+                        let weight = self.get_weight_by_cards(4 * rank + suit1, 4 * rank + suit2);
+                        if weight > 0.0 {
+                            let mut tmp = format!(
+                                "{rank}{suit1}{rank}{suit2}",
+                                rank = rank_to_char(rank).unwrap(),
+                                suit1 = suit_to_char(suit1).unwrap(),
+                                suit2 = suit_to_char(suit2).unwrap(),
+                            );
+                            if weight != 1.0 {
+                                write!(tmp, ":{weight}").unwrap();
+                            }
+                            result.push(tmp);
+                        }
+                    }
+                }
+            }
+        }
+
+        // non-pairs
+        for rank1 in (0..13).rev() {
+            for rank2 in (0..rank1).rev() {
+                // suited
+                if !self.is_enabled_for_indices(&suited_indices(rank1, rank2)) {
+                    for suit in (0..4).rev() {
+                        let weight = self.get_weight_by_cards(4 * rank1 + suit, 4 * rank2 + suit);
+                        if weight > 0.0 {
+                            let mut tmp = format!(
+                                "{rank1}{suit}{rank2}{suit}",
+                                rank1 = rank_to_char(rank1).unwrap(),
+                                rank2 = rank_to_char(rank2).unwrap(),
+                                suit = suit_to_char(suit).unwrap(),
+                            );
+                            if weight != 1.0 {
+                                write!(tmp, ":{weight}").unwrap();
+                            }
+                            result.push(tmp);
+                        }
+                    }
+                }
+
+                // offsuit
+                if !self.is_enabled_for_indices(&offsuit_indices(rank1, rank2)) {
+                    for suit1 in (0..4).rev() {
+                        for suit2 in (0..4).rev() {
+                            if suit1 != suit2 {
+                                let weight =
+                                    self.get_weight_by_cards(4 * rank1 + suit1, 4 * rank2 + suit2);
+                                if weight > 0.0 {
+                                    let mut tmp = format!(
+                                        "{rank1}{suit1}{rank2}{suit2}",
+                                        rank1 = rank_to_char(rank1).unwrap(),
+                                        suit1 = suit_to_char(suit1).unwrap(),
+                                        rank2 = rank_to_char(rank2).unwrap(),
+                                        suit2 = suit_to_char(suit2).unwrap(),
+                                    );
+                                    if weight != 1.0 {
+                                        write!(tmp, ":{weight}").unwrap();
+                                    }
+                                    result.push(tmp);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn high_cards_strings(&self, result: &mut Vec<String>, rank1: CardValue, suitedness: Suitedness) {
+        let rank1_char: char = rank1.to_char();
+        let mut start: Option<(u8, f32)> = None;
+        type FnPairToIndices = fn(CardValue, CardValue) -> Vec<usize>;
+        let (getter, suit_char): (FnPairToIndices, &str) = match suitedness {
+            Suitedness::Suited => (suited_indices, "s"),
+            Suitedness::Offsuit => (offsuit_indices, "o"),
+            Suitedness::All => (nonpair_indices, ""),
+            _ => panic!("high_cards_strings: invalid suitedness"),
+        };
+
+        for rank2 in CardValueRange::new(CardValue::Two, rank1.prev_card()) {}
+        //for i in (-1..rank1 as i32).rev() {
+            //let rank2 = i as u8;
+            //let prev_rank2 = (i + 1) as u8;
+
+            if start.is_some()
+                && (i == -1
+                    || !self.is_enabled_for_indices(&getter(rank1, rank2))
+                    || start.unwrap().1 != self.get_average_weight(&getter(rank1, rank2)))
+            {
+                let (start_rank2, weight) = start.unwrap();
+                let s = rank_to_char(start_rank2).unwrap();
+                let e = rank_to_char(prev_rank2).unwrap();
+                let mut tmp = if start_rank2 == prev_rank2 {
+                    format!("{rank1_char}{s}{suit_char}")
+                } else if start_rank2 == rank1 - 1 {
+                    format!("{rank1_char}{e}{suit_char}+")
+                } else {
+                    format!("{rank1_char}{s}{suit_char}-{rank1_char}{e}{suit_char}")
+                };
+                if weight != 1.0 {
+                    write!(tmp, ":{weight}").unwrap();
+                }
+                result.push(tmp);
+                start = None;
+            }
+
+            if i >= 0
+                && self.is_enabled_for_indices(&getter(rank1, rank2))
+                && self.get_average_weight(&getter(rank1, rank2)) > 0.0
+                && start.is_none()
+            {
+                start = Some((rank2, self.get_average_weight(&getter(rank1, rank2))));
+            }
+        }
+    }
+
+    fn can_unsuit(&self, rank1: CardValue) -> bool {
+        //for rank2 in 0..rank1 {
+        for rank2 in CardValueRange::new(CardValue::Two, rank1.prev_card()) {    
+            let has_suited = self.is_enabled_for_indices(&suited_indices(rank1, rank2));
+            let has_offsuit = self.is_enabled_for_indices(&offsuit_indices(rank1, rank2));
+            
+            if !has_suited || !has_offsuit
+            {
+                return false;
+            }
+        }
+        true
     }
 }
 const COMBO_PAT: &str = r"(?:(?:[AaKkQqJjTt2-9]{2}[os]?)|(?:(?:[AaKkQqJjTt2-9][cdhs]){2}))";
@@ -320,6 +504,17 @@ impl FromStr for BoolRange {
         }
 
         Ok(result)
+    }
+}
+
+impl ToString for BoolRange {
+    #[inline]
+    fn to_string(&self) -> String {
+        let mut result: Vec<String> = Vec::new();
+        self.pairs_strings(&mut result);
+        self.nonpairs_strings(&mut result);
+        self.suit_specified_strings(&mut result);
+        result.join(",")
     }
 }
 
