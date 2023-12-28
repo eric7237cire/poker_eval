@@ -48,7 +48,7 @@ impl Deck {
         assert_eq!(count_after, count_before + 1);
     }
 
-    pub fn choose_available_in_range(&self, range: &BoolRange) -> Result<HoleCards, PokerError> {
+    pub fn choose_available_in_range(&mut self, range: &BoolRange) -> Result<HoleCards, PokerError> {
         let mut out_range = BoolRange::default();
         //there should be a better way to do this
         //perhaps each card has the bit set for the range it is in

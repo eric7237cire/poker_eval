@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use wasm_bindgen::JsValue;
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct PokerError {
     details: String,
 }

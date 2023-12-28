@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::{InRangeType, Suit, PokerError, CardValue, Rank};
+use crate::{InRangeType, Suit, PokerError, CardValue, Rank, Card, HoleCards};
 
 #[derive(Serialize, Deserialize, Default, PartialEq, Eq, Debug)]
 pub struct BoolRange {
@@ -32,70 +32,79 @@ impl BoolRange {
     }
 
     #[inline]
-    pub fn set_weight(&mut self, indices: &[usize], enabled: bool) {
+    pub fn set_enabled(&mut self, indices: &[usize], enabled: bool) {
         for &i in indices {
-            self.data[i] = enabled;
+            self.data.set(i, enabled);
         }
     }
     
 
     #[inline]
-    pub fn update_with_singleton(&mut self, combo: &str, weight: f32) -> Result<(), PokerError> {
+    pub fn update_with_singleton(&mut self, combo: &str, enabled: bool) -> Result<(), PokerError> {
         let (rank1, rank2, suitedness) = parse_singleton(combo)?;
-        self.set_weight(&indices_with_suitedness(rank1, rank2, suitedness), weight);
+        self.set_enabled(&indices_with_suitedness(rank1, rank2, suitedness), enabled);
         Ok(())
     }
 
     #[inline]
-    fn update_with_plus_range(&mut self, range: &str, weight: f32) -> Result<(), String> {
+    fn update_with_plus_range(&mut self, range: &str, enabled: bool) -> Result<(), PokerError> {
         let lowest_combo = &range[..range.len() - 1];
         let (rank1, rank2, suitedness) = parse_singleton(lowest_combo)?;
-        let gap = rank1 - rank2;
+        assert!(rank1 >= rank2);
+        
+        let gap = (rank1 as u8) - (rank2 as u8);
         if gap <= 1 {
+            let rank1_u8 = rank1 as u8;
             // pair and connector (e.g.,  88+, T9s+)
-            for i in rank1..13 {
-                self.set_weight(&indices_with_suitedness(i, i - gap, suitedness), weight);
+            for i in rank1_u8..13 {
+                let r1: CardValue = i.try_into().unwrap();
+                let r2: CardValue = (i - gap).try_into().unwrap();
+                self.set_enabled(&indices_with_suitedness(r1, r2, suitedness), enabled);
             }
         } else {
             // otherwise (e.g., ATo+)
-            for i in rank2..rank1 {
-                self.set_weight(&indices_with_suitedness(rank1, i, suitedness), weight);
+            for i in (rank2 as u8)..(rank1 as u8){
+                let r2 : CardValue = i.try_into().unwrap();
+                self.set_enabled(&indices_with_suitedness(rank1, r2, suitedness), enabled);
             }
         }
         Ok(())
     }
 
     #[inline]
-    fn update_with_dash_range(&mut self, range: &str, weight: f32) -> Result<(), String> {
+    fn update_with_dash_range(&mut self, range: &str, enabled: bool) -> Result<(), PokerError> {
         let combo_pair = range.split('-').collect::<Vec<_>>();
         let (rank11, rank12, suitedness) = parse_singleton(combo_pair[0])?;
         let (rank21, rank22, suitedness2) = parse_singleton(combo_pair[1])?;
-        let gap = rank11 - rank12;
-        let gap2 = rank21 - rank22;
+        let gap = (rank11 as u8) - (rank12 as u8);
+        let gap2 = (rank21 as u8) - (rank22 as u8);
         if suitedness != suitedness2 {
-            Err(format!("Suitedness does not match: {range}"))
+            Err(format!("Suitedness does not match: {range}").into())
         } else if gap == gap2 {
             // same gap (e.g., 88-55, KQo-JTo)
             if rank11 > rank21 {
-                for i in rank21..=rank11 {
-                    self.set_weight(&indices_with_suitedness(i, i - gap, suitedness), weight);
+                for i in (rank21 as u8)..=(rank11 as u8) {
+                    let r1: CardValue = i.try_into().unwrap();
+                    let r2: CardValue = (i - gap).try_into().unwrap();
+                    self.set_enabled(&indices_with_suitedness(r1, r2, suitedness), enabled);
                 }
                 Ok(())
             } else {
-                Err(format!("Range must be in descending order: {range}"))
+                Err(format!("Range must be in descending order: {range}").into())
             }
         } else if rank11 == rank21 {
             // same first rank (e.g., A5s-A2s)
             if rank12 > rank22 {
-                for i in rank22..=rank12 {
-                    self.set_weight(&indices_with_suitedness(rank11, i, suitedness), weight);
+                for i in (rank22 as u8)..=(rank12 as u8) {
+                    let r2 = i.try_into().unwrap();
+                    self.set_enabled(&indices_with_suitedness(rank11, r2, suitedness), enabled);
                 }
                 Ok(())
             } else {
-                Err(format!("Range must be in descending order: {range}"))
+                Err(format!("Range must be in descending order: {range}").into())
             }
         } else {
-            Err(format!("Invalid range: {range}"))
+            Err(format!("Invalid range: {range}").into())
         }
     }
 }
@@ -108,71 +117,90 @@ static RANGE_REGEX: Lazy<Regex> = Lazy::new(|| {
     .unwrap()
 });
 
-#[inline]
-pub fn card_pair_to_index(mut card1: usize, mut card2: usize) -> usize {
-    assert!(card1 < 52);
-    assert!(card2 < 52);
-    assert!(card1 != card2);
-    if card1 > card2 {
-        mem::swap(&mut card1, &mut card2);
-    }
-    //card2 > card1
-    card1 as usize * (101 - card1 as usize) / 2 + card2 as usize - 1
-}
+// #[inline]
+// pub fn card_pair_to_index(mut card1: usize, mut card2: usize) -> usize {
+//     assert!(card1 < 52);
+//     assert!(card2 < 52);
+//     assert!(card1 != card2);
+//     if card1 > card2 {
+//         mem::swap(&mut card1, &mut card2);
+//     }
+//     //card2 > card1
+//     card1 as usize * (101 - card1 as usize) / 2 + card2 as usize - 1
+// }
 
 //Use holecard -- to_range_index
 #[inline]
-fn pair_indices(rank_obj: Rank) -> Vec<usize> {
-    let rank: usize = rank_obj.into();
+fn pair_indices(rank: CardValue) -> Vec<usize> {
+    //let rank: usize = rank_obj.try_into().unwrap();
     let mut result = Vec::with_capacity(6);
-    for i in 0..4usize {
-        for j in i + 1..4usize {
-            result.push(card_pair_to_index(4 * rank + i, 4 * rank + j));
-        }
-    }
-    result
-}
-
-#[inline]
-fn nonpair_indices(rank1: u8, rank2: u8) -> Vec<usize> {
-    let mut result = Vec::with_capacity(16);
-    for i in 0..4 {
-        for j in 0..4 {
-            result.push(card_pair_to_index(4 * rank1 + i, 4 * rank2 + j));
-        }
-    }
-    result
-}
-
-#[inline]
-fn suited_indices(rank1: u8, rank2: u8) -> Vec<usize> {
-    let mut result = Vec::with_capacity(4);
-    for i in 0..4 {
-        result.push(card_pair_to_index(4 * rank1 + i, 4 * rank2 + i));
-    }
-    result
-}
-
-#[inline]
-fn offsuit_indices(rank1: u8, rank2: u8) -> Vec<usize> {
-    let mut result = Vec::with_capacity(12);
-    for i in 0..4 {
-        for j in 0..4 {
-            if i != j {
-                result.push(card_pair_to_index(4 * rank1 + i, 4 * rank2 + j));
+    for suit1 in Suit::suits() {
+        let card1 = Card::new(rank, suit1);
+        for suit2 in Suit::suits() {
+            if suit1 == suit2 {
+                continue;
             }
+            let card2 = Card::new(rank, suit2);
+            let hc = HoleCards::new(card1, card2).unwrap();
+            result.push(hc.to_range_index());
         }
     }
     result
 }
 
 #[inline]
-fn indices_with_suitedness(rank1: u8, rank2: u8, suitedness: Suitedness) -> Vec<usize> {
+fn nonpair_indices(rank1: CardValue, rank2: CardValue) -> Vec<usize> {
+    let mut result = Vec::with_capacity(16);
+    for suit1 in Suit::suits() {
+        let card1 = Card::new(rank1, suit1);
+        for suit2 in Suit::suits() {
+            let card2 = Card::new(rank2, suit2);
+            let hc = HoleCards::new(card1, card2).unwrap();
+            result.push(hc.to_range_index());
+        }
+    }
+    result
+}
+
+#[inline]
+fn suited_indices(rank1: CardValue, rank2: CardValue) -> Vec<usize> {
+    let mut result = Vec::with_capacity(4);
+    for suit1 in Suit::suits() {
+        let card1 = Card::new(rank1, suit1);
+        let card2 = Card::new(rank2, suit1);
+        let hc = HoleCards::new(card1, card2).unwrap();
+        result.push(hc.to_range_index());
+    }
+    result
+}
+
+#[inline]
+fn offsuit_indices(rank1: CardValue, rank2: CardValue) -> Vec<usize> {
+    let mut result = Vec::with_capacity(12);
+    for suit1 in Suit::suits() {
+        let card1 = Card::new(rank1, suit1);
+        for suit2 in Suit::suits() {
+            if suit1 == suit2 {
+                continue;
+            }
+            let card2 = Card::new(rank2, suit2);
+            let hc = HoleCards::new(card1, card2).unwrap();
+            result.push(hc.to_range_index());
+        }
+    }
+    result
+}
+
+#[inline]
+fn indices_with_suitedness(rank1: CardValue, rank2: CardValue, suitedness: Suitedness) -> Vec<usize> {
     if rank1 == rank2 {
         match suitedness {
             Suitedness::All => pair_indices(rank1),
             Suitedness::Specific(suit1, suit2) => {
-                vec![card_pair_to_index(4 * rank1 + suit1, 4 * rank1 + suit2)]
+                let card1 = Card::new(rank1, suit1);
+                let card2 = Card::new(rank1, suit2);
+                let hc = HoleCards::new(card1, card2).unwrap();
+                vec![hc.to_range_index()]
             }
             _ => panic!("invalid suitedness with a pair"),
         }
@@ -182,7 +210,10 @@ fn indices_with_suitedness(rank1: u8, rank2: u8, suitedness: Suitedness) -> Vec<
             Suitedness::Offsuit => offsuit_indices(rank1, rank2),
             Suitedness::All => nonpair_indices(rank1, rank2),
             Suitedness::Specific(suit1, suit2) => {
-                vec![card_pair_to_index(4 * rank1 + suit1, 4 * rank2 + suit2)]
+                let card1 = Card::new(rank1, suit1);
+                let card2 = Card::new(rank1, suit2);
+                let hc = HoleCards::new(card1, card2).unwrap();
+                vec![hc.to_range_index()]
             }
         }
     }
@@ -238,7 +269,7 @@ fn parse_compound_singleton(combo: &str) -> Result<(CardValue, CardValue, Suited
 }
 
 impl FromStr for BoolRange {
-    type Err = String;
+    type Err = PokerError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = TRIM_REGEX.replace_all(s, "$1").trim().to_string();
@@ -259,11 +290,11 @@ impl FromStr for BoolRange {
             let range = caps.name("range").unwrap().as_str();
 
             if range.contains('-') {
-                result.update_with_dash_range(range)?;
+                result.update_with_dash_range(range, true)?;
             } else if range.contains('+') {
-                result.update_with_plus_range(range)?;
+                result.update_with_plus_range(range, true)?;
             } else {
-                result.update_with_singleton(range)?;
+                result.update_with_singleton(range, true)?;
             }
         }
 
@@ -355,13 +386,5 @@ mod tests {
         let dash_error_5 = "AhAs-QsQh".parse::<BoolRange>();
         assert!(dash_error_5.is_err());
 
-        let data = "85s:0.5".parse::<BoolRange>();
-        assert!(data.is_ok());
-
-        let data = data.unwrap();
-        assert_eq!(data.get_weight_suited(3, 6), 0.5);
-        assert_eq!(data.get_weight_suited(6, 3), 0.5);
-        assert_eq!(data.get_weight_offsuit(3, 6), 0.0);
-        assert_eq!(data.get_weight_offsuit(6, 3), 0.0);
     }
 }

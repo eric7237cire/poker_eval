@@ -175,7 +175,7 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
                     StraightDrawType::OpenEnded => {
                         trace!(
                             "open ended str8 with board {} and hole cards {} {}",
-                            Board::new_from_cards(cards.to_vec()),
+                            Board::new_from_cards(cards),
                             hole_card1,
                             hole_card2
                         );
@@ -192,7 +192,7 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
                     StraightDrawType::DoubleGutShot => {
                         trace!(
                             "Double gut shot with board {} and hole cards {} {}",
-                            Board::new_from_cards(cards.to_vec()),
+                            Board::new_from_cards(cards),
                             hole_card1,
                             hole_card2
                         );
