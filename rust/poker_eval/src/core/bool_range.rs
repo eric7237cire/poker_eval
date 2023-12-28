@@ -1,16 +1,15 @@
-use std::{str::FromStr};
+use std::str::FromStr;
 
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::{InRangeType, Suit, PokerError, CardValue, Card, HoleCards};
+use crate::{Card, CardValue, HoleCards, InRangeType, PokerError, Suit};
 
 #[derive(Serialize, Deserialize, Default, PartialEq, Eq, Debug)]
 pub struct BoolRange {
     pub data: InRangeType,
 }
-
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Suitedness {
@@ -37,7 +36,6 @@ impl BoolRange {
             self.data.set(i, enabled);
         }
     }
-    
 
     #[inline]
     pub fn update_with_singleton(&mut self, combo: &str, enabled: bool) -> Result<(), PokerError> {
@@ -51,7 +49,7 @@ impl BoolRange {
         let lowest_combo = &range[..range.len() - 1];
         let (rank1, rank2, suitedness) = parse_singleton(lowest_combo)?;
         assert!(rank1 >= rank2);
-        
+
         let gap = (rank1 as u8) - (rank2 as u8);
         if gap <= 1 {
             let rank1_u8 = rank1 as u8;
@@ -63,8 +61,8 @@ impl BoolRange {
             }
         } else {
             // otherwise (e.g., ATo+)
-            for i in (rank2 as u8)..(rank1 as u8){
-                let r2 : CardValue = i.try_into().unwrap();
+            for i in (rank2 as u8)..(rank1 as u8) {
+                let r2: CardValue = i.try_into().unwrap();
                 self.set_enabled(&indices_with_suitedness(rank1, r2, suitedness), enabled);
             }
         }
@@ -192,7 +190,11 @@ fn offsuit_indices(rank1: CardValue, rank2: CardValue) -> Vec<usize> {
 }
 
 #[inline]
-fn indices_with_suitedness(rank1: CardValue, rank2: CardValue, suitedness: Suitedness) -> Vec<usize> {
+fn indices_with_suitedness(
+    rank1: CardValue,
+    rank2: CardValue,
+    suitedness: Suitedness,
+) -> Vec<usize> {
     if rank1 == rank2 {
         match suitedness {
             Suitedness::All => pair_indices(rank1),
@@ -219,7 +221,6 @@ fn indices_with_suitedness(rank1: CardValue, rank2: CardValue, suitedness: Suite
     }
 }
 
-
 #[inline]
 fn parse_singleton(combo: &str) -> Result<(CardValue, CardValue, Suitedness), PokerError> {
     if combo.len() == 4 {
@@ -232,14 +233,27 @@ fn parse_singleton(combo: &str) -> Result<(CardValue, CardValue, Suitedness), Po
 #[inline]
 fn parse_simple_singleton(combo: &str) -> Result<(CardValue, CardValue, Suitedness), PokerError> {
     let mut chars = combo.chars();
-    let rank1 = chars.next().ok_or_else(|| "Unexpected end".to_string())?.try_into()?;
-    let suit1 = chars.next().ok_or_else(|| "Unexpected end".to_string())?.try_into()?;
-    let rank2 = chars.next().ok_or_else(|| "Unexpected end".to_string())?.try_into()?;
-    let suit2 = chars.next().ok_or_else(|| "Unexpected end".to_string())?.try_into()?;
+    let rank1 = chars
+        .next()
+        .ok_or_else(|| "Unexpected end".to_string())?
+        .try_into()?;
+    let suit1 = chars
+        .next()
+        .ok_or_else(|| "Unexpected end".to_string())?
+        .try_into()?;
+    let rank2 = chars
+        .next()
+        .ok_or_else(|| "Unexpected end".to_string())?
+        .try_into()?;
+    let suit2 = chars
+        .next()
+        .ok_or_else(|| "Unexpected end".to_string())?
+        .try_into()?;
     if rank1 < rank2 {
         return Err(format!(
             "The first rank must be equal or higher than the second rank: {combo}"
-        ).into());
+        )
+        .into());
     }
     if rank1 == rank2 && suit1 == suit2 {
         return Err(format!("Duplicate cards are not allowed: {combo}").into());
@@ -250,8 +264,14 @@ fn parse_simple_singleton(combo: &str) -> Result<(CardValue, CardValue, Suitedne
 #[inline]
 fn parse_compound_singleton(combo: &str) -> Result<(CardValue, CardValue, Suitedness), PokerError> {
     let mut chars = combo.chars();
-    let rank1 = chars.next().ok_or_else(|| "Unexpected end".to_string())?.try_into()?;
-    let rank2 = chars.next().ok_or_else(|| "Unexpected end".to_string())?.try_into()?;
+    let rank1 = chars
+        .next()
+        .ok_or_else(|| "Unexpected end".to_string())?
+        .try_into()?;
+    let rank2 = chars
+        .next()
+        .ok_or_else(|| "Unexpected end".to_string())?
+        .try_into()?;
     let suitedness = chars.next().map_or(Ok(Suitedness::All), |c| match c {
         's' => Ok(Suitedness::Suited),
         'o' => Ok(Suitedness::Offsuit),
@@ -260,7 +280,8 @@ fn parse_compound_singleton(combo: &str) -> Result<(CardValue, CardValue, Suited
     if rank1 < rank2 {
         return Err(format!(
             "The first rank must be equal or higher than the second rank: {combo}"
-        ).into());
+        )
+        .into());
     }
     if rank1 == rank2 && suitedness != Suitedness::All {
         return Err(format!("A pair with suitedness is not allowed: {combo}").into());
@@ -385,6 +406,5 @@ mod tests {
 
         let dash_error_5 = "AhAs-QsQh".parse::<BoolRange>();
         assert!(dash_error_5.is_err());
-
     }
 }

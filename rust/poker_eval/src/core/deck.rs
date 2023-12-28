@@ -1,4 +1,4 @@
-use log::{trace};
+use log::trace;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{BoolRange, Card, CardUsedType, HoleCards, PokerError};
@@ -48,7 +48,10 @@ impl Deck {
         assert_eq!(count_after, count_before + 1);
     }
 
-    pub fn choose_available_in_range(&mut self, range: &BoolRange) -> Result<HoleCards, PokerError> {
+    pub fn choose_available_in_range(
+        &mut self,
+        range: &BoolRange,
+    ) -> Result<HoleCards, PokerError> {
         let _out_range = BoolRange::default();
         //there should be a better way to do this
         //perhaps each card has the bit set for the range it is in

@@ -5,7 +5,6 @@ use std::{
 
 use crate::{set_used_card, unset_used_card, CardUsedType};
 
-
 use crate::{Card, PokerError};
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]

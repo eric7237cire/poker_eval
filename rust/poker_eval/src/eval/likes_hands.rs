@@ -1,6 +1,6 @@
 use crate::{
-    Board, BoardTexture, CardValue, FlushDrawType, HoleCards, PartialRankContainer,
-    PokerError, Rank, Round, StraightDrawType,
+    Board, BoardTexture, CardValue, FlushDrawType, HoleCards, PartialRankContainer, PokerError,
+    Rank, Round, StraightDrawType,
 };
 
 #[repr(u8)]

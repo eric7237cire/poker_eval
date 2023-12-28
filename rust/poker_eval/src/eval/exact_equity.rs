@@ -29,7 +29,6 @@ use std::{cell::RefCell, rc::Rc};
 
 use itertools::Itertools;
 
-
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceRank},
     Board, BoolRange, Deck, PokerError, Rank,
@@ -117,7 +116,6 @@ fn calc_equity(
 
 #[cfg(test)]
 mod tests {
-    
 
     #[test]
     fn test_equity() {
