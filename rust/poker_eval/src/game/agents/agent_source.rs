@@ -85,10 +85,10 @@ mod tests {
 
     use std::{cell::RefCell, collections::BinaryHeap, rc::Rc};
 
-    use log::{debug, info};
+    use log::{info};
 
     use crate::{
-        board_eval_cache_redb::{EvalCacheEnum, EvalCacheReDb, ProduceFlopTexture},
+        board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
         board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
         game::{
             agents::{
@@ -97,7 +97,7 @@ mod tests {
             },
             game_runner_source::GameRunnerSourceEnum,
         },
-        init_test_logger, test_game_runner, BoardTexture, Card, Deck, GameLog, GameRunner,
+        init_test_logger, test_game_runner, Card, Deck, GameRunner,
         InitialPlayerState, PartialRankContainer,
     };
 

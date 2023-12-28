@@ -56,7 +56,7 @@ use crate::{
     core::BoolRange,
     Board, Card, HoleCards, PartialRankContainer, PokerError,
 };
-use postflop_solver::{Hand, Range};
+
 use serde::{Deserialize, Serialize};
 const BET_SIZE_COUNT: usize = 3;
 
@@ -84,7 +84,7 @@ pub struct FlopRanges {
 fn narrow_range(
     board: &Board,
     in_range: &BoolRange,
-    bet_size: usize,
+    _bet_size: usize,
     partial_rank_db: Rc<
         RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
     >,
@@ -107,7 +107,7 @@ fn narrow_range(
                 continue;
             }
 
-            let prc = p_db.get_put(board, &hc).unwrap();
+            let _prc = p_db.get_put(board, &hc).unwrap();
 
             //out_range.set(hc_index);
         }

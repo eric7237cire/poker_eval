@@ -3,8 +3,8 @@ use std::{
     str::FromStr,
 };
 
-use crate::{core::card, set_used_card, unset_used_card, CardUsedType};
-use postflop_solver::card_pair_to_index;
+use crate::{set_used_card, unset_used_card, CardUsedType};
+
 
 use crate::{Card, PokerError};
 

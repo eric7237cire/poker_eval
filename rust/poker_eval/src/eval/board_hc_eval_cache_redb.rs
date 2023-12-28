@@ -144,7 +144,6 @@ mod tests {
     use log::info;
 
     use crate::{
-        board_eval_cache_redb::EvalCacheEnum,
         board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
         init_test_logger, Board, Card, Deck, HoleCards,
     };

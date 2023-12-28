@@ -1,10 +1,10 @@
-use std::{str::FromStr, mem};
+use std::{str::FromStr};
 
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::{InRangeType, Suit, PokerError, CardValue, Rank, Card, HoleCards};
+use crate::{InRangeType, Suit, PokerError, CardValue, Card, HoleCards};
 
 #[derive(Serialize, Deserialize, Default, PartialEq, Eq, Debug)]
 pub struct BoolRange {

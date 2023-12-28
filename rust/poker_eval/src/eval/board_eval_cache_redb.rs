@@ -174,7 +174,7 @@ mod tests {
     use log::info;
 
     use crate::{
-        board_eval_cache_redb::{get_data_path, EvalCacheReDb},
+        board_eval_cache_redb::{EvalCacheReDb},
         init_test_logger, Deck,
     };
 

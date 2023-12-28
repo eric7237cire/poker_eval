@@ -7,7 +7,7 @@ use serde::Serialize;
 use std::cmp;
 use std::convert::TryFrom;
 use std::fmt;
-use std::fmt::Display;
+
 use std::mem;
 use std::str::FromStr;
 

@@ -3,7 +3,7 @@
 // via trait that will do
 
 use std::cmp::min;
-use std::iter;
+
 
 use crate::{rank_cards, set_used_card, Board, PlayerAction, Rank};
 use crate::{
@@ -289,7 +289,7 @@ impl GameRunner {
         }
 
         //to have it calculated
-        let index_ = self.game_state.board.get_index();
+        let _index_ = self.game_state.board.get_index();
 
         Ok(())
     }

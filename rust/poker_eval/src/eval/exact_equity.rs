@@ -28,7 +28,7 @@ rank all the hole cards
 use std::{cell::RefCell, rc::Rc};
 
 use itertools::Itertools;
-use log::trace;
+
 
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceRank},
@@ -49,7 +49,7 @@ fn calc_equity(
 
     let mut out = vec![0.0; ranges.len()];
 
-    for it in 0..num_simulations {
+    for _it in 0..num_simulations {
         deck.reset();
 
         //We need to deal hole cards to each player
@@ -96,7 +96,7 @@ fn calc_equity(
         let mut count_at_max = 0;
         let mut max_rank: Option<Rank> = None;
 
-        for (rank, player_index) in ranks.iter() {
+        for (rank, _player_index) in ranks.iter() {
             if max_rank.is_none() || rank > max_rank.as_ref().unwrap() {
                 max_rank = Some(*rank);
                 count_at_max = 1;
@@ -117,7 +117,7 @@ fn calc_equity(
 
 #[cfg(test)]
 mod tests {
-    use crate::BoolRange;
+    
 
     #[test]
     fn test_equity() {
