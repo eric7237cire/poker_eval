@@ -89,7 +89,7 @@ mod tests {
 
     use crate::{
         board_hc_eval_cache_redb::{
-            EvalCacheWithHcReDb, ProducePartialRankCards, PARTIAL_RANK_PATH,
+            EvalCacheWithHcReDb, ProducePartialRankCards, 
         },
         game::{
             agents::{
@@ -98,15 +98,14 @@ mod tests {
             },
             game_runner_source::GameRunnerSourceEnum,
         },
-        game_runner_source::GameRunnerSource,
         init_test_logger, test_game_runner, Card, Deck, GameRunner, InitialPlayerState,
-        PartialRankContainer, GameLog, board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture, FLOP_TEXTURE_PATH}, BoardTexture,
+        PartialRankContainer, GameLog, board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture,  EvalCacheEnum,  }, BoardTexture,
     };
 
     use super::AgentSource;
 
     fn build_agents(
-        flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture, BoardTexture>>>,
+        flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
         partial_rank_db: Rc<
             RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
         >,
@@ -159,12 +158,12 @@ mod tests {
         */
 
         let partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
-            EvalCacheWithHcReDb::new(PARTIAL_RANK_PATH).unwrap();
+            EvalCacheWithHcReDb::new().unwrap();
 
         let rcref_pdb = Rc::new(RefCell::new(partial_rank_db));
 
-        let flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture> =
-            EvalCacheReDb::new(FLOP_TEXTURE_PATH).unwrap();
+        let flop_texture_db: EvalCacheReDb<ProduceFlopTexture> =
+            EvalCacheReDb::new().unwrap();
 
         let rcref_ftdb = Rc::new(RefCell::new(flop_texture_db));
 

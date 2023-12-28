@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture, FLOP_TEXTURE_PATH},
+    board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture,},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
     ActionEnum, BoardTexture, CommentedAction, FlushDrawType, GameState, HoleCards,
     PartialRankContainer, PlayerState, Round, StraightDrawType,
@@ -17,7 +17,7 @@ pub struct Tag {
     pub pfr_range: Range,
     pub hole_cards: Option<HoleCards>,
     pub name: String,
-    flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture, BoardTexture>>>,
+    flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
     partial_rank_db:
         Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>>,
 }
@@ -27,7 +27,7 @@ impl Tag {
         three_bet_range_str: &str,
         pfr_range_str: &str,
         name: &str,
-        flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture, BoardTexture>>>,
+        flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
         partial_rank_db: Rc<
             RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
         >,
@@ -259,7 +259,7 @@ mod tests {
     use log::info;
 
     use super::*;
-    use crate::{init_test_logger, board_hc_eval_cache_redb::{EvalCacheWithHcReDb, PARTIAL_RANK_PATH}, Board};
+    use crate::{init_test_logger, board_hc_eval_cache_redb::{EvalCacheWithHcReDb}, Board,};
 
 
     #[test]
@@ -267,12 +267,12 @@ mod tests {
         init_test_logger();
 
         let partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
-            EvalCacheWithHcReDb::new(PARTIAL_RANK_PATH).unwrap();
+            EvalCacheWithHcReDb::new().unwrap();
 
         let rcref_pdb = Rc::new(RefCell::new(partial_rank_db));
         
-        let flop_texture_db: EvalCacheReDb<ProduceFlopTexture, BoardTexture> =
-            EvalCacheReDb::new(FLOP_TEXTURE_PATH).unwrap();
+        let flop_texture_db: EvalCacheReDb<ProduceFlopTexture> =
+            EvalCacheReDb::new().unwrap();
 
         let rcref_ftdb = Rc::new(RefCell::new(flop_texture_db));
 

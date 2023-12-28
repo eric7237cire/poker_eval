@@ -1,8 +1,8 @@
-use log::debug;
+use log::{debug, info};
 use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{partial_rank_cards, Card, HoleCards, PartialRankContainer, Board};
+use crate::{partial_rank_cards, Card, HoleCards, PartialRankContainer, Board, board_eval_cache_redb::{ EvalCacheEnum, get_data_path}};
 
 //u32 is usually  enough
 //In the worst case we have 5 cards * 2 cards
@@ -11,12 +11,13 @@ use crate::{partial_rank_cards, Card, HoleCards, PartialRankContainer, Board};
 // need 22 bits for 52 choose 5
 // need 11 bits for 52 choose 2
 
-pub const PARTIAL_RANK_PATH: &str = "/home/eric/git/poker_eval/data/partial_rank_re.db";
 
 const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("eval_cache");
 
 pub trait ProduceEvalWithHcResult<R> {
     fn produce_eval_result(cards: &[Card], hole_cards: &HoleCards) -> R;
+
+    fn get_cache_name() -> EvalCacheEnum;
 }
 
 //P is producer type
@@ -37,7 +38,9 @@ where
     R: Serialize + DeserializeOwned,
 {
     //each different struct should get its own db path
-    pub fn new(db_name: &str) -> Result<Self, ReDbError> {
+    pub fn new() -> Result<Self, ReDbError> {
+        let db_name = get_data_path(P::get_cache_name());
+        info!("Opening db {}", db_name	);
         let db = Database::create(db_name)?;
         {
             //Make sure table exists
@@ -129,6 +132,10 @@ impl ProduceEvalWithHcResult<PartialRankContainer> for ProducePartialRankCards {
     fn produce_eval_result(board: &[Card], hole_cards: &HoleCards) -> PartialRankContainer {
         partial_rank_cards(&hole_cards, board)
     }
+
+    fn get_cache_name() -> EvalCacheEnum {
+        EvalCacheEnum::PartialRank
+    }
 }
 
 #[cfg(test)]
@@ -139,9 +146,9 @@ mod tests {
 
     use crate::{
         board_hc_eval_cache_redb::{
-            EvalCacheWithHcReDb, ProducePartialRankCards, PARTIAL_RANK_PATH,
+            EvalCacheWithHcReDb, ProducePartialRankCards, 
         },
-        init_test_logger, Card, Deck, HoleCards, Board,
+        init_test_logger, Card, Deck, HoleCards, Board, board_eval_cache_redb::{EvalCacheEnum},
     };
 
     //// cargo test cache_perf --lib --release -- --nocapture
@@ -163,7 +170,7 @@ mod tests {
 
         //let mut flop_texture_db = FlopTextureReDb::new(re_db_name).unwrap();
         let mut partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
-            EvalCacheWithHcReDb::new(PARTIAL_RANK_PATH).unwrap();
+            EvalCacheWithHcReDb::new().unwrap();
         let now = Instant::now();
         let iter_count = 500_000;
         // Code block to measure.

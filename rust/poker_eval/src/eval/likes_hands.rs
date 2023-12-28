@@ -1,14 +1,14 @@
 use crate::{PartialRankContainer, BoardTexture, Rank, HoleCards, Card, CardValue, Round, PokerError, Board, FlushDrawType, StraightDrawType};
 
 #[repr(u8)]
-enum LikesHandLevel {
+pub enum LikesHandLevel {
     None, //might even fold instead of checking
     SmallBet,
     LargeBet,
     AllIn,
 }
 
-struct LikesHandResponse {
+pub struct LikesHandResponse {
     pub likes_hand: LikesHandLevel,
     pub likes_hand_comments: Vec<String>,
     pub not_like_hand_comments: Vec<String>,
@@ -18,7 +18,7 @@ pub fn likes_hand(
     prc: &PartialRankContainer,
     ft: &BoardTexture,
     hand_rank: &Rank,
-    board: &mut Board,
+    board: &Board,
     hc: &HoleCards,
 ) -> Result<LikesHandResponse, PokerError> {
 

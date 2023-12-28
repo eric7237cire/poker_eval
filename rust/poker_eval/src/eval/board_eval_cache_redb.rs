@@ -1,7 +1,7 @@
 use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{calc_board_texture, BoardTexture, Card, CombinatorialIndex, Board};
+use crate::{calc_board_texture, BoardTexture, Card, Board, Rank, rank_cards};
 
 //u32 is usually  enough
 //In the worst case we have 5 cards * 2 cards
@@ -10,34 +10,62 @@ use crate::{calc_board_texture, BoardTexture, Card, CombinatorialIndex, Board};
 // need 22 bits for 52 choose 5
 // need 11 bits for 52 choose 2
 
-pub const FLOP_TEXTURE_PATH: &str = "/home/eric/git/poker_eval/data/flop_texture_re.db";
+const PARTIAL_RANK_FILENAME: &str = "partial_rank_re.db";
+const FLOP_TEXTURE_FILENAME: &str = "flop_texture_re.db";
+const HAND_RANK_FILENAME: &str = "hand_rank.db";
+
+pub enum EvalCacheEnum {
+    PartialRank,
+    FlopTexture,
+    HandRank,
+}
+
+pub fn get_data_path(cache_name: EvalCacheEnum) -> String {
+
+    let file_name = match cache_name {
+        EvalCacheEnum::PartialRank => PARTIAL_RANK_FILENAME,
+        EvalCacheEnum::FlopTexture => FLOP_TEXTURE_FILENAME,
+        EvalCacheEnum::HandRank => HAND_RANK_FILENAME,
+    };
+
+
+    
+    let ret : String = "".to_string();
+    ret + file!() + "../../data/" + file_name
+}
 
 const TABLE: TableDefinition<u32, &[u8]> = TableDefinition::new("eval_cache");
 
-pub trait ProduceEvalResult<R> {
-    fn produce_eval_result(cards: &[Card]) -> R;
+pub trait ProduceEvalResult {
+
+    type Result;
+
+    fn produce_eval_result(cards: &[Card]) -> Self::Result;
+
+    fn get_cache_name() -> EvalCacheEnum;
 }
 
 //P is producer type
 //R is result
 //K is the key type
-pub struct EvalCacheReDb<P, R> {
+pub struct EvalCacheReDb<P> {
     db: Database,
     pub cache_hits: u32,
     pub cache_misses: u32,
 
     //We don't actually need an instance
     phantom1: std::marker::PhantomData<P>,
-    phantom2: std::marker::PhantomData<R>,
+    //phantom2: std::marker::PhantomData<R>,
 }
 
-impl<P, R> EvalCacheReDb<P, R>
+impl<P> EvalCacheReDb<P>
 where
-    P: ProduceEvalResult<R>,
-    R: Serialize + DeserializeOwned,
+    P: ProduceEvalResult,
+    P::Result: Serialize + DeserializeOwned,
 {
     //each different struct should get its own db path
-    pub fn new(db_name: &str) -> Result<Self, ReDbError> {
+    pub fn new() -> Result<Self, ReDbError> {
+        let db_name = get_data_path(P::get_cache_name());
         let db = Database::create(db_name)?;
         {
             //Make sure table exists
@@ -53,11 +81,11 @@ where
             cache_hits: 0,
             cache_misses: 0,
             phantom1: std::marker::PhantomData,
-            phantom2: std::marker::PhantomData,
+            //phantom2: std::marker::PhantomData,
         })
     }
 
-    pub fn get_put(&mut self, board: &Board) -> Result<R, ReDbError> {
+    pub fn get_put(&mut self, board: &Board) -> Result<P::Result, ReDbError> {
         
         let opt = self.get(board.get_precalc_index().unwrap())?;
         if opt.is_some() {
@@ -73,14 +101,14 @@ where
         Ok(result)
     }
 
-    fn get(&mut self, index: u32) -> Result<Option<R>, ReDbError> {
+    fn get(&mut self, index: u32) -> Result<Option<P::Result>, ReDbError> {
         let read_txn: ReadTransaction = self.db.begin_read()?;
         let table = read_txn.open_table(TABLE)?;
 
         let data = table.get(index)?;
         if let Some(data) = data {
             //let texture: BoardTexture = rmp_serde::from_slice(data.value()).unwrap();
-            let texture: R = bincode::deserialize(&data.value()).unwrap();
+            let texture: P::Result = bincode::deserialize(&data.value()).unwrap();
 
             Ok(Some(texture))
         } else {
@@ -88,7 +116,7 @@ where
         }
     }
 
-    fn put(&mut self, index: u32, result: &R) -> Result<(), ReDbError> {
+    fn put(&mut self, index: u32, result: &P::Result) -> Result<(), ReDbError> {
         let write_txn = self.db.begin_write()?;
         {
             let mut table = write_txn.open_table(TABLE)?;
@@ -111,9 +139,38 @@ impl ProduceFlopTexture {
     }
 }
 
-impl ProduceEvalResult<BoardTexture> for ProduceFlopTexture {
+impl ProduceEvalResult for ProduceFlopTexture {
+
+    type Result = BoardTexture;
+
     fn produce_eval_result(cards: &[Card]) -> BoardTexture {
         calc_board_texture(cards)
+    }
+
+    fn get_cache_name() -> EvalCacheEnum {
+        EvalCacheEnum::FlopTexture
+    }
+}
+
+
+pub struct ProduceRank {}
+
+impl ProduceRank {
+    pub fn new() -> Self {
+        ProduceRank {}
+    }
+}
+
+impl ProduceEvalResult for ProduceRank {
+
+    type Result = Rank;
+
+    fn produce_eval_result(cards: &[Card]) -> Rank {
+        rank_cards(cards.iter())
+    }
+
+    fn get_cache_name() -> EvalCacheEnum {
+        EvalCacheEnum::HandRank
     }
 }
 
@@ -125,7 +182,7 @@ mod tests {
     use log::info;
 
     use crate::{
-        board_eval_cache_redb::{EvalCacheReDb, FLOP_TEXTURE_PATH},
+        board_eval_cache_redb::{EvalCacheReDb, get_data_path},
         init_test_logger, Deck,
     };
 
@@ -149,8 +206,9 @@ mod tests {
         //let mut flop_texture_db = FlopTextureJamDb::new(db_name).unwrap();
 
         //let mut flop_texture_db = FlopTextureReDb::new(re_db_name).unwrap();
-        let mut flop_texture_db: EvalCacheReDb<ProduceFlopTexture, _> =
-            EvalCacheReDb::new(FLOP_TEXTURE_PATH).unwrap();
+        
+        let mut flop_texture_db: EvalCacheReDb<ProduceFlopTexture> =
+            EvalCacheReDb::new().unwrap();
         let now = Instant::now();
         let iter_count = 100_000;
         // Code block to measure.

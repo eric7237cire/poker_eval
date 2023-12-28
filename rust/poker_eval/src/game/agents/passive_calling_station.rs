@@ -14,7 +14,7 @@ pub struct PassiveCallingStation {
     pub calling_range: Option<Range>,
     pub hole_cards: Option<HoleCards>,
     pub name: String,
-    flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture, BoardTexture>>>,
+    flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
     partial_rank_db:
         Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>>,
 }
@@ -23,7 +23,7 @@ impl PassiveCallingStation {
     pub fn new(
         calling_range_str: Option<&str>,
         name: &str,
-        flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture, BoardTexture>>>,
+        flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
         partial_rank_db: Rc<
             RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
         >,
