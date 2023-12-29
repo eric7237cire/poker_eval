@@ -4,11 +4,12 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 
+use log::info;
 use ph::fmph;
 
 use crate::eval::{pre_calc::{constants::{NUMBER_OF_CARDS, GLOBAL_SUIT_SHIFT, INITIAL_SUIT_COUNT}, get_lookup_path, perfect_hash::load_perfect_hash}, kev::{eval_5cards, eval_7cards, eval_6cards}};
 
-use super::constants::{CARDS, FLUSH_MASK};
+use super::{constants::{CARDS, FLUSH_MASK}, perfect_hash::get_value_bits_for_flush};
 
 fn adjust_hand_rank(rank: u16) -> u16 {
     let reversed_rank = 7463 - rank; // now best hand = 7462
@@ -41,9 +42,9 @@ fn update(
     lookup_flush: &mut HashMap<usize, u16>,
     mixed_key_perfect_hash_func: &fmph::Function
 ) {
-    let is_flush = key & FLUSH_MASK;
-    if is_flush > 0 {
-        let flush_key = (mask >> (4 * is_flush.leading_zeros())) as u16;
+    let flush_key = get_value_bits_for_flush(key, mask);
+    if let Some(flush_key) = flush_key {
+        //let flush_key = (mask >> (4 * is_flush.leading_zeros())) as u16;
         match lookup_flush.insert(flush_key as usize, val) {
             Some(v) => assert_eq!(val, v),
             None => (),
@@ -58,12 +59,14 @@ fn update(
     }
 }
 
-fn main() {
+pub fn generate_lookup_tables() {
     let mut lookup = HashMap::new();
     let mut lookup_flush = HashMap::new();
 
+    info!("Loading perfect hash func");
     let hash_func = load_perfect_hash();
 
+    info!("Running through all 5 card hands");
     // 5-cards
     for i in 0..(NUMBER_OF_CARDS - 4) {
         let (key, mask) = add_card(INITIAL_SUIT_COUNT << GLOBAL_SUIT_SHIFT, 0, i);
@@ -89,6 +92,7 @@ fn main() {
         }
     }
 
+    info!("Running through all 6 card hands");
     // 6-cards
     for i in 0..(NUMBER_OF_CARDS - 5) {
         let (key, mask) = add_card(INITIAL_SUIT_COUNT << GLOBAL_SUIT_SHIFT, 0, i);
@@ -118,7 +122,9 @@ fn main() {
     }
 
     // 7-cards
+    info!("Running through all 7 card hands");
     for i in 0..(NUMBER_OF_CARDS - 6) {
+        info!("7 card hands, i is {}", i);
         let (key, mask) = add_card(INITIAL_SUIT_COUNT << GLOBAL_SUIT_SHIFT, 0, i);
         for j in (i + 1)..(NUMBER_OF_CARDS - 5) {
             let (key, mask) = add_card(key, mask, j);
@@ -148,6 +154,7 @@ fn main() {
         }
     }
 
+    info!("Sorting vecs");
     let mut lookup_vec = vec![0; *lookup.keys().max().unwrap() as usize + 1];
     let mut lookup_flush_vec = vec![0; *lookup_flush.keys().max().unwrap() + 1];
 
@@ -178,4 +185,47 @@ fn main() {
     .unwrap();
 
     println!("wrote result to 'assets/src/lookup.rs'");
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::init_test_logger;
+
+    use crate::eval::pre_calc::perfect_hash::create_perfect_hash;
+
+    use super::*;
+
+    #[test]
+    fn test_adjust_hand_rank() {
+        assert_eq!(adjust_hand_rank(0), 7462);
+        assert_eq!(adjust_hand_rank(1), 7461);
+        assert_eq!(adjust_hand_rank(1277), 6185);
+        assert_eq!(adjust_hand_rank(1278), 6184);
+        assert_eq!(adjust_hand_rank(4137), 3326);
+        assert_eq!(adjust_hand_rank(4138), 3325);
+        assert_eq!(adjust_hand_rank(4995), 2468);
+        assert_eq!(adjust_hand_rank(4996), 2467);
+        assert_eq!(adjust_hand_rank(5853), 1600);
+        assert_eq!(adjust_hand_rank(5854), 1599);
+        assert_eq!(adjust_hand_rank(5863), 1590);
+        assert_eq!(adjust_hand_rank(5864), 1589);
+        assert_eq!(adjust_hand_rank(7140),  312);
+        assert_eq!(adjust_hand_rank(7141),  311);
+        assert_eq!(adjust_hand_rank(7296),  156);
+        assert_eq!(adjust_hand_rank(7297),  155);
+        assert_eq!(adjust_hand_rank(7452),    9);
+        assert_eq!(adjust_hand_rank(7453),    8);
+        assert_eq!(adjust_hand_rank(7462),    0);
+    }
+
+    #[test]
+    fn test_generate_lookup_tables() {
+
+        init_test_logger();
+
+        //create_perfect_hash();
+        
+        //cargo test --lib --release test_generate_lookup_tables -- --nocapture
+        generate_lookup_tables();
+    }
 }
