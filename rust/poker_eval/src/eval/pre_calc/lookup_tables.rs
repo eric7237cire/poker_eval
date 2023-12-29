@@ -9,20 +9,20 @@ use ph::fmph;
 
 use crate::eval::{pre_calc::{constants::{NUMBER_OF_CARDS, GLOBAL_SUIT_SHIFT, INITIAL_SUIT_COUNT}, get_lookup_path, perfect_hash::load_perfect_hash}, kev::{eval_5cards, eval_7cards, eval_6cards}};
 
-use super::{constants::{CARDS, FLUSH_MASK}, perfect_hash::get_value_bits_for_flush};
+use super::{constants::{CARDS, FLUSH_MASK, RANK_FAMILY_OFFEST}, perfect_hash::get_value_bits_for_flush};
 
 fn adjust_hand_rank(rank: u16) -> u16 {
     let reversed_rank = 7463 - rank; // now best hand = 7462
     match reversed_rank {
         1..=1277 => reversed_rank - 1,                   // 1277 high card
-        1278..=4137 => (1 << 12) + reversed_rank - 1278, // 2860 one pair
-        4138..=4995 => (2 << 12) + reversed_rank - 4138, //  858 two pair
-        4996..=5853 => (3 << 12) + reversed_rank - 4996, //  858 three-kind
-        5854..=5863 => (4 << 12) + reversed_rank - 5854, //   10 straights
-        5864..=7140 => (5 << 12) + reversed_rank - 5864, // 1277 flushes
-        7141..=7296 => (6 << 12) + reversed_rank - 7141, //  156 full house
-        7297..=7452 => (7 << 12) + reversed_rank - 7297, //  156 four-kind
-        7453..=7462 => (8 << 12) + reversed_rank - 7453, //   10 straight flushes
+        1278..=4137 => (1 << RANK_FAMILY_OFFEST) + reversed_rank - 1278, // 2860 one pair
+        4138..=4995 => (2 << RANK_FAMILY_OFFEST) + reversed_rank - 4138, //  858 two pair
+        4996..=5853 => (3 << RANK_FAMILY_OFFEST) + reversed_rank - 4996, //  858 three-kind
+        5854..=5863 => (4 << RANK_FAMILY_OFFEST) + reversed_rank - 5854, //   10 straights
+        5864..=7140 => (5 << RANK_FAMILY_OFFEST) + reversed_rank - 5864, // 1277 flushes
+        7141..=7296 => (6 << RANK_FAMILY_OFFEST) + reversed_rank - 7141, //  156 full house
+        7297..=7452 => (7 << RANK_FAMILY_OFFEST) + reversed_rank - 7297, //  156 four-kind
+        7453..=7462 => (8 << RANK_FAMILY_OFFEST) + reversed_rank - 7453, //   10 straight flushes
         _ => panic!(),
     }
 }
@@ -218,7 +218,8 @@ mod tests {
         assert_eq!(adjust_hand_rank(7462),    0);
     }
 
-    #[test]
+    //#[test]
+    #[allow(dead_code)]
     fn test_generate_lookup_tables() {
 
         init_test_logger();

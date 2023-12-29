@@ -4,7 +4,7 @@
 
 use std::cmp::min;
 
-use crate::{rank_cards, set_used_card, Board, PlayerAction, Rank};
+use crate::{rank_cards, set_used_card, Board, PlayerAction, OldRank};
 use crate::{
     ActionEnum, CardUsedType, ChipType, GameState, PlayerState, PokerError, Position, Round,
 };
@@ -304,7 +304,7 @@ impl GameRunner {
             );
         }
 
-        let mut hand_rankings: Vec<(Rank, usize)> = Vec::new();
+        let mut hand_rankings: Vec<(OldRank, usize)> = Vec::new();
         //let mut hand_ranking_strings: Vec<Option<String>> = vec![None; self.game_state.player_states.len()];
 
         let mut eval_cards = self.game_state.board.as_slice_card().to_vec();

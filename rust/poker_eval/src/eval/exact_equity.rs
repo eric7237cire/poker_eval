@@ -31,7 +31,7 @@ use itertools::Itertools;
 
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceRank},
-    Board, BoolRange, Deck, PokerError, Rank,
+    Board, BoolRange, Deck, PokerError, OldRank,
 };
 
 //A more direct version of the flop analyze code
@@ -93,7 +93,7 @@ fn calc_equity(
             .collect_vec();
 
         let mut count_at_max = 0;
-        let mut max_rank: Option<Rank> = None;
+        let mut max_rank: Option<OldRank> = None;
 
         for (rank, _player_index) in ranks.iter() {
             if max_rank.is_none() || rank > max_rank.as_ref().unwrap() {

@@ -4,7 +4,7 @@ mod tests {
 
     use crate::{
         web::{flop_analyzer, PlayerPreFlopState},
-        Board, HoleCards, Rank,
+        Board, HoleCards, OldRank,
     };
 
     fn assert_equity(equity: f64, target: f64, tolerance: f64) {
@@ -191,7 +191,7 @@ mod tests {
         let v_r = &results.all_villians;
         assert_eq!(
             1,
-            v_r.street_rank_results[0].rank_family_count[Rank::OnePair(0).get_family_index()]
+            v_r.street_rank_results[0].rank_family_count[OldRank::OnePair(0).get_family_index()]
         );
         assert_eq!(
             1u32,
@@ -208,7 +208,7 @@ mod tests {
         //Turn villian picks up gut shot
         assert_eq!(
             1,
-            v_r.street_rank_results[1].rank_family_count[Rank::ThreeOfAKind(0).get_family_index()]
+            v_r.street_rank_results[1].rank_family_count[OldRank::ThreeOfAKind(0).get_family_index()]
         );
         assert_eq!(
             1u32,
@@ -220,11 +220,11 @@ mod tests {
 
         assert_eq!(
             0,
-            v_r.street_rank_results[2].rank_family_count[Rank::OnePair(0).get_family_index()]
+            v_r.street_rank_results[2].rank_family_count[OldRank::OnePair(0).get_family_index()]
         );
         assert_eq!(
             1,
-            v_r.street_rank_results[2].rank_family_count[Rank::Straight(0).get_family_index()]
+            v_r.street_rank_results[2].rank_family_count[OldRank::Straight(0).get_family_index()]
         );
         assert_eq!(
             1u32,
@@ -269,7 +269,7 @@ mod tests {
         let v_r = &results.all_villians;
         assert_eq!(
             1,
-            v_r.street_rank_results[0].rank_family_count[Rank::HighCard(0).get_family_index()]
+            v_r.street_rank_results[0].rank_family_count[OldRank::HighCard(0).get_family_index()]
         );
         assert_eq!(
             1,
@@ -283,7 +283,7 @@ mod tests {
 
         assert_eq!(
             1,
-            v_r.street_rank_results[1].rank_family_count[Rank::OnePair(0).get_family_index()]
+            v_r.street_rank_results[1].rank_family_count[OldRank::OnePair(0).get_family_index()]
         );
         assert_eq!(
             1,
@@ -297,7 +297,7 @@ mod tests {
 
         assert_eq!(
             1,
-            v_r.street_rank_results[2].rank_family_count[Rank::OnePair(0).get_family_index()]
+            v_r.street_rank_results[2].rank_family_count[OldRank::OnePair(0).get_family_index()]
         );
         assert_eq!(
             1,

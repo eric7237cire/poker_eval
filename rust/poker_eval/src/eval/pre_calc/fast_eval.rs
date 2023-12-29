@@ -7,182 +7,16 @@ use log::info;
 use bitvec::prelude::*;
 use ph::fmph;
 
-use crate::eval::pre_calc::get_perfect_hash_path;
+use crate::{eval::pre_calc::get_perfect_hash_path, };
 
-use super::pre_calc::perfect_hash::{create_perfect_hash, load_perfect_hash};
+use crate::eval::pre_calc::perfect_hash::{create_perfect_hash, load_perfect_hash};
+
+use super::{lookup::{self, LOOKUP_FLUSH, LOOKUP}, CARDS, perfect_hash::get_value_bits_for_flush, rank::Rank};
 
 /*
 
 
 */
-
-
-fn test_has_unique_value(weights: &[u64]) -> HashSet<u64> {
-    //Go through values 1 (2) to 13 (Ace) and check that the weight give a unique value
-    //Reason is that when a hand is not a flush, the card values alone determine the evaluation rank
-
-    //The ugliest but fastest of the checkers
-
-    let mut seen: HashSet<u64> = HashSet::new();
-
-    //using 3 bits per count
-    let mut valid_counts: HashSet<u64> = HashSet::new();
-
-    let mut num_unique = 0;
-    let mut max_key = 0;
-    for num_val0 in 0..=4 {
-        
-        for num_val1 in 0..=4 {
-            let val_sum = num_val0 + num_val1;
-            if val_sum > 7 {
-                break;
-            }
-            for num_val2 in 0..=4 {
-                let val_sum = num_val0 + num_val1 + num_val2;
-                if val_sum > 7 {
-                    break;
-                }
-                for num_val3 in 0..=4 {
-                    let val_sum = num_val0 + num_val1 + num_val2 + num_val3;
-                    if val_sum > 7 {
-                        break;
-                    }
-                    for num_val4 in 0..=4 {
-                        let val_sum = num_val0 + num_val1 + num_val2 + num_val3 + num_val4;
-                        if val_sum > 7 {
-                            break;
-                        }
-                        for num_val5 in 0..=4 {
-                            let val_sum =
-                                num_val0 + num_val1 + num_val2 + num_val3 + num_val4 + num_val5;
-                            if val_sum > 7 {
-                                break;
-                            }
-                            for num_val6 in 0..=4 {
-                                let val_sum = num_val0
-                                    + num_val1
-                                    + num_val2
-                                    + num_val3
-                                    + num_val4
-                                    + num_val5
-                                    + num_val6;
-                                let val_0to6 = val_sum;
-                                if val_sum > 7 {
-                                    break;
-                                }
-                                for num_val7 in 0..=4 {
-                                    let val_sum = val_0to6 + num_val7;
-                                    if val_sum > 7 {
-                                        break;
-                                    }
-                                    for num_val8 in 0..=4 {
-                                        let val_sum = val_0to6 + num_val7 + num_val8;
-                                        if val_sum > 7 {
-                                            break;
-                                        }
-                                        for num_val9 in 0..=4 {
-                                            let val_sum = val_0to6 + num_val7 + num_val8 + num_val9;
-                                            if val_sum > 7 {
-                                                break;
-                                            }
-                                            for num_val10 in 0..=4 {
-                                                let val_sum = val_0to6
-                                                    + num_val7
-                                                    + num_val8
-                                                    + num_val9
-                                                    + num_val10;
-                                                if val_sum > 7 {
-                                                    break;
-                                                }
-                                                for num_val11 in 0..=4 {
-                                                    let val_sum = val_0to6
-                                                        + num_val7
-                                                        + num_val8
-                                                        + num_val9
-                                                        + num_val10
-                                                        + num_val11;
-                                                    if val_sum > 7 {
-                                                        break;
-                                                    }
-                                                    for num_val12 in 0..=4 {
-                                                        let val_sum = val_0to6
-                                                            + num_val7
-                                                            + num_val8
-                                                            + num_val9
-                                                            + num_val10
-                                                            + num_val11
-                                                            + num_val12;
-                                                        if val_sum < 5 || val_sum > 7 {
-                                                            continue;
-                                                        }
-                                                        let mut counts = [0; 13];
-                                                        counts[0] = num_val0;
-                                                        counts[1] = num_val1;
-                                                        counts[2] = num_val2;
-                                                        counts[3] = num_val3;
-                                                        counts[4] = num_val4;
-                                                        counts[5] = num_val5;
-                                                        counts[6] = num_val6;
-                                                        counts[7] = num_val7;
-                                                        counts[8] = num_val8;
-                                                        counts[9] = num_val9;
-                                                        counts[10] = num_val10;
-                                                        counts[11] = num_val11;
-                                                        counts[12] = num_val12;
-
-                                                        //max count is 4
-                                                        if *counts.iter().max().unwrap() > 4 {
-                                                            panic!("Max count is 4");
-                                                        }
-
-                                                        let mut counts_hash = 0;
-                                                        for i in 0..13 {
-                                                            counts_hash |= counts[i] << (i * 3);
-                                                        }
-                                                        if valid_counts.contains(&counts_hash) {
-                                                            //This is ok
-                                                            continue;
-                                                        }
-                                                        valid_counts.insert(counts_hash);
-
-                                                        let mut key = 0;
-                                                        for i in 0..13 {
-                                                            key += weights[i] * counts[i];
-                                                        }
-                                                        if seen.contains(&key) {
-                                                            panic!(
-                                                                "Duplicate key: {} for counts {:?}",
-                                                                key, counts
-                                                            );
-                                                        }
-                                                        seen.insert(key);
-                                                        max_key = max(max_key, key);
-
-                                                        num_unique += 1;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    info!("Max key: {}", max_key);
-    info!("Number of unique keys: {} for {}", seen.len(), num_unique);
-    info!("Bits needed for max key: {}", 64 - max_key.leading_zeros());
-
-    valid_counts
-}
-
-const NUMBER_OF_RANKS : usize = 13;
-
-type SeenBitSet = BitArr!(for 73775, in usize, Lsb0);
 
 
 // fn check_perfect_hash(rank_bases: &[u64]) {
@@ -220,28 +54,46 @@ type SeenBitSet = BitArr!(for 73775, in usize, Lsb0);
 
 // }
 
-fn generate_lookup_table() {
 
-    //I wasn't able to figure out the secrete science of those better bases,
-    //but we don't need better than this one, which takes 31 bits max
-    let mut rank_base: Vec<u64> = vec![1, 5, 25];
-
-    while rank_base.len() < NUMBER_OF_RANKS {
-        let mut next = rank_base[rank_base.len() - 1] * 5;
-        rank_base.push(next);
+pub fn fast_hand_eval<I, B>(
+    cards: I,
+    hash_func: &fmph::Function
+) -> Rank 
+where
+    I: Iterator<Item = B>,
+    B: Into<u8>,
+{
+    let mut lookup_key_sum = 0;
+    let mut card_mask = 0;
+    for card in cards {
+        let (lookup_key, card_bit) = CARDS[card.into() as usize];
+        lookup_key_sum += lookup_key;
+        card_mask |= card_bit;
     }
 
-    create_perfect_hash( );
+    let flush_lookup_key = get_value_bits_for_flush(lookup_key_sum, card_mask);
 
-    let hash_func = load_perfect_hash();
+    let raw_rank = if let Some(flush_lookup) = flush_lookup_key {
+        LOOKUP_FLUSH[flush_lookup as usize]
+    } else {
+        //hash it first
+        let lookup_key_without_suits = lookup_key_sum as u32;
+        LOOKUP[lookup_key_without_suits as usize]
+    };
+
+    Rank::from(raw_rank)
 }
-
 
 #[cfg(test)]
 mod tests {
     use crate::init_test_logger;
 
     use super::*;
+
+    #[test]
+    fn test_lookups() {
+
+    }
 
     #[test]
     fn test_abc() {
@@ -512,4 +364,173 @@ fn test_has_unique_value3(weights: &[u64]) {
     info!("Number of unique keys: {} for {}", seen.len(), num_unique);
     info!("Bits needed for max key: {}", 64 - max_key.leading_zeros());
 }
+
+
+// fn test_has_unique_value(weights: &[u64]) -> HashSet<u64> {
+//     //Go through values 1 (2) to 13 (Ace) and check that the weight give a unique value
+//     //Reason is that when a hand is not a flush, the card values alone determine the evaluation rank
+
+//     //The ugliest but fastest of the checkers
+
+//     let mut seen: HashSet<u64> = HashSet::new();
+
+//     //using 3 bits per count
+//     let mut valid_counts: HashSet<u64> = HashSet::new();
+
+//     let mut num_unique = 0;
+//     let mut max_key = 0;
+//     for num_val0 in 0..=4 {
+        
+//         for num_val1 in 0..=4 {
+//             let val_sum = num_val0 + num_val1;
+//             if val_sum > 7 {
+//                 break;
+//             }
+//             for num_val2 in 0..=4 {
+//                 let val_sum = num_val0 + num_val1 + num_val2;
+//                 if val_sum > 7 {
+//                     break;
+//                 }
+//                 for num_val3 in 0..=4 {
+//                     let val_sum = num_val0 + num_val1 + num_val2 + num_val3;
+//                     if val_sum > 7 {
+//                         break;
+//                     }
+//                     for num_val4 in 0..=4 {
+//                         let val_sum = num_val0 + num_val1 + num_val2 + num_val3 + num_val4;
+//                         if val_sum > 7 {
+//                             break;
+//                         }
+//                         for num_val5 in 0..=4 {
+//                             let val_sum =
+//                                 num_val0 + num_val1 + num_val2 + num_val3 + num_val4 + num_val5;
+//                             if val_sum > 7 {
+//                                 break;
+//                             }
+//                             for num_val6 in 0..=4 {
+//                                 let val_sum = num_val0
+//                                     + num_val1
+//                                     + num_val2
+//                                     + num_val3
+//                                     + num_val4
+//                                     + num_val5
+//                                     + num_val6;
+//                                 let val_0to6 = val_sum;
+//                                 if val_sum > 7 {
+//                                     break;
+//                                 }
+//                                 for num_val7 in 0..=4 {
+//                                     let val_sum = val_0to6 + num_val7;
+//                                     if val_sum > 7 {
+//                                         break;
+//                                     }
+//                                     for num_val8 in 0..=4 {
+//                                         let val_sum = val_0to6 + num_val7 + num_val8;
+//                                         if val_sum > 7 {
+//                                             break;
+//                                         }
+//                                         for num_val9 in 0..=4 {
+//                                             let val_sum = val_0to6 + num_val7 + num_val8 + num_val9;
+//                                             if val_sum > 7 {
+//                                                 break;
+//                                             }
+//                                             for num_val10 in 0..=4 {
+//                                                 let val_sum = val_0to6
+//                                                     + num_val7
+//                                                     + num_val8
+//                                                     + num_val9
+//                                                     + num_val10;
+//                                                 if val_sum > 7 {
+//                                                     break;
+//                                                 }
+//                                                 for num_val11 in 0..=4 {
+//                                                     let val_sum = val_0to6
+//                                                         + num_val7
+//                                                         + num_val8
+//                                                         + num_val9
+//                                                         + num_val10
+//                                                         + num_val11;
+//                                                     if val_sum > 7 {
+//                                                         break;
+//                                                     }
+//                                                     for num_val12 in 0..=4 {
+//                                                         let val_sum = val_0to6
+//                                                             + num_val7
+//                                                             + num_val8
+//                                                             + num_val9
+//                                                             + num_val10
+//                                                             + num_val11
+//                                                             + num_val12;
+//                                                         if val_sum < 5 || val_sum > 7 {
+//                                                             continue;
+//                                                         }
+//                                                         let mut counts = [0; 13];
+//                                                         counts[0] = num_val0;
+//                                                         counts[1] = num_val1;
+//                                                         counts[2] = num_val2;
+//                                                         counts[3] = num_val3;
+//                                                         counts[4] = num_val4;
+//                                                         counts[5] = num_val5;
+//                                                         counts[6] = num_val6;
+//                                                         counts[7] = num_val7;
+//                                                         counts[8] = num_val8;
+//                                                         counts[9] = num_val9;
+//                                                         counts[10] = num_val10;
+//                                                         counts[11] = num_val11;
+//                                                         counts[12] = num_val12;
+
+//                                                         //max count is 4
+//                                                         if *counts.iter().max().unwrap() > 4 {
+//                                                             panic!("Max count is 4");
+//                                                         }
+
+//                                                         let mut counts_hash = 0;
+//                                                         for i in 0..13 {
+//                                                             counts_hash |= counts[i] << (i * 3);
+//                                                         }
+//                                                         if valid_counts.contains(&counts_hash) {
+//                                                             //This is ok
+//                                                             continue;
+//                                                         }
+//                                                         valid_counts.insert(counts_hash);
+
+//                                                         let mut key = 0;
+//                                                         for i in 0..13 {
+//                                                             key += weights[i] * counts[i];
+//                                                         }
+//                                                         if seen.contains(&key) {
+//                                                             panic!(
+//                                                                 "Duplicate key: {} for counts {:?}",
+//                                                                 key, counts
+//                                                             );
+//                                                         }
+//                                                         seen.insert(key);
+//                                                         max_key = max(max_key, key);
+
+//                                                         num_unique += 1;
+//                                                     }
+//                                                 }
+//                                             }
+//                                         }
+//                                     }
+//                                 }
+//                             }
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     }
+
+//     info!("Max key: {}", max_key);
+//     info!("Number of unique keys: {} for {}", seen.len(), num_unique);
+//     info!("Bits needed for max key: {}", 64 - max_key.leading_zeros());
+
+//     valid_counts
+// }
+
+// const NUMBER_OF_RANKS : usize = 13;
+
+// type SeenBitSet = BitArr!(for 73775, in usize, Lsb0);
+
 */

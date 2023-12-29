@@ -6,13 +6,15 @@ use itertools::Itertools;
 use log::trace;
 use serde::{Deserialize, Serialize};
 
+
+
 /// All the different possible hand ranks.
 /// For each hand rank the u32 corresponds to
 /// the strength of the hand in comparison to others
 /// of the same rank.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Copy, Serialize, Deserialize)]
-pub enum Rank {
+pub enum OldRank {
     /// The lowest rank.
     /// No matches
     HighCard(u32),
@@ -36,25 +38,25 @@ pub enum Rank {
 
 pub const NUM_RANK_FAMILIES: usize = 9;
 
-impl Rank {
+impl OldRank {
     pub fn get_family_index(&self) -> usize {
         match self {
-            Rank::HighCard(_) => 0,
-            Rank::OnePair(_) => 1,
-            Rank::TwoPair(_) => 2,
-            Rank::ThreeOfAKind(_) => 3,
-            Rank::Straight(_) => 4,
-            Rank::Flush(_) => 5,
-            Rank::FullHouse(_) => 6,
-            Rank::FourOfAKind(_) => 7,
-            Rank::StraightFlush(_) => 8,
+            OldRank::HighCard(_) => 0,
+            OldRank::OnePair(_) => 1,
+            OldRank::TwoPair(_) => 2,
+            OldRank::ThreeOfAKind(_) => 3,
+            OldRank::Straight(_) => 4,
+            OldRank::Flush(_) => 5,
+            OldRank::FullHouse(_) => 6,
+            OldRank::FourOfAKind(_) => 7,
+            OldRank::StraightFlush(_) => 8,
         }
     }
 
     pub fn print_winning(&self, cards: &[Card]) -> String {
         let low_set_mask: u32 = 0b1_1111_1111_1111;
         match self {
-            Rank::HighCard(k) => {
+            OldRank::HighCard(k) => {
                 let mut r = "High Card - ".to_string();
                 let bvs: ValueSetType = ValueSetType::new([*k]);
                 assert_eq!(5, bvs.count_ones());
@@ -68,7 +70,7 @@ impl Rank {
                 r.pop().unwrap();
                 r
             }
-            Rank::OnePair(k) => {
+            OldRank::OnePair(k) => {
                 let pair_value_u32 = (k >> 13).trailing_zeros();
                 let pair_value: CardValue = (pair_value_u32 as u8).try_into().unwrap();
                 let mut r = "One Pair - ".to_string();
@@ -88,7 +90,7 @@ impl Rank {
 
                 r
             }
-            Rank::TwoPair(k) => {
+            OldRank::TwoPair(k) => {
                 let pair_values_u32 = k >> 13;
                 let pv_bvs = ValueSetType::new([pair_values_u32]);
 
@@ -109,7 +111,7 @@ impl Rank {
 
                 r
             }
-            Rank::ThreeOfAKind(k) => {
+            OldRank::ThreeOfAKind(k) => {
                 let trips_value_u32 = (k >> 13).trailing_zeros();
                 let trips_value: CardValue = (trips_value_u32 as u8).try_into().unwrap();
                 let mut r = "Trips - ".to_string();
@@ -132,7 +134,7 @@ impl Rank {
 
                 r
             }
-            Rank::Straight(k) => {
+            OldRank::Straight(k) => {
                 let straight_value = if *k == 0 {
                     CardValue::Five
                 } else {
@@ -172,7 +174,7 @@ impl Rank {
 
                 r
             }
-            Rank::Flush(k) => {
+            OldRank::Flush(k) => {
                 let mut r = "Flush - ".to_string();
                 let bvs: ValueSetType = ValueSetType::new([*k]);
                 assert_eq!(5, bvs.count_ones());
@@ -186,7 +188,7 @@ impl Rank {
                 r.pop().unwrap();
                 r
             }
-            Rank::FullHouse(k) => {
+            OldRank::FullHouse(k) => {
                 let trips_values_u32 = k >> 13;
                 let pair_value_u32 = k & low_set_mask;
                 let trips_value: CardValue = (trips_values_u32.trailing_zeros() as u8)
@@ -204,7 +206,7 @@ impl Rank {
 
                 r
             }
-            Rank::FourOfAKind(k) => {
+            OldRank::FourOfAKind(k) => {
                 let quads_value_u32 = (k >> 13).trailing_zeros();
                 let quads_value: CardValue = (quads_value_u32 as u8).try_into().unwrap();
                 let mut r = "Quads - ".to_string();
@@ -227,7 +229,7 @@ impl Rank {
 
                 r
             }
-            Rank::StraightFlush(k) => {
+            OldRank::StraightFlush(k) => {
                 let straight_value = if *k == 0 {
                     CardValue::Five
                 } else {
@@ -453,7 +455,7 @@ where
     card_metrics
 }
 
-pub fn rank_cards<I, B>(cards: I) -> Rank
+pub fn rank_cards<I, B>(cards: I) -> OldRank
 where
     I: Iterator<Item = B>,
     //to accept both Card and &Card
@@ -470,36 +472,36 @@ where
     if let Some(flush_idx) = flush {
         // If we can find a straight in the flush then it's a straight flush
         if let Some(rank) = rank_straight(cards_metrics.suit_value_sets[flush_idx]) {
-            Rank::StraightFlush(rank)
+            OldRank::StraightFlush(rank)
         } else {
             // Else it's just a normal flush
             let rank = keep_n(cards_metrics.suit_value_sets[flush_idx], 5);
-            Rank::Flush(rank)
+            OldRank::Flush(rank)
         }
     } else if cards_metrics.count_to_value[4] != 0 {
         // Four of a kind.
         let high = keep_highest(cards_metrics.value_set ^ cards_metrics.count_to_value[4]);
-        Rank::FourOfAKind(cards_metrics.count_to_value[4] << 13 | high)
+        OldRank::FourOfAKind(cards_metrics.count_to_value[4] << 13 | high)
     } else if cards_metrics.count_to_value[3] != 0
         && cards_metrics.count_to_value[3].count_ones() == 2
     {
         // There are two sets. So the best we can make is a full house.
         let set = keep_highest(cards_metrics.count_to_value[3]);
         let pair = cards_metrics.count_to_value[3] ^ set;
-        Rank::FullHouse(set << 13 | pair)
+        OldRank::FullHouse(set << 13 | pair)
     } else if cards_metrics.count_to_value[3] != 0 && cards_metrics.count_to_value[2] != 0 {
         // there is a pair and a set.
         let set = cards_metrics.count_to_value[3];
         let pair = keep_highest(cards_metrics.count_to_value[2]);
-        Rank::FullHouse(set << 13 | pair)
+        OldRank::FullHouse(set << 13 | pair)
     } else if let Some(s_rank) = rank_straight(cards_metrics.value_set) {
         // If there's a straight return it now.
-        Rank::Straight(s_rank)
+        OldRank::Straight(s_rank)
     } else if cards_metrics.count_to_value[3] != 0 {
         // if there is a set then we need to keep 2 cards that
         // aren't in the set.
         let low = keep_n(cards_metrics.value_set ^ cards_metrics.count_to_value[3], 2);
-        Rank::ThreeOfAKind(cards_metrics.count_to_value[3] << 13 | low)
+        OldRank::ThreeOfAKind(cards_metrics.count_to_value[3] << 13 | low)
     } else if cards_metrics.count_to_value[2].count_ones() >= 2 {
         // Two pair
         //
@@ -507,18 +509,18 @@ where
         // Or we could have two pair and two high cards.
         let pairs = keep_n(cards_metrics.count_to_value[2], 2);
         let low = keep_highest(cards_metrics.value_set ^ pairs);
-        Rank::TwoPair(pairs << 13 | low)
+        OldRank::TwoPair(pairs << 13 | low)
     } else if cards_metrics.count_to_value[2] == 0 {
         // This means that there's no pair
         // no sets, no straights, no flushes, so only a
         // high card.
-        Rank::HighCard(keep_n(cards_metrics.value_set, 5))
+        OldRank::HighCard(keep_n(cards_metrics.value_set, 5))
     } else {
         // Otherwise there's only one pair.
         let pair = cards_metrics.count_to_value[2];
         // Keep the highest three cards not in the pair.
         let low = keep_n(cards_metrics.value_set ^ cards_metrics.count_to_value[2], 3);
-        Rank::OnePair(pair << 13 | low)
+        OldRank::OnePair(pair << 13 | low)
     }
 }
 
@@ -532,7 +534,7 @@ mod tests {
     use rand::{rngs::StdRng, SeedableRng};
 
     use crate::{
-        get_possible_hole_cards, range_string_to_set, rank_cards, CardUsedType, HoleCards, Rank,
+        get_possible_hole_cards, range_string_to_set, rank_cards, CardUsedType, HoleCards, OldRank,
     };
 
     #[test]
@@ -578,16 +580,16 @@ mod tests {
 
             let rank = rank_cards(eval_cards.iter());
             match rank {
-                Rank::HighCard(_) => {
+                OldRank::HighCard(_) => {
                     num_high_card += 1;
                 }
-                Rank::OnePair(_) => {
+                OldRank::OnePair(_) => {
                     num_pair += 1;
                 }
-                Rank::TwoPair(_) => {
+                OldRank::TwoPair(_) => {
                     num_two_pair += 1;
                 }
-                Rank::ThreeOfAKind(_) => {
+                OldRank::ThreeOfAKind(_) => {
                     num_trips += 1;
                 }
                 _ => {}

@@ -3,7 +3,7 @@ use std::{env, path::PathBuf};
 use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{calc_board_texture, rank_cards, Board, BoardTexture, Card, Rank};
+use crate::{calc_board_texture, rank_cards, Board, BoardTexture, Card, OldRank};
 use dotenv::dotenv;
 
 //u32 is usually  enough
@@ -162,9 +162,9 @@ impl ProduceRank {
 }
 
 impl ProduceEvalResult for ProduceRank {
-    type Result = Rank;
+    type Result = OldRank;
 
-    fn produce_eval_result(cards: &[Card]) -> Rank {
+    fn produce_eval_result(cards: &[Card]) -> OldRank {
         rank_cards(cards.iter())
     }
 

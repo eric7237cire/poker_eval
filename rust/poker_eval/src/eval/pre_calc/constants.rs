@@ -7,6 +7,9 @@ pub const NUMBER_OF_CARDS: usize = 4 * NUMBER_OF_RANKS;
 //We want 32 (not 31) so we can truncate easily via as u32
 pub const GLOBAL_SUIT_SHIFT: u64 = 32 ;
 
+//the ranks are repurposed to have the family after bit 12
+pub const RANK_FAMILY_OFFEST: u16 = 12;
+
 // see readme, we initialize the suit count to 3, because 5 more gives us 8, the 4th bit
 // we check for flushes
 pub const INITIAL_SUIT_COUNT: u64 = 0x3333;

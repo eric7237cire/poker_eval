@@ -1,6 +1,6 @@
 use crate::{
     Board, BoardTexture, CardValue, FlushDrawType, HoleCards, PartialRankContainer, PokerError,
-    Rank, Round, StraightDrawType,
+    OldRank, Round, StraightDrawType,
 };
 
 #[repr(u8)]
@@ -20,7 +20,7 @@ pub struct LikesHandResponse {
 pub fn likes_hand(
     prc: &PartialRankContainer,
     ft: &BoardTexture,
-    _hand_rank: &Rank,
+    _hand_rank: &OldRank,
     board: &Board,
     hc: &HoleCards,
 ) -> Result<LikesHandResponse, PokerError> {
