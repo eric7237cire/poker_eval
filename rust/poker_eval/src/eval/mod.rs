@@ -28,3 +28,8 @@ pub mod likes_hands;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod exact_equity;
+
+mod kev;
+mod eval_cache;
+
+mod pre_calc;
