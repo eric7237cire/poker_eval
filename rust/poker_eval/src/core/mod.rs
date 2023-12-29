@@ -20,3 +20,5 @@ pub use bool_range::*;
 
 mod board;
 pub use board::*;
+
+mod eval_cache;

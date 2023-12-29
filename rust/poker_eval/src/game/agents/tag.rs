@@ -327,6 +327,5 @@ mod tests {
 
         info!("Action: {}", action);
         assert_eq!(action.action, ActionEnum::Check);
-
     }
 }

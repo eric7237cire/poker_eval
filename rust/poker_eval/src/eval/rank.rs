@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 
-use crate::{core::Card, CardValue, Suit, CardValueRange};
+use crate::{core::Card, CardValue, CardValueRange, Suit};
 use bitvec::prelude::*;
 use itertools::Itertools;
 use log::trace;
@@ -164,7 +164,7 @@ impl Rank {
 
                     for card_value in CardValueRange::new(start, straight_value) {
                         let card = cards.iter().find(|c| c.value == card_value).unwrap();
-                        r.push_str(&format!("{} ", card));                        
+                        r.push_str(&format!("{} ", card));
                     }
                 }
 
