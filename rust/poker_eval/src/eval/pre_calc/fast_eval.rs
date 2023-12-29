@@ -1,17 +1,16 @@
 use std::{
     cmp::max,
-    collections::{HashMap, HashSet}, env, path::PathBuf, fs::{File, self, remove_file}, io::Write,
+    collections::{HashMap, HashSet}, env, path::PathBuf, fs::{File, self, remove_file}, io::Write, borrow::Borrow,
 };
 use dotenv::dotenv;
 use log::info;
-use bitvec::prelude::*;
 use ph::fmph;
 
-use crate::{eval::pre_calc::get_perfect_hash_path, };
+use crate::{eval::pre_calc::get_perfect_hash_path, Card, };
 
 use crate::eval::pre_calc::perfect_hash::{create_perfect_hash, load_perfect_hash};
 
-use super::{lookup::{self, LOOKUP_FLUSH, LOOKUP}, CARDS, perfect_hash::get_value_bits_for_flush, rank::Rank};
+use super::{lookup::{self, LOOKUP_FLUSH, LOOKUP}, CARDS, perfect_hash::get_value_bits_for_flush, rank::Rank, GLOBAL_SUIT_SHIFT, INITIAL_SUIT_COUNT};
 
 /*
 
@@ -61,12 +60,13 @@ pub fn fast_hand_eval<I, B>(
 ) -> Rank 
 where
     I: Iterator<Item = B>,
-    B: Into<u8>,
+    B: Borrow<Card>,
 {
-    let mut lookup_key_sum = 0;
+    let mut lookup_key_sum = INITIAL_SUIT_COUNT << GLOBAL_SUIT_SHIFT;
     let mut card_mask = 0;
     for card in cards {
-        let (lookup_key, card_bit) = CARDS[card.into() as usize];
+        let card_index: usize = (*card.borrow()).into();
+        let (lookup_key, card_bit) = CARDS[card_index];
         lookup_key_sum += lookup_key;
         card_mask |= card_bit;
     }
@@ -77,7 +77,8 @@ where
         LOOKUP_FLUSH[flush_lookup as usize]
     } else {
         //hash it first
-        let lookup_key_without_suits = lookup_key_sum as u32;
+        let raw_lookup_key_without_suits = lookup_key_sum as u32;
+        let lookup_key_without_suits = hash_func.get(&raw_lookup_key_without_suits as _).unwrap();
         LOOKUP[lookup_key_without_suits as usize]
     };
 
@@ -86,13 +87,62 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::init_test_logger;
+    use crate::{init_test_logger, Board, eval::pre_calc::rank::RankEnum};
 
     use super::*;
 
     #[test]
     fn test_lookups() {
+        //create_perfect_hash();
+        let f = load_perfect_hash();
 
+        let board = Board::try_from("7d 5s 2h 3s 4c").unwrap();
+        let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
+
+        assert_eq!(rank.get_rank_enum(), RankEnum::HighCard(0));
+
+        let board = Board::try_from("Ad 5s Qd Tc Kh Js").unwrap();
+        let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
+
+        assert_eq!(rank.get_rank_enum(), RankEnum::Straight(9));
+        
+        let board = Board::try_from("9d 5s Qd Tc Kh Js").unwrap();
+        let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
+
+        assert_eq!(rank.get_rank_enum(), RankEnum::Straight(8));
+
+        let board = Board::try_from("2d 5s Qd 3h Kh 4s Ac").unwrap();
+        let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
+
+        assert_eq!(rank.get_rank_enum(), RankEnum::Straight(0));
+
+        let board = Board::try_from("2c 5c Qd 3c Kh 4c Ac").unwrap();
+        let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
+
+        assert_eq!(rank.get_rank_enum(), RankEnum::StraightFlush(0));
+
+        //Even though there is a flush on the board
+        let board = Board::try_from("3c 3d Qd 5d 4h 4c 4d").unwrap();
+        let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
+
+        assert_eq!(rank.get_rank_enum(), RankEnum::FullHouse(25));
+
+        let board = Board::try_from("3c 3d 3h Qd 5d 4c 4d").unwrap();
+        let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
+
+        assert_eq!(rank.get_rank_enum(), RankEnum::FullHouse(13));
+
+        let board = Board::try_from("2c 2d 2h Qd 5d 4c 4d").unwrap();
+        let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
+
+        assert_eq!(rank.get_rank_enum(), RankEnum::FullHouse(1));
+
+        let board = Board::try_from("Ad 3d Qd 5d 4h 4c 4d").unwrap();
+        let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
+
+        assert_eq!(rank.get_rank_enum(), RankEnum::Flush(996));
+
+        assert_eq!(42, 42+42)
     }
 
     #[test]
@@ -531,6 +581,6 @@ fn test_has_unique_value3(weights: &[u64]) {
 
 // const NUMBER_OF_RANKS : usize = 13;
 
-// type SeenBitSet = BitArr!(for 73775, in usize, Lsb0);
+// 
 
 */

@@ -15,19 +15,21 @@ pub struct Rank {
 }
 
 impl Rank {
-    fn get_rank_enum(&self) -> RankEnum {
+    pub fn get_rank_enum(&self) -> RankEnum {
         let rank_family = self.raw_rank >> RANK_FAMILY_OFFEST;
 
+        let kicker_mask = (1 << RANK_FAMILY_OFFEST) - 1;
+
         match rank_family {
-            0 => RankEnum::HighCard(self.raw_rank),
-            1 => RankEnum::OnePair(self.raw_rank),
-            2 => RankEnum::TwoPair(self.raw_rank),
-            3 => RankEnum::ThreeOfAKind(self.raw_rank),
-            4 => RankEnum::Straight(self.raw_rank),
-            5 => RankEnum::Flush(self.raw_rank),
-            6 => RankEnum::FullHouse(self.raw_rank),
-            7 => RankEnum::FourOfAKind(self.raw_rank),
-            8 => RankEnum::StraightFlush(self.raw_rank),
+            0 => RankEnum::HighCard(self.raw_rank & kicker_mask),
+            1 => RankEnum::OnePair(self.raw_rank & kicker_mask),
+            2 => RankEnum::TwoPair(self.raw_rank & kicker_mask),
+            3 => RankEnum::ThreeOfAKind(self.raw_rank   & kicker_mask),
+            4 => RankEnum::Straight(self.raw_rank & kicker_mask),
+            5 => RankEnum::Flush(self.raw_rank & kicker_mask),
+            6 => RankEnum::FullHouse(self.raw_rank & kicker_mask),
+            7 => RankEnum::FourOfAKind(self.raw_rank & kicker_mask),
+            8 => RankEnum::StraightFlush(self.raw_rank & kicker_mask),
             _ => panic!("Unknown rank family {}", rank_family),
             
         }
@@ -35,6 +37,7 @@ impl Rank {
 }
 
 
+#[derive(Debug, PartialEq, Eq,)]
 pub enum RankEnum {
     //0
     HighCard(u16),

@@ -7,7 +7,7 @@ use std::io::Write;
 use log::info;
 use ph::fmph;
 
-use crate::eval::{pre_calc::{constants::{NUMBER_OF_CARDS, GLOBAL_SUIT_SHIFT, INITIAL_SUIT_COUNT}, get_lookup_path, perfect_hash::load_perfect_hash}, kev::{eval_5cards, eval_7cards, eval_6cards}};
+use crate::eval::{pre_calc::{constants::{NUMBER_OF_CARDS, GLOBAL_SUIT_SHIFT, INITIAL_SUIT_COUNT}, get_lookup_path, perfect_hash::{load_perfect_hash, create_perfect_hash}}, kev::{eval_5cards, eval_7cards, eval_6cards}};
 
 use super::{constants::{CARDS, FLUSH_MASK, RANK_FAMILY_OFFEST}, perfect_hash::get_value_bits_for_flush};
 
@@ -30,13 +30,14 @@ fn adjust_hand_rank(rank: u16) -> u16 {
 #[inline]
 fn add_card(key: u64, mask: u64, card: usize) -> (u64, u64) {
     let (k, m) = CARDS[card];
-    (key.wrapping_add(k), mask.wrapping_add(m))
+    (key+k, mask | m)
 }
 
 #[inline]
 fn update(
     key: u64,
     mask: u64,
+    //the kev evaluation result
     val: u16,
     lookup: &mut HashMap<u64, u16>,
     lookup_flush: &mut HashMap<usize, u16>,
@@ -50,9 +51,12 @@ fn update(
             None => (),
         };
     } else {
-        let mixed_key = key as u32 as usize;
+        //we truncate the suited count info in the higher bits
+        let mixed_key = key as u32 ;
         let hash_key = mixed_key_perfect_hash_func.get(&mixed_key).unwrap();
+        assert!(hash_key < 73_775);
         match lookup.insert(hash_key, val) {
+            //We should get same evaluation if we hash to the same value
             Some(v) => assert_eq!(val, v),
             None => (),
         }
@@ -64,6 +68,7 @@ pub fn generate_lookup_tables() {
     let mut lookup_flush = HashMap::new();
 
     info!("Loading perfect hash func");
+    create_perfect_hash();
     let hash_func = load_perfect_hash();
 
     info!("Running through all 5 card hands");
@@ -218,7 +223,7 @@ mod tests {
         assert_eq!(adjust_hand_rank(7462),    0);
     }
 
-    //#[test]
+    #[test]
     #[allow(dead_code)]
     fn test_generate_lookup_tables() {
 

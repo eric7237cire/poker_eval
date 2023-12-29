@@ -33,14 +33,14 @@ pub fn get_value_bits_for_flush(raw_lookup_key: u64, card_bit_set: u64) -> Optio
     return Some( ((card_bit_set >> (suit * NUMBER_OF_RANKS as u64)) & CARD_VALUE_MASK) as u16 );
 }
 
-pub fn enumerate_all_unique_sets() -> Vec<u64> {
+pub fn enumerate_all_unique_sets() -> Vec<u32> {
 
     //rank_bases are what we add for each card value 
     //so each 2 adds rank_bases[0]
     //each 3 adds rank_bases[1]
     //etc. 
 
-    let mut keys: Vec<u64> = Vec::new();
+    let mut keys: Vec<u32> = Vec::new();
 
     let rank_bases = RANK_BASES;
 
@@ -63,13 +63,13 @@ pub fn enumerate_all_unique_sets() -> Vec<u64> {
                         let x = rank_bases[i] + rank_bases[j] + rank_bases[k];
                         let x = x + rank_bases[m] + rank_bases[n];
                         //5 card hand sum
-                        keys.push(x);
+                        keys.push(x as u32);
                         for p in max(n, j + 1)..NUMBER_OF_RANKS {
                             let x = x + rank_bases[p];
-                            keys.push(x);
+                            keys.push(x as u32);
                             for q in max(p, k + 1)..NUMBER_OF_RANKS {
                                 let x = x + rank_bases[q];
-                                keys.push(x);
+                                keys.push(x as u32);
                             }
                         }
                     }
@@ -107,4 +107,49 @@ pub fn load_perfect_hash() -> fmph::Function {
     let f2 = fmph::Function::read(&mut file).unwrap();
 
     f2 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bitvec::prelude::*;
+    type SeenBitSet = BitArr!(for 73775, in usize, Lsb0);
+    
+    #[test]
+    fn is_perfect_hash_stable() {
+
+        let unique_sets = enumerate_all_unique_sets();
+        
+        create_perfect_hash();
+
+        let f = load_perfect_hash();
+
+        create_perfect_hash();
+
+        let f2 = load_perfect_hash();
+
+        for s in unique_sets {
+            assert_eq!(f.get(&s), f2.get(&s));
+        }
+    }
+
+    #[test]
+    fn is_hash_minimal() {
+        let unique_sets = enumerate_all_unique_sets();
+
+        assert_eq!(unique_sets.len(), 73_775);
+        
+        let f = load_perfect_hash();
+
+        let mut seen = SeenBitSet::default();
+
+        for s in unique_sets {
+            let hash = f.get(&s).unwrap();
+            assert!(hash < 73_775);
+            assert!(!seen.get(hash as usize).unwrap());
+            seen.set(hash as usize, true);
+        }
+        
+        assert_eq!(seen.count_ones(), 73_775);
+    }
 }
