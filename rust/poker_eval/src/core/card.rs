@@ -233,7 +233,11 @@ pub struct CardValueRange {
 
 impl CardValueRange {
     pub fn new(start: CardValue, end: CardValue) -> Self {
-        CardValueRange { start, end, valid : start <= end }
+        CardValueRange {
+            start,
+            end,
+            valid: start <= end,
+        }
     }
 }
 
@@ -246,14 +250,13 @@ impl Iterator for CardValueRange {
         }
 
         assert!(self.start <= self.end);
-        
-        
+
         let current = self.start;
 
         match self.start {
             CardValue::Ace => {
                 self.valid = false;
-            },
+            }
             _ => {
                 self.start = (self.start as u8 + 1).try_into().unwrap();
                 self.valid = self.start <= self.end;
@@ -261,7 +264,6 @@ impl Iterator for CardValueRange {
         }
 
         Some(current)
-        
     }
 }
 
@@ -278,7 +280,7 @@ impl DoubleEndedIterator for CardValueRange {
         match self.end {
             CardValue::Two => {
                 self.valid = false;
-            },
+            }
             _ => {
                 self.end = (self.end as u8 - 1).try_into().unwrap();
                 self.valid = self.start <= self.end;
@@ -288,8 +290,6 @@ impl DoubleEndedIterator for CardValueRange {
         Some(current)
     }
 }
-
-
 
 /// Enum for the four different suits.
 /// While this has support for ordering it's not
@@ -1015,53 +1015,147 @@ mod tests {
 
     #[test]
     fn test_value_iterator() {
-        let v = CardValueRange::new(CardValue::Two, CardValue::Five).into_iter().collect::<Vec<CardValue>>();
-        assert_eq!(v, vec![CardValue::Two, CardValue::Three, CardValue::Four, CardValue::Five]);
+        let v = CardValueRange::new(CardValue::Two, CardValue::Five)
+            .into_iter()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(
+            v,
+            vec![
+                CardValue::Two,
+                CardValue::Three,
+                CardValue::Four,
+                CardValue::Five
+            ]
+        );
 
-        let v = CardValueRange::new(CardValue::Two, CardValue::Five).into_iter().rev().collect::<Vec<CardValue>>();
-        assert_eq!(v, vec![CardValue::Five, CardValue::Four, CardValue::Three, CardValue::Two]);
+        let v = CardValueRange::new(CardValue::Two, CardValue::Five)
+            .into_iter()
+            .rev()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(
+            v,
+            vec![
+                CardValue::Five,
+                CardValue::Four,
+                CardValue::Three,
+                CardValue::Two
+            ]
+        );
 
-        let v = CardValueRange::new(CardValue::Ace, CardValue::Ace).into_iter().collect::<Vec<CardValue>>();
+        let v = CardValueRange::new(CardValue::Ace, CardValue::Ace)
+            .into_iter()
+            .collect::<Vec<CardValue>>();
         assert_eq!(v, vec![CardValue::Ace]);
 
         //2 to 2
-        let v = CardValueRange::new(CardValue::Two, CardValue::Two).into_iter().collect::<Vec<CardValue>>();
+        let v = CardValueRange::new(CardValue::Two, CardValue::Two)
+            .into_iter()
+            .collect::<Vec<CardValue>>();
         assert_eq!(v, vec![CardValue::Two]);
 
         //now aa, 22 rev
-        let v = CardValueRange::new(CardValue::Ace, CardValue::Ace).into_iter().rev().collect::<Vec<CardValue>>();
+        let v = CardValueRange::new(CardValue::Ace, CardValue::Ace)
+            .into_iter()
+            .rev()
+            .collect::<Vec<CardValue>>();
         assert_eq!(v, vec![CardValue::Ace]);
 
-        let v = CardValueRange::new(CardValue::Two, CardValue::Two).into_iter().rev().collect::<Vec<CardValue>>();
+        let v = CardValueRange::new(CardValue::Two, CardValue::Two)
+            .into_iter()
+            .rev()
+            .collect::<Vec<CardValue>>();
         assert_eq!(v, vec![CardValue::Two]);
 
         //j to a and rev
-        let v = CardValueRange::new(CardValue::Jack, CardValue::Ace).into_iter().collect::<Vec<CardValue>>();
-        assert_eq!(v, vec![CardValue::Jack, CardValue::Queen, CardValue::King, CardValue::Ace]);
+        let v = CardValueRange::new(CardValue::Jack, CardValue::Ace)
+            .into_iter()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(
+            v,
+            vec![
+                CardValue::Jack,
+                CardValue::Queen,
+                CardValue::King,
+                CardValue::Ace
+            ]
+        );
 
-        let v = CardValueRange::new(CardValue::Jack, CardValue::Ace).into_iter().rev().collect::<Vec<CardValue>>();
-        assert_eq!(v, vec![CardValue::Ace, CardValue::King, CardValue::Queen, CardValue::Jack]);
+        let v = CardValueRange::new(CardValue::Jack, CardValue::Ace)
+            .into_iter()
+            .rev()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(
+            v,
+            vec![
+                CardValue::Ace,
+                CardValue::King,
+                CardValue::Queen,
+                CardValue::Jack
+            ]
+        );
 
         //j to j
-        let v = CardValueRange::new(CardValue::Jack, CardValue::Jack).into_iter().collect::<Vec<CardValue>>();
+        let v = CardValueRange::new(CardValue::Jack, CardValue::Jack)
+            .into_iter()
+            .collect::<Vec<CardValue>>();
         assert_eq!(v, vec![CardValue::Jack]);
 
-        let v = CardValueRange::new(CardValue::Jack, CardValue::Jack).into_iter().rev().collect::<Vec<CardValue>>();
+        let v = CardValueRange::new(CardValue::Jack, CardValue::Jack)
+            .into_iter()
+            .rev()
+            .collect::<Vec<CardValue>>();
         assert_eq!(v, vec![CardValue::Jack]);
 
         //a to 5 is empty !
-        let v = CardValueRange::new(CardValue::Ace, CardValue::Five).into_iter().collect::<Vec<CardValue>>();
+        let v = CardValueRange::new(CardValue::Ace, CardValue::Five)
+            .into_iter()
+            .collect::<Vec<CardValue>>();
         assert_eq!(v, vec![]);
 
-        let v = CardValueRange::new(CardValue::Ace, CardValue::Five).into_iter().rev().collect::<Vec<CardValue>>();
+        let v = CardValueRange::new(CardValue::Ace, CardValue::Five)
+            .into_iter()
+            .rev()
+            .collect::<Vec<CardValue>>();
         assert_eq!(v, vec![]);
 
         //5 to ace is normal
-        let v = CardValueRange::new(CardValue::Five, CardValue::Ace).into_iter().collect::<Vec<CardValue>>();
-        assert_eq!(v, vec![CardValue::Five, CardValue::Six, CardValue::Seven, CardValue::Eight, CardValue::Nine, CardValue::Ten, CardValue::Jack, CardValue::Queen, CardValue::King, CardValue::Ace]);
+        let v = CardValueRange::new(CardValue::Five, CardValue::Ace)
+            .into_iter()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(
+            v,
+            vec![
+                CardValue::Five,
+                CardValue::Six,
+                CardValue::Seven,
+                CardValue::Eight,
+                CardValue::Nine,
+                CardValue::Ten,
+                CardValue::Jack,
+                CardValue::Queen,
+                CardValue::King,
+                CardValue::Ace
+            ]
+        );
 
-        let v = CardValueRange::new(CardValue::Five, CardValue::Ace).into_iter().rev().collect::<Vec<CardValue>>();
-        assert_eq!(v, vec![CardValue::Ace, CardValue::King, CardValue::Queen, CardValue::Jack, CardValue::Ten, CardValue::Nine, CardValue::Eight, CardValue::Seven, CardValue::Six, CardValue::Five]);
-
+        let v = CardValueRange::new(CardValue::Five, CardValue::Ace)
+            .into_iter()
+            .rev()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(
+            v,
+            vec![
+                CardValue::Ace,
+                CardValue::King,
+                CardValue::Queen,
+                CardValue::Jack,
+                CardValue::Ten,
+                CardValue::Nine,
+                CardValue::Eight,
+                CardValue::Seven,
+                CardValue::Six,
+                CardValue::Five
+            ]
+        );
     }
 }

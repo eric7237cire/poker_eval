@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::{Card, CardValue, HoleCards, InRangeType, PokerError, Suit, CardValueRange};
+use crate::{Card, CardValue, CardValueRange, HoleCards, InRangeType, PokerError, Suit};
 
 #[derive(Serialize, Deserialize, Default, PartialEq, Eq, Debug)]
 pub struct BoolRange {
@@ -38,8 +38,7 @@ impl BoolRange {
     }
 
     fn is_enabled_for_indices(&self, indices: &[usize]) -> bool {
-        
-        indices.iter().all(|&i| self.data[i] )
+        indices.iter().all(|&i| self.data[i])
     }
 
     #[inline]
@@ -112,11 +111,9 @@ impl BoolRange {
     }
 
     fn pairs_strings(&self, result: &mut Vec<String>) {
-
         let mut start: Option<CardValue> = None;
 
         for rank in CardValueRange::new(CardValue::Two, CardValue::Ace).rev() {
-            
             let has_all_pairs = self.is_enabled_for_indices(&pair_indices(rank));
 
             if start.is_none() && rank == CardValue::Two && has_all_pairs {
@@ -138,11 +135,19 @@ impl BoolRange {
                 result.push(tmp);
                 start = None;
             }
-
-           
         }
     }
 
+    // fn nonpairs_strings(&self, result: &mut Vec<String>) {
+    //     for rank1 in (1..13).rev() {
+    //         if self.can_unsuit(rank1) {
+    //             self.high_cards_strings(result, rank1, Suitedness::All);
+    //         } else {
+    //             self.high_cards_strings(result, rank1, Suitedness::Suited);
+    //             self.high_cards_strings(result, rank1, Suitedness::Offsuit);
+    //         }
+    //     }
+    // }
     // fn nonpairs_strings(&self, result: &mut Vec<String>) {
     //     for rank1 in (1..13).rev() {
     //         if self.can_unsuit(rank1) {
@@ -514,6 +519,8 @@ impl ToString for BoolRange {
         self.pairs_strings(&mut result);
         // self.nonpairs_strings(&mut result);
         // self.suit_specified_strings(&mut result);
+        //self.nonpairs_strings(&mut result);
+        //self.suit_specified_strings(&mut result);
         result.join(",")
     }
 }
