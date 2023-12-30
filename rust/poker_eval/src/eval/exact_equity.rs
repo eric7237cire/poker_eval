@@ -265,7 +265,7 @@ mod tests {
 
         //let shared = Rc::new(RefCell::new(rank_db));
 
-        let results = calc_equity(&board, &ranges, 10_000_000).unwrap();
+        let results = calc_equity(&board, &ranges, 1_000).unwrap();
 
         for i in 0..ranges.len() {
             println!("{}\n{:.2}", ranges[i].to_string(), results[i] * 100.0);

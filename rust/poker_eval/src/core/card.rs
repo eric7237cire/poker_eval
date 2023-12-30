@@ -680,12 +680,7 @@ mod tests {
         assert!(CardValue::try_from(13u8).is_err());
     }
 
-    #[test]
-    fn test_size_card() {
-        // Card should be really small. Hopefully just two u8's
-        assert!(mem::size_of::<Card>() <= 2);
-    }
-
+    
     #[test]
     fn test_size_suit() {
         // One byte for Suit

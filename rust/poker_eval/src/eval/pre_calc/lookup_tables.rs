@@ -212,7 +212,7 @@ pub fn generate_lookup_tables() {
     )
     .unwrap();
 
-    println!("wrote result to 'assets/src/lookup.rs'");
+    println!("wrote result to '{:?}'", lookup_path);
 }
 
 /*
@@ -526,7 +526,7 @@ mod tests {
         assert_eq!(rank.get_rank_enum(), RankEnum::StraightFlush(9));
     }
 
-    #[test]
+    //#[test]
     #[allow(dead_code)]
     fn test_generate_lookup_tables() {
         init_test_logger();

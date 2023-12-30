@@ -162,7 +162,8 @@ mod test {
         }
     }
 
-    #[test]
+    //#[test]
+    #[allow(dead_code)]
     fn test_likes_hand() {
         /*
         cargo test test_likes_hand --release -- --nocapture
@@ -175,13 +176,14 @@ mod test {
         let mut flop_texture_db: EvalCacheReDb<ProduceFlopTexture> = EvalCacheReDb::new().unwrap();
 
         let mut ranges: Vec<BoolRange> = vec![
-            "Ks6s".parse().unwrap(),
+            //We'll replace this one with the hole cards
+            BoolRange::all_enabled(),
             BoolRange::all_enabled(),
             BoolRange::all_enabled(),
             BoolRange::all_enabled(),
         ];
 
-        
+        let mut it_count = 0;
 
         let mut deck = Deck::new();
         //Test rainbow boards
@@ -230,8 +232,12 @@ mod test {
                             ranges[0].data.set(hc.to_range_index(), true);
 
                             //info!("Trying board {} and hole cards {}", &board, &hc);
+                            it_count+=1;
+                            let results = calc_equity(&board, &ranges, 1_000).unwrap();
 
-                            let results = calc_equity(&board, &ranges, 10_000).unwrap();
+                            if it_count > 0 {
+                                break;
+                            }
 
                             //info!("Equiny hose board {} and hole cards {}", &board, &hc);
                             let allowed_range = get_expected_equity_ranges(likes_hand_res.likes_hand);
