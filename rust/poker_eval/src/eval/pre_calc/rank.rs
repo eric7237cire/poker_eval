@@ -24,6 +24,18 @@ impl Rank {
             _ => panic!("Unknown rank family {}", rank_family),
         }
     }
+
+    pub fn get_family_index(&self) -> usize {
+        let rank_family = self.raw_rank >> RANK_FAMILY_OFFEST;
+
+        assert!(rank_family < 9);
+        
+        rank_family as usize
+    }
+
+    pub fn lowest_rank() -> Self {
+        Self { raw_rank: 0 }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]

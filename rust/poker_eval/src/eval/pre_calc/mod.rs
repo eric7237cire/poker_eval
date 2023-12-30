@@ -1,5 +1,5 @@
 mod constants;
-mod fast_eval;
+pub mod fast_eval;
 
 mod lookup;
 
@@ -16,5 +16,5 @@ pub mod perfect_hash;
 
 pub use constants::*;
 
-mod rank;
+pub mod rank;
 mod boom;

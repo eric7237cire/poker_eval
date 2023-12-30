@@ -33,4 +33,5 @@ pub mod exact_equity;
 mod kev;
 
 //#[cfg(not(target_arch = "wasm32"))]
-mod pre_calc;
+pub mod pre_calc;
+
