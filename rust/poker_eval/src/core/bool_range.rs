@@ -310,7 +310,7 @@ impl BoolRange {
 
     fn can_unsuit(&self, rank1: CardValue) -> bool {
         //Basically if we have something before it that has to be seperated, we can't unsuit
-        //for rank2 in 0..rank1 {
+        //if this were true, we would create a string like A2o+  A4-A3 
         for rank2 in CardValueRange::new(CardValue::Two, rank1.prev_card()) {
             let has_suited = self.is_enabled_for_indices(&suited_indices(rank1, rank2));
             let has_offsuit = self.is_enabled_for_indices(&offsuit_indices(rank1, rank2));
