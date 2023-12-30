@@ -530,16 +530,14 @@ mod tests {
     use itertools::Itertools;
     use rand::{rngs::StdRng, SeedableRng};
 
-    use crate::{
-        get_possible_hole_cards, rank_cards, CardUsedType, HoleCards, OldRank,
-    };
+    use crate::{get_possible_hole_cards, rank_cards, CardUsedType, HoleCards, OldRank};
 
     #[test]
     fn test_flop_rank() {
         let range_str = "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o";
         let range: BoolRange = range_str.parse().unwrap();
         let range_set = &range.data;
-        
+
         let mut used_cards = CardUsedType::default();
         let flop = Board::try_from("Qs Ts 7c")
             .unwrap()
@@ -645,7 +643,6 @@ mod tests {
         assert!(passed);
     }
 
-    
     //Slow
     //#[test]
     #[allow(dead_code)]

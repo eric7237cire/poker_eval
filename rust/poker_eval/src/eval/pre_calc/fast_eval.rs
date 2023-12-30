@@ -1,10 +1,8 @@
-
 use boomphf::Mphf;
 //use ph::fmph;
 use std::borrow::Borrow;
 
 use crate::Card;
-
 
 use super::{
     lookup::{LOOKUP, LOOKUP_FLUSH},
@@ -94,9 +92,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    
 
-    use crate::{eval::pre_calc::{rank::RankEnum, perfect_hash::load_boomperfect_hash}, Board};
+    use crate::{
+        eval::pre_calc::{perfect_hash::load_boomperfect_hash, rank::RankEnum},
+        Board,
+    };
 
     use super::*;
 
@@ -168,8 +168,6 @@ mod tests {
         //the worst flush without it being a str8
         assert_eq!(rank.get_rank_enum(), RankEnum::Flush(0));
     }
-
-    
 }
 
 /*

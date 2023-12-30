@@ -54,15 +54,11 @@ use std::{cell::RefCell, rc::Rc};
 use crate::{
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
     core::BoolRange,
-    Board, Card, HoleCards, PartialRankContainer, PokerError,
+    Board, Card, HoleCards, PokerError,
 };
 
 use serde::{Deserialize, Serialize};
 const BET_SIZE_COUNT: usize = 3;
-
-const BET_ZERO: usize = 0;
-const BET_SMALL: usize = 1;
-const BET_LARGE: usize = 2;
 
 #[derive(Serialize, Deserialize)]
 pub struct FlopRangeContainer {
@@ -85,9 +81,7 @@ fn narrow_range(
     board: &Board,
     in_range: &BoolRange,
     _bet_size: usize,
-    partial_rank_db: Rc<
-        RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>,
-    >,
+    partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
 ) -> Result<BoolRange, PokerError> {
     //bet 0 is nothing, 1 is small bet
     let out_range = BoolRange::default();

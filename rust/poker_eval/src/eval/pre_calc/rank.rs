@@ -29,7 +29,7 @@ impl Rank {
         let rank_family = self.raw_rank >> RANK_FAMILY_OFFEST;
 
         assert!(rank_family < 9);
-        
+
         rank_family as usize
     }
 

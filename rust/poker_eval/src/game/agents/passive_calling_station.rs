@@ -3,8 +3,8 @@ use std::{cell::RefCell, rc::Rc};
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
-    ActionEnum, CardValue, CommentedAction, FlushDrawType, GameState, HoleCards,
-    PartialRankContainer, PlayerState, Round, StraightDrawType, BoolRange,
+    ActionEnum, BoolRange, CardValue, CommentedAction, FlushDrawType, GameState, HoleCards,
+    PlayerState, Round, StraightDrawType,
 };
 
 use super::Agent;
@@ -15,8 +15,7 @@ pub struct PassiveCallingStation {
     pub hole_cards: Option<HoleCards>,
     pub name: String,
     flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
-    partial_rank_db:
-        Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
+    partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
 }
 
 impl PassiveCallingStation {
@@ -24,9 +23,7 @@ impl PassiveCallingStation {
         calling_range_str: Option<&str>,
         name: &str,
         flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
-        partial_rank_db: Rc<
-            RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>,
-        >,
+        partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
     ) -> Self {
         let calling_range = match calling_range_str {
             Some(s) => Some(s.parse().unwrap()),
@@ -154,7 +151,7 @@ impl Agent for PassiveCallingStation {
                 let ri = self.hole_cards.unwrap().to_range_index();
                 //not handling all ins
                 if let Some(calling_range) = self.calling_range.as_ref() {
-                    if calling_range.data[ri]  {
+                    if calling_range.data[ri] {
                         ActionEnum::Call
                     } else {
                         ActionEnum::Fold

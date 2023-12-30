@@ -105,9 +105,7 @@ mod tests {
 
     fn build_agents(
         flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
-        partial_rank_db: Rc<
-            RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>,
-        >,
+        partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
     ) -> Vec<Box<dyn Agent>> {
         let calling_75 = "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+";
 
@@ -157,7 +155,7 @@ mod tests {
         cargo test  agent --lib --release -- --nocapture --test-threads=1
         */
 
-        let partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
+        let partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards> =
             EvalCacheWithHcReDb::new().unwrap();
 
         let rcref_pdb = Rc::new(RefCell::new(partial_rank_db));

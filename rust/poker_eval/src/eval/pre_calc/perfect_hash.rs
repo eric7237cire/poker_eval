@@ -10,11 +10,12 @@ use std::{
 };
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::eval::pre_calc::{get_perfect_hash_path, get_boom_path};
+use crate::eval::pre_calc::{get_boom_path, get_perfect_hash_path};
 
-use super::{constants::{
-    CARD_VALUE_MASK, FLUSH_MASK, GLOBAL_SUIT_SHIFT, NUMBER_OF_RANKS, RANK_BASES,
-}, boom::BOOM_PHF_BYTES};
+use super::{
+    boom::BOOM_PHF_BYTES,
+    constants::{CARD_VALUE_MASK, FLUSH_MASK, GLOBAL_SUIT_SHIFT, NUMBER_OF_RANKS, RANK_BASES},
+};
 
 pub fn get_value_bits_for_flush(raw_lookup_key: u64, card_bit_set: u64) -> Option<u16> {
     /*
@@ -113,31 +114,34 @@ pub fn create_perfect_hash_boom_phf() {
     let phf = Mphf::new(1.7, &unique_sets);
 
     let serialized_data = bincode::serialize(&phf).expect("Serialization failed");
-    
+
     //println!("const MY_DATA_BYTES: &[u8] = &{:?};", serialized_data);
 
-    // println!("const MY_DATA_BYTES: &[u8] = b\"{}\";", 
+    // println!("const MY_DATA_BYTES: &[u8] = b\"{}\";",
     //     serialized_data.iter()
     //                    .map(|b| format!("\\x{:02x}", b))
     //                    .collect::<String>());
 
     let boom_path = get_boom_path();
     let mut file = File::create(&boom_path).unwrap();
-    
-    writeln!(file, "pub const BOOM_PHF_BYTES: &[u8] = b\"{}\";", 
-        serialized_data.iter()
-                       .map(|b| format!("\\x{:02x}", b))
-                       .collect::<String>()).unwrap();
+
+    writeln!(
+        file,
+        "pub const BOOM_PHF_BYTES: &[u8] = b\"{}\";",
+        serialized_data
+            .iter()
+            .map(|b| format!("\\x{:02x}", b))
+            .collect::<String>()
+    )
+    .unwrap();
     writeln!(file).unwrap();
-    
 
     println!("wrote result to '{:?}'", &boom_path);
-
 }
 
 pub fn load_boomperfect_hash() -> Mphf<u32> {
-    let deserialized_data:  Mphf<u32> = bincode::deserialize(BOOM_PHF_BYTES)
-        .expect("Deserialization failed");
+    let deserialized_data: Mphf<u32> =
+        bincode::deserialize(BOOM_PHF_BYTES).expect("Deserialization failed");
 
     deserialized_data
 }

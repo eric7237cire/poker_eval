@@ -4,7 +4,7 @@ use crate::web::{
     eval_current, eval_current_draws, get_all_player_hole_cards, FlopSimulationResults,
     PlayerPreFlopState, PreflopPlayerInfo,
 };
-use crate::{add_eval_card, get_unused_card, set_used_card, HoleCards, PokerError, BoolRange};
+use crate::{add_eval_card, get_unused_card, set_used_card, BoolRange, HoleCards, PokerError};
 use boomphf::Mphf;
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
@@ -51,7 +51,7 @@ impl flop_analyzer {
         Self {
             board_cards: Vec::with_capacity(7),
             player_info: Vec::with_capacity(MAX_PLAYERS),
-            hash_func
+            hash_func,
         }
     }
 
@@ -138,7 +138,7 @@ impl flop_analyzer {
             return Err(PokerError::from_str("set_player_range: empty string"));
         }
         let range: BoolRange = range_str.parse()?;
-        
+
         info!("% is {}", range.data.count_ones() as f64 / 2652.0);
 
         self.player_info[player_idx].range_set = range.data;
@@ -297,7 +297,7 @@ impl flop_analyzer {
                 &mut flop_results,
                 &mut villian_results,
                 0,
-                &self.hash_func
+                &self.hash_func,
             )?;
 
             assert_eq!(3, eval_cards.len());
@@ -346,7 +346,7 @@ impl flop_analyzer {
                 &mut flop_results,
                 &mut villian_results,
                 1,
-                &self.hash_func
+                &self.hash_func,
             )?;
 
             //River
@@ -382,7 +382,7 @@ impl flop_analyzer {
                 &mut flop_results,
                 &mut villian_results,
                 2,
-                &self.hash_func
+                &self.hash_func,
             )?;
         }
 

@@ -129,11 +129,10 @@ pub const CARDS: [(u64, u64); NUMBER_OF_CARDS] = [
 
 #[cfg(test)]
 mod tests {
-    
 
     use crate::eval::pre_calc::perfect_hash::get_value_bits_for_flush;
     use crate::init_test_logger;
-    use log::{info};
+    use log::info;
 
     use super::*;
     use crate::{eval::pre_calc::perfect_hash::enumerate_all_unique_sets, CardValue};

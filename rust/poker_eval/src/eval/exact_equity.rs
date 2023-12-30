@@ -25,13 +25,14 @@ rank all the hole cards
 
 */
 
-use std::{cell::RefCell, rc::Rc, iter::once};
+use std::iter::once;
 
 use itertools::Itertools;
+use log::trace;
 
 use crate::{
-    board_eval_cache_redb::{EvalCacheReDb, ProduceRank},
-    Board, BoolRange, Deck, OldRank, PokerError, pre_calc::{perfect_hash::load_boomperfect_hash, fast_eval::fast_hand_eval, rank::Rank}, ALL_HOLE_CARDS, ALL_CARDS,
+    pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash, rank::Rank},
+    Board, BoolRange, Deck, PokerError, ALL_CARDS, ALL_HOLE_CARDS,
 };
 
 //A more direct version of the flop analyze code
@@ -45,7 +46,7 @@ use crate::{
 //     // num above / below / equal & total
 
 //     let _hash_func = load_boomperfect_hash();
-    
+
 //     let mut deck = Deck::new();
 
 //     let mut out = vec![0.0; ranges.len()];
@@ -71,7 +72,6 @@ use crate::{
 //                 hole_cards
 //             })
 //             .collect_vec();
-
 
 //         let mut extra_board_cards = Vec::with_capacity(5);
 
@@ -131,7 +131,7 @@ use crate::{
 // }
 
 pub fn calc_equity(
-    board: Board,
+    board: &Board,
     ranges: &Vec<BoolRange>,
     num_simulations: usize,
 ) -> Result<Vec<f64>, PokerError> {
@@ -139,14 +139,17 @@ pub fn calc_equity(
     // num above / below / equal & total
 
     let hash_func = load_boomperfect_hash();
-    
+
     let mut deck = Deck::new();
 
     let mut out = vec![0.0; ranges.len()];
 
-    let possible_hole_cards = ranges.iter().map(|r| {
-        r.get_all_enabled_holecards()
-    }).collect_vec();
+    //trace!("Get possible hole cards");
+    let possible_hole_cards = ranges
+        .iter()
+        .map(|r| r.get_all_enabled_holecards())
+        .collect_vec();
+    //trace!("Get possible hole cards done ");
 
     let mut player_hole_cards = vec![ALL_HOLE_CARDS[0]; ranges.len()];
 
@@ -160,7 +163,7 @@ pub fn calc_equity(
     }
 
     for it in 0..num_simulations {
-        if it % 100000 == 0 {
+        if it % 10_000 == 0 && it > 0 {
             println!("it {}", it);
         }
         deck.reset();
@@ -171,7 +174,14 @@ pub fn calc_equity(
 
         //We need to deal hole cards to each player
         for p in 0..player_hole_cards.len() {
-            player_hole_cards[p] = deck.choose_available_in_range(&possible_hole_cards[p]).unwrap();
+            // trace!(
+            //     "Choosing range for {} with {} possibilities",
+            //     p,
+            //     possible_hole_cards[p].len()
+            // );
+            player_hole_cards[p] = deck
+                .choose_available_in_range(&possible_hole_cards[p])
+                .unwrap();
         }
         // let player_hole_cards = ranges
         //     .iter()
@@ -189,7 +199,10 @@ pub fn calc_equity(
             board_cards[board_index] = card;
         }
 
-        assert_eq!(2 * player_hole_cards.len() + 5, deck.get_number_of_used_cards());
+        assert_eq!(
+            2 * player_hole_cards.len() + 5,
+            deck.get_number_of_used_cards()
+        );
 
         //do eval
 
@@ -198,11 +211,11 @@ pub fn calc_equity(
 
         for player_index in 0..player_hole_cards.len() {
             let hole_cards = &player_hole_cards[player_index];
-                
+
             let h1 = once(hole_cards.get_hi_card()).chain(once(hole_cards.get_lo_card()));
             let c_it = board_cards.iter().map(|c| *c).chain(h1);
 
-            let rank = fast_hand_eval(c_it, &hash_func );
+            let rank = fast_hand_eval(c_it, &hash_func);
             player_ranks[player_index] = rank;
 
             if max_rank.is_none() || &rank > max_rank.as_ref().unwrap() {
@@ -231,18 +244,14 @@ pub fn calc_equity(
 mod tests {
     use std::time::Instant;
 
-    use crate::{Board, board_eval_cache_redb::{EvalCacheReDb, ProduceEvalResult, ProduceRank}};
-
     use super::*;
-
 
     #[test]
     fn test_equity() {
-
         /*
-        cargo test test_equity --release -- --nocapture 
+        cargo test test_equity --release -- --nocapture
          */
-        
+
         let board: Board = "9d 8h 9c".parse().unwrap();
 
         let start = Instant::now();
@@ -257,13 +266,12 @@ mod tests {
 
         //let shared = Rc::new(RefCell::new(rank_db));
 
-        let results = calc_equity(board, &ranges, 10_000_000).unwrap();
+        let results = calc_equity(&board, &ranges, 10_000_000).unwrap();
 
         for i in 0..ranges.len() {
-            println!("{}\n{:.2}", ranges[i].to_string(), results[i]*100.0);
+            println!("{}\n{:.2}", ranges[i].to_string(), results[i] * 100.0);
         }
 
         println!("time {:?}", start.elapsed());
-        
     }
 }

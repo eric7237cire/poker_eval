@@ -1,4 +1,4 @@
-use log::{debug, info};
+use log::info;
 use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -62,7 +62,11 @@ where
         })
     }
 
-    pub fn get_put(&mut self, cards: &Board, hole_cards: &HoleCards) -> Result<P::Result, ReDbError> {
+    pub fn get_put(
+        &mut self,
+        cards: &Board,
+        hole_cards: &HoleCards,
+    ) -> Result<P::Result, ReDbError> {
         let index = cards.get_precalc_index().unwrap();
 
         let mut index_bytes: [u8; 6] = [0; 6];
@@ -121,7 +125,6 @@ where
 pub struct ProducePartialRankCards {}
 
 impl ProduceEvalWithHcResult for ProducePartialRankCards {
-
     type Result = PartialRankContainer;
 
     fn produce_eval_result(board: &[Card], hole_cards: &HoleCards) -> PartialRankContainer {

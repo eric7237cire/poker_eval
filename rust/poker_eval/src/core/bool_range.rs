@@ -1,12 +1,15 @@
 use std::str::FromStr;
 
+use crate::{
+    pre_calc::{NUMBER_OF_CARDS, NUMBER_OF_HOLE_CARDS, NUMBER_OF_SUITS},
+    Card, CardValue, CardValueRange, HoleCards, PokerError, Suit, ALL_HOLE_CARDS,
+};
+use bitvec::prelude::*;
 use itertools::Itertools;
-use log::trace;
+use log::{trace, Log};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use bitvec::prelude::*;
-use crate::{Card, CardValue, CardValueRange, HoleCards, PokerError, Suit, pre_calc::{NUMBER_OF_SUITS, NUMBER_OF_HOLE_CARDS, NUMBER_OF_CARDS}, ALL_HOLE_CARDS};
 
 //52 * 51 / 2
 pub type InRangeType = BitArr!(for NUMBER_OF_HOLE_CARDS, in usize, Lsb0);
@@ -32,14 +35,18 @@ pub struct CardRange {
 pub static ALL_CARD_RANGES: Lazy<Vec<CardRange>> = Lazy::new(|| {
     let mut result: Vec<CardRange> = Vec::with_capacity(NUMBER_OF_CARDS);
     for _ in 0..NUMBER_OF_CARDS {
-        result.push(CardRange{
-            range:BoolRange::default(),
+        result.push(CardRange {
+            range: BoolRange::default(),
             inverse: BoolRange::default(),
         });
     }
     for card1 in 0..52usize {
         for card2 in card1 + 1..52 {
-            let hc = HoleCards::new(Card::try_from(card1).unwrap(), Card::try_from(card2).unwrap()).unwrap();
+            let hc = HoleCards::new(
+                Card::try_from(card1).unwrap(),
+                Card::try_from(card2).unwrap(),
+            )
+            .unwrap();
 
             result[card1].range.data.set(hc.to_range_index(), true);
             result[card2].range.data.set(hc.to_range_index(), true);
@@ -50,7 +57,7 @@ pub static ALL_CARD_RANGES: Lazy<Vec<CardRange>> = Lazy::new(|| {
         c.inverse.data = !c.range.data;
         //assert_eq!(c.range.data.count_ones() + c.inverse.data.count_ones(), NUMBER_OF_HOLE_CARDS);
     }
-            
+
     assert_eq!(NUMBER_OF_CARDS, result.len());
     result
 });
@@ -90,9 +97,10 @@ impl BoolRange {
     pub fn get_all_enabled_holecards(&self) -> Vec<HoleCards> {
         let mut result = Vec::with_capacity(self.data.count_ones());
         for enabled_card in self.data.iter_ones() {
-                
+            if enabled_card >= ALL_HOLE_CARDS.len() {
+                break;
+            }
             result.push(ALL_HOLE_CARDS[enabled_card]);
-                
         }
         result
     }
@@ -100,7 +108,12 @@ impl BoolRange {
     #[inline]
     fn update_with_singleton(&mut self, combo: &str, enabled: bool) -> Result<(), PokerError> {
         let (rank1, rank2, suitedness) = parse_singleton(combo)?;
-        trace!("update_with_singleton rank1: {}, rank2: {}, suitedness: {:?}", rank1, rank2, suitedness);
+        trace!(
+            "update_with_singleton rank1: {}, rank2: {}, suitedness: {:?}",
+            rank1,
+            rank2,
+            suitedness
+        );
         self.set_enabled(&indices_with_suitedness(rank1, rank2, suitedness), enabled);
         Ok(())
     }
@@ -168,17 +181,15 @@ impl BoolRange {
     }
 
     fn pairs_strings(&self, result: &mut Vec<String>) {
-        
-        let is_enabled_vec = CardValueRange::new(CardValue::Two, CardValue::Ace).rev().map(
-            |rank| {
-                (self.is_enabled_for_indices(&pair_indices(rank)), rank)
-            },
-        ).collect_vec();
+        let is_enabled_vec = CardValueRange::new(CardValue::Two, CardValue::Ace)
+            .rev()
+            .map(|rank| (self.is_enabled_for_indices(&pair_indices(rank)), rank))
+            .collect_vec();
 
         let mut start_index = 0;
         while start_index < is_enabled_vec.len() {
-        //for (start_index, (is_enabled, start_rank2)) in is_enabled_vec.iter().enumerate() {
-            
+            //for (start_index, (is_enabled, start_rank2)) in is_enabled_vec.iter().enumerate() {
+
             assert!(result.len() < 2000);
 
             let (is_enabled, start_rank) = is_enabled_vec[start_index];
@@ -188,36 +199,36 @@ impl BoolRange {
             }
 
             //Find the next disabled index
-            let stop_index = is_enabled_vec.iter().skip(start_index + 1).position(|(is_enabled, _)| !is_enabled).map_or(                
-                is_enabled_vec.len(), |idx| idx + start_index + 1,);
+            let stop_index = is_enabled_vec
+                .iter()
+                .skip(start_index + 1)
+                .position(|(is_enabled, _)| !is_enabled)
+                .map_or(is_enabled_vec.len(), |idx| idx + start_index + 1);
 
             assert!(stop_index > start_index);
 
             if start_index == 0 && stop_index > start_index + 1 {
-                let stop_rank = is_enabled_vec[stop_index-1].1;
+                let stop_rank = is_enabled_vec[stop_index - 1].1;
                 assert!(stop_rank < start_rank);
                 result.push(format!("{stop_rank}{stop_rank}+"));
                 start_index = stop_index + 1;
                 continue;
                 //result.push(format!("{start_rank}{start_rank}+"));
-                
             }
             if stop_index == start_index + 1 {
                 result.push(format!("{start_rank}{start_rank}"));
                 start_index += 1;
                 continue;
             }
-            let stop_rank = is_enabled_vec[stop_index-1].1;
+            let stop_rank = is_enabled_vec[stop_index - 1].1;
             start_index = stop_index + 1;
-            
+
             //convention is 55-33; note order is decreasing, so start_rank > stop_rank
             assert!(start_rank > stop_rank);
             result.push(format!("{start_rank}{start_rank}-{stop_rank}{stop_rank}"));
-
         }
     }
 
-    
     fn nonpairs_strings(&self, result: &mut Vec<String>) {
         for rank1 in CardValueRange::new(CardValue::Three, CardValue::Ace).rev() {
             if self.can_unsuit(rank1) {
@@ -237,16 +248,13 @@ impl BoolRange {
                     let suit1: Suit = suit1_int.try_into().unwrap();
                     for suit2_int in (0..suit1_int).rev() {
                         let suit2: Suit = suit2_int.try_into().unwrap();
-                        let hc = HoleCards::new(Card::new(rank, suit1), Card::new(rank, suit2))
-                            .unwrap();
+                        let hc =
+                            HoleCards::new(Card::new(rank, suit1), Card::new(rank, suit2)).unwrap();
                         if !self.is_enabled_for_holecards(&hc) {
                             continue;
                         }
-                        let tmp = format!(
-                            "{rank}{suit1}{rank}{suit2}",
-                        );
+                        let tmp = format!("{rank}{suit1}{rank}{suit2}",);
                         result.push(tmp);
-                        
                     }
                 }
             }
@@ -254,43 +262,37 @@ impl BoolRange {
 
         // non-pairs
         for rank1 in CardValueRange::new(CardValue::Three, CardValue::Ace).rev() {
-        
             for rank2 in CardValueRange::new(CardValue::Two, rank1.prev_card()).rev() {
-
                 assert!(rank1 > rank2);
                 if !self.is_enabled_for_indices(&suited_indices(rank1, rank2)) {
                     for suit_int in (0..4).rev() {
-                        let suit : Suit = suit_int.try_into().unwrap();
-                        let hc = HoleCards::new(Card::new(rank1, suit), Card::new(rank2, suit))
-                            .unwrap();
+                        let suit: Suit = suit_int.try_into().unwrap();
+                        let hc =
+                            HoleCards::new(Card::new(rank1, suit), Card::new(rank2, suit)).unwrap();
                         if !self.is_enabled_for_holecards(&hc) {
                             continue;
                         }
-                        result.push( format!(
-                            "{rank1}{suit}{rank2}{suit}",
-                        ));
+                        result.push(format!("{rank1}{suit}{rank2}{suit}",));
                     }
                 }
 
                 // offsuit
                 if !self.is_enabled_for_indices(&offsuit_indices(rank1, rank2)) {
                     for suit1_int in (0..4).rev() {
-                        let suit1 : Suit = suit1_int.try_into().unwrap();
+                        let suit1: Suit = suit1_int.try_into().unwrap();
                         for suit2_int in (0..4).rev() {
-                            let suit2 : Suit = suit2_int.try_into().unwrap();
+                            let suit2: Suit = suit2_int.try_into().unwrap();
                             if suit1 == suit2 {
                                 continue;
                             }
-                            
-                            let hc = HoleCards::new(Card::new(rank1, suit1), Card::new(rank2, suit2)).unwrap();
+
+                            let hc =
+                                HoleCards::new(Card::new(rank1, suit1), Card::new(rank2, suit2))
+                                    .unwrap();
                             if !self.is_enabled_for_holecards(&hc) {
                                 continue;
                             }
-                            result.push(format!(
-                                        "{rank1}{suit1}{rank2}{suit2}",
-                                    ));
-                                
-                            
+                            result.push(format!("{rank1}{suit1}{rank2}{suit2}",));
                         }
                     }
                 }
@@ -298,8 +300,12 @@ impl BoolRange {
         }
     }
 
-    fn high_cards_strings(&self, result: &mut Vec<String>, rank1: CardValue, suitedness: Suitedness) {
-
+    fn high_cards_strings(
+        &self,
+        result: &mut Vec<String>,
+        rank1: CardValue,
+        suitedness: Suitedness,
+    ) {
         /*
         Generates like A2o+  A3-A5
         */
@@ -313,15 +319,15 @@ impl BoolRange {
         };
 
         // rank1 is the higher rank
-        let is_enabled_vec = CardValueRange::new(CardValue::Two, rank1.prev_card()).rev().map(|rank2| {
-            (self.is_enabled_for_indices(&getter(rank1, rank2)), rank2)
-        }).collect_vec();
-
+        let is_enabled_vec = CardValueRange::new(CardValue::Two, rank1.prev_card())
+            .rev()
+            .map(|rank2| (self.is_enabled_for_indices(&getter(rank1, rank2)), rank2))
+            .collect_vec();
 
         let mut start_index = 0;
         while start_index < is_enabled_vec.len() {
-        //for (start_index, (is_enabled, start_rank2)) in is_enabled_vec.iter().enumerate() {
-            
+            //for (start_index, (is_enabled, start_rank2)) in is_enabled_vec.iter().enumerate() {
+
             assert!(result.len() < 2000);
 
             let (is_enabled, start_rank2) = is_enabled_vec[start_index];
@@ -331,14 +337,17 @@ impl BoolRange {
             }
 
             //Find the next disabled index
-            let stop_index = is_enabled_vec.iter().skip(start_index + 1).position(|(is_enabled, _)| !is_enabled).map_or(                
-                is_enabled_vec.len(), |idx| idx + start_index + 1,);
+            let stop_index = is_enabled_vec
+                .iter()
+                .skip(start_index + 1)
+                .position(|(is_enabled, _)| !is_enabled)
+                .map_or(is_enabled_vec.len(), |idx| idx + start_index + 1);
 
             assert!(stop_index > start_index);
 
             //is_enabled is decreasing
             if start_index == 0 && stop_index > start_index + 1 {
-                let stop_rank2 = is_enabled_vec[stop_index-1].1;
+                let stop_rank2 = is_enabled_vec[stop_index - 1].1;
                 assert!(stop_rank2 < start_rank2);
                 result.push(format!("{rank1}{stop_rank2}{suit_char}+"));
                 start_index = stop_index + 1;
@@ -349,18 +358,19 @@ impl BoolRange {
                 start_index += 1;
                 continue;
             }
-            let stop_rank2 = is_enabled_vec[stop_index-1].1;
+            let stop_rank2 = is_enabled_vec[stop_index - 1].1;
             start_index = stop_index + 1;
-            
+
             //convention is larger one first; so K8s-K5s
-            result.push(format!("{rank1}{start_rank2}{suit_char}-{rank1}{stop_rank2}{suit_char}"));
-            
+            result.push(format!(
+                "{rank1}{start_rank2}{suit_char}-{rank1}{stop_rank2}{suit_char}"
+            ));
         }
     }
 
     fn can_unsuit(&self, rank1: CardValue) -> bool {
         //Basically if we have something before it that has to be seperated, we can't unsuit
-        //if this were true, we would create a string like A2o+  A4-A3 
+        //if this were true, we would create a string like A2o+  A4-A3
         for rank2 in CardValueRange::new(CardValue::Two, rank1.prev_card()) {
             let has_suited = self.is_enabled_for_indices(&suited_indices(rank1, rank2));
             let has_offsuit = self.is_enabled_for_indices(&offsuit_indices(rank1, rank2));
@@ -401,7 +411,7 @@ fn pair_indices(rank: CardValue) -> Vec<usize> {
     for suit1_index in 0..NUMBER_OF_SUITS {
         let suit1: Suit = Suit::suits()[suit1_index];
         let card1 = Card::new(rank, suit1);
-        for suit2_index in suit1_index+1..NUMBER_OF_SUITS {
+        for suit2_index in suit1_index + 1..NUMBER_OF_SUITS {
             let suit2: Suit = Suit::suits()[suit2_index];
             let card2 = Card::new(rank, suit2);
             let hc = HoleCards::new(card1, card2).unwrap();
@@ -612,18 +622,18 @@ impl ToString for BoolRange {
         self.pairs_strings(&mut result);
         self.nonpairs_strings(&mut result);
         self.suit_specified_strings(&mut result);
-        
+
         result.join(",")
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use log::{debug};
-    
-    use rand::{rngs::StdRng, SeedableRng, seq::SliceRandom};
+    use log::debug;
 
-    use crate::{pre_calc::NUMBER_OF_HOLE_CARDS, init_test_logger};
+    use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
+
+    use crate::{init_test_logger, pre_calc::NUMBER_OF_HOLE_CARDS};
 
     use super::*;
 
@@ -631,7 +641,6 @@ mod tests {
     //#[test]
     #[allow(dead_code)]
     fn test_range_to_string() {
-
         //cargo test --lib test_range_to_string --release -- --nocapture
 
         init_test_logger();
@@ -641,7 +650,10 @@ mod tests {
         let mut indices = (0..NUMBER_OF_HOLE_CARDS).collect::<Vec<usize>>();
 
         for num_set_in_range in 0..=NUMBER_OF_HOLE_CARDS {
-            debug!("Doing 10 iterations with {} cards in the range", num_set_in_range);
+            debug!(
+                "Doing 10 iterations with {} cards in the range",
+                num_set_in_range
+            );
             //do 10 random subsets of that size
             for _ in 0..10 {
                 //shuffle the indices
@@ -654,7 +666,7 @@ mod tests {
                 let mut range = BoolRange::new();
                 range.set_enabled(indices, true);
 
-                assert_eq!(range.data.count_ones(), num_set_in_range );
+                assert_eq!(range.data.count_ones(), num_set_in_range);
 
                 //convert the range to a string
                 let range_string = range.to_string();
@@ -666,12 +678,12 @@ mod tests {
                 //     }
                 // }
                 // assert_eq!(check_rng.to_string(), range_string);
-                
+
                 //convert the string back to a range
                 let range2 = range_string.parse::<BoolRange>().unwrap();
 
                 // if range.data.count_ones() != range2.data.count_ones() {
-                //     info!("range: {}", range.to_string());     
+                //     info!("range: {}", range.to_string());
                 //     let mut check_rng: Range = Range::new();
                 //     for card1_int in 0..52u8 {
                 //         let card1 = card1_int.try_into().unwrap();
@@ -685,8 +697,8 @@ mod tests {
                 //                 info!("card1: {}, card2: {}  enabled originally? {}", card1, card2, range.is_enabled_for_holecards(&hc));
                 //             }
                 //         }
-                //     }      
-                    
+                //     }
+
                 //     info!("chk range: {}", check_rng.to_string());
                 // }
 
@@ -699,11 +711,10 @@ mod tests {
 
     #[test]
     fn test_range_single_pair_to_string() {
-
         //cargo test --lib test_range_to_string --release -- --nocapture
 
         init_test_logger();
-        
+
         let hc1: HoleCards = "Ac Ad".parse().unwrap();
         let hc2: HoleCards = "Ac Ah".parse().unwrap();
         let hc3: HoleCards = "Ac As".parse().unwrap();
@@ -712,16 +723,23 @@ mod tests {
         let hc6: HoleCards = "Ah As".parse().unwrap();
 
         let mut range = BoolRange::new();
-        let indices = [hc1.to_range_index(), hc2.to_range_index(), hc3.to_range_index(), hc4.to_range_index(), hc5.to_range_index(), hc6.to_range_index()];
+        let indices = [
+            hc1.to_range_index(),
+            hc2.to_range_index(),
+            hc3.to_range_index(),
+            hc4.to_range_index(),
+            hc5.to_range_index(),
+            hc6.to_range_index(),
+        ];
         range.set_enabled(&indices, true);
 
-        assert_eq!(6, range.data.count_ones() );
+        assert_eq!(6, range.data.count_ones());
 
         assert_eq!(6, pair_indices(CardValue::Ace).len());
 
         //convert the range to a string
         let range_string = range.to_string();
-        
+
         assert_eq!(range_string, "AA");
     }
 

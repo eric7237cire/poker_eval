@@ -5,10 +5,7 @@ use crate::pre_calc::rank::Rank;
 use crate::web::{
     PlayerFlopResults, PlayerPreFlopState, PreflopPlayerInfo, ResultType, MAX_PLAYERS,
 };
-use crate::{
-    Card, HoleCards, PokerError, NUM_RANK_FAMILIES, SIMPLE_RANGE_INDEX_LEN,
-};
-
+use crate::{Card, HoleCards, PokerError, NUM_RANK_FAMILIES, SIMPLE_RANGE_INDEX_LEN};
 
 pub struct RankResults {
     pub(crate) num_iterations: ResultType,
@@ -49,7 +46,7 @@ pub fn eval_current(
     //treat first active player as the hero, all others as villians
     villian_results: &mut PlayerFlopResults,
     street_index: usize,
-    hash_func: &Mphf<u32>
+    hash_func: &Mphf<u32>,
 ) -> Result<(), PokerError> {
     if eval_cards.len() < 3 {
         return Err(PokerError::from_string(format!(

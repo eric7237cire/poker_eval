@@ -2,7 +2,7 @@ use rand::{rngs::StdRng, Rng};
 
 use crate::{Card, CardUsedType, PokerError};
 
-const MAX_RAND_NUMBER_ATTEMPS: usize = 1000;
+const MAX_RAND_NUMBER_ATTEMPS: usize = 1_000;
 
 pub fn set_used_card(c_index: usize, cards_used: &mut CardUsedType) -> Result<(), PokerError> {
     let count_before = cards_used.count_ones();

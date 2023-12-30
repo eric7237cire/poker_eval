@@ -1,28 +1,24 @@
+use log::trace;
 
-
-
-use rand::{Rng};
-
-use crate::{BoolRange, Card, CardUsedType, HoleCards, PokerError, ALL_CARD_RANGES, ALL_HOLE_CARDS, ALL_CARDS};
+use crate::{Card, CardUsedType, HoleCards, PokerError, ALL_CARDS};
 
 pub struct Deck {
     //rng: StdRng,
-    used_cards: CardUsedType, 
-
+    used_cards: CardUsedType,
     //available_range: BoolRange,
 }
 
-const MAX_RAND_NUMBER_ATTEMPS: usize = 10_000;
+const MAX_RAND_NUMBER_ATTEMPS: usize = 1_000;
 
 impl Deck {
     pub fn new() -> Self {
         //let rng = StdRng::seed_from_u64(42);
         fastrand::seed(42);
-        
+
         let mut d = Deck {
             //rng,
             used_cards: CardUsedType::default(),
-           // available_range: BoolRange::default(),
+            // available_range: BoolRange::default(),
         };
 
         d.reset();
@@ -39,6 +35,10 @@ impl Deck {
         self.used_cards.count_ones() as usize
     }
 
+    pub fn is_used(&self, card: Card) -> bool {
+        self.used_cards[card.index]
+    }
+
     pub fn choose_new_board(&mut self) -> Vec<Card> {
         let mut board = Vec::new();
         for _ in 0..5 {
@@ -48,14 +48,11 @@ impl Deck {
         board
     }
 
-    
-
     pub fn set_used_card(&mut self, card: Card) {
-        
         assert!(!self.used_cards[card.index]);
-            //let count_before = self.used_cards.count_ones();
+        //let count_before = self.used_cards.count_ones();
         self.used_cards.set(card.index, true);
-        
+
         //self.available_range.data &= &ALL_CARD_RANGES[card.index].inverse.data;
 
         //let count_after = self.used_cards.count_ones();
@@ -65,9 +62,8 @@ impl Deck {
     pub fn choose_available_in_range(
         &mut self,
         //range: &BoolRange,
-        possible_hole_cards: &Vec<HoleCards>
+        possible_hole_cards: &Vec<HoleCards>,
     ) -> Result<HoleCards, PokerError> {
-        
         // let possible_range = range.data & self.available_range.data;
 
         // if possible_range.data.is_empty() {
@@ -78,7 +74,7 @@ impl Deck {
         // }
 
         //let num_possible = possible_range.count_ones();
-        
+
         //let rand_int: usize = self.rng.gen_range(0..num_possible);
         //let rand_int: usize = fastrand::usize(0..possible_hole_cards.len());
 
@@ -89,15 +85,9 @@ impl Deck {
         let mut attempts = 0;
         loop {
             attempts += 1;
+            //trace!("Attempt {}", attempts);
             let rand_int: usize = fastrand::usize(0..possible_hole_cards.len());
             let hole_cards = possible_hole_cards[rand_int];
-
-            if self.used_cards[hole_cards.get_hi_card().index] {
-                continue;
-            }
-            if self.used_cards[hole_cards.get_lo_card().index] {
-                continue;
-            }
 
             if attempts > MAX_RAND_NUMBER_ATTEMPS {
                 return Err(format!(
@@ -108,11 +98,17 @@ impl Deck {
                 .into());
             }
 
+            if self.used_cards[hole_cards.get_hi_card().index] {
+                continue;
+            }
+            if self.used_cards[hole_cards.get_lo_card().index] {
+                continue;
+            }
+
             self.set_used_card(hole_cards.get_hi_card());
             self.set_used_card(hole_cards.get_lo_card());
             return Ok(hole_cards);
         }
-        
     }
 
     pub fn get_unused_card(&mut self) -> Result<Card, PokerError> {
@@ -122,13 +118,7 @@ impl Deck {
             //let rand_int: usize = self.rng.gen_range(0..52);
             let rand_int: usize = fastrand::usize(0..52);
             assert!(rand_int < 52);
-            //let card = Card::from(rand_int);
-            if !self.used_cards[rand_int] {
-                let card: Card = ALL_CARDS[rand_int];
-                self.set_used_card(card);
-                
-                return Ok(card);
-            }
+
             attempts += 1;
             if attempts > MAX_RAND_NUMBER_ATTEMPS {
                 return Err(format!(
@@ -138,18 +128,21 @@ impl Deck {
                 )
                 .into());
             }
+
+            //let card = Card::from(rand_int);
+            if !self.used_cards[rand_int] {
+                let card: Card = ALL_CARDS[rand_int];
+                self.set_used_card(card);
+
+                return Ok(card);
+            }
+            
         }
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use rand::{rngs::StdRng, SeedableRng, seq::SliceRandom};
-
-    use crate::{pre_calc::NUMBER_OF_HOLE_CARDS, init_test_logger, CardValue};
-
-    use super::*;
 
     // #[test]
     // fn test_choose_available_in_range_aces() {
@@ -162,7 +155,7 @@ mod tests {
 
     //     for _ in 0..iter_count {
     //         deck.reset();
-            
+
     //         let hole_cards = deck.choose_available_in_range(&just_aces).unwrap();
     //         total[hole_cards.to_range_index()] += 1;
     //     }
@@ -179,7 +172,7 @@ mod tests {
     //         deck.reset();
 
     //         deck.set_used_card(ace_clubs);
-            
+
     //         let hole_cards = deck.choose_available_in_range(&just_aces).unwrap();
     //         total[hole_cards.to_range_index()] += 1;
     //     }
@@ -194,7 +187,7 @@ mod tests {
 
     // #[test]
     // fn test_choose_available_larger_range() {
-        //AT-A2,KT-K2,QT-Q2,J2+
+    //AT-A2,KT-K2,QT-Q2,J2+
 
     //     init_test_logger();
     //     let mut deck = Deck::new();
@@ -204,7 +197,7 @@ mod tests {
 
     //     for _ in 0..iter_count {
     //         deck.reset();
-            
+
     //         let hole_cards = deck.choose_available_in_range(&with_tens).unwrap();
     //         assert!(with_tens.data[hole_cards.to_range_index()]);
 
@@ -214,7 +207,7 @@ mod tests {
     //         deck.set_used_card("5d".parse().unwrap());
     //         deck.set_used_card("5h".parse().unwrap());
     //         deck.set_used_card("5s".parse().unwrap());
-            
+
     //         let hole_cards = deck.choose_available_in_range(&with_tens).unwrap();
     //         assert!(with_tens.data[hole_cards.to_range_index()]);
 
@@ -222,6 +215,5 @@ mod tests {
     //         //assert!(hole_cards.get_lo_card().value != CardValue::Four);
     //     }
 
-        
     // }
 }

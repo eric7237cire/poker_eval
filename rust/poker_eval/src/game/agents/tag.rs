@@ -3,10 +3,9 @@ use std::{cell::RefCell, rc::Rc};
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
-    ActionEnum, CommentedAction, FlushDrawType, GameState, HoleCards, PartialRankContainer,
-    PlayerState, Round, StraightDrawType, BoolRange
+    ActionEnum, BoolRange, CommentedAction, FlushDrawType, GameState, HoleCards, PlayerState,
+    Round, StraightDrawType,
 };
-
 
 use super::Agent;
 
@@ -17,8 +16,7 @@ pub struct Tag {
     pub hole_cards: Option<HoleCards>,
     pub name: String,
     flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
-    partial_rank_db:
-        Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
+    partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
 }
 
 impl Tag {
@@ -27,9 +25,7 @@ impl Tag {
         pfr_range_str: &str,
         name: &str,
         flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
-        partial_rank_db: Rc<
-            RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>,
-        >,
+        partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
     ) -> Self {
         Tag {
             three_bet_range: three_bet_range_str.parse().unwrap(),
@@ -52,7 +48,7 @@ impl Tag {
         let any_raises = game_state.current_to_call > game_state.bb;
 
         if !any_raises {
-            if self.pfr_range.data[ri]  {
+            if self.pfr_range.data[ri] {
                 CommentedAction {
                     action: ActionEnum::Raise(game_state.bb * 3),
                     comment: Some("Opening raise".to_string()),
@@ -262,7 +258,7 @@ mod tests {
     fn test_doesnt_bet_river() {
         init_test_logger();
 
-        let partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
+        let partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards> =
             EvalCacheWithHcReDb::new().unwrap();
 
         let rcref_pdb = Rc::new(RefCell::new(partial_rank_db));

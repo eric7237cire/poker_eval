@@ -1,7 +1,5 @@
 use crate::BoolRange;
 
-
-
 pub type ChipType = u16;
 
 pub enum PreFrabRanges {

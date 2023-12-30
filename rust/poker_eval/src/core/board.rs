@@ -82,7 +82,7 @@ impl Board {
         Ok(())
     }
 
-    pub fn clear_cards(&mut self, ) {
+    pub fn clear_cards(&mut self) {
         self.cards.clear();
         self.index = None;
     }
