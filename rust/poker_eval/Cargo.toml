@@ -13,13 +13,8 @@ name = "poker_eval"
 path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
-[[bin]]
-name = "runner"
-path = "src/bin.rs"
 
 [dependencies]
-# poker_rs = { path = "../poker_rs", features=["arena"] }
-postflop-solver = {path = "../postflop-solver"}
 bitvec = {version = "1.0.1", features=["serde"]}
 itertools = "*"
 log = "*"

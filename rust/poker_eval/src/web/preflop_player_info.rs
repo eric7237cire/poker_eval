@@ -1,6 +1,5 @@
 use std::{cmp, mem};
 
-use postflop_solver::card_pair_to_index;
 use rand::rngs::StdRng;
 use wasm_bindgen::prelude::wasm_bindgen;
 
@@ -82,7 +81,9 @@ pub fn get_all_player_hole_cards(
                 continue;
             }
 
-            let range_index = card_pair_to_index(card1_index as u8, card2_index as u8);
+            let hc = HoleCards::new(Card::try_from(card1_index)?, Card::try_from(card2_index)?)?;
+
+            let range_index = hc.to_range_index();
 
             if !p.range_set[range_index] {
                 continue;

@@ -5,8 +5,11 @@ use log::trace;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use bitvec::prelude::*;
+use crate::{Card, CardValue, CardValueRange, HoleCards, PokerError, Suit, pre_calc::{NUMBER_OF_RANKS, NUMBER_OF_SUITS, NUMBER_OF_HOLE_CARDS}};
 
-use crate::{Card, CardValue, CardValueRange, HoleCards, InRangeType, PokerError, Suit, pre_calc::{NUMBER_OF_RANKS, NUMBER_OF_SUITS}};
+//52 * 51 / 2
+pub type InRangeType = BitArr!(for NUMBER_OF_HOLE_CARDS, in usize, Lsb0);
 
 #[derive(Serialize, Deserialize, Default, PartialEq, Eq, Debug)]
 pub struct BoolRange {
@@ -570,7 +573,7 @@ impl ToString for BoolRange {
 #[cfg(test)]
 mod tests {
     use log::{info, debug};
-    use postflop_solver::Range;
+    
     use rand::{rngs::StdRng, SeedableRng, seq::SliceRandom};
 
     use crate::{pre_calc::NUMBER_OF_HOLE_CARDS, init_test_logger};
@@ -607,36 +610,36 @@ mod tests {
                 //convert the range to a string
                 let range_string = range.to_string();
 
-                let mut check_rng: Range = Range::new();
-                for idx in 0..NUMBER_OF_HOLE_CARDS {
-                    if range.data[idx]  {
-                        check_rng.data[idx] = 1.0;
-                    }
-                }
-                assert_eq!(check_rng.to_string(), range_string);
+                // let mut check_rng: Range = Range::new();
+                // for idx in 0..NUMBER_OF_HOLE_CARDS {
+                //     if range.data[idx]  {
+                //         check_rng.data[idx] = 1.0;
+                //     }
+                // }
+                // assert_eq!(check_rng.to_string(), range_string);
                 
                 //convert the string back to a range
                 let range2 = range_string.parse::<BoolRange>().unwrap();
 
-                if range.data.count_ones() != range2.data.count_ones() {
-                    info!("range: {}", range.to_string());     
-                    let mut check_rng: Range = Range::new();
-                    for card1_int in 0..52u8 {
-                        let card1 = card1_int.try_into().unwrap();
-                        for card2_int in card1_int+1..52 {
-                            let card2 = card2_int.try_into().unwrap();
-                            let hc = HoleCards::new(card1, card2).unwrap();
-                            if range.is_enabled_for_holecards(&hc) {
-                                check_rng.data[hc.to_range_index()]=1.0;
-                            }
-                            if range.is_enabled_for_holecards(&hc) != range2.is_enabled_for_holecards(&hc) {
-                                info!("card1: {}, card2: {}  enabled originally? {}", card1, card2, range.is_enabled_for_holecards(&hc));
-                            }
-                        }
-                    }      
+                // if range.data.count_ones() != range2.data.count_ones() {
+                //     info!("range: {}", range.to_string());     
+                //     let mut check_rng: Range = Range::new();
+                //     for card1_int in 0..52u8 {
+                //         let card1 = card1_int.try_into().unwrap();
+                //         for card2_int in card1_int+1..52 {
+                //             let card2 = card2_int.try_into().unwrap();
+                //             let hc = HoleCards::new(card1, card2).unwrap();
+                //             if range.is_enabled_for_holecards(&hc) {
+                //                 check_rng.data[hc.to_range_index()]=1.0;
+                //             }
+                //             if range.is_enabled_for_holecards(&hc) != range2.is_enabled_for_holecards(&hc) {
+                //                 info!("card1: {}, card2: {}  enabled originally? {}", card1, card2, range.is_enabled_for_holecards(&hc));
+                //             }
+                //         }
+                //     }      
                     
-                    info!("chk range: {}", check_rng.to_string());
-                }
+                //     info!("chk range: {}", check_rng.to_string());
+                // }
 
                 //check that the two ranges are equal
                 assert_eq!(range.data.count_ones(), range2.data.count_ones());

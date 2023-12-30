@@ -526,20 +526,20 @@ where
 mod tests {
     use std::{collections::HashMap, io::Write};
 
-    use crate::{add_eval_card, get_unused_card, init_test_logger, Board};
+    use crate::{add_eval_card, get_unused_card, init_test_logger, Board, BoolRange};
     use itertools::Itertools;
-    use postflop_solver::Hand;
     use rand::{rngs::StdRng, SeedableRng};
 
     use crate::{
-        get_possible_hole_cards, range_string_to_set, rank_cards, CardUsedType, HoleCards, OldRank,
+        get_possible_hole_cards, rank_cards, CardUsedType, HoleCards, OldRank,
     };
 
     #[test]
     fn test_flop_rank() {
         let range_str = "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o";
-        let range_set = range_string_to_set(range_str).unwrap();
-
+        let range: BoolRange = range_str.parse().unwrap();
+        let range_set = &range.data;
+        
         let mut used_cards = CardUsedType::default();
         let flop = Board::try_from("Qs Ts 7c")
             .unwrap()
@@ -645,163 +645,7 @@ mod tests {
         assert!(passed);
     }
 
-    #[test]
-    fn test_enumerate_all_equity() {
-        let range_str = "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o";
-        let range_set = range_string_to_set(range_str).unwrap();
-
-        let mut used_cards = CardUsedType::default();
-        let flop = Board::try_from("Qs Ts 7c")
-            .unwrap()
-            .as_slice_card()
-            .to_vec();
-
-        let flop_hand = Hand::new();
-        let flop_hand = flop_hand.add_card(flop[0].into());
-        let flop_hand = flop_hand.add_card(flop[1].into());
-        let flop_hand = flop_hand.add_card(flop[2].into());
-
-        let p1_hole_cards = Board::try_from("8d 7s").unwrap().as_slice_card().to_vec();
-        let p2_hole_cards = Board::try_from("Qd 5c").unwrap().as_slice_card().to_vec();
-
-        for card in flop.iter() {
-            used_cards.set((*card).into(), true);
-        }
-        for card in p1_hole_cards.iter() {
-            used_cards.set((*card).into(), true);
-        }
-        for card in p2_hole_cards.iter() {
-            used_cards.set((*card).into(), true);
-        }
-        assert_eq!(used_cards.count_ones(), 7);
-
-        let possible = get_possible_hole_cards(&range_set, used_cards).unwrap();
-
-        assert_eq!(373, possible.len());
-
-        let mut win_equity = vec![0.0; 3];
-        let mut tie_equity = vec![0.0; 3];
-
-        let mut total_showdowns = 0;
-
-        //enumerate everything
-        for p in possible.iter() {
-            p.set_used(&mut used_cards).unwrap();
-            assert_eq!(used_cards.count_ones(), 9);
-            let check_showndown = total_showdowns;
-            for turn_card in 0..52 {
-                if used_cards[turn_card] {
-                    continue;
-                }
-                used_cards.set(turn_card, true);
-                for river_card in turn_card + 1..52 {
-                    if used_cards[river_card] {
-                        continue;
-                    }
-
-                    total_showdowns += 1;
-
-                    let mut p1_cards = flop.clone().to_vec();
-                    p1_cards.push(p1_hole_cards[0]);
-                    p1_cards.push(p1_hole_cards[1]);
-                    p1_cards.push(turn_card.try_into().unwrap());
-                    p1_cards.push(river_card.try_into().unwrap());
-
-                    let mut p2_cards = flop.clone().to_vec();
-                    p2_cards.push(p2_hole_cards[0]);
-                    p2_cards.push(p2_hole_cards[1]);
-                    p2_cards.push(turn_card.try_into().unwrap());
-                    p2_cards.push(river_card.try_into().unwrap());
-
-                    let mut p3_cards = flop.clone().to_vec();
-                    p3_cards.push(p.get_hi_card());
-                    p3_cards.push(p.get_lo_card());
-                    p3_cards.push(turn_card.try_into().unwrap());
-                    p3_cards.push(river_card.try_into().unwrap());
-
-                    let p1_hand = flop_hand.add_card(p1_hole_cards[0].into());
-                    let p1_hand = p1_hand.add_card(p1_hole_cards[1].into());
-                    let p1_hand = p1_hand.add_card(turn_card.into());
-                    let p1_hand = p1_hand.add_card(river_card.into());
-
-                    let p2_hand = flop_hand.add_card(p2_hole_cards[0].into());
-                    let p2_hand = p2_hand.add_card(p2_hole_cards[1].into());
-                    let p2_hand = p2_hand.add_card(turn_card.into());
-                    let p2_hand = p2_hand.add_card(river_card.into());
-
-                    let p3_hand = flop_hand.add_card(p.get_hi_card().into());
-                    let p3_hand = p3_hand.add_card(p.get_lo_card().into());
-                    let p3_hand = p3_hand.add_card(turn_card.into());
-                    let p3_hand = p3_hand.add_card(river_card.into());
-
-                    let p1_rank = rank_cards(p1_cards.iter());
-                    let p2_rank = rank_cards(p2_cards.iter());
-                    let p3_rank = rank_cards(p3_cards.iter());
-
-                    let p1_eval = p1_hand.evaluate_internal();
-                    let p2_eval = p2_hand.evaluate_internal();
-                    let p3_eval = p3_hand.evaluate_internal();
-
-                    if p1_rank == p2_rank && p2_rank == p3_rank {
-                        assert_eq!(p1_eval, p2_eval);
-                        assert_eq!(p1_eval, p3_eval);
-                        tie_equity[0] += 1.0 / 3.0;
-                        tie_equity[1] += 1.0 / 3.0;
-                        tie_equity[2] += 1.0 / 3.0;
-                    } else if p1_rank == p2_rank && p1_rank > p3_rank {
-                        assert_eq!(p1_eval, p2_eval);
-                        tie_equity[0] += 1.0 / 2.0;
-                        tie_equity[1] += 1.0 / 2.0;
-                    } else if p1_rank == p3_rank && p1_rank > p2_rank {
-                        assert_eq!(p1_eval, p3_eval);
-                        tie_equity[0] += 1.0 / 2.0;
-                        tie_equity[2] += 1.0 / 2.0;
-                    } else if p2_rank == p3_rank && p2_rank > p1_rank {
-                        assert_eq!(p2_eval, p3_eval);
-                        tie_equity[1] += 1.0 / 2.0;
-                        tie_equity[2] += 1.0 / 2.0;
-                    } else {
-                        let mut ranks = vec![p1_rank, p2_rank, p3_rank];
-                        ranks.sort();
-                        if ranks[2] == p1_rank {
-                            assert!(p1_eval > p2_eval);
-                            assert!(p1_eval > p3_eval);
-                            win_equity[0] += 1.0;
-                        } else if ranks[2] == p2_rank {
-                            assert!(p2_eval > p1_eval);
-                            assert!(p2_eval > p3_eval);
-                            win_equity[1] += 1.0;
-                        } else {
-                            assert!(p3_eval > p1_eval);
-                            assert!(p3_eval > p2_eval);
-                            win_equity[2] += 1.0;
-                        }
-                    }
-
-                    //used_cards.set(river_card, false);
-                }
-
-                used_cards.set(turn_card, false);
-            }
-
-            p.unset_used(&mut used_cards).unwrap();
-
-            assert_eq!(used_cards.count_ones(), 7);
-            //we used 9 cards, so there should be 43*42/2 showdowns total
-            assert_eq!(total_showdowns - check_showndown, 43 * 42 / 2);
-        }
-
-        //Values from Equilab
-        assert_equity(100.0 * tie_equity[0] / total_showdowns as f64, 0.12, 0.005);
-        assert_equity(100.0 * win_equity[0] / total_showdowns as f64, 21.03, 0.005);
-
-        assert_equity(100.0 * tie_equity[1] / total_showdowns as f64, 0.82, 0.005);
-        assert_equity(100.0 * win_equity[1] / total_showdowns as f64, 50.93, 0.005);
-
-        assert_equity(100.0 * tie_equity[2] / total_showdowns as f64, 0.95, 0.005);
-        assert_equity(100.0 * win_equity[2] / total_showdowns as f64, 26.14, 0.005);
-    }
-
+    
     //Slow
     //#[test]
     #[allow(dead_code)]

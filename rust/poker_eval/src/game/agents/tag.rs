@@ -4,17 +4,16 @@ use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
     ActionEnum, CommentedAction, FlushDrawType, GameState, HoleCards, PartialRankContainer,
-    PlayerState, Round, StraightDrawType,
+    PlayerState, Round, StraightDrawType, BoolRange
 };
 
-use postflop_solver::Range;
 
 use super::Agent;
 
 //#[derive(Default)]
 pub struct Tag {
-    pub three_bet_range: Range,
-    pub pfr_range: Range,
+    pub three_bet_range: BoolRange,
+    pub pfr_range: BoolRange,
     pub hole_cards: Option<HoleCards>,
     pub name: String,
     flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
@@ -53,7 +52,7 @@ impl Tag {
         let any_raises = game_state.current_to_call > game_state.bb;
 
         if !any_raises {
-            if self.pfr_range.data[ri] > 0.0 {
+            if self.pfr_range.data[ri]  {
                 CommentedAction {
                     action: ActionEnum::Raise(game_state.bb * 3),
                     comment: Some("Opening raise".to_string()),
@@ -72,7 +71,7 @@ impl Tag {
                 }
             }
         } else {
-            if self.pfr_range.data[ri] > 0.0 {
+            if self.pfr_range.data[ri] {
                 CommentedAction {
                     action: ActionEnum::Raise(game_state.current_to_call * 3),
                     comment: Some("3-betting".to_string()),

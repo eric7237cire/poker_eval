@@ -4,7 +4,7 @@ use crate::web::{
     eval_current, eval_current_draws, get_all_player_hole_cards, FlopSimulationResults,
     PlayerPreFlopState, PreflopPlayerInfo,
 };
-use crate::{add_eval_card, get_unused_card, set_used_card, HoleCards, PokerError};
+use crate::{add_eval_card, get_unused_card, set_used_card, HoleCards, PokerError, BoolRange};
 use boomphf::Mphf;
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
@@ -13,7 +13,7 @@ use log::{debug, error, info, trace, warn};
 use rand::thread_rng;
 use rand::{rngs::StdRng, SeedableRng};
 
-use crate::{range_string_to_set, Card, CardUsedType};
+use crate::{Card, CardUsedType};
 use wasm_bindgen::prelude::wasm_bindgen;
 
 #[wasm_bindgen]
@@ -137,11 +137,11 @@ impl flop_analyzer {
         if range_str.is_empty() {
             return Err(PokerError::from_str("set_player_range: empty string"));
         }
-        let range_set = range_string_to_set(range_str)?;
+        let range: BoolRange = range_str.parse()?;
+        
+        info!("% is {}", range.data.count_ones() as f64 / 2652.0);
 
-        info!("% is {}", range_set.count_ones() as f64 / 2652.0);
-
-        self.player_info[player_idx].range_set = range_set;
+        self.player_info[player_idx].range_set = range.data;
         self.player_info[player_idx].range_string = range_str.to_string();
 
         Ok(())
