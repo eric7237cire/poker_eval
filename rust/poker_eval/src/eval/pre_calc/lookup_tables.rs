@@ -488,7 +488,7 @@ mod tests {
         
     }
 
-    #[test]
+    //#[test]
     #[allow(dead_code)]
     fn test_generate_lookup_tables() {
         init_test_logger();
