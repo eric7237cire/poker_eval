@@ -1,5 +1,6 @@
 
-use ph::fmph;
+use boomphf::Mphf;
+//use ph::fmph;
 use std::borrow::Borrow;
 
 use crate::Card;
@@ -68,7 +69,8 @@ where
     (lookup_key_sum, card_mask)
 }
 
-pub fn fast_hand_eval<I, B>(cards: I, hash_func: &fmph::Function) -> Rank
+//pub fn fast_hand_eval<I, B>(cards: I, hash_func: &fmph::Function) -> Rank
+pub fn fast_hand_eval<I, B>(cards: I, hash_func: &Mphf<u32>) -> Rank
 where
     I: Iterator<Item = B>,
     B: Borrow<Card>,
@@ -82,7 +84,8 @@ where
     } else {
         //hash it first
         let raw_lookup_key_without_suits = lookup_key_sum as u32;
-        let lookup_key_without_suits = hash_func.get(&raw_lookup_key_without_suits as _).unwrap();
+        //let lookup_key_without_suits = hash_func.get(&raw_lookup_key_without_suits as _).unwrap();
+        let lookup_key_without_suits = hash_func.hash(&raw_lookup_key_without_suits as _);
         LOOKUP[lookup_key_without_suits as usize]
     };
 
@@ -93,14 +96,14 @@ where
 mod tests {
     use log::info;
 
-    use crate::{eval::pre_calc::rank::RankEnum, init_test_logger, Board};
+    use crate::{eval::pre_calc::{rank::RankEnum, perfect_hash::load_boomperfect_hash}, init_test_logger, Board};
 
     use super::*;
 
     #[test]
     fn test_lookups() {
         //create_perfect_hash();
-        let f = load_perfect_hash();
+        let f = load_boomperfect_hash();
 
         let board = Board::try_from("7d 5s 2h 3s 4c").unwrap();
         let rank = fast_hand_eval(board.as_slice_card().iter(), &f);

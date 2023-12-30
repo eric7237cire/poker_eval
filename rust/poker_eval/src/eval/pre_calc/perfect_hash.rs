@@ -2,8 +2,9 @@ use boomphf::Mphf;
 use log::info;
 #[cfg(not(target_arch = "wasm32"))]
 use ph::fmph;
+use std::cmp::max;
+#[cfg(not(target_arch = "wasm32"))]
 use std::{
-    cmp::max,
     fs::{remove_file, File},
     io::Write,
 };
