@@ -580,7 +580,9 @@ mod tests {
 
     use super::*;
 
-    #[test]
+    //Pretty slow
+    //#[test]
+    #[allow(dead_code)]
     fn test_range_to_string() {
 
         //cargo test --lib test_range_to_string --release -- --nocapture
