@@ -82,10 +82,7 @@ impl Board {
         Ok(())
     }
 
-    pub fn clear_cards_from_deck(&mut self, deck: &mut Deck) {
-        for card in self.cards.iter() {
-            deck.clear_used_card(*card);
-        }
+    pub fn clear_cards(&mut self, ) {
         self.cards.clear();
         self.index = None;
     }

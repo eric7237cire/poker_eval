@@ -3,7 +3,9 @@ use std::{
     str::FromStr,
 };
 
-use crate::{set_used_card, unset_used_card, CardUsedType};
+use once_cell::sync::Lazy;
+
+use crate::{set_used_card, unset_used_card, CardUsedType, Suit, CardValue, pre_calc::NUMBER_OF_HOLE_CARDS};
 
 use crate::{Card, PokerError};
 
@@ -176,6 +178,19 @@ impl Display for HoleCards {
     }
 }
 
+pub static ALL_HOLE_CARDS: Lazy<Vec<HoleCards>> = Lazy::new(|| {
+
+    let mut vec_hole_cards = Vec::with_capacity(NUMBER_OF_HOLE_CARDS);
+    for card1 in 0..52u8 {
+        for card2 in card1 + 1..52 {
+            let hc = HoleCards::new(Card::try_from(card1).unwrap(), Card::try_from(card2).unwrap()).unwrap();
+            vec_hole_cards.push(hc);
+        }
+    }
+    assert_eq!(vec_hole_cards.len(), NUMBER_OF_HOLE_CARDS);
+    vec_hole_cards
+});
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -261,5 +276,22 @@ mod tests {
                 .to_simple_range_index(),
             163
         );
+    }
+
+    #[test]
+    fn test_all_hole_cards() {
+       
+       
+        let mut index_check = 0;
+        for card1 in 0..52u8 {
+            for card2 in card1 + 1..52 {
+                let hc = HoleCards::new(Card::try_from(card1).unwrap(), Card::try_from(card2).unwrap()).unwrap();
+                
+                assert_eq!(hc.to_range_index(), index_check);
+                index_check += 1;
+
+                assert_eq!(ALL_HOLE_CARDS[hc.to_range_index()], hc);
+            }
+        }
     }
 }

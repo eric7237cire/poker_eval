@@ -300,14 +300,15 @@ impl DoubleEndedIterator for CardValueRange {
 #[derive(PartialEq, PartialOrd, Eq, Ord, Debug, Clone, Copy, Hash)]
 #[repr(u8)]
 pub enum Suit {
-    /// Spades
-    Spade = 3,
     /// Clubs
     Club = 0,
-    /// Hearts
-    Heart = 2,
     /// Diamonds
     Diamond = 1,
+    /// Hearts
+    Heart = 2,
+    /// Spades
+    Spade = 3,
+    
 }
 
 /// All of the `Suit`'s. This is what `Suit::suits()` returns.

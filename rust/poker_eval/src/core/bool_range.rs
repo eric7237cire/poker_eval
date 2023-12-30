@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use bitvec::prelude::*;
-use crate::{Card, CardValue, CardValueRange, HoleCards, PokerError, Suit, pre_calc::{NUMBER_OF_SUITS, NUMBER_OF_HOLE_CARDS}};
+use crate::{Card, CardValue, CardValueRange, HoleCards, PokerError, Suit, pre_calc::{NUMBER_OF_SUITS, NUMBER_OF_HOLE_CARDS, NUMBER_OF_CARDS}};
 
 //52 * 51 / 2
 pub type InRangeType = BitArr!(for NUMBER_OF_HOLE_CARDS, in usize, Lsb0);
@@ -23,6 +23,37 @@ enum Suitedness {
     All,
     Specific(Suit, Suit),
 }
+
+//Each card has a bool range that it belongs to and it's inverse
+pub struct CardRange {
+    pub range: BoolRange,
+    pub inverse: BoolRange,
+}
+pub static ALL_CARD_RANGES: Lazy<Vec<CardRange>> = Lazy::new(|| {
+    let mut result: Vec<CardRange> = Vec::with_capacity(NUMBER_OF_CARDS);
+    for _ in 0..NUMBER_OF_CARDS {
+        result.push(CardRange{
+            range:BoolRange::default(),
+            inverse: BoolRange::default(),
+        });
+    }
+    for card1 in 0..52usize {
+        for card2 in card1 + 1..52 {
+            let hc = HoleCards::new(Card::try_from(card1).unwrap(), Card::try_from(card2).unwrap()).unwrap();
+
+            result[card1].range.data.set(hc.to_range_index(), true);
+            result[card2].range.data.set(hc.to_range_index(), true);
+        }
+    }
+
+    for c in result.iter_mut() {
+        c.inverse.data = !c.range.data;
+        //assert_eq!(c.range.data.count_ones() + c.inverse.data.count_ones(), NUMBER_OF_HOLE_CARDS);
+    }
+            
+    assert_eq!(NUMBER_OF_CARDS, result.len());
+    result
+});
 
 impl BoolRange {
     pub fn new() -> Self {

@@ -31,7 +31,7 @@ use itertools::Itertools;
 
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceRank},
-    Board, BoolRange, Deck, OldRank, PokerError,
+    Board, BoolRange, Deck, OldRank, PokerError, pre_calc::perfect_hash::load_boomperfect_hash,
 };
 
 //A more direct version of the flop analyze code
@@ -44,6 +44,8 @@ fn calc_equity(
     //returns array [52*51/2] = none for impossible or
     // num above / below / equal & total
 
+    let mut hash_func = load_boomperfect_hash();
+    
     let mut deck = Deck::new();
 
     let mut out = vec![0.0; ranges.len()];

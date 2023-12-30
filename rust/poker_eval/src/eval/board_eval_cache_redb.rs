@@ -212,7 +212,8 @@ mod tests {
                 cards.add_cards_from_deck(&mut agent_deck, 3).unwrap();
                 let _texture = flop_texture_db.get_put(&mut cards).unwrap();
 
-                cards.clear_cards_from_deck(&mut agent_deck);
+                cards.clear_cards();
+                agent_deck.reset();
 
                 if flop_texture_db.cache_misses > 0 && flop_texture_db.cache_misses % 1000 == 0 {
                     println!("Iter {}", i);

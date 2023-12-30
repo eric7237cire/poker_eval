@@ -178,10 +178,8 @@ mod tests {
                 let hole2: Card = agent_deck.get_unused_card().unwrap().try_into().unwrap();
                 let hole_cards: HoleCards = HoleCards::new(hole1, hole2).unwrap();
                 let _texture = partial_rank_db.get_put(&mut cards, &hole_cards).unwrap();
-                cards.clear_cards_from_deck(&mut agent_deck);
-
-                agent_deck.clear_used_card(hole1);
-                agent_deck.clear_used_card(hole2);
+                cards.clear_cards();
+                agent_deck.reset();
 
                 if partial_rank_db.cache_misses > 0 && partial_rank_db.cache_misses % 1000 == 0 {
                     println!("Iter {}", i);
