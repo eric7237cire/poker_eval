@@ -1,22 +1,31 @@
-use std::{
-    cmp::max,
-    collections::{HashMap, HashSet}, env, path::PathBuf, fs::{File, self, remove_file}, io::Write, borrow::Borrow,
-};
 use dotenv::dotenv;
 use log::info;
 use ph::fmph;
+use std::{
+    borrow::Borrow,
+    cmp::max,
+    collections::{HashMap, HashSet},
+    env,
+    fs::{self, remove_file, File},
+    io::Write,
+    path::PathBuf,
+};
 
-use crate::{eval::pre_calc::get_perfect_hash_path, Card, };
+use crate::{eval::pre_calc::get_perfect_hash_path, Card};
 
 use crate::eval::pre_calc::perfect_hash::{create_perfect_hash, load_perfect_hash};
 
-use super::{lookup::{self, LOOKUP_FLUSH, LOOKUP}, CARDS, perfect_hash::get_value_bits_for_flush, rank::Rank, GLOBAL_SUIT_SHIFT, INITIAL_SUIT_COUNT};
+use super::{
+    lookup::{self, LOOKUP, LOOKUP_FLUSH},
+    perfect_hash::get_value_bits_for_flush,
+    rank::Rank,
+    CARDS, GLOBAL_SUIT_SHIFT, INITIAL_SUIT_COUNT,
+};
 
 /*
 
 
 */
-
 
 // fn check_perfect_hash(rank_bases: &[u64]) {
 //     let weights_u32 = rank_bases.iter().map(|x| *x as u32).collect::<Vec<u32>>();
@@ -53,11 +62,7 @@ use super::{lookup::{self, LOOKUP_FLUSH, LOOKUP}, CARDS, perfect_hash::get_value
 
 // }
 
-
-pub fn fast_hand_eval<I, B>(
-    cards: I,
-    hash_func: &fmph::Function
-) -> Rank 
+pub fn calc_lookup_key_and_mask<I, B>(cards: I) -> (u64, u64)
 where
     I: Iterator<Item = B>,
     B: Borrow<Card>,
@@ -70,6 +75,15 @@ where
         lookup_key_sum += lookup_key;
         card_mask |= card_bit;
     }
+    (lookup_key_sum, card_mask)
+}
+
+pub fn fast_hand_eval<I, B>(cards: I, hash_func: &fmph::Function) -> Rank
+where
+    I: Iterator<Item = B>,
+    B: Borrow<Card>,
+{
+    let (lookup_key_sum, card_mask) = calc_lookup_key_and_mask(cards);
 
     let flush_lookup_key = get_value_bits_for_flush(lookup_key_sum, card_mask);
 
@@ -87,7 +101,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{init_test_logger, Board, eval::pre_calc::rank::RankEnum};
+    use crate::{eval::pre_calc::rank::RankEnum, init_test_logger, Board};
 
     use super::*;
 
@@ -105,7 +119,7 @@ mod tests {
         let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
 
         assert_eq!(rank.get_rank_enum(), RankEnum::Straight(9));
-        
+
         let board = Board::try_from("9d 5s Qd Tc Kh Js").unwrap();
         let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
 
@@ -142,7 +156,22 @@ mod tests {
 
         assert_eq!(rank.get_rank_enum(), RankEnum::Flush(996));
 
-        assert_eq!(42, 42+42)
+        let board = Board::try_from("Ad 9d Qd Jd 4h 4c Td").unwrap();
+        let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
+
+        assert_eq!(rank.get_rank_enum(), RankEnum::Flush(1112));
+
+        let board = Board::try_from("Ad Kd Qd Jd 4h 4c 9d").unwrap();
+        let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
+
+        //the best flush without it being a str8
+        assert_eq!(rank.get_rank_enum(), RankEnum::Flush(1276));
+
+        let board = Board::try_from("2h 7h 4d Jd 4h 3h 5h").unwrap();
+        let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
+
+        //the worst flush without it being a str8
+        assert_eq!(rank.get_rank_enum(), RankEnum::Flush(0));
     }
 
     #[test]
@@ -150,7 +179,7 @@ mod tests {
         //  cargo test --lib --release abc -- --nocapture
 
         // 7 cards -- 49 205 unique keys
-        // 6 cards -- 18 395 
+        // 6 cards -- 18 395
         // 5 cards --  6 175
 
         // 73,775  unique key sums for 5 to 7 cards
@@ -167,7 +196,7 @@ mod tests {
 
         // for i in 0..13 {
         //     //also print in binary
-        //     for j in 1..=4 { 
+        //     for j in 1..=4 {
         //         info!("{} x {}: {:>40b} {}", i, j, rank_base1[i]*j, rank_base1[i]*j);
         //     }
         // }
@@ -197,11 +226,13 @@ mod tests {
 
         //check_perfect_hash(&rank_base3, );
 
-        let suit_bases : [u64; 6] = [0x1000, 0x0100, 0x0010, 0x0001, 0x8888, 0x3333];
+        let suit_bases: [u64; 6] = [0x1000, 0x0100, 0x0010, 0x0001, 0x8888, 0x3333];
         for s in 0..suit_bases.len() {
             //Print in binary (width 40, hex, and dec)
-            info!("{} : {:>40b} {:>10x} {}", s, suit_bases[s], suit_bases[s], suit_bases[s]);
-            
+            info!(
+                "{} : {:>40b} {:>10x} {}",
+                s, suit_bases[s], suit_bases[s], suit_bases[s]
+            );
         }
 
         // let valid_counts = test_has_unique_value(&rank_base3);
@@ -257,7 +288,7 @@ mod tests {
         //     5580, //10
         //     10230, //jack
         //     17787, //queen
-        //     29601, //king 
+        //     29601, //king
         //     //Calculated counts having 0, 1, 2, 3, or 4 aces, largest size was this
         //     //meaning adding it should be enough to garauntee a unique key
         //     47476 // Ace
@@ -266,9 +297,6 @@ mod tests {
         assert_eq!(1, 3);
     }
 }
-
-
-
 
 /*
 Unused code while figuring it out
@@ -430,7 +458,7 @@ fn test_has_unique_value3(weights: &[u64]) {
 //     let mut num_unique = 0;
 //     let mut max_key = 0;
 //     for num_val0 in 0..=4 {
-        
+
 //         for num_val1 in 0..=4 {
 //             let val_sum = num_val0 + num_val1;
 //             if val_sum > 7 {
@@ -581,6 +609,6 @@ fn test_has_unique_value3(weights: &[u64]) {
 
 // const NUMBER_OF_RANKS : usize = 13;
 
-// 
+//
 
 */

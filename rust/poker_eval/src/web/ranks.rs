@@ -2,7 +2,7 @@ use crate::web::{
     PlayerFlopResults, PlayerPreFlopState, PreflopPlayerInfo, ResultType, MAX_PLAYERS,
 };
 use crate::{
-    rank_cards, Card, HoleCards, PokerError, NUM_RANK_FAMILIES, SIMPLE_RANGE_INDEX_LEN, OldRank,
+    rank_cards, Card, HoleCards, OldRank, PokerError, NUM_RANK_FAMILIES, SIMPLE_RANGE_INDEX_LEN,
 };
 
 pub struct RankResults {

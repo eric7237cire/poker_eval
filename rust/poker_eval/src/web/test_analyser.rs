@@ -208,7 +208,8 @@ mod tests {
         //Turn villian picks up gut shot
         assert_eq!(
             1,
-            v_r.street_rank_results[1].rank_family_count[OldRank::ThreeOfAKind(0).get_family_index()]
+            v_r.street_rank_results[1].rank_family_count
+                [OldRank::ThreeOfAKind(0).get_family_index()]
         );
         assert_eq!(
             1u32,

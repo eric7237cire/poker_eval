@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 
 use super::RANK_FAMILY_OFFEST;
 
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct Rank {
     pub raw_rank: u16,
@@ -24,20 +23,18 @@ impl Rank {
             0 => RankEnum::HighCard(self.raw_rank & kicker_mask),
             1 => RankEnum::OnePair(self.raw_rank & kicker_mask),
             2 => RankEnum::TwoPair(self.raw_rank & kicker_mask),
-            3 => RankEnum::ThreeOfAKind(self.raw_rank   & kicker_mask),
+            3 => RankEnum::ThreeOfAKind(self.raw_rank & kicker_mask),
             4 => RankEnum::Straight(self.raw_rank & kicker_mask),
             5 => RankEnum::Flush(self.raw_rank & kicker_mask),
             6 => RankEnum::FullHouse(self.raw_rank & kicker_mask),
             7 => RankEnum::FourOfAKind(self.raw_rank & kicker_mask),
             8 => RankEnum::StraightFlush(self.raw_rank & kicker_mask),
             _ => panic!("Unknown rank family {}", rank_family),
-            
         }
     }
 }
 
-
-#[derive(Debug, PartialEq, Eq,)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum RankEnum {
     //0
     HighCard(u16),
@@ -49,7 +46,6 @@ pub enum RankEnum {
     FullHouse(u16),
     FourOfAKind(u16),
     StraightFlush(u16),
-
 }
 
 impl From<u16> for Rank {
@@ -57,4 +53,3 @@ impl From<u16> for Rank {
         Self { raw_rank }
     }
 }
-

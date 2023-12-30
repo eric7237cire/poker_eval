@@ -31,7 +31,7 @@ use itertools::Itertools;
 
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceRank},
-    Board, BoolRange, Deck, PokerError, OldRank,
+    Board, BoolRange, Deck, OldRank, PokerError,
 };
 
 //A more direct version of the flop analyze code

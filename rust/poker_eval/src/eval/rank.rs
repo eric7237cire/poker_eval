@@ -6,8 +6,6 @@ use itertools::Itertools;
 use log::trace;
 use serde::{Deserialize, Serialize};
 
-
-
 /// All the different possible hand ranks.
 /// For each hand rank the u32 corresponds to
 /// the strength of the hand in comparison to others

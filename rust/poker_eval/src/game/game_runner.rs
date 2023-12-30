@@ -4,7 +4,7 @@
 
 use std::cmp::min;
 
-use crate::{rank_cards, set_used_card, Board, PlayerAction, OldRank};
+use crate::{rank_cards, set_used_card, Board, OldRank, PlayerAction};
 use crate::{
     ActionEnum, CardUsedType, ChipType, GameState, PlayerState, PokerError, Position, Round,
 };
