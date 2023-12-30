@@ -93,3 +93,8 @@ cccccccc sssssssss hhhhhhh dddddd
  So recall the flush mask will give us a single bit, in suit_shift + 3, 7, 11, 15
 
  This flush key is basically 7 bits
+
+
+# Minimal Perfect Hashing
+
+https://burtleburtle.net/bob/hash/perfect.html

@@ -89,6 +89,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "boomphf"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "617e2d952880a00583ddb9237ac3965732e8df6a92a8e7bcc054100ec467ec3b"
+dependencies = [
+ "crossbeam-utils",
+ "log",
+ "rayon",
+ "serde",
+ "wyhash",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -475,6 +488,7 @@ version = "0.2.0"
 dependencies = [
  "bincode 1.3.3",
  "bitvec",
+ "boomphf",
  "console_error_panic_hook",
  "dotenv",
  "enum_dispatch",

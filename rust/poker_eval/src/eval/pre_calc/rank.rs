@@ -1,11 +1,3 @@
-use std::borrow::Borrow;
-
-use crate::{core::Card, CardValue, CardValueRange, Suit};
-use bitvec::prelude::*;
-use itertools::Itertools;
-use log::trace;
-use serde::{Deserialize, Serialize};
-
 use super::RANK_FAMILY_OFFEST;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]

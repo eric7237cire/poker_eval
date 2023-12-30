@@ -1,22 +1,12 @@
-use dotenv::dotenv;
-use log::info;
+
 use ph::fmph;
-use std::{
-    borrow::Borrow,
-    cmp::max,
-    collections::{HashMap, HashSet},
-    env,
-    fs::{self, remove_file, File},
-    io::Write,
-    path::PathBuf,
-};
+use std::borrow::Borrow;
 
-use crate::{eval::pre_calc::get_perfect_hash_path, Card};
+use crate::Card;
 
-use crate::eval::pre_calc::perfect_hash::{create_perfect_hash, load_perfect_hash};
 
 use super::{
-    lookup::{self, LOOKUP, LOOKUP_FLUSH},
+    lookup::{LOOKUP, LOOKUP_FLUSH},
     perfect_hash::get_value_bits_for_flush,
     rank::Rank,
     CARDS, GLOBAL_SUIT_SHIFT, INITIAL_SUIT_COUNT,
@@ -101,6 +91,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use log::info;
+
     use crate::{eval::pre_calc::rank::RankEnum, init_test_logger, Board};
 
     use super::*;

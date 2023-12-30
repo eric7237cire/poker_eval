@@ -4,9 +4,11 @@ use std::fs::File;
 use std::io::Write;
 use std::{cmp::max, collections::HashMap};
 
+use crate::eval::pre_calc::perfect_hash::load_boomperfect_hash;
 use crate::{Card, CardValue};
+use boomphf::Mphf;
 use log::info;
-use ph::fmph;
+//use ph::fmph;
 
 use crate::eval::pre_calc::fast_eval::calc_lookup_key_and_mask;
 use crate::eval::pre_calc::RANK_BASES;
@@ -56,7 +58,8 @@ fn update(
     val: u16,
     lookup: &mut HashMap<u64, u16>,
     lookup_flush: &mut HashMap<usize, u16>,
-    mixed_key_perfect_hash_func: &fmph::Function,
+    //mixed_key_perfect_hash_func: &fmph::Function,
+    mixed_key_perfect_hash_func: &Mphf<u32>
 ) {
     let flush_key = get_value_bits_for_flush(key, mask);
     if let Some(flush_key) = flush_key {
@@ -68,7 +71,8 @@ fn update(
     } else {
         //we truncate the suited count info in the higher bits
         let mixed_key = key as u32;
-        let hash_key = mixed_key_perfect_hash_func.get(&mixed_key).unwrap();
+        //let hash_key = mixed_key_perfect_hash_func.get(&mixed_key).unwrap();
+        let hash_key = mixed_key_perfect_hash_func.hash(&mixed_key);
         assert!(hash_key < 73_775);
         match lookup.insert(hash_key, val) {
             //We should get same evaluation if we hash to the same value
@@ -88,8 +92,9 @@ pub fn generate_lookup_tables() {
     let mut lookup_flush = HashMap::new();
 
     info!("Loading perfect hash func");
-    create_perfect_hash();
-    let hash_func = load_perfect_hash();
+    //create_perfect_hash();
+    //let hash_func = load_perfect_hash();
+    let hash_func = load_boomperfect_hash();
 
     info!("Running through all 5 card hands");
     // 5-cards
@@ -222,8 +227,9 @@ pub fn generate_lookup_tables_fast() {
     let mut lookup_flush = HashMap::new();
 
     info!("Loading perfect hash func");
-    create_perfect_hash();
-    let hash_func = load_perfect_hash();
+    //create_perfect_hash();
+    //let hash_func = load_perfect_hash();
+    let hash_func = load_boomperfect_hash();
 
     //Code from enumerate_all_unique_sets
     //we have card1 <= card2 <= card3 <= card4 <= card5 <= card6 <= card7
