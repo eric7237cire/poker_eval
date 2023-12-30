@@ -18,7 +18,7 @@ pub struct Tag {
     pub name: String,
     flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
     partial_rank_db:
-        Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>>,
+        Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
 }
 
 impl Tag {
@@ -28,7 +28,7 @@ impl Tag {
         name: &str,
         flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
         partial_rank_db: Rc<
-            RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
+            RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>,
         >,
     ) -> Self {
         Tag {

@@ -66,6 +66,12 @@ impl BoolRange {
         BoolRange { data }
     }
 
+    pub fn all_enabled() -> Self {
+        let mut result = Self::new();
+        result.data.fill(true);
+        result
+    }
+
     #[inline]
     pub fn set_enabled(&mut self, indices: &[usize], enabled: bool) {
         for &i in indices {

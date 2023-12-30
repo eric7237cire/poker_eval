@@ -86,7 +86,7 @@ fn narrow_range(
     in_range: &BoolRange,
     _bet_size: usize,
     partial_rank_db: Rc<
-        RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
+        RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>,
     >,
 ) -> Result<BoolRange, PokerError> {
     //bet 0 is nothing, 1 is small bet

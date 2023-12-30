@@ -29,6 +29,7 @@ pub mod likes_hands;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod exact_equity;
 
+#[allow(dead_code)]
 #[cfg(not(target_arch = "wasm32"))]
 mod kev;
 

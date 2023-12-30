@@ -16,8 +16,10 @@ use crate::{
 
 const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("eval_cache");
 
-pub trait ProduceEvalWithHcResult<R> {
-    fn produce_eval_result(cards: &[Card], hole_cards: &HoleCards) -> R;
+pub trait ProduceEvalWithHcResult {
+    type Result;
+
+    fn produce_eval_result(cards: &[Card], hole_cards: &HoleCards) -> Self::Result;
 
     fn get_cache_name() -> EvalCacheEnum;
 }
@@ -25,19 +27,18 @@ pub trait ProduceEvalWithHcResult<R> {
 //P is producer type
 //R is result
 //K is the key type
-pub struct EvalCacheWithHcReDb<P, R> {
+pub struct EvalCacheWithHcReDb<P> {
     db: Database,
     pub cache_hits: u32,
     pub cache_misses: u32,
 
     phantom1: std::marker::PhantomData<P>,
-    phantom2: std::marker::PhantomData<R>,
 }
 
-impl<P, R> EvalCacheWithHcReDb<P, R>
+impl<P> EvalCacheWithHcReDb<P>
 where
-    P: ProduceEvalWithHcResult<R>,
-    R: Serialize + DeserializeOwned,
+    P: ProduceEvalWithHcResult,
+    P::Result: Serialize + DeserializeOwned,
 {
     //each different struct should get its own db path
     pub fn new() -> Result<Self, ReDbError> {
@@ -58,11 +59,10 @@ where
             cache_hits: 0,
             cache_misses: 0,
             phantom1: std::marker::PhantomData,
-            phantom2: std::marker::PhantomData,
         })
     }
 
-    pub fn get_put(&mut self, cards: &Board, hole_cards: &HoleCards) -> Result<R, ReDbError> {
+    pub fn get_put(&mut self, cards: &Board, hole_cards: &HoleCards) -> Result<P::Result, ReDbError> {
         let index = cards.get_precalc_index().unwrap();
 
         let mut index_bytes: [u8; 6] = [0; 6];
@@ -88,14 +88,14 @@ where
         Ok(result)
     }
 
-    fn get(&mut self, index: &[u8]) -> Result<Option<R>, ReDbError> {
+    fn get(&mut self, index: &[u8]) -> Result<Option<P::Result>, ReDbError> {
         let read_txn: ReadTransaction = self.db.begin_read()?;
         let table = read_txn.open_table(TABLE)?;
 
         let data = table.get(index)?;
         if let Some(data) = data {
             //let texture: BoardTexture = rmp_serde::from_slice(data.value()).unwrap();
-            let texture: R = bincode::deserialize(&data.value()).unwrap();
+            let texture: P::Result = bincode::deserialize(&data.value()).unwrap();
 
             Ok(Some(texture))
         } else {
@@ -103,7 +103,7 @@ where
         }
     }
 
-    fn put(&mut self, index: &[u8], result: &R) -> Result<(), ReDbError> {
+    fn put(&mut self, index: &[u8], result: &P::Result) -> Result<(), ReDbError> {
         let write_txn = self.db.begin_write()?;
         {
             let mut table = write_txn.open_table(TABLE)?;
@@ -118,16 +118,12 @@ where
     }
 }
 
-impl<P, R> Drop for EvalCacheWithHcReDb<P, R> {
-    fn drop(&mut self) {
-        println!("Dropping EvalCacheWithHcReDb!");
-        debug!("Dropping EvalCacheWithHcReDb!");
-    }
-}
-
 pub struct ProducePartialRankCards {}
 
-impl ProduceEvalWithHcResult<PartialRankContainer> for ProducePartialRankCards {
+impl ProduceEvalWithHcResult for ProducePartialRankCards {
+
+    type Result = PartialRankContainer;
+
     fn produce_eval_result(board: &[Card], hole_cards: &HoleCards) -> PartialRankContainer {
         partial_rank_cards(&hole_cards, board)
     }
@@ -166,7 +162,7 @@ mod tests {
         //let mut flop_texture_db = FlopTextureJamDb::new(db_name).unwrap();
 
         //let mut flop_texture_db = FlopTextureReDb::new(re_db_name).unwrap();
-        let mut partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
+        let mut partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards> =
             EvalCacheWithHcReDb::new().unwrap();
         let now = Instant::now();
         let iter_count = 500_000;
