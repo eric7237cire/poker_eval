@@ -25,17 +25,17 @@ rank all the hole cards
 
 */
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, iter::once};
 
 use itertools::Itertools;
 
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceRank},
-    Board, BoolRange, Deck, OldRank, PokerError, pre_calc::perfect_hash::load_boomperfect_hash,
+    Board, BoolRange, Deck, OldRank, PokerError, pre_calc::{perfect_hash::load_boomperfect_hash, fast_eval::fast_hand_eval, rank::Rank},
 };
 
 //A more direct version of the flop analyze code
-fn calc_equity(
+fn calc_equity_slow(
     board: Board,
     ranges: &Vec<BoolRange>,
     rank_db: Rc<RefCell<EvalCacheReDb<ProduceRank>>>,
@@ -50,8 +50,15 @@ fn calc_equity(
 
     let mut out = vec![0.0; ranges.len()];
 
-    for _it in 0..num_simulations {
+    for it in 0..num_simulations {
+        if it % 1000 == 0 {
+            println!("it {}", it);
+        }
         deck.reset();
+
+        for c in board.as_slice_card().iter() {
+            deck.set_used_card(*c);
+        }
 
         //We need to deal hole cards to each player
         let player_hole_cards = ranges
@@ -65,12 +72,15 @@ fn calc_equity(
             })
             .collect_vec();
 
+
         let mut extra_board_cards = Vec::with_capacity(5);
 
         for _ in 0..5 - board.get_num_cards() {
             let card = deck.get_unused_card().unwrap();
             extra_board_cards.push(card);
         }
+
+        assert_eq!(2 * player_hole_cards.len() + 5, deck.get_number_of_used_cards());
 
         let mut rank_instance = rank_db.borrow_mut();
 
@@ -113,14 +123,139 @@ fn calc_equity(
         }
     }
 
+    for i in 0..out.len() {
+        out[i] /= num_simulations as f64;
+    }
+
+    Ok(out)
+}
+
+fn calc_equity(
+    board: Board,
+    ranges: &Vec<BoolRange>,
+    num_simulations: usize,
+) -> Result<Vec<f64>, PokerError> {
+    //returns array [52*51/2] = none for impossible or
+    // num above / below / equal & total
+
+    let hash_func = load_boomperfect_hash();
+    
+    let mut deck = Deck::new();
+
+    let mut out = vec![0.0; ranges.len()];
+
+    for it in 0..num_simulations {
+        if it % 10000 == 0 {
+            println!("it {}", it);
+        }
+        deck.reset();
+
+        for c in board.as_slice_card().iter() {
+            deck.set_used_card(*c);
+        }
+
+        //We need to deal hole cards to each player
+        let player_hole_cards = ranges
+            .iter()
+            .map(|range| {
+                //let usable_range = deck.get_available_in_range(range)?;
+                //trace!("usable range {}", usable_range.data.count_ones());
+                let hole_cards = deck.choose_available_in_range(range).unwrap();
+
+                hole_cards
+            })
+            .collect_vec();
+
+
+        let mut extra_board_cards = Vec::with_capacity(5);
+
+        for _ in 0..5 - board.get_num_cards() {
+            let card = deck.get_unused_card().unwrap();
+            extra_board_cards.push(card);
+        }
+
+        assert_eq!(2 * player_hole_cards.len() + 5, deck.get_number_of_used_cards());
+
+        //do eval
+        let ranks = player_hole_cards
+            .iter()
+            .enumerate()
+            .map(|(player_index, hole_cards)| {
+                
+                let h1 = once(hole_cards.get_hi_card()).chain(once(hole_cards.get_lo_card()));
+                let c_it = board.as_slice_card().iter().map(|c| *c).chain(
+                    extra_board_cards.iter().map(|c| *c)
+                ).chain(h1);
+
+                let rank = fast_hand_eval(c_it, &hash_func );
+
+                (rank, player_index)
+            })
+            .collect_vec();
+
+        let mut count_at_max = 0;
+        let mut max_rank: Option<Rank> = None;
+
+        for (rank, _player_index) in ranks.iter() {
+            if max_rank.is_none() || rank > max_rank.as_ref().unwrap() {
+                max_rank = Some(*rank);
+                count_at_max = 1;
+            } else if rank == max_rank.as_ref().unwrap() {
+                count_at_max += 1;
+            }
+        }
+
+        for (rank, player_index) in ranks.iter() {
+            if rank == max_rank.as_ref().unwrap() {
+                out[*player_index] += 1.0 / count_at_max as f64;
+            }
+        }
+    }
+
+    for i in 0..out.len() {
+        out[i] /= num_simulations as f64;
+    }
+
     Ok(out)
 }
 
 #[cfg(test)]
 mod tests {
+    use std::time::Instant;
+
+    use crate::{Board, board_eval_cache_redb::{EvalCacheReDb, ProduceEvalResult, ProduceRank}};
+
+    use super::*;
+
 
     #[test]
     fn test_equity() {
-        //let mut range_1 : BoolRange = "TT+".parse();
+
+        /*
+        cargo test test_equity --release -- --nocapture 
+         */
+        
+        let board: Board = "9d 8h 9c".parse().unwrap();
+
+        let start = Instant::now();
+
+        let ranges: Vec<BoolRange> = vec![
+            "Ks6s".parse().unwrap(),
+            "22+,A2s+,K2s+,Q2s+,J2s+,T2s+,92s+,82s+,74s+,64s+,54s,A2o+,K2o+,Q2o+,J2o+,T2o+,94o+,85o+,75o+".parse().unwrap(),
+            "33+,A2s+,K3s+,Q6s+,J8s+,T9s,A2o+,K6o+,Q8o+,JTo".parse().unwrap(),
+        ];
+
+        //let rank_db: EvalCacheReDb<ProduceRank> = EvalCacheReDb::new().unwrap();
+
+        //let shared = Rc::new(RefCell::new(rank_db));
+
+        let results = calc_equity(board, &ranges, 1_000_000).unwrap();
+
+        for i in 0..ranges.len() {
+            println!("{}\n{:.2}", ranges[i].to_string(), results[i]*100.0);
+        }
+
+        println!("time {:?}", start.elapsed());
+        
     }
 }

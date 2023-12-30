@@ -3,6 +3,7 @@ use crate::InRangeType;
 use crate::pre_calc::NUMBER_OF_CARDS;
 
 use bitvec::prelude::*;
+use once_cell::sync::Lazy;
 use serde::Deserialize;
 use serde::Serialize;
 use std::cmp;
@@ -312,7 +313,7 @@ pub enum Suit {
 }
 
 /// All of the `Suit`'s. This is what `Suit::suits()` returns.
-const SUITS: [Suit; 4] = [Suit::Spade, Suit::Club, Suit::Heart, Suit::Diamond];
+const SUITS: [Suit; 4] = [Suit::Club, Suit::Diamond, Suit::Heart, Suit::Spade];
 
 /// Impl of Suit
 ///
@@ -398,11 +399,30 @@ pub struct Card {
     pub value: CardValue,
     /// The suit of this card.
     pub suit: Suit,
+
+    pub index: usize,
 }
+
+pub static ALL_CARDS: Lazy<Vec<Card>> = Lazy::new(|| {
+    let mut result: Vec<Card> = Vec::with_capacity(NUMBER_OF_CARDS);
+    for card_num in 0..NUMBER_OF_CARDS {
+        let value= CardValue::try_from(card_num >> 2).unwrap();
+        let suit =  Suit::suits()[card_num & 0x3];
+        result.push(Card{
+            suit, value, index: card_num
+        });
+    }
+                
+    assert_eq!(NUMBER_OF_CARDS, result.len());
+    result
+});
 
 impl Card {
     pub fn new(value: CardValue, suit: Suit) -> Self {
-        Self { value, suit }
+        let index = ((value as usize) << 2) | suit as usize;
+        assert_eq!(ALL_CARDS[index].value, value);
+        assert_eq!(ALL_CARDS[index].suit, suit);
+        ALL_CARDS[index]
     }
 
 }
@@ -431,10 +451,10 @@ impl FromStr for Card {
         let mut chars = s.chars();
         let value_char = chars.next().ok_or(PokerError::from_str("No character"))?;
         let suit_char = chars.next().ok_or(PokerError::from_str("No character"))?;
-        Ok(Self {
-            value: value_char.to_string().parse()?,
-            suit: suit_char.to_string().parse()?,
-        })
+        Ok(Self::new(
+             value_char.to_string().parse()?,
+             suit_char.to_string().parse()?,
+        ))
     }
 }
 
@@ -445,10 +465,10 @@ impl TryFrom<&str> for Card {
         let mut chars = value.chars();
         let value_char = chars.next().ok_or(PokerError::from_str("No character"))?;
         let suit_char = chars.next().ok_or(PokerError::from_str("No character"))?;
-        Ok(Self {
-            value: value_char.to_string().parse()?,
-            suit: suit_char.to_string().parse()?,
-        })
+        Ok(Self::new( 
+             value_char.to_string().parse()?,
+            suit_char.to_string().parse()?,
+        ))
     }
 }
 
@@ -468,10 +488,7 @@ impl TryFrom<u8> for Card {
     type Error = PokerError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        Ok(Self {
-            value: CardValue::try_from(value >> 2)?,
-            suit: Suit::try_from(value & 0x3)?,
-        })
+        Ok(ALL_CARDS[value as usize])
     }
 }
 
@@ -479,76 +496,10 @@ impl TryFrom<usize> for Card {
     type Error = PokerError;
 
     fn try_from(value: usize) -> Result<Self, Self::Error> {
-        Ok(Self {
-            value: CardValue::try_from((value >> 2) as u8)?,
-            suit: Suit::try_from((value & 0x3) as u8)?,
-        })
+       Ok(ALL_CARDS[value])
     }
 }
 
-// pub struct CardVec(pub Vec<Card>);
-
-// impl TryFrom<&str> for CardVec {
-//     type Error = PokerError;
-
-//     fn try_from(value: &str) -> Result<Self, Self::Error> {
-//         let mut cards = Vec::with_capacity(7);
-//         let mut chars = value.chars().filter(|c| c.is_alphanumeric());
-//         while let Some(c) = chars.next() {
-//             let value = c;
-//             let suit = chars.next().ok_or(PokerError::from_string(format!(
-//                 "Unable to parse suit from {}",
-//                 value
-//             )))?;
-//             cards.push(Card::new(value.try_into()?, suit.try_into()?));
-//         }
-//         Ok(CardVec(cards))
-//     }
-// }
-
-// impl FromStr for CardVec {
-//     type Err = PokerError;
-
-//     fn from_str(s: &str) -> Result<Self, Self::Err> {
-//         CardVec::try_from(s)
-//     }
-// }
-
-// impl CardVec {
-//     pub fn as_vec_u8(&self) -> Vec<u8> {
-//         self.0
-//             .iter()
-//             .map(|c| {
-//                 let c_u8: u8 = (*c).into();
-//                 c_u8
-//             })
-//             .collect()
-//     }
-// }
-
-// impl Display for CardVec {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         let mut s = String::new();
-//         for card in self.0.iter() {
-//             s.push_str(&format!("{} ", card));
-//         }
-//         write!(f, "{}", s.trim())
-//     }
-// }
-
-// pub fn cards_from_string(a_string: &str) -> Result<Vec<Card>, PokerError> {
-//     let mut cards = Vec::with_capacity(7);
-//     let mut chars = a_string.chars().filter(|c| c.is_alphanumeric());
-//     while let Some(c) = chars.next() {
-//         let value = c;
-//         let suit = chars.next().ok_or(PokerError::from_string(format!(
-//             "Unable to parse suit from {}",
-//             a_string
-//         )))?;
-//         cards.push(Card::new(value.try_into()?, suit.try_into()?));
-//     }
-//     Ok(cards)
-// }
 
 pub fn add_cards_from_string(cards: &mut Vec<Card>, a_string: &str) -> () {
     let mut chars = a_string.chars().filter(|c| !c.is_whitespace());
@@ -680,31 +631,15 @@ mod tests {
     use super::*;
     use std::mem;
 
-    #[test]
-    fn test_constructor() {
-        let c = Card {
-            value: CardValue::Three,
-            suit: Suit::Spade,
-        };
-        assert_eq!(Suit::Spade, c.suit);
-        assert_eq!(CardValue::Three, c.value);
-    }
+    
 
-    #[test]
-    fn test_try_parse_card() {
-        let expected = Card {
-            value: CardValue::King,
-            suit: Suit::Spade,
-        };
-
-        assert_eq!(expected, Card::try_from("Ks").unwrap())
-    }
+    
 
     #[test]
     fn test_parse_all_cards() {
         for suit in SUITS {
             for value in VALUES {
-                let e = Card { suit, value };
+                let e = Card::new(value, suit);
                 let card_string = format!("{}{}", char::from(value), char::from(suit));
                 let card: Card = card_string.parse().unwrap();
                 assert_eq!(e, card);
@@ -714,18 +649,18 @@ mod tests {
 
     #[test]
     fn test_compare() {
-        let c1 = Card {
-            value: CardValue::Three,
-            suit: Suit::Spade,
-        };
-        let c2 = Card {
-            value: CardValue::Four,
-            suit: Suit::Spade,
-        };
-        let c3 = Card {
-            value: CardValue::Four,
-            suit: Suit::Club,
-        };
+        let c1 = Card::new(
+            CardValue::Three,
+            Suit::Spade,
+        );
+        let c2 = Card::new(
+             CardValue::Four,
+             Suit::Spade,
+        );
+        let c3 = Card::new(
+            CardValue::Four,
+            Suit::Club,
+        );
 
         // Make sure that the values are ordered
         assert!(c1 < c2);

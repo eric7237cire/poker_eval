@@ -181,7 +181,7 @@ mod tests {
 
             let players: Vec<InitialPlayerState> = build_initial_players_from_agents(&agents);
 
-            let board: Vec<Card> = agent_deck.get_board();
+            let board: Vec<Card> = agent_deck.choose_new_board();
             let agent_source = AgentSource {
                 agents,
                 players,

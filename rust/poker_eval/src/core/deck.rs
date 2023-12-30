@@ -34,7 +34,11 @@ impl Deck {
         self.available_range.data.fill(true);
     }
 
-    pub fn get_board(&mut self) -> Vec<Card> {
+    pub fn get_number_of_used_cards(&self) -> usize {
+        self.used_cards.count_ones() as usize
+    }
+
+    pub fn choose_new_board(&mut self) -> Vec<Card> {
         let mut board = Vec::new();
         for _ in 0..5 {
             let card = self.get_unused_card().unwrap();
@@ -167,7 +171,6 @@ mod tests {
         init_test_logger();
         let mut deck = Deck::new();
         let iter_count = 1_000;
-        let mut total = vec![0i32; NUMBER_OF_HOLE_CARDS];
 
         let with_tens: BoolRange = "AT-A2,KT-K2,QT-Q2,J2+".parse().unwrap();
 
