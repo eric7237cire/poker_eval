@@ -4,6 +4,8 @@ pub const NUMBER_OF_RANKS: usize = 13;
 /// number of ranks
 pub const NUMBER_OF_CARDS: usize = 4 * NUMBER_OF_RANKS;
 
+pub const NUMBER_OF_HOLE_CARDS: usize = 1326; //52 choose 2
+
 //We want 32 (not 31) so we can truncate easily via as u32
 pub const GLOBAL_SUIT_SHIFT: u64 = 32;
 

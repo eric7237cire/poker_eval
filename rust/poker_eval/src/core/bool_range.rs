@@ -527,7 +527,47 @@ impl ToString for BoolRange {
 
 #[cfg(test)]
 mod tests {
+    use log::info;
+    use rand::{rngs::StdRng, SeedableRng, seq::SliceRandom};
+
+    use crate::{pre_calc::NUMBER_OF_HOLE_CARDS, init_test_logger};
+
     use super::*;
+
+    #[test]
+    fn test_range_to_string() {
+
+        init_test_logger();
+        let mut rng = StdRng::seed_from_u64(42);
+
+        //initialize an array usize from 0 to NUMBER_OF_HOLE_CARDS
+        let mut indices = (0..NUMBER_OF_HOLE_CARDS).collect::<Vec<usize>>();
+
+        for num_set_in_range in 0..=NUMBER_OF_HOLE_CARDS {
+            //do 10 random subsets of that size
+            for _ in 0..10 {
+                //shuffle the indices
+                indices.shuffle(&mut rng);
+
+                //take the first num_set_in_range indices
+                let indices = &indices[..num_set_in_range];
+
+                //create a range from those indices
+                let mut range = BoolRange::new();
+                range.set_enabled(indices, true);
+
+                //convert the range to a string
+                let range_string = range.to_string();
+                info!("range_string: {}", range_string);
+
+                //convert the string back to a range
+                let range2 = range_string.parse::<BoolRange>().unwrap();
+
+                //check that the two ranges are equal
+                assert_eq!(range, range2);
+            }
+        }
+    }
 
     #[test]
     fn range_from_str() {

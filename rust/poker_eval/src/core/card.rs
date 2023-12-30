@@ -1,4 +1,6 @@
 use crate::HoleCards;
+use crate::pre_calc::NUMBER_OF_CARDS;
+use crate::pre_calc::NUMBER_OF_HOLE_CARDS;
 use bitvec::prelude::*;
 use postflop_solver::card_pair_to_index;
 use postflop_solver::Range;
@@ -588,9 +590,9 @@ pub fn add_cards_from_string(cards: &mut Vec<Card>, a_string: &str) -> () {
 }
 
 //52 * 51 / 2
-pub type InRangeType = BitArr!(for 1326, in usize, Lsb0);
+pub type InRangeType = BitArr!(for NUMBER_OF_HOLE_CARDS, in usize, Lsb0);
 
-pub type CardUsedType = BitArr!(for 52, in usize, Lsb0);
+pub type CardUsedType = BitArr!(for NUMBER_OF_CARDS, in usize, Lsb0);
 
 pub fn range_string_to_set(range_str: &str) -> Result<InRangeType, PokerError> {
     let range: Range = range_str
