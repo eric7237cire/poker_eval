@@ -1,7 +1,7 @@
 use crate::HoleCards;
 use crate::InRangeType;
 use crate::pre_calc::NUMBER_OF_CARDS;
-use crate::pre_calc::NUMBER_OF_HOLE_CARDS;
+
 use bitvec::prelude::*;
 use serde::Deserialize;
 use serde::Serialize;

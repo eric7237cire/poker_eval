@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use bitvec::prelude::*;
-use crate::{Card, CardValue, CardValueRange, HoleCards, PokerError, Suit, pre_calc::{NUMBER_OF_RANKS, NUMBER_OF_SUITS, NUMBER_OF_HOLE_CARDS}};
+use crate::{Card, CardValue, CardValueRange, HoleCards, PokerError, Suit, pre_calc::{NUMBER_OF_SUITS, NUMBER_OF_HOLE_CARDS}};
 
 //52 * 51 / 2
 pub type InRangeType = BitArr!(for NUMBER_OF_HOLE_CARDS, in usize, Lsb0);
@@ -572,7 +572,7 @@ impl ToString for BoolRange {
 
 #[cfg(test)]
 mod tests {
-    use log::{info, debug};
+    use log::{debug};
     
     use rand::{rngs::StdRng, SeedableRng, seq::SliceRandom};
 

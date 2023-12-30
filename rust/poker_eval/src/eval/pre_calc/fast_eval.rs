@@ -94,9 +94,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use log::info;
+    
 
-    use crate::{eval::pre_calc::{rank::RankEnum, perfect_hash::load_boomperfect_hash}, init_test_logger, Board};
+    use crate::{eval::pre_calc::{rank::RankEnum, perfect_hash::load_boomperfect_hash}, Board};
 
     use super::*;
 

@@ -17,14 +17,13 @@ use crate::eval::{
     pre_calc::{
         constants::{GLOBAL_SUIT_SHIFT, INITIAL_SUIT_COUNT, NUMBER_OF_CARDS},
         get_lookup_path,
-        perfect_hash::{create_perfect_hash, load_perfect_hash},
         NUMBER_OF_RANKS,
     },
 };
 use crate::Suit;
 
 use super::{
-    constants::{CARDS, FLUSH_MASK, RANK_FAMILY_OFFEST},
+    constants::{CARDS, RANK_FAMILY_OFFEST},
     perfect_hash::get_value_bits_for_flush,
 };
 
