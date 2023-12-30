@@ -6,7 +6,7 @@ use crate::{
 };
 use bitvec::prelude::*;
 use itertools::Itertools;
-use log::{trace, Log};
+use log::trace;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};

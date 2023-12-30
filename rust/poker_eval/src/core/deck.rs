@@ -1,5 +1,3 @@
-use log::trace;
-
 use crate::{Card, CardUsedType, HoleCards, PokerError, ALL_CARDS};
 
 pub struct Deck {

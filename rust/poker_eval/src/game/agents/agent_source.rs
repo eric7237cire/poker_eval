@@ -98,7 +98,6 @@ mod tests {
             game_runner_source::GameRunnerSourceEnum,
         },
         init_test_logger, test_game_runner, Card, Deck, GameRunner, InitialPlayerState,
-        PartialRankContainer,
     };
 
     use super::AgentSource;
@@ -219,6 +218,6 @@ mod tests {
         //     debug!("Losing hand #{} (iteration {})\nLoss: {}\n{}", i, it_num, change, log);
         // }
 
-        //assert_eq!(hero_winnings, 5835);
+        assert!(hero_winnings > 0);
     }
 }

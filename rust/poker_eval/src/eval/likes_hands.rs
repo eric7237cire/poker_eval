@@ -147,7 +147,7 @@ mod test {
         exact_equity::calc_equity,
         init_test_logger,
         pre_calc::NUMBER_OF_RANKS,
-        Board, BoolRange, Card, CardValue, Suit, ALL_HOLE_CARDS, Deck,
+        Board, BoolRange, Card, CardValue, Suit, Deck,
     };
 
     use super::*;

@@ -635,13 +635,13 @@ mod tests {
         );
     }
 
-    fn assert_equity(equity: f64, target: f64, tolerance: f64) {
-        let passed = (equity - target).abs() < tolerance;
-        if !passed {
-            println!("assert_equity failed: {} != {}", equity, target);
-        }
-        assert!(passed);
-    }
+    // fn assert_equity(equity: f64, target: f64, tolerance: f64) {
+    //     let passed = (equity - target).abs() < tolerance;
+    //     if !passed {
+    //         println!("assert_equity failed: {} != {}", equity, target);
+    //     }
+    //     assert!(passed);
+    // }
 
     //Slow
     //#[test]

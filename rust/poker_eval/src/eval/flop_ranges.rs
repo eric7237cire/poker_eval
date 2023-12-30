@@ -49,13 +49,7 @@ Maybe have this take a decision profile, but we'll start with what
 seems reasonable and the most 'fishy'
 */
 
-use std::{cell::RefCell, rc::Rc};
-
-use crate::{
-    board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
-    core::BoolRange,
-    Board, Card, HoleCards, PokerError,
-};
+use crate::core::BoolRange;
 
 use serde::{Deserialize, Serialize};
 const BET_SIZE_COUNT: usize = 3;
@@ -77,35 +71,3 @@ pub struct FlopRanges {
     pub top_50: FlopRangeContainer,
 }
 
-fn narrow_range(
-    board: &Board,
-    in_range: &BoolRange,
-    _bet_size: usize,
-    partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
-) -> Result<BoolRange, PokerError> {
-    //bet 0 is nothing, 1 is small bet
-    let out_range = BoolRange::default();
-
-    let mut p_db = partial_rank_db.borrow_mut();
-
-    let mut index_check = 0;
-    for lo_card in 0..52u8 {
-        for hi_card in lo_card + 1..52u8 {
-            let hc = HoleCards::new(Card::try_from(lo_card)?, Card::try_from(hi_card)?)?;
-
-            let hc_index = hc.to_range_index();
-            assert_eq!(hc_index, index_check);
-            index_check += 1;
-
-            if !in_range.data[hc_index] {
-                continue;
-            }
-
-            let _prc = p_db.get_put(board, &hc).unwrap();
-
-            //out_range.set(hc_index);
-        }
-    }
-
-    Ok(out_range)
-}

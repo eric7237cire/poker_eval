@@ -28,7 +28,6 @@ rank all the hole cards
 use std::iter::once;
 
 use itertools::Itertools;
-use log::trace;
 
 use crate::{
     pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash, rank::Rank},
