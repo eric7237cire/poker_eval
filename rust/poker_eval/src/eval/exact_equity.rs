@@ -130,7 +130,7 @@ fn calc_equity_slow(
     Ok(out)
 }
 
-fn calc_equity(
+pub fn calc_equity(
     board: Board,
     ranges: &Vec<BoolRange>,
     num_simulations: usize,

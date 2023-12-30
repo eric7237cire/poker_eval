@@ -3,10 +3,10 @@ use std::ops::BitAnd;
 use log::trace;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
-use crate::{BoolRange, Card, CardUsedType, HoleCards, PokerError, InRangeType, ALL_CARD_RANGES, ALL_HOLE_CARDS};
+use crate::{BoolRange, Card, CardUsedType, HoleCards, PokerError, InRangeType, ALL_CARD_RANGES, ALL_HOLE_CARDS, ALL_CARDS};
 
 pub struct Deck {
-    rng: StdRng,
+    //rng: StdRng,
     used_cards: CardUsedType, 
 
     available_range: BoolRange,
@@ -16,10 +16,11 @@ const MAX_RAND_NUMBER_ATTEMPS: usize = 10_000;
 
 impl Deck {
     pub fn new() -> Self {
-        let rng = StdRng::seed_from_u64(42);
+        //let rng = StdRng::seed_from_u64(42);
+        fastrand::seed(42);
         
         let mut d = Deck {
-            rng,
+            //rng,
             used_cards: CardUsedType::default(),
             available_range: BoolRange::default(),
         };
@@ -50,11 +51,11 @@ impl Deck {
     
 
     pub fn set_used_card(&mut self, card: Card) {
-        let card_index: usize = card.into();
-        let count_before = self.used_cards.count_ones();
-        self.used_cards.set(card_index, true);
         
-        self.available_range.data &= &ALL_CARD_RANGES[card_index].inverse.data;
+        let count_before = self.used_cards.count_ones();
+        self.used_cards.set(card.index, true);
+        
+        self.available_range.data &= &ALL_CARD_RANGES[card.index].inverse.data;
 
         let count_after = self.used_cards.count_ones();
         assert_eq!(count_after, count_before + 1);
@@ -76,7 +77,8 @@ impl Deck {
 
         let num_possible = possible_range.count_ones();
         
-        let rand_int: usize = self.rng.gen_range(0..num_possible);
+        //let rand_int: usize = self.rng.gen_range(0..num_possible);
+        let rand_int: usize = fastrand::usize(0..num_possible);
 
         let hole_position = possible_range.iter_ones().skip(rand_int).take(1).next().unwrap();
 
@@ -92,14 +94,15 @@ impl Deck {
         //Usually most of the deck is available
         let mut attempts = 0;
         loop {
-            let rand_int: usize = self.rng.gen_range(0..52);
+            //let rand_int: usize = self.rng.gen_range(0..52);
+            let rand_int: usize = fastrand::usize(0..52);
             assert!(rand_int < 52);
             //let card = Card::from(rand_int);
             if !self.used_cards[rand_int] {
-                let card: Card = rand_int.try_into()?;
+                let card: Card = ALL_CARDS[rand_int];
                 self.set_used_card(card);
                 
-                return Ok(rand_int.try_into()?);
+                return Ok(card);
             }
             attempts += 1;
             if attempts > MAX_RAND_NUMBER_ATTEMPS {

@@ -13,6 +13,10 @@ name = "poker_eval"
 path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
+[[bin]]
+name = "test_perf"
+path = "src/test_perf.rs"
+
 
 [dependencies]
 bitvec = {version = "1.0.1", features=["serde"]}
@@ -46,6 +50,8 @@ once_cell = "1.19"
 
 boomphf = {version="0.6.0", features=["serde"]}
 bincode = "1.3.3"
+
+fastrand = "2.0.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 jammdb = "0.11"
