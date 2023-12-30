@@ -30,6 +30,7 @@ import { defineStore } from 'pinia';
 import { RangeManager } from '@pkg/range';
 import { useLocalStorage } from '@vueuse/core';
 import { CardList } from './board';
+import { parseCardString } from '@src/utils';
 
 function initializePlayers(): Array<Player> {
   const players: Array<Player> = [];
@@ -103,3 +104,17 @@ export const usePlayerStore = defineStore('player', {
     }
   }
 });
+
+
+export function loadHeroCardsFromUrl(): number | null {
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryParamCardText = urlParams.get('hero') || '';
+  
+      if (!queryParamCardText) {
+          return null;
+      }
+  
+      
+    return parseCardString(queryParamCardText);
+          
+  }

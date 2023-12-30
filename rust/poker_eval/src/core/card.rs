@@ -2,9 +2,12 @@ use crate::HoleCards;
 use bitvec::prelude::*;
 use postflop_solver::card_pair_to_index;
 use postflop_solver::Range;
+use serde::Deserialize;
+use serde::Serialize;
 use std::cmp;
 use std::convert::TryFrom;
 use std::fmt;
+
 use std::mem;
 use std::str::FromStr;
 
@@ -16,7 +19,7 @@ use crate::PokerError;
 /// Card rank or value.
 /// This is basically the face value - 2
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(PartialEq, PartialOrd, Eq, Ord, Debug, Clone, Copy, Hash)]
+#[derive(PartialEq, PartialOrd, Eq, Ord, Debug, Clone, Copy, Hash, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum CardValue {
     /// 2
@@ -222,6 +225,72 @@ impl fmt::Display for CardValue {
     }
 }
 
+pub struct CardValueRange {
+    start: CardValue,
+    end: CardValue,
+    valid: bool,
+}
+
+impl CardValueRange {
+    pub fn new(start: CardValue, end: CardValue) -> Self {
+        CardValueRange {
+            start,
+            end,
+            valid: start <= end,
+        }
+    }
+}
+
+impl Iterator for CardValueRange {
+    type Item = CardValue;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if !self.valid {
+            return None;
+        }
+
+        assert!(self.start <= self.end);
+
+        let current = self.start;
+
+        match self.start {
+            CardValue::Ace => {
+                self.valid = false;
+            }
+            _ => {
+                self.start = (self.start as u8 + 1).try_into().unwrap();
+                self.valid = self.start <= self.end;
+            }
+        }
+
+        Some(current)
+    }
+}
+
+impl DoubleEndedIterator for CardValueRange {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if !self.valid {
+            return None;
+        }
+
+        assert!(self.start <= self.end);
+
+        let current = self.end;
+
+        match self.end {
+            CardValue::Two => {
+                self.valid = false;
+            }
+            _ => {
+                self.end = (self.end as u8 - 1).try_into().unwrap();
+                self.valid = self.start <= self.end;
+            }
+        }
+
+        Some(current)
+    }
+}
+
 /// Enum for the four different suits.
 /// While this has support for ordering it's not
 /// sensical. The sorting is only there to allow sorting cards.
@@ -327,24 +396,28 @@ impl Card {
         Self { value, suit }
     }
 
-    pub fn to_range_index_part(&self) -> usize {
-        let value = self.value as usize;
-        assert!(value < 13);
-        let suit = self.suit as usize;
-        assert!(suit < 4);
-        let ret = (value << 2) + suit;
-        assert!(ret < 52);
-        ret
-    }
+    //The way the 0-51 works is we want consecutive values to be together, so like clubs
+    // are in the 1st 13 bits, diamonds in the 2nd 13 bits, etc.
+    // In rank evaluation, we can then shift and mask 13 bits to get all the values of a suit
 
-    pub fn from_range_index_part(index: usize) -> Result<Self, PokerError> {
-        let value = index >> 2;
-        let suit = index & 0x3;
-        Ok(Self {
-            value: CardValue::try_from(value as u8)?,
-            suit: Suit::try_from(suit as u8)?,
-        })
-    }
+    // pub fn to_range_index_part(&self) -> usize {
+    //     let value = self.value as usize;
+    //     assert!(value < 13);
+    //     let suit = self.suit as usize;
+    //     assert!(suit < 4);
+    //     let ret = (value << 2) + suit;
+    //     assert!(ret < 52);
+    //     ret
+    // }
+
+    // pub fn from_range_index_part(index: usize) -> Result<Self, PokerError> {
+    //     let value = index >> 2;
+    //     let suit = index & 0x3;
+    //     Ok(Self {
+    //         value: CardValue::try_from(value as u8)?,
+    //         suit: Suit::try_from(suit as u8)?,
+    //     })
+    // }
 }
 
 impl fmt::Debug for Card {
@@ -438,45 +511,55 @@ impl TryFrom<usize> for Card {
     }
 }
 
-pub struct CardVec(pub Vec<Card>);
+// pub struct CardVec(pub Vec<Card>);
 
-impl TryFrom<&str> for CardVec {
-    type Error = PokerError;
+// impl TryFrom<&str> for CardVec {
+//     type Error = PokerError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let mut cards = Vec::with_capacity(7);
-        let mut chars = value.chars().filter(|c| c.is_alphanumeric());
-        while let Some(c) = chars.next() {
-            let value = c;
-            let suit = chars.next().ok_or(PokerError::from_string(format!(
-                "Unable to parse suit from {}",
-                value
-            )))?;
-            cards.push(Card::new(value.try_into()?, suit.try_into()?));
-        }
-        Ok(CardVec(cards))
-    }
-}
+//     fn try_from(value: &str) -> Result<Self, Self::Error> {
+//         let mut cards = Vec::with_capacity(7);
+//         let mut chars = value.chars().filter(|c| c.is_alphanumeric());
+//         while let Some(c) = chars.next() {
+//             let value = c;
+//             let suit = chars.next().ok_or(PokerError::from_string(format!(
+//                 "Unable to parse suit from {}",
+//                 value
+//             )))?;
+//             cards.push(Card::new(value.try_into()?, suit.try_into()?));
+//         }
+//         Ok(CardVec(cards))
+//     }
+// }
 
-impl FromStr for CardVec {
-    type Err = PokerError;
+// impl FromStr for CardVec {
+//     type Err = PokerError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        CardVec::try_from(s)
-    }
-}
+//     fn from_str(s: &str) -> Result<Self, Self::Err> {
+//         CardVec::try_from(s)
+//     }
+// }
 
-impl CardVec {
-    pub fn as_vec_u8(&self) -> Vec<u8> {
-        self.0
-            .iter()
-            .map(|c| {
-                let c_u8: u8 = (*c).into();
-                c_u8
-            })
-            .collect()
-    }
-}
+// impl CardVec {
+//     pub fn as_vec_u8(&self) -> Vec<u8> {
+//         self.0
+//             .iter()
+//             .map(|c| {
+//                 let c_u8: u8 = (*c).into();
+//                 c_u8
+//             })
+//             .collect()
+//     }
+// }
+
+// impl Display for CardVec {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         let mut s = String::new();
+//         for card in self.0.iter() {
+//             s.push_str(&format!("{} ", card));
+//         }
+//         write!(f, "{}", s.trim())
+//     }
+// }
 
 // pub fn cards_from_string(a_string: &str) -> Result<Vec<Card>, PokerError> {
 //     let mut cards = Vec::with_capacity(7);
@@ -641,6 +724,8 @@ pub fn get_filtered_range_set(range_set: &InRangeType, used_card_set: CardUsedTy
 #[cfg(test)]
 mod tests {
     use postflop_solver::{card_from_str, index_to_card_pair};
+
+    use crate::Board;
 
     use super::*;
     use std::mem;
@@ -830,13 +915,18 @@ mod tests {
         }
     }
 
+    
+
     #[test]
     fn test_get_possible_hole_cards() {
         let range_str = "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o";
         let range_set = range_string_to_set(range_str).unwrap();
 
         let mut used_cards = CardUsedType::default();
-        let cards = CardVec::try_from("8d 7s Qd 5c Qs Ts 7c").unwrap().0;
+        let cards = Board::try_from("8d 7s Qd 5c Qs Ts 7c")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
 
         for card in cards.iter() {
             used_cards.set((*card).into(), true);
@@ -851,5 +941,151 @@ mod tests {
         assert_eq!(373, dbg_fs.count_ones());
 
         assert_eq!(11029519011840, used_cards.data[0]);
+    }
+
+    #[test]
+    fn test_value_iterator() {
+        let v = CardValueRange::new(CardValue::Two, CardValue::Five)
+            .into_iter()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(
+            v,
+            vec![
+                CardValue::Two,
+                CardValue::Three,
+                CardValue::Four,
+                CardValue::Five
+            ]
+        );
+
+        let v = CardValueRange::new(CardValue::Two, CardValue::Five)
+            .into_iter()
+            .rev()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(
+            v,
+            vec![
+                CardValue::Five,
+                CardValue::Four,
+                CardValue::Three,
+                CardValue::Two
+            ]
+        );
+
+        let v = CardValueRange::new(CardValue::Ace, CardValue::Ace)
+            .into_iter()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(v, vec![CardValue::Ace]);
+
+        //2 to 2
+        let v = CardValueRange::new(CardValue::Two, CardValue::Two)
+            .into_iter()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(v, vec![CardValue::Two]);
+
+        //now aa, 22 rev
+        let v = CardValueRange::new(CardValue::Ace, CardValue::Ace)
+            .into_iter()
+            .rev()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(v, vec![CardValue::Ace]);
+
+        let v = CardValueRange::new(CardValue::Two, CardValue::Two)
+            .into_iter()
+            .rev()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(v, vec![CardValue::Two]);
+
+        //j to a and rev
+        let v = CardValueRange::new(CardValue::Jack, CardValue::Ace)
+            .into_iter()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(
+            v,
+            vec![
+                CardValue::Jack,
+                CardValue::Queen,
+                CardValue::King,
+                CardValue::Ace
+            ]
+        );
+
+        let v = CardValueRange::new(CardValue::Jack, CardValue::Ace)
+            .into_iter()
+            .rev()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(
+            v,
+            vec![
+                CardValue::Ace,
+                CardValue::King,
+                CardValue::Queen,
+                CardValue::Jack
+            ]
+        );
+
+        //j to j
+        let v = CardValueRange::new(CardValue::Jack, CardValue::Jack)
+            .into_iter()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(v, vec![CardValue::Jack]);
+
+        let v = CardValueRange::new(CardValue::Jack, CardValue::Jack)
+            .into_iter()
+            .rev()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(v, vec![CardValue::Jack]);
+
+        //a to 5 is empty !
+        let v = CardValueRange::new(CardValue::Ace, CardValue::Five)
+            .into_iter()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(v, vec![]);
+
+        let v = CardValueRange::new(CardValue::Ace, CardValue::Five)
+            .into_iter()
+            .rev()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(v, vec![]);
+
+        //5 to ace is normal
+        let v = CardValueRange::new(CardValue::Five, CardValue::Ace)
+            .into_iter()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(
+            v,
+            vec![
+                CardValue::Five,
+                CardValue::Six,
+                CardValue::Seven,
+                CardValue::Eight,
+                CardValue::Nine,
+                CardValue::Ten,
+                CardValue::Jack,
+                CardValue::Queen,
+                CardValue::King,
+                CardValue::Ace
+            ]
+        );
+
+        let v = CardValueRange::new(CardValue::Five, CardValue::Ace)
+            .into_iter()
+            .rev()
+            .collect::<Vec<CardValue>>();
+        assert_eq!(
+            v,
+            vec![
+                CardValue::Ace,
+                CardValue::King,
+                CardValue::Queen,
+                CardValue::Jack,
+                CardValue::Ten,
+                CardValue::Nine,
+                CardValue::Eight,
+                CardValue::Seven,
+                CardValue::Six,
+                CardValue::Five
+            ]
+        );
     }
 }

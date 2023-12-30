@@ -1,10 +1,11 @@
 use log::trace;
 
 use crate::{
-    Card, ChipType, GameLog, GameState, HoleCards, InitialPlayerState, PlayerState, PokerError,
+    Card, ChipType, CommentedAction, GameLog, GameState, HoleCards, InitialPlayerState,
+    PlayerState, PokerError,
 };
 
-use super::{agents::AgentDecision, game_runner_source::GameRunnerSource};
+use super::game_runner_source::GameRunnerSource;
 
 pub struct GameLogSource {
     game_log: GameLog,
@@ -39,7 +40,7 @@ impl GameRunnerSource for GameLogSource {
         &mut self,
         player_state: &PlayerState,
         game_state: &GameState,
-    ) -> Result<AgentDecision, PokerError> {
+    ) -> Result<CommentedAction, PokerError> {
         if self.cur_action >= self.game_log.actions.len() {
             return Err(PokerError::from_string(format!(
                 "Invalid action index {}",
@@ -65,7 +66,7 @@ impl GameRunnerSource for GameLogSource {
         }
 
         self.cur_action += 1;
-        Ok(AgentDecision {
+        Ok(CommentedAction {
             action: action.action,
             comment: None,
         })

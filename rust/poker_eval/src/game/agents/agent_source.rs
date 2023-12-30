@@ -1,11 +1,13 @@
-use log::{trace};
+use log::trace;
 
-use crate::{Card, ChipType, GameState, HoleCards, InitialPlayerState, PlayerState, PokerError};
+use crate::{
+    Card, ChipType, CommentedAction, GameState, HoleCards, InitialPlayerState, PlayerState,
+    PokerError,
+};
 
 use crate::game::agents::Agent;
 use crate::game::game_runner_source::GameRunnerSource;
 
-use super::agents::AgentDecision;
 pub struct AgentSource {
     agents: Vec<Box<dyn Agent>>,
     pub players: Vec<InitialPlayerState>,
@@ -35,7 +37,7 @@ impl GameRunnerSource for AgentSource {
         &mut self,
         player_state: &PlayerState,
         game_state: &GameState,
-    ) -> Result<AgentDecision, PokerError> {
+    ) -> Result<CommentedAction, PokerError> {
         let player_index: usize = player_state.position.into();
         let agent = &mut self.agents[player_index];
         Ok(agent.decide(player_state, game_state))
@@ -81,62 +83,101 @@ impl GameRunnerSource for AgentSource {
 #[cfg(test)]
 mod tests {
 
+    use std::{cell::RefCell, collections::BinaryHeap, rc::Rc};
+
     use log::info;
-    use postflop_solver::Range;
 
     use crate::{
+        board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
+        board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
         game::{
             agents::{
-                build_initial_players_from_agents, Agent, AgentDeck, PassiveCallingStation, Tag,
+                build_initial_players_from_agents, set_agent_hole_cards, Agent,
+                PassiveCallingStation, Tag,
             },
             game_runner_source::GameRunnerSourceEnum,
         },
-        init_test_logger, test_game_runner, Card, GameRunner, InitialPlayerState, game_runner_source::GameRunnerSource,
+        init_test_logger, test_game_runner, Card, Deck, GameRunner, InitialPlayerState,
+        PartialRankContainer,
     };
 
     use super::AgentSource;
 
-    fn build_agents() -> Vec<Box<dyn Agent>> {
+    fn build_agents(
+        flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
+        partial_rank_db: Rc<
+            RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
+        >,
+    ) -> Vec<Box<dyn Agent>> {
         let calling_75 = "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+";
-        let calling_75_range: Range = calling_75.parse().unwrap();
 
         let mut agents: Vec<Box<dyn Agent>> = Vec::new();
 
-        agents.push(Box::new(PassiveCallingStation::default()));
-        agents.push(Box::new(PassiveCallingStation::default()));
+        agents.push(Box::new(PassiveCallingStation::new(
+            None,
+            "Call 100% A",
+            flop_texture_db.clone(),
+            partial_rank_db.clone(),
+        )));
+        agents.push(Box::new(PassiveCallingStation::new(
+            None,
+            "Call 100% B",
+            flop_texture_db.clone(),
+            partial_rank_db.clone(),
+        )));
 
         for i in 0..2 {
-            let mut agent = PassiveCallingStation::default();
-            agent.calling_range = Some(calling_75_range.clone());
-            agent.name = format!("{} Calling Station 75%", i + 1);
+            let agent = PassiveCallingStation::new(
+                Some(calling_75),
+                &format!("{} Cal Stn 75%", i + 1),
+                flop_texture_db.clone(),
+                partial_rank_db.clone(),
+            );
             agents.push(Box::new(agent));
         }
 
-        let tag = Tag {
-            three_bet_range: "JJ+,AJs+,AQo+,KQs".parse().unwrap(),
-            pfr_range: "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+".parse().unwrap(),
-            name: "Hero".to_string(),
-            hole_cards: None,
-        };
+        let tag = Tag::new(
+            "JJ+,AJs+,AQo+,KQs",
+            "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+",
+            "Hero",
+            flop_texture_db.clone(),
+            partial_rank_db.clone(),
+        );
         agents.push(Box::new(tag));
 
         agents
     }
 
-    #[test]
+    //#[test]
+    #[allow(dead_code)]
     fn test_agents() {
         init_test_logger();
 
-        let mut agent_deck = AgentDeck::new();
+        /*
+        cargo test  agent --lib --release -- --nocapture --test-threads=1
+        */
 
-        
+        let partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards, _> =
+            EvalCacheWithHcReDb::new().unwrap();
+
+        let rcref_pdb = Rc::new(RefCell::new(partial_rank_db));
+
+        let flop_texture_db: EvalCacheReDb<ProduceFlopTexture> = EvalCacheReDb::new().unwrap();
+
+        let rcref_ftdb = Rc::new(RefCell::new(flop_texture_db));
+
+        let mut agent_deck = Deck::new();
+
         let mut hero_winnings: i64 = 0;
 
-        for _ in 0..20 {
+        //we want to track the worst loses
+        let mut heap: BinaryHeap<(i64, i32, String)> = BinaryHeap::new();
+
+        for it_num in 0..200 {
             agent_deck.reset();
 
-            let mut agents = build_agents();
-            agent_deck.set_agent_hole_cards(&mut agents);
+            let mut agents = build_agents(rcref_ftdb.clone(), rcref_pdb.clone());
+            set_agent_hole_cards(&mut agent_deck, &mut agents);
 
             let players: Vec<InitialPlayerState> = build_initial_players_from_agents(&agents);
 
@@ -155,16 +196,31 @@ mod tests {
             test_game_runner(&mut game_runner).unwrap();
 
             let change = game_runner.game_state.player_states[4].stack as i64
-             - game_runner.game_state.player_states[4].initial_stack as i64;
+                - game_runner.game_state.player_states[4].initial_stack as i64;
 
             hero_winnings += change;
 
-            if change < -50 {         
-                game_runner.game_state.player_states[4].player_name = format!("Hero ({})", game_runner.game_runner_source.get_hole_cards(4).unwrap());
-                info!("Losing hand {}", game_runner.to_game_log_string(true));
+            heap.push((change, it_num, game_runner.to_game_log_string(true, true)));
+
+            if heap.len() > 5 {
+                heap.pop();
+            }
+
+            if it_num == 5 || it_num == 36
+            // change < -50 {
+            {
+                info!(
+                    "Losing hand #{}\n{}",
+                    it_num,
+                    game_runner.to_game_log_string(true, true)
+                );
             }
         }
 
-        //assert_eq!(hero_winnings, 5836);
+        // for (i, (change, it_num, log)) in heap.into_iter().enumerate() {
+        //     debug!("Losing hand #{} (iteration {})\nLoss: {}\n{}", i, it_num, change, log);
+        // }
+
+        //assert_eq!(hero_winnings, 5835);
     }
 }

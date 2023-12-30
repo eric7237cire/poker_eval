@@ -1,4 +1,4 @@
-use crate::{hand_table::*, card_to_string, Card};
+use crate::{card_to_string, hand_table::*, Card};
 
 #[derive(Clone, Copy, Default, Debug)]
 pub struct Hand {
@@ -64,7 +64,7 @@ impl Hand {
 
     pub fn evaluate_internal(&self) -> i32 {
         assert_eq!(7, self.num_cards);
-        
+
         let mut rankset = 0i32;
         let mut rankset_suit = [0i32; 4];
         let mut rankset_of_count = [0i32; 5];
@@ -83,8 +83,11 @@ impl Hand {
             if rank_count[rank] > 4 {
                 println!("Card count {}", self.num_cards);
                 for i in 0..self.num_cards {
-                    println!("Card {}={}", self.cards[i],
-                    card_to_string(self.cards[i] as u8).unwrap());
+                    println!(
+                        "Card {}={}",
+                        self.cards[i],
+                        card_to_string(self.cards[i] as u8).unwrap()
+                    );
                 }
             }
             assert!(rank_count[rank] <= 4);
@@ -201,6 +204,5 @@ mod tests {
         assert_eq!(counter[2], 31_433_400); // two pair
         assert_eq!(counter[1], 58_627_800); // one pair
         assert_eq!(counter[0], 23_294_460); // high card
-
     }
 }

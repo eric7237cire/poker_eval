@@ -1,18 +1,13 @@
-use crate::{ActionEnum, GameState, HoleCards, PlayerState};
-
-pub struct AgentDecision {
-    pub action: ActionEnum,
-    pub comment: Option<String>,
-}
+use crate::{CommentedAction, GameState, HoleCards, PlayerState};
 
 pub trait Agent {
     //Get hand cards with index_to_card_pair
     fn decide(
         //To be able to mutate internal state
-        &self,
+        &mut self,
         player_state: &PlayerState,
         game_state: &GameState,
-    ) -> AgentDecision;
+    ) -> CommentedAction;
 
     fn get_hole_cards(&self) -> HoleCards;
 

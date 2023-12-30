@@ -1,16 +1,16 @@
 use crate::{
-    game::game_log_source::GameLogSource, Card, ChipType, GameState, HoleCards, InitialPlayerState,
-    PlayerState, PokerError,
+    game::game_log_source::GameLogSource, Card, ChipType, CommentedAction, GameState, HoleCards,
+    InitialPlayerState, PlayerState, PokerError,
 };
 use enum_dispatch::enum_dispatch;
 
-use crate::game::agent_source::AgentSource;
-
-use super::agents::AgentDecision;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::game::agents::AgentSource;
 
 #[enum_dispatch]
 pub enum GameRunnerSourceEnum {
     GameLogSource,
+    #[cfg(not(target_arch = "wasm32"))]
     AgentSource,
 }
 
@@ -25,7 +25,7 @@ pub trait GameRunnerSource {
         &mut self,
         player_state: &PlayerState,
         game_state: &GameState,
-    ) -> Result<AgentDecision, PokerError>;
+    ) -> Result<CommentedAction, PokerError>;
 
     //get cards for player?
     fn get_hole_cards(&self, player_index: usize) -> Result<HoleCards, PokerError>;

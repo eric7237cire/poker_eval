@@ -1,9 +1,11 @@
+use crate::pre_calc::perfect_hash::load_boomperfect_hash;
 use crate::web::player_results::PlayerFlopResults;
 use crate::web::{
     eval_current, eval_current_draws, get_all_player_hole_cards, FlopSimulationResults,
     PlayerPreFlopState, PreflopPlayerInfo,
 };
 use crate::{add_eval_card, get_unused_card, set_used_card, HoleCards, PokerError};
+use boomphf::Mphf;
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
 
@@ -20,6 +22,8 @@ use wasm_bindgen::prelude::wasm_bindgen;
 pub struct flop_analyzer {
     board_cards: Vec<Card>,
     player_info: Vec<PreflopPlayerInfo>,
+
+    hash_func: Mphf<u32>,
 }
 
 //hero is 0
@@ -42,9 +46,12 @@ impl flop_analyzer {
 
         info!("Initializing FlopAnalyzer ");
 
+        let hash_func = load_boomperfect_hash();
+
         Self {
             board_cards: Vec::with_capacity(7),
             player_info: Vec::with_capacity(MAX_PLAYERS),
+            hash_func
         }
     }
 
@@ -290,6 +297,7 @@ impl flop_analyzer {
                 &mut flop_results,
                 &mut villian_results,
                 0,
+                &self.hash_func
             )?;
 
             assert_eq!(3, eval_cards.len());
@@ -338,6 +346,7 @@ impl flop_analyzer {
                 &mut flop_results,
                 &mut villian_results,
                 1,
+                &self.hash_func
             )?;
 
             //River
@@ -373,6 +382,7 @@ impl flop_analyzer {
                 &mut flop_results,
                 &mut villian_results,
                 2,
+                &self.hash_func
             )?;
         }
 

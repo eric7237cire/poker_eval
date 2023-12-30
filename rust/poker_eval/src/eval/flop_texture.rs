@@ -33,13 +33,29 @@
 
 use std::cmp::max;
 
-use crate::{calc_cards_metrics, Card, CardValue};
+use log::trace;
+use serde::{Deserialize, Serialize};
+// use rmps crate to serialize structs using the MessagePack format
+use crate::{
+    calc_cards_metrics, partial_rank_cards, rank_cards, Board, Card, CardValue, HoleCards,
+    StraightDrawType,
+};
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct BoardTexture {
     // Highest same suited count, 1 is a raindbow board
     pub same_suited_max_count: u8,
 
     pub gaps: Vec<u8>, // a flop will have 2
+
+    //56 on board gives straight draw to
+    //43 and 78 and 4 7
+    //5 7 gives straight draw to 46, 68
+    //5 8 gives straight draw to 67
+    pub num_with_str8: u16,
+    pub num_with_str8_draw: u16,
+    pub num_with_gut_shot: u16,
+    pub num_hole_cards: u16,
 
     pub has_trips: bool,
     pub has_pair: bool,
@@ -62,9 +78,13 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
         high_value_count: 0,
         med_value_count: 0,
         low_value_count: 0,
+        num_with_str8: 0,
+        num_with_str8_draw: 0,
+        num_with_gut_shot: 0,
+        num_hole_cards: 0,
     };
 
-    let cards_metrics = calc_cards_metrics(cards);
+    let cards_metrics = calc_cards_metrics(cards.iter());
 
     let mut card_values: Vec<CardValue> = cards.iter().map(|c| c.value).collect();
     //highest value 1st
@@ -118,19 +138,99 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
         texture.has_pair = true;
     }
 
+    //Calculate expensive fields
+    let mut eval_cards = cards.to_vec();
+    let mut total_eval = 0;
+    let mut num_str8 = 0;
+    let mut num_str8_draw = 0;
+    let mut num_gut_shot = 0;
+    for hole_card1_u8 in 0..52u8 {
+        let hole_card1: Card = hole_card1_u8.try_into().unwrap();
+        if cards.contains(&hole_card1) {
+            continue;
+        }
+        for hole_card2_u8 in hole_card1_u8 + 1..52u8 {
+            let hole_card2: Card = hole_card2_u8.try_into().unwrap();
+            if cards.contains(&hole_card2) {
+                continue;
+            }
+            let hc = HoleCards::new(hole_card1, hole_card2).unwrap();
+            let prc = partial_rank_cards(&hc, cards);
+            eval_cards.push(hole_card1);
+            eval_cards.push(hole_card2);
+
+            let rank = rank_cards(eval_cards.iter());
+
+            eval_cards.pop();
+            eval_cards.pop();
+
+            total_eval += 1;
+
+            if rank.get_family_index() == 4 {
+                num_str8 += 1;
+                continue;
+            }
+            if let Some(s) = prc.straight_draw {
+                match s.straight_draw_type {
+                    StraightDrawType::OpenEnded => {
+                        trace!(
+                            "open ended str8 with board {} and hole cards {} {}",
+                            Board::new_from_cards(cards),
+                            hole_card1,
+                            hole_card2
+                        );
+
+                        num_str8_draw += 1;
+                    }
+                    StraightDrawType::GutShot(_) => {
+                        // trace!("{} gut shot with board {} and hole cards {} {}",
+                        // num_gut_shot,
+                        // Board(cards.to_vec()), hole_card1, hole_card2);
+
+                        num_gut_shot += 1;
+                    }
+                    StraightDrawType::DoubleGutShot => {
+                        trace!(
+                            "Double gut shot with board {} and hole cards {} {}",
+                            Board::new_from_cards(cards),
+                            hole_card1,
+                            hole_card2
+                        );
+
+                        num_str8_draw += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    texture.num_with_str8 = num_str8;
+    texture.num_with_str8_draw = num_str8_draw;
+    texture.num_with_gut_shot = num_gut_shot;
+    texture.num_hole_cards = total_eval;
+
     texture
 }
 
 #[cfg(test)]
 mod tests {
 
-    use crate::CardVec;
+    use log::{debug, info};
+
+    use crate::init_test_logger;
 
     use super::*;
 
     #[test]
     fn test_board_texture() {
-        let cards = CardVec::try_from("3c 2s As").unwrap().0;
+        init_test_logger();
+        info!("test_board_texture");
+        debug!("test_board_texture");
+        trace!("test_board_texture");
+        let cards = Board::try_from("3c 2s As")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let texture = calc_board_texture(&cards);
 
         assert_eq!(texture.same_suited_max_count, 2);
@@ -143,8 +243,15 @@ mod tests {
         assert_eq!(texture.high_value_count, 1);
         assert_eq!(texture.med_value_count, 0);
         assert_eq!(texture.low_value_count, 2);
+        assert_eq!(texture.num_hole_cards, 1176); // 49*48/2
+        assert_eq!(texture.num_with_str8, 16);
+        assert_eq!(texture.num_with_str8_draw, 0);
+        assert_eq!(texture.num_with_gut_shot, 340);
 
-        let cards = CardVec::try_from("Ac Ah As").unwrap().0;
+        let cards = Board::try_from("Ac Ah As")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let texture = calc_board_texture(&cards);
 
         assert_eq!(texture.same_suited_max_count, 1);
@@ -155,8 +262,15 @@ mod tests {
         assert_eq!(texture.high_value_count, 3);
         assert_eq!(texture.med_value_count, 0);
         assert_eq!(texture.low_value_count, 0);
+        assert_eq!(texture.num_hole_cards, 1176); // 49*48/2
+        assert_eq!(texture.num_with_str8, 0);
+        assert_eq!(texture.num_with_str8_draw, 0);
+        assert_eq!(texture.num_with_gut_shot, 0);
 
-        let cards = CardVec::try_from("Qc Kh Qd As Ks").unwrap().0;
+        let cards = Board::try_from("Qc Kh Qd As Ks")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
         let texture = calc_board_texture(&cards);
 
         assert_eq!(texture.same_suited_max_count, 2);
@@ -169,5 +283,113 @@ mod tests {
         assert_eq!(texture.high_value_count, 5);
         assert_eq!(texture.med_value_count, 0);
         assert_eq!(texture.low_value_count, 0);
+        assert_eq!(texture.num_hole_cards, 1081); // 47*46/2
+        assert_eq!(texture.num_with_str8, 16);
+        assert_eq!(texture.num_with_str8_draw, 0);
+        assert_eq!(texture.num_with_gut_shot, 324);
+
+        let cards = Board::try_from("9c 2h Td As 6s")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
+        let texture = calc_board_texture(&cards);
+
+        assert_eq!(texture.same_suited_max_count, 2);
+        assert_eq!(texture.gaps.len(), 5);
+        debug!("gaps {:?}", texture.gaps);
+        trace!("Texture\n{:#?}", &texture);
+        assert_eq!(texture.gaps[0], 1);
+        assert_eq!(texture.gaps[1], 1);
+        assert_eq!(texture.gaps[2], 3);
+        assert_eq!(texture.gaps[3], 4);
+        assert_eq!(texture.gaps[4], 4);
+        assert_eq!(texture.has_trips, false);
+        assert_eq!(texture.has_pair, false);
+        assert_eq!(texture.has_two_pair, false);
+        assert_eq!(texture.high_value_count, 1);
+        assert_eq!(texture.med_value_count, 2);
+        assert_eq!(texture.low_value_count, 2);
+        assert_eq!(texture.num_hole_cards, 1081); // 47*46/2
+        assert_eq!(texture.num_with_str8, 16);
+        assert_eq!(texture.num_with_str8_draw, 48);
+        assert_eq!(texture.num_with_gut_shot, 372);
+
+        let cards = Board::try_from("9c 2h Td Ks 6s")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
+        let texture = calc_board_texture(&cards);
+
+        trace!("Texture\n{:#?}", &texture);
+
+        assert_eq!(texture.num_hole_cards, 1081); // 47*46/2
+        assert_eq!(texture.num_with_str8, 32);
+        assert_eq!(texture.num_with_str8_draw, 64);
+        assert_eq!(texture.num_with_gut_shot, 568);
+
+        let cards = Board::try_from("9c 2h Td Qs 6s")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
+        let texture = calc_board_texture(&cards);
+
+        trace!("Texture\n{:#?}", &texture);
+
+        assert_eq!(texture.num_hole_cards, 1081); // 47*46/2
+        assert_eq!(texture.num_with_str8, 48);
+        assert_eq!(texture.num_with_str8_draw, 308);
+        assert_eq!(texture.num_with_gut_shot, 308);
+
+        let cards = Board::try_from("9c 2h Td Js 6s")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
+        let texture = calc_board_texture(&cards);
+
+        trace!("Texture\n{:#?}", &texture);
+
+        assert_eq!(texture.num_hole_cards, 1081); // 47*46/2
+        assert_eq!(texture.num_with_str8, 48);
+        assert_eq!(texture.num_with_str8_draw, 308);
+        assert_eq!(texture.num_with_gut_shot, 308);
+
+        let cards = Board::try_from("6c 8h Td")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
+        let texture = calc_board_texture(&cards);
+
+        trace!("Texture\n{:#?}", &texture);
+
+        assert_eq!(texture.num_hole_cards, 49 * 48 / 2);
+        assert_eq!(texture.num_with_str8, 16);
+        assert_eq!(texture.num_with_str8_draw, 64);
+        assert_eq!(texture.num_with_gut_shot, 308);
+
+        let cards = Board::try_from("6c 8h Td 9d")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
+        let texture = calc_board_texture(&cards);
+
+        trace!("Texture\n{:#?}", &texture);
+
+        assert_eq!(texture.num_hole_cards, 48 * 47 / 2);
+        assert_eq!(texture.num_with_str8, 198);
+        assert_eq!(texture.num_with_str8_draw, 166);
+        assert_eq!(texture.num_with_gut_shot, 268);
+
+        let cards = Board::try_from("Ac 2h 4d 5d")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
+        let texture = calc_board_texture(&cards);
+
+        trace!("Texture\n{:#?}", &texture);
+
+        assert_eq!(texture.num_hole_cards, 48 * 47 / 2);
+        assert_eq!(texture.num_with_str8, 182);
+        assert_eq!(texture.num_with_str8_draw, 32);
+        assert_eq!(texture.num_with_gut_shot, 150);
     }
 }

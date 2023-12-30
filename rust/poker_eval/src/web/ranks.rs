@@ -1,9 +1,14 @@
+use boomphf::Mphf;
+
+use crate::pre_calc::fast_eval::fast_hand_eval;
+use crate::pre_calc::rank::Rank;
 use crate::web::{
     PlayerFlopResults, PlayerPreFlopState, PreflopPlayerInfo, ResultType, MAX_PLAYERS,
 };
 use crate::{
-    rank_cards, Card, HoleCards, PokerError, Rank, NUM_RANK_FAMILIES, SIMPLE_RANGE_INDEX_LEN,
+    rank_cards, Card, HoleCards, OldRank, PokerError, NUM_RANK_FAMILIES, SIMPLE_RANGE_INDEX_LEN,
 };
+
 
 pub struct RankResults {
     pub(crate) num_iterations: ResultType,
@@ -44,6 +49,7 @@ pub fn eval_current(
     //treat first active player as the hero, all others as villians
     villian_results: &mut PlayerFlopResults,
     street_index: usize,
+    hash_func: &Mphf<u32>
 ) -> Result<(), PokerError> {
     if eval_cards.len() < 3 {
         return Err(PokerError::from_string(format!(
@@ -71,7 +77,7 @@ pub fn eval_current(
 
         player_cards[active_index].add_to_eval(eval_cards);
 
-        let rank = rank_cards(&eval_cards);
+        let rank = fast_hand_eval(eval_cards.iter(), hash_func);
 
         update_results_from_rank(
             &mut flop_results[active_index].street_rank_results[street_index],
@@ -89,7 +95,7 @@ pub fn eval_current(
     //Best villian hand
     let best_villian_rank = hand_evals[1..]
         .iter()
-        .fold(Rank::HighCard(0), |acc, &x| acc.max(x));
+        .fold(Rank::lowest_rank(), |acc, &x| acc.max(x));
     update_results_from_rank(
         &mut villian_results.street_rank_results[street_index],
         best_villian_rank,
@@ -131,7 +137,7 @@ pub(crate) fn update_results_from_rank(results: &mut RankResults, rank: Rank) {
 //returns winners and how many players were considered (non None rank)
 pub(crate) fn indices_of_max_values(arr: &[Rank]) -> Vec<usize> {
     let mut max_indices = Vec::with_capacity(MAX_PLAYERS);
-    let mut max_value = Rank::HighCard(0);
+    let mut max_value = Rank::lowest_rank();
 
     for (index, &value) in arr.iter().enumerate() {
         if value > max_value {

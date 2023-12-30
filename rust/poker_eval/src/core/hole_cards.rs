@@ -4,7 +4,6 @@ use std::{
 };
 
 use crate::{set_used_card, unset_used_card, CardUsedType};
-use postflop_solver::card_pair_to_index;
 
 use crate::{Card, PokerError};
 
@@ -43,7 +42,16 @@ impl HoleCards {
 
     //This converts our exact hole cards to the range index from 0 to 52*51/2
     pub fn to_range_index(&self) -> usize {
-        card_pair_to_index(self.card_hi_lo[1].into(), self.card_hi_lo[0].into())
+        let lo_card: usize = self.card_hi_lo[1].into();
+        let hi_card: usize = self.card_hi_lo[0].into();
+
+        //Uses sum formula for how many cards come before it
+        //card2 > card1
+        lo_card as usize * (101 - lo_card as usize) / 2 + hi_card as usize - 1
+
+        //assert_eq!(ret, card_pair_to_index(hi_card as u8, lo_card as u8));
+
+        //ret
     }
 
     //This is to convert to the range index from 0 to 169

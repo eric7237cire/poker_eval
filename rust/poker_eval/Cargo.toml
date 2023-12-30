@@ -20,7 +20,7 @@ path = "src/bin.rs"
 [dependencies]
 # poker_rs = { path = "../poker_rs", features=["arena"] }
 postflop-solver = {path = "../postflop-solver"}
-bitvec = "1"
+bitvec = {version = "1.0.1", features=["serde"]}
 itertools = "*"
 log = "*"
 env_logger = "*"
@@ -45,3 +45,20 @@ js-sys = "0.3"
 
 enum_dispatch = "0.3.12"
 
+num-integer = "0.1"
+
+once_cell = "1.19"
+
+boomphf = {version="0.6.0", features=["serde"]}
+bincode = "1.3.3"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+jammdb = "0.11"
+redb = "1.4"
+rmp-serde = "1.1.2"
+
+
+dotenv = "0.15"
+
+# doesn't compile in 32 bits
+ph = "0.8.2"

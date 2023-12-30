@@ -1,4 +1,4 @@
-use crate::{CardVec, HoleCards};
+use crate::{Board, HoleCards};
 use log::trace;
 use regex::Regex;
 
@@ -423,7 +423,7 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             )))?
             .as_str();
 
-        let cards: Vec<Card> = CardVec::try_from(just_cards_str)?.0;
+        let cards: Vec<Card> = Board::try_from(just_cards_str)?.as_slice_card().to_vec();
 
         // let match_end = caps.get(0).unwrap().end();
         // let remaining_str = &s[match_end..];

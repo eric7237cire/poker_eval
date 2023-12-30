@@ -30,6 +30,22 @@ impl Display for ActionEnum {
     }
 }
 
+pub struct CommentedAction {
+    pub action: ActionEnum,
+    pub comment: Option<String>,
+}
+
+impl Display for CommentedAction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} # {}",
+            self.action,
+            self.comment.as_ref().unwrap_or(&"".to_string())
+        )
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Default)]
 pub struct PlayerAction {
     pub player_index: usize,

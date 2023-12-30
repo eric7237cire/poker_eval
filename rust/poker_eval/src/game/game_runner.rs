@@ -4,14 +4,14 @@
 
 use std::cmp::min;
 
-use crate::{rank_cards, set_used_card, PlayerAction, Rank};
+use crate::{rank_cards, set_used_card, Board, OldRank, PlayerAction};
 use crate::{
     ActionEnum, CardUsedType, ChipType, GameState, PlayerState, PokerError, Position, Round,
 };
 
 use crate::game::game_runner_source::GameRunnerSource;
 use crate::game::game_runner_source::GameRunnerSourceEnum;
-use log::{trace};
+use log::trace;
 
 // Enforces the poker rules
 pub struct GameRunner {
@@ -52,7 +52,7 @@ impl GameRunner {
             round_pot: 0,
             current_to_call: bb,
             current_round: Round::Preflop,
-            board: Vec::new(),
+            board: Board::new(),
             sb,
             bb,
             actions: Vec::new(),
@@ -284,8 +284,11 @@ impl GameRunner {
         for _ in 0..cards_needed {
             let card = self.game_runner_source.get_next_board_card()?;
             set_used_card(card.into(), &mut self.used_cards)?;
-            self.game_state.board.push(card);
+            self.game_state.board.add_card(card).unwrap();
         }
+
+        //to have it calculated
+        let _index_ = self.game_state.board.get_index();
 
         Ok(())
     }
@@ -301,25 +304,34 @@ impl GameRunner {
             );
         }
 
-        let mut hand_rankings: Vec<(Rank, usize)> = Vec::new();
+        let mut hand_rankings: Vec<(OldRank, usize)> = Vec::new();
+        //let mut hand_ranking_strings: Vec<Option<String>> = vec![None; self.game_state.player_states.len()];
 
-        let mut eval_cards = self.game_state.board.clone();
+        let mut eval_cards = self.game_state.board.as_slice_card().to_vec();
 
         for player_index in 0..self.game_state.player_states.len() {
             if self.game_state.player_states[player_index].folded {
-                trace!(
-                    "Player #{} named {} folded, did not win, skipping",
-                    player_index,
-                    &self.game_state.player_states[player_index].player_name
-                );
+                // trace!(
+                //     "Player #{} named {} folded, did not win, skipping",
+                //     player_index,
+                //     &self.game_state.player_states[player_index].player_name
+                // );
                 continue;
             }
 
             let hole_cards = self.game_runner_source.get_hole_cards(player_index)?;
-
             hole_cards.add_to_eval(&mut eval_cards);
-            let rank = rank_cards(&eval_cards);
-            hand_rankings.push((rank, player_index));
+            // let eval_iter = iter::once(hole_cards.get_hi_card())
+            //     .chain(iter::once(hole_cards.get_lo_card()))
+            //     .chain(eval_cards.iter());
+            let rank = rank_cards(eval_cards.iter());
+
+            self.game_state.player_states[player_index].final_eval_comment =
+                Some(format!("{}", rank.print_winning(&eval_cards)));
+
+            if !self.game_state.player_states[player_index].folded {
+                hand_rankings.push((rank, player_index));
+            }
 
             hole_cards.remove_from_eval(&mut eval_cards)?;
         }
@@ -877,22 +889,43 @@ impl GameRunner {
         Ok(())
     }
 
-    pub fn to_game_log_string(&self, with_player_comments: bool) -> String {
-        //Find longest player id width
-        let max_player_id_width = self
+    pub fn to_game_log_string(
+        &self,
+        with_player_comments: bool,
+        with_hole_cards_in_name: bool,
+    ) -> String {
+        let player_names = self
             .game_state
             .player_states
             .iter()
-            .map(|player_state| player_state.player_name.len())
+            .map(|p| {
+                if with_hole_cards_in_name {
+                    format!(
+                        "{} ({})",
+                        p.player_name,
+                        self.game_runner_source
+                            .get_hole_cards(p.player_index())
+                            .unwrap()
+                    )
+                } else {
+                    p.player_name.clone()
+                }
+            })
+            .collect::<Vec<String>>();
+
+        //Find longest player id width
+        let max_player_id_width = player_names
+            .iter()
+            .map(|player_name| player_name.len())
             .max()
             .unwrap_or(0);
 
         let mut s = String::new();
         s.push_str("*** Players ***\n");
-        for player_state in &self.game_state.player_states {
+        for (pi, player_state) in self.game_state.player_states.iter().enumerate() {
             s.push_str(&format!(
                 "{:width$} - {} - {}\n",
-                player_state.player_name,
+                player_names[pi],
                 player_state.initial_stack,
                 self.game_runner_source
                     .get_hole_cards(player_state.player_index())
@@ -904,7 +937,7 @@ impl GameRunner {
         s.push_str("*** Blinds ***\n");
         s.push_str(&format!(
             "{:width$} - {}\n",
-            self.game_state.player_states[0].player_name,
+            &player_names[0],
             min(
                 self.game_state.sb,
                 self.game_state.player_states[0].initial_stack
@@ -913,7 +946,7 @@ impl GameRunner {
         ));
         s.push_str(&format!(
             "{:width$} - {}\n",
-            self.game_state.player_states[1].player_name,
+            &player_names[1],
             min(
                 self.game_state.bb,
                 self.game_state.player_states[0].initial_stack
@@ -929,27 +962,32 @@ impl GameRunner {
                 s.push_str(&format!("*** {} ***\n", round));
 
                 if round == Round::Flop {
-                    self.game_state.board[0..3].iter().for_each(|c| {
-                        s.push_str(&format!("{} ", c));
-                    });
+                    self.game_state.board.as_slice_card()[0..3]
+                        .iter()
+                        .for_each(|c| {
+                            s.push_str(&format!("{} ", c));
+                        });
                     s.push_str("\n");
                 } else if round == Round::Turn {
-                    s.push_str(&format!("{}\n", self.game_state.board[3]));
+                    s.push_str(&format!("{}\n", self.game_state.board.as_slice_card()[3]));
                 } else if round == Round::River {
-                    s.push_str(&format!("{}\n", self.game_state.board[4]));
+                    s.push_str(&format!("{}\n", self.game_state.board.as_slice_card()[4]));
                 }
             }
 
             s.push_str(&format!(
                 "{:width$} {} # {}{}{}\n",
-                self.game_state.player_states[action.player_index].player_name,
+                &player_names[action.player_index],
                 action.action,
                 if with_player_comments {
                     action.player_comment.as_deref().unwrap_or("")
                 } else {
                     ""
                 },
-                if with_player_comments && action.player_comment.is_some() && action.system_comment.is_some() {
+                if with_player_comments
+                    && action.player_comment.is_some()
+                    && action.system_comment.is_some()
+                {
                     " - "
                 } else {
                     ""
@@ -959,13 +997,38 @@ impl GameRunner {
             ));
         }
 
-        s.push_str("*** Summary ***\n");
+        //Create a link with board and hero cards
+        //http://localhost:5173/?board=2s7c8s2h2d&hole=As2c
 
-        for player_state in &self.game_state.player_states {
+        let board_url_param = self
+            .game_state
+            .board
+            .as_slice_card()
+            .iter()
+            .map(|c| format!("{}", c))
+            .collect::<Vec<String>>()
+            .join("");
+        //Hard code hero as button
+        let hero_cards = self
+            .game_runner_source
+            .get_hole_cards(self.game_state.player_states.len() - 1)
+            .unwrap();
+        let hero_url_param = format!("{}{}", hero_cards.get_hi_card(), hero_cards.get_lo_card());
+
+        let url = format!(
+            "http://localhost:5173/?board={}&hero={}",
+            board_url_param, hero_url_param
+        );
+        s.push_str("*** Summary *** # ");
+        s.push_str(&url);
+        s.push_str("\n");
+
+        for (pi, player_state) in self.game_state.player_states.iter().enumerate() {
             s.push_str(&format!(
-                "{:width$} - {} # Started with {} change {}\n",
-                player_state.player_name,
+                "{:width$} - {} # {} Started with {} change {}\n",
+                &player_names[pi],
                 player_state.stack,
+                player_state.final_eval_comment.as_deref().unwrap_or(""),
                 player_state.initial_stack,
                 (player_state.stack as i64) - (player_state.initial_stack as i64),
                 width = max_player_id_width
@@ -980,7 +1043,7 @@ impl GameRunner {
 mod tests {
     use log::debug;
 
-    use crate::{game::game_log_source::GameLogSource, init_test_logger, CardVec, GameLog};
+    use crate::{game::game_log_source::GameLogSource, init_test_logger, GameLog};
 
     use super::*;
 
@@ -1053,8 +1116,8 @@ Plyr D - 15 # Lost 30, 10
         assert_eq!(game_runner.game_state.prev_round_pot, 12 + 30 * 2 + 10);
         assert_eq!(game_runner.game_state.round_pot, 0);
         assert_eq!(
-            game_runner.game_state.board,
-            CardVec::try_from("2s 7c 8s").unwrap().0
+            game_runner.game_state.board.as_slice_card(),
+            Board::try_from("2s 7c 8s").unwrap().as_slice_card()
         );
 
         //flop actions
@@ -1067,8 +1130,8 @@ Plyr D - 15 # Lost 30, 10
         assert_eq!(game_runner.game_state.prev_round_pot, 12 + 30 * 2 + 10 + 20);
         assert_eq!(game_runner.game_state.round_pot, 0);
         assert_eq!(
-            game_runner.game_state.board,
-            CardVec::try_from("2s 7c 8s 2h").unwrap().0
+            game_runner.game_state.board.as_slice_card(),
+            Board::try_from("2s 7c 8s 2h").unwrap().as_slice_card()
         );
 
         //turn actions
@@ -1081,8 +1144,8 @@ Plyr D - 15 # Lost 30, 10
         assert_eq!(game_runner.game_state.prev_round_pot, 12 + 30 * 2 + 10 + 30);
         assert_eq!(game_runner.game_state.round_pot, 0);
         assert_eq!(
-            game_runner.game_state.board,
-            CardVec::try_from("2s 7c 8s 2h 2d").unwrap().0
+            game_runner.game_state.board.as_slice_card(),
+            Board::try_from("2s 7c 8s 2h 2d").unwrap().as_slice_card(),
         );
 
         //river actions

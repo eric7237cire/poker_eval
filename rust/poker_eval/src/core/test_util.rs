@@ -1,7 +1,5 @@
 use std::io::Write;
 
-use log::{info};
-
 use crate::game::game_runner_source::GameRunnerSourceEnum;
 use crate::game_log_source::GameLogSource;
 use crate::{GameLog, GameRunner, PokerError};
@@ -13,8 +11,13 @@ pub fn init_test_logger() {
         .filter_module("poker_eval::game::game_log_parser", log::LevelFilter::Debug)
         .filter_module("poker_eval::game::game_log_source", log::LevelFilter::Debug)
         .filter_module("poker_eval::game::game_runner", log::LevelFilter::Debug)
-        .filter_module("poker_eval::game::agent_source", log::LevelFilter::Debug)
+        .filter_module(
+            "poker_eval::game::agents::agent_source",
+            log::LevelFilter::Debug,
+        )
         .filter_module("poker_eval::game::game_log", log::LevelFilter::Debug)
+        .filter_module("poker_eval::eval::rank", log::LevelFilter::Debug)
+        .filter_module("poker_eval::eval::flop_texture", log::LevelFilter::Debug)
         .format(|buf, record| {
             writeln!(
                 buf,
@@ -40,7 +43,6 @@ fn take_after_last_slash(s: &str) -> &str {
     &s[last_slash + 1..]
 }
 
-
 pub fn test_game_runner(game_runner: &mut GameRunner) -> Result<(), PokerError> {
     for _ in 0..200 {
         let action_count_before = game_runner.game_state.actions.len();
@@ -58,7 +60,7 @@ pub fn test_game_runner(game_runner: &mut GameRunner) -> Result<(), PokerError> 
 
     //let log_display = game_runner.to_game_log_string(true);
 
-    let check_log = game_runner.to_game_log_string(false);
+    let check_log = game_runner.to_game_log_string(false, false);
     //info!("log\n{}", log_display);
 
     let parsed_game_log: GameLog = check_log.parse().unwrap();
@@ -77,7 +79,7 @@ pub fn test_game_runner(game_runner: &mut GameRunner) -> Result<(), PokerError> 
         assert_eq!(action_count_before + 1, action_count_after);
     }
 
-    let log2 = game_runner2.to_game_log_string(false);
+    let log2 = game_runner2.to_game_log_string(false, false);
 
     //info!("log2:\n{}", log2);
 
