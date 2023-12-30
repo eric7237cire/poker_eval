@@ -5,3 +5,7 @@ members = [
     "poker_eval",
     "range",
 ]
+
+[profile.profiling]
+inherits = "release"
+debug = true

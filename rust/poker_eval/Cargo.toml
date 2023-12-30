@@ -18,6 +18,7 @@ name = "test_perf"
 path = "src/test_perf.rs"
 
 
+
 [dependencies]
 bitvec = {version = "1.0.1", features=["serde"]}
 itertools = "*"

@@ -5,7 +5,7 @@ use std::{
 
 use once_cell::sync::Lazy;
 
-use crate::{set_used_card, unset_used_card, CardUsedType, Suit, CardValue, pre_calc::NUMBER_OF_HOLE_CARDS};
+use crate::{set_used_card, unset_used_card, CardUsedType, pre_calc::NUMBER_OF_HOLE_CARDS};
 
 use crate::{Card, PokerError};
 

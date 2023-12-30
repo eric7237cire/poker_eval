@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use bitvec::prelude::*;
-use crate::{Card, CardValue, CardValueRange, HoleCards, PokerError, Suit, pre_calc::{NUMBER_OF_SUITS, NUMBER_OF_HOLE_CARDS, NUMBER_OF_CARDS}};
+use crate::{Card, CardValue, CardValueRange, HoleCards, PokerError, Suit, pre_calc::{NUMBER_OF_SUITS, NUMBER_OF_HOLE_CARDS, NUMBER_OF_CARDS}, ALL_HOLE_CARDS};
 
 //52 * 51 / 2
 pub type InRangeType = BitArr!(for NUMBER_OF_HOLE_CARDS, in usize, Lsb0);
@@ -81,8 +81,18 @@ impl BoolRange {
         self.data[hc.to_range_index()]
     }
 
+    pub fn get_all_enabled_holecards(&self) -> Vec<HoleCards> {
+        let mut result = Vec::with_capacity(self.data.count_ones());
+        for enabled_card in self.data.iter_ones() {
+                
+            result.push(ALL_HOLE_CARDS[enabled_card]);
+                
+        }
+        result
+    }
+
     #[inline]
-    pub fn update_with_singleton(&mut self, combo: &str, enabled: bool) -> Result<(), PokerError> {
+    fn update_with_singleton(&mut self, combo: &str, enabled: bool) -> Result<(), PokerError> {
         let (rank1, rank2, suitedness) = parse_singleton(combo)?;
         trace!("update_with_singleton rank1: {}, rank2: {}, suitedness: {:?}", rank1, rank2, suitedness);
         self.set_enabled(&indices_with_suitedness(rank1, rank2, suitedness), enabled);
