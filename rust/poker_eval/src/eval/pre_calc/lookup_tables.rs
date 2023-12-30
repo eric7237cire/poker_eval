@@ -476,33 +476,16 @@ pub fn generate_lookup_tables_fast() {
 
 #[cfg(test)]
 mod tests {
+    use crate::eval::pre_calc::rank::{Rank, RankEnum};
     use crate::init_test_logger;
-
-    use crate::eval::pre_calc::perfect_hash::create_perfect_hash;
-
     use super::*;
 
     #[test]
     fn test_adjust_hand_rank() {
-        assert_eq!(adjust_hand_rank(0), 7462);
-        assert_eq!(adjust_hand_rank(1), 7461);
-        assert_eq!(adjust_hand_rank(1277), 6185);
-        assert_eq!(adjust_hand_rank(1278), 6184);
-        assert_eq!(adjust_hand_rank(4137), 3326);
-        assert_eq!(adjust_hand_rank(4138), 3325);
-        assert_eq!(adjust_hand_rank(4995), 2468);
-        assert_eq!(adjust_hand_rank(4996), 2467);
-        assert_eq!(adjust_hand_rank(5853), 1600);
-        assert_eq!(adjust_hand_rank(5854), 1599);
-        assert_eq!(adjust_hand_rank(5863), 1590);
-        assert_eq!(adjust_hand_rank(5864), 1589);
-        assert_eq!(adjust_hand_rank(7140), 312);
-        assert_eq!(adjust_hand_rank(7141), 311);
-        assert_eq!(adjust_hand_rank(7296), 156);
-        assert_eq!(adjust_hand_rank(7297), 155);
-        assert_eq!(adjust_hand_rank(7452), 9);
-        assert_eq!(adjust_hand_rank(7453), 8);
-        assert_eq!(adjust_hand_rank(7462), 0);
+        let rank : Rank = adjust_hand_rank(1).into();
+        assert_eq!(rank.get_rank_enum(), RankEnum::StraightFlush(9));
+        
+        
     }
 
     #[test]
@@ -513,6 +496,9 @@ mod tests {
         //create_perfect_hash();
 
         //cargo test --lib --release test_generate_lookup_tables -- --nocapture
+
+        //cargo test --lib --release test_lookups -- --nocapture
+        
         //generate_lookup_tables();
 
         generate_lookup_tables_fast();

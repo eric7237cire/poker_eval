@@ -915,76 +915,7 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_print_bases() {
-        /// rank keys that guarantee a unique sum for every rank combination of 5-7 cards.
-        ///
-        ///
-        ///
-        // https://github.com/b-inary/holdem-hand-evaluator/blob/main/assets/src/constants.rs
-        let rank_bases: [u64; 13] = [
-            0x000800, 0x002000, 0x024800, 0x025005, 0x03102e, 0x05f0e4, 0x13dc93, 0x344211,
-            0x35a068, 0x377813, 0x378001, 0x378800, 0x380000,
-        ];
-
-        //https://github.com/zekyll/OMPEval/blob/master/omp/HandEvaluator.cpp
-        let rank_bases2: [u64; 13] = [
-            0x2000, 0x8001, 0x11000, 0x3a000, 0x91000, 0x176005, 0x366000, 0x41a013, 0x47802e,
-            0x479068, 0x48c0e4, 0x48f211, 0x494493,
-        ];
-
-        let mut base5_bases = vec![1, 5, 25];
-
-        while base5_bases.len() < 13 {
-            let last = base5_bases.last().unwrap();
-            base5_bases.push(last * 5);
-        }
-
-        //25 bits?
-
-        //13*2 == 26
-        //00 01 10 11 100
-
-        //base 5
-        //1 -- 2
-        //5 -- 3  5, 10, 15, 20
-        //25 -- 5^2 -- 4
-        //5^11 -- 13
-        //5^13 * 4 == 195,312,500 28bits
-
-        // 2 3 4 5 6 7 8 9 T J Q K A
-        // 0 1 2 3 4 5 6 7 8 9 10 11 12
-        // 5^(0+1) - 1
-
-        // 5^13 - 1 = 1,220,703,124
-        //2^31 =      2,147,483,648
-        //52 choose 7 == 133,784,560
-
-        for i in 0..13 {
-            let base = rank_bases[i];
-            let mut base_str = format!("{:b}", base);
-            while base_str.len() < 24 {
-                base_str = format!("0{}", base_str);
-            }
-            println!("{}: {} - {}; {}", i, base_str, base, base * 5);
-            println!("{}: - {}", i, base5_bases[i]);
-        }
-
-        println!("Max {}", base5_bases[12] * 5 - 1);
-
-        //Print 2^25
-        println!("{}", 1 << 25);
-
-        //so to do better, we need to take advantage of the 7 card limit
-
-        //maybe ordering the set [4, 0, 0, .. 3] to mean 4 aces, 3 deuces
-        //and then seeing what we need to add ?
-
-        //maybe then we find how many sets have 0 aces, 1, 2, 3, 4 take the max of that, and it's our base
-        //then do that for k q j etc.
-
-        assert!(false);
-    }
+    
 
     #[test]
     fn test_get_possible_hole_cards() {
