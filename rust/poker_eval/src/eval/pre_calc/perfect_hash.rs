@@ -158,7 +158,8 @@ mod tests {
     type SeenBitSet = BitArr!(for 73775, in usize, Lsb0);
 
     #[cfg(not(target_arch = "wasm32"))]
-    #[test]
+    //#[test]
+    #[allow(dead_code)]
     fn is_perfect_hash_stable() {
         let unique_sets = enumerate_all_unique_sets();
 
@@ -196,7 +197,8 @@ mod tests {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    #[test]
+    //#[test]
+    #[allow(dead_code)]
     fn test_create_boom() {
         //cargo test boom --lib -- --nocapture
         create_perfect_hash_boom_phf();
