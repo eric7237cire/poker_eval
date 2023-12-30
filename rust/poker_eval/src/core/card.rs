@@ -10,6 +10,7 @@ use std::cmp;
 use std::convert::TryFrom;
 use std::fmt;
 
+use std::fmt::Display;
 use std::mem;
 use std::str::FromStr;
 
@@ -379,6 +380,12 @@ impl FromStr for Suit {
             'c' => Ok(Self::Club),
             c => Err(PokerError::from_string(format!("Unsupported char: {}", c))),
         }
+    }
+}
+
+impl Display for Suit {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", char::from(*self))
     }
 }
 

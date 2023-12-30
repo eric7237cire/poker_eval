@@ -1,8 +1,10 @@
 /// number of ranks
 pub const NUMBER_OF_RANKS: usize = 13;
 
+pub const NUMBER_OF_SUITS: usize = 4;
+
 /// number of ranks
-pub const NUMBER_OF_CARDS: usize = 4 * NUMBER_OF_RANKS;
+pub const NUMBER_OF_CARDS: usize = NUMBER_OF_SUITS * NUMBER_OF_RANKS;
 
 pub const NUMBER_OF_HOLE_CARDS: usize = 1326; //52 choose 2
 
