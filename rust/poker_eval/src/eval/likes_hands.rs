@@ -198,7 +198,23 @@ pub fn likes_hand(
     if round != Round::River {
         if let Some(p) = prc.flush_draw {
             if p.flush_draw_type == FlushDrawType::FlushDraw {
-                likes_hand_comments.push(format!("Flush draw {}", p.hole_card_value));
+                if prc.has_straight_draw() {
+                    likes_hand_comments.push(format!("Flush & str draw {}", p.hole_card_value));
+                    likes_hand = max(likes_hand, LikesHandLevel::AllIn);
+                } else {
+                    if prc.has_top_pair() {
+                        likes_hand_comments.push(format!("Flush draw {} with top pair", p.hole_card_value));
+                        likes_hand = max(likes_hand, LikesHandLevel::AllIn);    
+                    } else if p.hole_card_value >= CardValue::King {
+                         
+                        likes_hand_comments.push(format!("Flush draw {}", p.hole_card_value));
+                        likes_hand = max(likes_hand, LikesHandLevel::LargeBet);
+                    
+                    } else {
+                        likes_hand_comments.push(format!("Flush draw {}", p.hole_card_value));
+                        likes_hand = max(likes_hand, LikesHandLevel::SmallBet);
+                    }
+                }
             }
         }
         if let Some(p) = prc.straight_draw {
@@ -313,6 +329,10 @@ mod test {
                     //let card2 = Card::new(card_value2, Suit::Heart);
                     let card2 = Card::new(card_value2, Suit::Spade);
                     let card3 = Card::new(card_value3, Suit::Diamond);
+
+                    if card1 == card2 {
+                        continue;
+                    }
 
                     deck.set_used_card(card1);
                     deck.set_used_card(card2);

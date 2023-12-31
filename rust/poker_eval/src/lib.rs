@@ -4,4 +4,5 @@ pub mod eval;
 pub use eval::*;
 mod core;
 pub use core::*;
-mod web;
+pub mod web;
+pub use web::*;

@@ -38,7 +38,7 @@ mod tests {
 
         let num_it = 10_000;
         let f_results = analyzer.build_results();
-        let f_results = analyzer.simulate_flop(num_it, f_results).unwrap();
+        let f_results = analyzer.simulate_flop(num_it, f_results, true).unwrap();
 
         let results = &f_results.flop_results;
 
@@ -100,7 +100,7 @@ mod tests {
         //let tolerance = 0.1;
 
         let f_results = analyzer.build_results();
-        let f_results = analyzer.simulate_flop(num_it, f_results).unwrap();
+        let f_results = analyzer.simulate_flop(num_it, f_results, true).unwrap();
 
         let results = &f_results.flop_results;
 
@@ -186,7 +186,7 @@ mod tests {
         let num_it = 1;
 
         let results = analyzer.build_results();
-        let results = analyzer.simulate_flop(num_it, results).unwrap();
+        let results = analyzer.simulate_flop(num_it, results, false).unwrap();
 
         let v_r = &results.all_villians;
         assert_eq!(
@@ -265,7 +265,7 @@ mod tests {
         let num_it = 1;
 
         let results = analyzer.build_results();
-        let results = analyzer.simulate_flop(num_it, results).unwrap();
+        let results = analyzer.simulate_flop(num_it, results, false).unwrap();
 
         let v_r = &results.all_villians;
         assert_eq!(
@@ -333,7 +333,7 @@ mod tests {
         let num_it = 200;
 
         let results = analyzer.build_results();
-        let results = analyzer.simulate_flop(num_it, results).unwrap();
+        let results = analyzer.simulate_flop(num_it, results, true).unwrap();
 
         let kj_index = HoleCards::from_str("Kd Jc")
             .unwrap()

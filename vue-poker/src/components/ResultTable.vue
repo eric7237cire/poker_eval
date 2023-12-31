@@ -81,7 +81,7 @@
     </div>
 
     <!--Draw table-->
-    <div class="flex flex-col w-full border-l border-gray-500 overflow-x-auto">
+    <div v-if="!equityOnly" class="flex flex-col w-full border-l border-gray-500 overflow-x-auto">
       <div ref="tableDiv" class="flex-grow overflow-y-scroll will-change-scroll">
         <table class="w-full h-full text-sm text-center align-middle">
           <thead class="sticky top-0 z-30 shadow">
@@ -228,6 +228,7 @@ import RangeEquityViewer from './result/RangeEquityViewer.vue';
 
 const props = defineProps<{
   results: Array<ResultsInterface>;
+    equityOnly: boolean;
 }>();
 
 const columnNames = ['Player Id', 'Cards', 'Street', 'Equity', ...RANK_FAMILY_NAMES];

@@ -5,12 +5,12 @@ use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::{
     get_unused_card, web::MAX_RAND_NUMBER_ATTEMPS, Card, CardUsedType, HoleCards, InRangeType,
-    PokerError,
+    PokerError, ALL_CARDS,
 };
 
 #[derive(Eq, PartialEq, Debug)]
 #[repr(u8)]
-pub(crate) enum PlayerPreFlopState {
+pub enum PlayerPreFlopState {
     Disabled = 0,
     UseHoleCards = 1,
     UseRange = 2,
@@ -81,7 +81,7 @@ pub fn get_all_player_hole_cards(
                 continue;
             }
 
-            let hc = HoleCards::new(Card::try_from(card1_index)?, Card::try_from(card2_index)?)?;
+            let hc = HoleCards::new(ALL_CARDS[card1_index], ALL_CARDS[card2_index])?;
 
             let range_index = hc.to_range_index();
 
@@ -93,7 +93,7 @@ pub fn get_all_player_hole_cards(
         }
 
         //we set their cards
-        let pc = HoleCards::new(Card::try_from(card1_index)?, Card::try_from(card2_index)?)?;
+        let pc = HoleCards::new(ALL_CARDS[card1_index], ALL_CARDS[card2_index])?;
         pc.set_used(cards_used)?;
         player_cards.push(pc);
     }

@@ -178,6 +178,34 @@ impl PartialRankContainer {
         return None;
     }
 
+    pub fn has_straight_draw(&self) -> bool {
+        if let Some(p) = self.straight_draw {
+            if p.straight_draw_type == StraightDrawType::OpenEnded
+                || p.straight_draw_type == StraightDrawType::DoubleGutShot
+            {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    pub fn has_top_pair(&self) -> bool {
+        if let Some(hi_pair) = self.hi_pair {
+            if hi_pair.number_above == 0 {
+                return true;
+            }
+        }
+
+        if let Some(lo_pair) = self.lo_pair {
+            if lo_pair.number_above == 0 {
+                return true;
+            }
+        }
+
+        false
+    }
+
     //Private methods below
     fn handle_pocket_pairs(&mut self, hole_cards: &[Card], board_metrics: &BitSetCardsMetrics) {
         if hole_cards[0].value == hole_cards[1].value {

@@ -215,6 +215,7 @@ impl flop_analyzer {
         &self,
         num_iterations: u32,
         all_flop_results: FlopSimulationResults,
+        equity_only: bool,
     ) -> Result<FlopSimulationResults, PokerError> {
         //let n_players = self.player_info.len();
         #[cfg(test)]
@@ -251,9 +252,10 @@ impl flop_analyzer {
         }
 
         info!(
-            "simulate_flop: num_iterations {} for {} players",
+            "simulate_flop: num_iterations {} for {} players.  Equity Only? {}",
             num_iterations,
-            active_players.len()
+            active_players.len(),
+            equity_only
         );
 
         let base_cards_used = self.init_cards_used()?;
@@ -281,14 +283,16 @@ impl flop_analyzer {
                 cards_used.count_ones()
             );
 
-            eval_current_draws(
-                &active_players,
-                &player_cards,
-                &eval_cards,
-                &mut flop_results,
-                &mut villian_results,
-                0,
-            )?;
+            if !equity_only {
+                eval_current_draws(
+                    &active_players,
+                    &player_cards,
+                    &eval_cards,
+                    &mut flop_results,
+                    &mut villian_results,
+                    0,
+                )?;
+            }
 
             eval_current(
                 &active_players,
@@ -330,14 +334,16 @@ impl flop_analyzer {
 
             assert_eq!(4, eval_cards.len());
 
-            eval_current_draws(
-                &active_players,
-                &player_cards,
-                &eval_cards,
-                &mut flop_results,
-                &mut villian_results,
-                1,
-            )?;
+            if !equity_only {
+                eval_current_draws(
+                    &active_players,
+                    &player_cards,
+                    &eval_cards,
+                    &mut flop_results,
+                    &mut villian_results,
+                    1,
+                )?;
+            }
 
             eval_current(
                 &active_players,

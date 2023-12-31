@@ -4,12 +4,14 @@
   </div>
   <div class="results-table-container">
     <Transition>
-      <ResultTable :results="myResultsList" v-if="myResultsList.length > 0" />
+      <ResultTable :results="myResultsList" :equityOnly="equityOnly" v-if="myResultsList.length > 0" />
     </Transition>
   </div>
 
   <div class="go-row-container">
     <div class="go-row">
+      <input type="checkbox" id="checkbox" v-model="equityOnly" />
+      <label for="checkbox">Equity Only</label>
       <button @click="go" class="button-base button-blue">Go</button>
       <button @click="stop" class="button-base button-red">Stop</button>
       <div class="status">{{ num_iterations }} Iterations</div>
@@ -109,9 +111,26 @@ const boardStore = useBoardStore();
 const resultsStore = useResultsStore();
 const rangeStore = useRangesStore();
 
-const iterationsPerTick = 1_000;
-const maxIterations = 50_000;
 const pauseAfterTickMs = 500;
+
+const equityOnly = ref(true);
+
+const iterationsPerTick = computed(() => {
+  if (equityOnly.value) {
+    return 25_000;
+  } else {
+    return 1_000;
+  }
+});
+
+const maxIterations = computed(() => {
+  if (equityOnly.value) {
+    return 500_000;
+  } else {
+    return 50_000;
+  }
+});
+
 
 boardStore.$subscribe((board) => {
   console.log('boardStore.$subscribe', board);
@@ -230,14 +249,14 @@ async function tick(numIterations: number) {
   }
   num_iterations.value = num_iterations.value + numIterations;
 
-  if (num_iterations.value >= maxIterations) {
+  if (num_iterations.value >= maxIterations.value) {
     console.log(`max iterations reached ${maxIterations} > ${num_iterations.value}`);
     userMessage.value = ``;
     stopping = true;
     return;
   }
 
-  const ok = await handler.simulateFlop(numIterations);
+  const ok = await handler.simulateFlop(numIterations, equityOnly.value);
 
   if (!ok) {
     userMessage.value = `Error simulating flop`;
@@ -259,7 +278,7 @@ async function tick(numIterations: number) {
   resultsStore.results = resultList;
 
   setTimeoutReturn.value = setTimeout(()=>{
-    tick(iterationsPerTick);
+    tick(iterationsPerTick.value);
   }, pauseAfterTickMs);
 }
 

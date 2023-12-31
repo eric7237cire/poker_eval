@@ -43,12 +43,12 @@ const createHandler = (mod: Mod) => {
         return true;
       }
     },
-    simulateFlop(num_iterations: number) {
+    simulateFlop(num_iterations: number, equity_only: boolean) {
       if (!this.results) {
         console.error('results not initialized');
         return false;
       }
-      this.results = this.flop_analyzer.simulate_flop(num_iterations, this.results);
+      this.results = this.flop_analyzer.simulate_flop(num_iterations, this.results, equity_only);
       return true;
     },
     getResults(): Array<ResultsInterface> {

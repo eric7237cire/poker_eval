@@ -91,7 +91,7 @@ impl FlopSimulationResults {
         active_player_index: Option<usize>,
         draw_index: usize,
     ) -> Result<JsValue, JsValue> {
-        info!("get_street_draw: {} ", draw_index);
+        //info!("get_street_draw: {} ", draw_index);
 
         Ok(serde_wasm_bindgen::to_value(
             if let Some(p_idx) = active_player_index {
