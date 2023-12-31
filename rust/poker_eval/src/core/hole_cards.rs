@@ -1,5 +1,6 @@
 use std::{
     fmt::{Display, Formatter},
+    iter::{once, Chain, Once},
     str::FromStr,
 };
 
@@ -121,6 +122,10 @@ impl HoleCards {
         unset_used_card(self.card_hi_lo[0].into(), cards_used)?;
         unset_used_card(self.card_hi_lo[1].into(), cards_used)?;
         Ok(())
+    }
+
+    pub fn get_iter(&self) -> Chain<Once<Card>, Once<Card>> {
+        once(self.get_hi_card()).chain(once(self.get_lo_card()))
     }
 
     pub fn add_to_eval(&self, eval_cards: &mut Vec<Card>) {

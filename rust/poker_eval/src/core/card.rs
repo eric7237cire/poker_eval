@@ -680,7 +680,6 @@ mod tests {
         assert!(CardValue::try_from(13u8).is_err());
     }
 
-    
     #[test]
     fn test_size_suit() {
         // One byte for Suit

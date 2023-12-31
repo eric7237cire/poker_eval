@@ -108,65 +108,77 @@ mod tests {
         let board = Board::try_from("7d 5s 2h 3s 4c").unwrap();
         let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
 
-        assert_eq!(rank.get_rank_enum(), RankEnum::HighCard(0));
+        assert_eq!(rank.get_rank_enum(), RankEnum::HighCard);
+        assert_eq!(rank.get_kicker(), 0);
 
         let board = Board::try_from("Ad 5s Qd Tc Kh Js").unwrap();
         let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
 
-        assert_eq!(rank.get_rank_enum(), RankEnum::Straight(9));
+        assert_eq!(rank.get_rank_enum(), RankEnum::Straight);
+        assert_eq!(rank.get_kicker(), 9);
 
         let board = Board::try_from("9d 5s Qd Tc Kh Js").unwrap();
         let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
 
-        assert_eq!(rank.get_rank_enum(), RankEnum::Straight(8));
-
+        assert_eq!(rank.get_rank_enum(), RankEnum::Straight);
+        assert_eq!(rank.get_kicker(), 8);
+        
         let board = Board::try_from("2d 5s Qd 3h Kh 4s Ac").unwrap();
         let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
 
-        assert_eq!(rank.get_rank_enum(), RankEnum::Straight(0));
+        assert_eq!(rank.get_rank_enum(), RankEnum::Straight);
+        assert_eq!(rank.get_kicker(), 0);
 
         let board = Board::try_from("2c 5c Qd 3c Kh 4c Ac").unwrap();
         let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
 
-        assert_eq!(rank.get_rank_enum(), RankEnum::StraightFlush(0));
+        assert_eq!(rank.get_rank_enum(), RankEnum::StraightFlush);
+        assert_eq!(rank.get_kicker(), 0);
 
         //Even though there is a flush on the board
         let board = Board::try_from("3c 3d Qd 5d 4h 4c 4d").unwrap();
         let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
 
-        assert_eq!(rank.get_rank_enum(), RankEnum::FullHouse(25));
+        assert_eq!(rank.get_rank_enum(), RankEnum::FullHouse);
+        assert_eq!(rank.get_kicker(), 25);
 
         let board = Board::try_from("3c 3d 3h Qd 5d 4c 4d").unwrap();
         let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
 
-        assert_eq!(rank.get_rank_enum(), RankEnum::FullHouse(13));
+        assert_eq!(rank.get_rank_enum(), RankEnum::FullHouse);
+        assert_eq!(rank.get_kicker(), 13);
 
         let board = Board::try_from("2c 2d 2h Qd 5d 4c 4d").unwrap();
         let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
 
-        assert_eq!(rank.get_rank_enum(), RankEnum::FullHouse(1));
+        assert_eq!(rank.get_rank_enum(), RankEnum::FullHouse);
+        assert_eq!(rank.get_kicker(), 1);
 
         let board = Board::try_from("Ad 3d Qd 5d 4h 4c 4d").unwrap();
         let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
 
-        assert_eq!(rank.get_rank_enum(), RankEnum::Flush(996));
+        assert_eq!(rank.get_rank_enum(), RankEnum::Flush);
+        assert_eq!(rank.get_kicker(), 996);
 
         let board = Board::try_from("Ad 9d Qd Jd 4h 4c Td").unwrap();
         let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
 
-        assert_eq!(rank.get_rank_enum(), RankEnum::Flush(1112));
+        assert_eq!(rank.get_rank_enum(), RankEnum::Flush);
+        assert_eq!(rank.get_kicker(), 1112);
 
         let board = Board::try_from("Ad Kd Qd Jd 4h 4c 9d").unwrap();
         let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
 
         //the best flush without it being a str8
-        assert_eq!(rank.get_rank_enum(), RankEnum::Flush(1276));
+        assert_eq!(rank.get_rank_enum(), RankEnum::Flush);
+        assert_eq!(rank.get_kicker(), 1276);
 
         let board = Board::try_from("2h 7h 4d Jd 4h 3h 5h").unwrap();
         let rank = fast_hand_eval(board.as_slice_card().iter(), &f);
 
         //the worst flush without it being a str8
-        assert_eq!(rank.get_rank_enum(), RankEnum::Flush(0));
+        assert_eq!(rank.get_rank_enum(), RankEnum::Flush);
+        assert_eq!(rank.get_kicker(), 0);
     }
 }
 

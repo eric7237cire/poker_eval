@@ -134,7 +134,6 @@ impl Deck {
 
                 return Ok(card);
             }
-            
         }
     }
 }

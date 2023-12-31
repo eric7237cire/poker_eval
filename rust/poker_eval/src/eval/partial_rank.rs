@@ -1,5 +1,6 @@
 use std::{
     cmp::{max, min},
+    fmt::{Display, Formatter},
     ops::BitOr,
 };
 
@@ -36,6 +37,16 @@ pub enum StraightDrawType {
     OpenEnded,
 }
 
+impl Display for StraightDrawType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StraightDrawType::GutShot(card) => write!(f, "Gut shot needs {}", card),
+            StraightDrawType::DoubleGutShot => write!(f, "Double gut shot"),
+            StraightDrawType::OpenEnded => write!(f, "Open ended"),
+        }
+    }
+}
+
 //We'll parse a list of these
 // pub enum PartialRank {
 //     FlushDraw(FlushDraw),
@@ -63,6 +74,7 @@ pub struct StraightDraw {
 pub struct PairInfo {
     pub number_above: u8,
     pub number_below: u8,
+    //This could also make a fh
     pub made_set: bool,
     pub made_quads: bool,
 }
@@ -88,6 +100,7 @@ pub struct PartialRankContainer {
     //quads: Option<PairFamilyRank>,
     pub hi_card: Option<PairFamilyRank>,
     pub lo_card: Option<PairFamilyRank>,
+    //num over_cards
 }
 
 impl Default for PartialRankContainer {
@@ -117,8 +130,53 @@ impl Default for PartialRankContainer {
 //     debug!("{} Value set: {}", desc, s);
 // }
 
+pub enum MadeWith {
+    HiCard,
+    LoCard,
+    BothCards,
+}
+
 impl PartialRankContainer {
     // Convenience methods
+
+    pub fn get_num_overcards(&self) -> u8 {
+        let mut num_overcards = 0;
+
+        if let Some(hi_card) = self.hi_card {
+            if hi_card.number_above == 0 {
+                num_overcards += 1;
+            }
+        }
+
+        if let Some(lo_card) = self.lo_card {
+            if lo_card.number_above == 0 {
+                num_overcards += 1;
+            }
+        }
+        num_overcards
+    }
+
+    pub fn made_a_set(&self) -> Option<MadeWith> {
+        if let Some(hi_pair) = self.hi_pair {
+            if hi_pair.made_set {
+                return Some(MadeWith::HiCard);
+            }
+        }
+
+        if let Some(lo_pair) = self.lo_pair {
+            if lo_pair.made_set {
+                return Some(MadeWith::LoCard);
+            }
+        }
+
+        if let Some(p) = self.pocket_pair {
+            if p.made_set {
+                return Some(MadeWith::BothCards);
+            }
+        }
+
+        return None;
+    }
 
     //Private methods below
     fn handle_pocket_pairs(&mut self, hole_cards: &[Card], board_metrics: &BitSetCardsMetrics) {

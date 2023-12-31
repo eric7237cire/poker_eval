@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use poker_eval::{exact_equity::calc_equity, Board, BoolRange};
+use poker_eval::{monte_carlo_equity::calc_equity, Board, BoolRange};
 
 fn main() {
     let board: Board = "9d 8h 9c".parse().unwrap();

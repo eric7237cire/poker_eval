@@ -128,7 +128,7 @@ pub fn eval_current(
 
 pub(crate) fn update_results_from_rank(results: &mut RankResults, rank: Rank) {
     results.num_iterations += 1;
-    results.rank_family_count[rank.get_family_index()] += 1;
+    results.rank_family_count[rank.get_rank_enum() as u8 as usize] += 1;
 }
 
 //returns winners and how many players were considered (non None rank)

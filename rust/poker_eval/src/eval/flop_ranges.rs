@@ -70,4 +70,3 @@ pub struct FlopRanges {
 
     pub top_50: FlopRangeContainer,
 }
-

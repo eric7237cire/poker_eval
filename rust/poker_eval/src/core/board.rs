@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{fmt::Display, str::FromStr};
+use std::{fmt::Display, iter::Cloned, slice::Iter, str::FromStr};
 
 use num_integer::binomial;
 
@@ -136,6 +136,10 @@ impl Board {
                 c_u8
             })
             .collect()
+    }
+
+    pub fn get_iter(&self) -> Cloned<Iter<Card>> {
+        self.cards.iter().cloned()
     }
 
     pub fn get_round(&self) -> Result<Round, PokerError> {

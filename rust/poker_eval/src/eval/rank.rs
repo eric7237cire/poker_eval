@@ -524,13 +524,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, io::Write};
+   use crate::{init_test_logger, Board, BoolRange};
+    
 
-    use crate::{add_eval_card, get_unused_card, init_test_logger, Board, BoolRange};
-    use itertools::Itertools;
-    use rand::{rngs::StdRng, SeedableRng};
-
-    use crate::{get_possible_hole_cards, rank_cards, CardUsedType, HoleCards, OldRank};
+    use crate::{get_possible_hole_cards, rank_cards, CardUsedType,  OldRank};
 
     #[test]
     fn test_flop_rank() {
@@ -642,151 +639,6 @@ mod tests {
     //     }
     //     assert!(passed);
     // }
-
-    //Slow
-    //#[test]
-    #[allow(dead_code)]
-    fn test_heads_up_ranking() {
-        //let mut range_idx_to_string: Vec<String> = Vec::new();
-        //let mut range_idx_to_equity: Vec<f64> = Vec::new();
-
-        let mut range_string_to_idx: HashMap<String, usize> = HashMap::new();
-
-        let mut hole_card_list = Vec::new();
-        let mut hole_index_list = Vec::new();
-        let mut hole_range_strings = Vec::new();
-
-        for card1 in 0..52usize {
-            for card2 in card1 + 1..52 {
-                let hole_cards =
-                    HoleCards::new(card1.try_into().unwrap(), card2.try_into().unwrap()).unwrap();
-
-                let hole_string = hole_cards.to_range_string();
-
-                // if !range_string_to_idx.contains_key(&hole_string) {
-                //     println!("{} {}", hole_string, range_idx_to_string.len());
-                // }
-
-                hole_card_list.push(hole_cards);
-                //range_idx_to_equity.push(0.0);
-
-                let l = range_string_to_idx.len();
-                let range_str_index = range_string_to_idx.entry(hole_string.clone()).or_insert(l);
-
-                if hole_range_strings.len() <= *range_str_index {
-                    hole_range_strings.push(hole_string.clone());
-                }
-
-                hole_index_list.push(*range_str_index);
-            }
-        }
-
-        assert_eq!(13 * 13, range_string_to_idx.len());
-        assert_eq!(range_string_to_idx.len(), hole_range_strings.len());
-
-        assert_eq!(hole_card_list.len(), hole_index_list.len());
-        assert_eq!(52 * 51 / 2, hole_card_list.len());
-
-        //let mut hole_idx_to_eq = vec![0.0; hole_card_list.len()];
-
-        let mut range_hole_idx_to_eq = vec![0.0; 13 * 13];
-        let mut range_hole_idx_showdown_count = vec![0; 13 * 13];
-
-        //change this to be higher for more accuracy, kept to 1 for speed
-        let num_flops_per_matchup = 1;
-
-        let mut rng = StdRng::seed_from_u64(42);
-
-        for (h1_idx, h1) in hole_card_list.iter().enumerate() {
-            for h2_idx in h1_idx + 1..hole_card_list.len() {
-                let r1_idx = hole_index_list[h1_idx];
-                let r2_idx = hole_index_list[h2_idx];
-
-                //no need to do this matchup
-                if r1_idx == r2_idx {
-                    continue;
-                }
-
-                let h2 = &hole_card_list[h2_idx];
-
-                let mut eval_cards = Vec::with_capacity(15);
-                let mut cards_used = CardUsedType::default();
-                h1.set_used(&mut cards_used).unwrap();
-
-                let is_ok = h2.set_used(&mut cards_used);
-
-                if !is_ok.is_ok() {
-                    //some possibilites won't be valid
-                    continue;
-                }
-
-                for _ in 0..num_flops_per_matchup {
-                    assert_eq!(4, cards_used.count_ones());
-                    for _ in 0..5 {
-                        add_eval_card(
-                            get_unused_card(&mut rng, &cards_used).unwrap(),
-                            &mut eval_cards,
-                            &mut cards_used,
-                        )
-                        .unwrap();
-                    }
-
-                    assert_eq!(4 + 5, cards_used.count_ones());
-
-                    h1.add_to_eval(&mut eval_cards);
-                    assert_eq!(7, eval_cards.len());
-                    let rank1 = rank_cards(eval_cards.iter());
-                    h1.remove_from_eval(&mut eval_cards).unwrap();
-
-                    h2.add_to_eval(&mut eval_cards);
-                    assert_eq!(7, eval_cards.len());
-                    let rank2 = rank_cards(eval_cards.iter());
-                    h2.remove_from_eval(&mut eval_cards).unwrap();
-
-                    range_hole_idx_showdown_count[r1_idx] += 1;
-                    range_hole_idx_showdown_count[r2_idx] += 1;
-                    if rank1 == rank2 {
-                        range_hole_idx_to_eq[r1_idx] += 1.0 / 2.0;
-                        range_hole_idx_to_eq[r2_idx] += 1.0 / 2.0;
-                    } else if rank1 > rank2 {
-                        range_hole_idx_to_eq[r1_idx] += 1.0;
-                    } else {
-                        range_hole_idx_to_eq[r2_idx] += 1.0;
-                    }
-
-                    //Pop off the 5
-                    for _ in 0..5 {
-                        let c = eval_cards.pop().unwrap();
-                        cards_used.set(c.into(), false);
-                    }
-                }
-            }
-        }
-
-        for r_idx in 0..range_hole_idx_to_eq.len() {
-            range_hole_idx_to_eq[r_idx] /= range_hole_idx_showdown_count[r_idx] as f64;
-        }
-
-        let mut with_idx = range_hole_idx_to_eq.iter().enumerate().collect_vec();
-        with_idx.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
-
-        for (rank, (r_idx, eq)) in with_idx.iter().enumerate().take(10) {
-            println!(
-                "#{} {} {} ",
-                1 + rank,
-                hole_range_strings[*r_idx],
-                100.0 * **eq
-            );
-        }
-
-        //open a text file and write the results
-
-        let mut file = std::fs::File::create("/tmp/heads_up_equity.txt").unwrap();
-        for (r_idx, _) in with_idx.iter() {
-            let line = format!("{}\n", hole_range_strings[*r_idx]);
-            file.write_all(line.as_bytes()).unwrap();
-        }
-    }
 
     #[test]
     fn test_print_winning() {
