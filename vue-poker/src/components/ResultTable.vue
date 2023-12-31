@@ -36,7 +36,7 @@
                 <tr class="relative" style="height: calc(1.9rem + 1px)">
                   <td>
                     <template v-if="item.player_index >= 0">
-                      Player {{ item.player_index }}
+                      {{playerStore.players[item.player_index].name || ('Player ' + item.player_index)}}
                     </template>
                     <template v-else> Player >= 1 </template>
                   </td>
@@ -229,6 +229,7 @@ import { RANK_FAMILY_NAMES, ResultsInterface } from '@src/worker/result_types';
 import Percentage from '@src/components/result/Percentage.vue';
 import PlayerPreflop from './result/PlayerPreflop.vue';
 import RangeEquityViewer from './result/RangeEquityViewer.vue';
+import { usePlayerStore } from '@src/stores/player';
 
 const props = defineProps<{
   results: Array<ResultsInterface>;
@@ -251,6 +252,8 @@ const drawColumnNames = [
   'One Overcard',
   'Backdoor Flush Draw'
 ];
+
+const playerStore = usePlayerStore();
 
 const results = computed(() => props.results);
 

@@ -21,6 +21,11 @@
   </table>
 </template>
 
+<style lang="postcss" scoped>
+table {
+  width: 150px;
+}
+</style>
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { usePlayerStore } from '../stores/player';

@@ -146,7 +146,6 @@ import { RangeManager } from '@pkg/range';
 import { CurrentPage, useNavStore } from '../stores/navigation';
 
 import DbItemPicker from './DbItemPicker.vue';
-import { Store, PiniaCustomStateProperties, storeToRefs } from 'pinia';
 import { useRangesStore } from '@src/stores/ranges';
 
 const yellow500 = '#eab308';
@@ -172,19 +171,19 @@ const percRange = ref(100);
 const numCombos = ref(0);
 
 const rangeStore = useRangesStore();
-const { currentPlayer } = storeToRefs(playerStore);
+//const { currentPlayer } = storeToRefs(playerStore);
 
 //update when player changes
 //tried to replace with comptude but didn't work...
-watch(currentPlayer, (newValue, oldValue) => {
-  console.log(`The re cp changed from ${oldValue} to ${newValue}`);
-  //const playerIndex = currentPlayer.value.valueOf();
-  const p = playerStore.curPlayerData;
-  console.log(`p is ${JSON.stringify(p)}`);
-  console.log(`range text is set to [ ${p.rangeStr} ]`);
-  rangeText.value = p.rangeStr;
-  onRangeTextChange();
-});
+// watch(currentPlayer, (newValue, oldValue) => {
+//   console.log(`The re cp changed from ${oldValue} to ${newValue}`);
+//   //const playerIndex = currentPlayer.value.valueOf();
+//   const p = playerStore.curPlayerData;
+//   console.log(`p is ${JSON.stringify(p)}`);
+//   console.log(`range text is set to [ ${p.rangeStr} ]`);
+//   rangeText.value = p.rangeStr;
+//   onRangeTextChange();
+// });
 
 //  const currentPlayerComputed = computed(() => {
 //   rangeText.value = playerStore.curPlayerData.rangeStr;

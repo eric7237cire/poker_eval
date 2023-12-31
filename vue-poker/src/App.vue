@@ -33,9 +33,11 @@
     </div>
 
     <!--Show 'players'-->
-    <div class="players">
-      <div v-for="player in players" :key="player.id" :class="['player', player.class]">
-        <Player :playerId="player.id" />
+    <div class="players-container">
+      <div class="players">
+        <div v-for="player in players" :key="player.id" :class="['player', player.class]">
+          <Player :playerId="player.id" />
+        </div>
       </div>
     </div>
 

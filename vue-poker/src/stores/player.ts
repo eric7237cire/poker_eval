@@ -26,11 +26,12 @@ import { RangeManager } from '@pkg/range';
 import { useLocalStorage } from '@vueuse/core';
 import { CardList } from './board';
 import { parseCardString } from '@src/utils';
+import { computed, ref } from 'vue';
 
 function initializePlayers(): Array<Player> {
   const players: Array<Player> = [];
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 9; i++) {
     players.push({
       index: i,
       name: `Player ${i}`,
@@ -61,44 +62,57 @@ initRangeManager().then(() => {
   console.log('Range initialized');
 });
 
-export const usePlayerStore = defineStore('player', {
-  state: () => {
-    return {
-      currentPlayer: PLAYER_ID_HERO,
-      players: useLocalStorage('playerData', initializePlayers())
-    };
-  },
-  getters: {
-    curPlayerData: (state) => state.players[state.currentPlayer],
-    playerDataForId: (state) => (id: number) => state.players[id]
-    //currentPlayer: (state) => state.currentPlayer
-  },
-  actions: {
-    setCurrentPlayer(newCurrentPlayer: number) {
-      this.currentPlayer = newCurrentPlayer;
-    },
-    updateRangeStr(newRangeStr: string) {
-      this.updateRangeStrForPlayer(this.currentPlayer, newRangeStr);
-    },
-    updateRangeStrForPlayer(playerId: number, newRangeStr: string) {
-      if (range == null) {
-        console.log('Range not initialized yet');
-        return;
-      }
-      console.log('updateRangeStrForPlayer', playerId, newRangeStr);
-      this.players[playerId].rangeStr = newRangeStr;
+export const usePlayerStore = defineStore('player', () => {
+  /*
+  ref()s become state properties
+computed()s become getters
+function()s become actions*/
 
-      //update stats
-      range.from_string(newRangeStr);
-      const rawData = range.raw_data();
-      const numCombos = rawData.reduce((acc, cur) => acc + cur, 0);
-      this.players[playerId].percHands = numCombos / ((52 * 51) / 2);
-      const weights = range.get_weights();
-      for (let i = 0; i < 13 * 13; ++i) {
-        this.players[playerId].range[i] = weights[i] * 100;
-      }
+  const currentPlayer = ref(PLAYER_ID_HERO);
+
+  const players = useLocalStorage('playerData', initializePlayers());
+
+  const curPlayerData = computed(() => {
+    return players.value[currentPlayer.value];
+  });
+
+  function playerDataForId(id: number) {
+    return players.value[id];
+  }
+
+  function setCurrentPlayer(newCurrentPlayer: number) {
+    currentPlayer.value = newCurrentPlayer;
+  }
+  function updateRangeStr(newRangeStr: string) {
+    updateRangeStrForPlayer(currentPlayer.value, newRangeStr);
+  }
+  function updateRangeStrForPlayer(playerId: number, newRangeStr: string) {
+    if (range == null) {
+      console.log('Range not initialized yet');
+      return;
+    }
+    console.log('updateRangeStrForPlayer', playerId, newRangeStr);
+    players.value[playerId].rangeStr = newRangeStr;
+
+    //update stats
+    range.from_string(newRangeStr);
+    const rawData = range.raw_data();
+    const numCombos = rawData.reduce((acc, cur) => acc + cur, 0);
+    players.value[playerId].percHands = numCombos / ((52 * 51) / 2);
+    const weights = range.get_weights();
+    for (let i = 0; i < 13 * 13; ++i) {
+      players.value[playerId].range[i] = weights[i] * 100;
     }
   }
+
+  return {
+    players,
+    currentPlayer,
+    setCurrentPlayer,
+    playerDataForId,
+    updateRangeStr,
+    curPlayerData
+  };
 });
 
 export function loadHeroCardsFromUrl(): number | null {

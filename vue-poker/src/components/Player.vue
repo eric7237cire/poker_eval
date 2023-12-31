@@ -5,8 +5,8 @@ or select a range
 
 <template>
   <div class="title">
-    <span class="inline ml-2 player-name">
-      <input v-model="playerData.name" :placeholder="'Player ' + playerId"/>
+    <span class="player-name">
+      <input v-model="playerData.name" :placeholder="'Player ' + playerId" />
     </span>
     <div class="button-row">
       <button
@@ -53,19 +53,20 @@ div.title {
   align-items: center;
 
   .player-name {
-    color: white;
-    font-size: 1.0rem;
+    
+    font-size: 1rem;
     font-weight: bold;
+    text-align:center;
+    display: block;
 
     input {
+      width: 90%;
+      box-sizing: border-box;
       background-color: black;
       color: green;
     }
   }
 
-  span {
-    flex-grow: 1;
-  }
   button {
     flex-grow: 0;
     @apply py-1  m-1 inline;

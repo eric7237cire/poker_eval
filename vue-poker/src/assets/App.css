@@ -39,16 +39,29 @@
   }
 }
 
-.players {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+.players-container {
+  display: block;
+  .players {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    
+    align-items: center;
+    justify-content: center;
 
-  .player {
-    width: v-bind(playerWidth);
-    border: 1px solid red;
-    display: inline-grid;
-    margin: 10px;
+    .player {
+      width: 170px;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 0;
+      flex-shrink: 0;
+      flex-basis: fit-content;
+      align-items: center;
+    justify-content: center;
+      border: 1px solid red;
+      /* display: inline-grid; */
+      margin: 10px;
+    }
   }
 }
 
