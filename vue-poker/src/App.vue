@@ -4,7 +4,11 @@
   </div>
   <div class="results-table-container">
     <Transition>
-      <ResultTable :results="myResultsList" :equityOnly="equityOnly" v-if="myResultsList.length > 0" />
+      <ResultTable
+        :results="myResultsList"
+        :equityOnly="equityOnly"
+        v-if="myResultsList.length > 0"
+      />
     </Transition>
   </div>
 
@@ -58,7 +62,7 @@
 }
 
 .results-table-container {
-    width: 100vw;
+  width: 100vw;
 }
 
 .fade-in {
@@ -131,7 +135,6 @@ const maxIterations = computed(() => {
   }
 });
 
-
 boardStore.$subscribe((board) => {
   console.log('boardStore.$subscribe', board);
   //handler!.reset(0, board);
@@ -164,12 +167,12 @@ onMounted(() => {
   }
 
   const heroCards = loadCardsFromUrl('hero');
-    if (heroCards) {
-        console.log('hero cards loaded from url', heroCards);
-        playerStore.playerDataForId(0).holeCards = heroCards;
-    } else {
-        console.log('no hero cards loaded from url');
-    }
+  if (heroCards) {
+    console.log('hero cards loaded from url', heroCards);
+    playerStore.playerDataForId(0).holeCards = heroCards;
+  } else {
+    console.log('no hero cards loaded from url');
+  }
 });
 
 const userMessage = ref(
@@ -277,7 +280,7 @@ async function tick(numIterations: number) {
 
   resultsStore.results = resultList;
 
-  setTimeoutReturn.value = setTimeout(()=>{
+  setTimeoutReturn.value = setTimeout(() => {
     tick(iterationsPerTick.value);
   }, pauseAfterTickMs);
 }

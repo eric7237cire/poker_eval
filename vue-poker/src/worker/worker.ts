@@ -90,8 +90,7 @@ function buildResultsInterface(
 
   //flop/turn/river
   for (let i = 0; i < 3; i++) {
-
-    const sr : StreetResults = {
+    const sr: StreetResults = {
       equity: r.get_equity(active_player_index, i),
       rank_family_count: rankIndexes.map((ri) => {
         return {
@@ -100,7 +99,7 @@ function buildResultsInterface(
         } as PercOrBetter;
       }),
       eq_by_simple_range_idx: [],
-      it_num_by_simple_range_idx:[]
+      it_num_by_simple_range_idx: []
     };
 
     if (!_.isNil(active_player_index)) {
@@ -110,8 +109,8 @@ function buildResultsInterface(
       //assert(r_eq.length === r_it.length);
 
       const eq_range = [] as Array<number | null>;
-      
-      for(let ri = 0; ri < r_eq.length; ++ri) {
+
+      for (let ri = 0; ri < r_eq.length; ++ri) {
         if (r_it[ri] > 0) {
           eq_range.push(r_eq[ri] / r_it[ri]);
         } else {

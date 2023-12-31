@@ -5,28 +5,32 @@ or select a range
 
 <template>
   <div class="title">
-    <span class="inline ml-2">P {{ playerId }}</span>
-    <button
-      @click="handleChangeState(PlayerState.DISABLED)"
-      v-if="playerData.state != PlayerState.DISABLED"
-      class="button-base button-red"
-    >
-      Off
-    </button>
-    <button
-      @click="handleChangeState(PlayerState.USE_RANGE)"
-      v-if="playerData.state == PlayerState.DISABLED || playerData.state == PlayerState.USE_HOLE"
-      class="button-base button-blue"
-    >
-      Range
-    </button>
-    <button
-      @click="handleChangeState(PlayerState.USE_HOLE)"
-      v-if="playerData.state == PlayerState.DISABLED || playerData.state == PlayerState.USE_RANGE"
-      class="button-base button-blue"
-    >
-      Hole
-    </button>
+    <span class="inline ml-2 player-name">
+      <input v-model="playerData.name" :placeholder="'Player ' + playerId"/>
+    </span>
+    <div class="button-row">
+      <button
+        @click="handleChangeState(PlayerState.DISABLED)"
+        v-if="playerData.state != PlayerState.DISABLED"
+        class="button-base button-red"
+      >
+        Disable
+      </button>
+      <button
+        @click="handleChangeState(PlayerState.USE_RANGE)"
+        v-if="playerData.state == PlayerState.DISABLED || playerData.state == PlayerState.USE_HOLE"
+        class="button-base button-blue"
+      >
+        Range
+      </button>
+      <button
+        @click="handleChangeState(PlayerState.USE_HOLE)"
+        v-if="playerData.state == PlayerState.DISABLED || playerData.state == PlayerState.USE_RANGE"
+        class="button-base button-blue"
+      >
+        Hole
+      </button>
+    </div>
   </div>
   <RangeMiniViewer
     :playerId="playerId"
@@ -45,8 +49,19 @@ or select a range
 <style lang="postcss" scoped>
 div.title {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
+
+  .player-name {
+    color: white;
+    font-size: 1.0rem;
+    font-weight: bold;
+
+    input {
+      background-color: black;
+      color: green;
+    }
+  }
 
   span {
     flex-grow: 1;

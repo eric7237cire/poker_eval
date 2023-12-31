@@ -80,21 +80,20 @@ input.input-error {
 }
 
 .suit-spades {
-    color: black;
+  color: black;
 }
 .card-text.suit-spades {
-    color: white;
+  color: white;
 }
 .suit-hearts {
-    @apply text-pink-600;
+  @apply text-pink-600;
 }
 .suit-clubs {
-    @apply text-green-600;
+  @apply text-green-600;
 }
 .suit-diamonds {
-    @apply text-blue-600;
+  @apply text-blue-600;
 }
-
 
 @keyframes spinner-animation {
   0% {

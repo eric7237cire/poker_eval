@@ -1,11 +1,3 @@
-export const enum PlayerIds {
-  HERO = 0,
-  WEST = 1,
-  NORTH_WEST = 2,
-  NORTH_EAST = 3,
-  EAST = 4
-}
-
 export enum PlayerState {
   DISABLED = 0,
   //We are setting the cards
@@ -14,7 +6,8 @@ export enum PlayerState {
 }
 
 export interface Player {
-  id: PlayerIds;
+  index: number;
+  name: string;
 
   state: PlayerState;
   holeCards: CardList;
@@ -24,6 +17,8 @@ export interface Player {
   //13 * 13 array with 0 to 100%
   range: Array<number>;
 }
+
+const PLAYER_ID_HERO = 0;
 
 // stores/counter.js
 import { defineStore } from 'pinia';
@@ -37,7 +32,8 @@ function initializePlayers(): Array<Player> {
 
   for (let i = 0; i < 5; i++) {
     players.push({
-      id: i,
+      index: i,
+      name: `Player ${i}`,
       rangeStr: '',
       holeCards: {
         cardText: '',
@@ -68,23 +64,23 @@ initRangeManager().then(() => {
 export const usePlayerStore = defineStore('player', {
   state: () => {
     return {
-      currentPlayer: PlayerIds.HERO,
+      currentPlayer: PLAYER_ID_HERO,
       players: useLocalStorage('playerData', initializePlayers())
     };
   },
   getters: {
     curPlayerData: (state) => state.players[state.currentPlayer],
-    playerDataForId: (state) => (id: PlayerIds) => state.players[id]
+    playerDataForId: (state) => (id: number) => state.players[id]
     //currentPlayer: (state) => state.currentPlayer
   },
   actions: {
-    setCurrentPlayer(newCurrentPlayer: PlayerIds) {
+    setCurrentPlayer(newCurrentPlayer: number) {
       this.currentPlayer = newCurrentPlayer;
     },
     updateRangeStr(newRangeStr: string) {
       this.updateRangeStrForPlayer(this.currentPlayer, newRangeStr);
     },
-    updateRangeStrForPlayer(playerId: PlayerIds, newRangeStr: string) {
+    updateRangeStrForPlayer(playerId: number, newRangeStr: string) {
       if (range == null) {
         console.log('Range not initialized yet');
         return;
@@ -105,16 +101,13 @@ export const usePlayerStore = defineStore('player', {
   }
 });
 
-
 export function loadHeroCardsFromUrl(): number | null {
-    const urlParams = new URLSearchParams(window.location.search);
-    const queryParamCardText = urlParams.get('hero') || '';
-  
-      if (!queryParamCardText) {
-          return null;
-      }
-  
-      
-    return parseCardString(queryParamCardText);
-          
+  const urlParams = new URLSearchParams(window.location.search);
+  const queryParamCardText = urlParams.get('hero') || '';
+
+  if (!queryParamCardText) {
+    return null;
   }
+
+  return parseCardString(queryParamCardText);
+}

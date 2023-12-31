@@ -13,7 +13,6 @@ export interface StreetResults {
   eq_by_simple_range_idx: Array<null | number>;
 
   it_num_by_simple_range_idx: Array<number>;
-
 }
 
 export interface ResultsInterface {
