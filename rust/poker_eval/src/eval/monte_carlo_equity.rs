@@ -28,10 +28,11 @@ rank all the hole cards
 use std::iter::once;
 
 use itertools::Itertools;
+use log::trace;
 
 use crate::{
     pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash, rank::Rank},
-    Board, BoolRange, Deck, PokerError, ALL_CARDS, ALL_HOLE_CARDS,
+    Board, BoolRange, Deck, PokerError, ALL_CARDS, ALL_HOLE_CARDS, HoleCards,
 };
 
 //A more direct version of the flop analyze code
@@ -143,11 +144,16 @@ pub fn calc_equity(
 
     let mut out = vec![0.0; ranges.len()];
 
-    //trace!("Get possible hole cards");
-    let possible_hole_cards = ranges
-        .iter()
-        .map(|r| r.get_all_enabled_holecards())
+    //Store the player index because we want to pick the most restrictive hole cards first
+    let possible_hole_cards: Vec<(usize, Vec<HoleCards>)> = {
+        let mut pv = ranges
+        .iter().enumerate()
+        .map(|(player_index, r)| (player_index, r.get_all_enabled_holecards()))
         .collect_vec();
+
+        pv.sort_by(|a, b| a.1.len().cmp(&b.1.len()));
+        pv
+    };
     //trace!("Get possible hole cards done ");
 
     let mut player_hole_cards = vec![ALL_HOLE_CARDS[0]; ranges.len()];
@@ -163,7 +169,7 @@ pub fn calc_equity(
 
     for it in 0..num_simulations {
         if it % 10_000 == 0 && it > 0 {
-            println!("it {}", it);
+            trace!("it {}", it);
         }
         deck.reset();
 
@@ -172,27 +178,16 @@ pub fn calc_equity(
         }
 
         //We need to deal hole cards to each player
-        for p in 0..player_hole_cards.len() {
+        for (player_index, player_possible_hold_cards) in possible_hole_cards.iter() {
             // trace!(
             //     "Choosing range for {} with {} possibilities",
             //     p,
             //     possible_hole_cards[p].len()
             // );
-            player_hole_cards[p] = deck
-                .choose_available_in_range(&possible_hole_cards[p])
-                .unwrap();
+            player_hole_cards[*player_index] = deck
+                .choose_available_in_range(player_possible_hold_cards)?;
         }
-        // let player_hole_cards = ranges
-        //     .iter()
-        //     .map(|range| {
-        //         //let usable_range = deck.get_available_in_range(range)?;
-        //         //trace!("usable range {}", usable_range.data.count_ones());
-        //         let hole_cards = deck.choose_available_in_range(range).unwrap();
-
-        //         hole_cards
-        //     })
-        //     .collect_vec();
-
+        
         for board_index in board.get_num_cards()..5 {
             let card = deck.get_unused_card().unwrap();
             board_cards[board_index] = card;
@@ -272,5 +267,33 @@ mod tests {
         }
 
         println!("time {:?}", start.elapsed());
+    }
+
+    #[test]
+    fn test_single_card_ranges() {
+        let board: Board = "9d 8h 9c".parse().unwrap();
+
+        let start = Instant::now();
+
+        let ranges: Vec<BoolRange> = vec![
+            "Ac7s,Ac6s,72".parse().unwrap(),
+            "Ks6s".parse().unwrap(),
+            "As7s".parse().unwrap(),
+        ];
+
+        //let rank_db: EvalCacheReDb<ProduceRank> = EvalCacheReDb::new().unwrap();
+
+        //let shared = Rc::new(RefCell::new(rank_db));
+
+        let results = calc_equity(&board, &ranges, 100).unwrap();
+
+        for i in 0..ranges.len() {
+            println!("{}\n{:.2}", ranges[i].to_string(), results[i] * 100.0);
+        }
+
+        println!("time {:?}", start.elapsed());
+
+        assert!(results[2] > results[1]);
+        assert!(results[1] > results[0]);
     }
 }

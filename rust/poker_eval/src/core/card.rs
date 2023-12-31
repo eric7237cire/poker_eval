@@ -399,7 +399,7 @@ pub struct Card {
     /// The suit of this card.
     pub suit: Suit,
 
-    pub index: usize,
+    pub index: u8,
 }
 
 pub static ALL_CARDS: Lazy<Vec<Card>> = Lazy::new(|| {
@@ -410,7 +410,7 @@ pub static ALL_CARDS: Lazy<Vec<Card>> = Lazy::new(|| {
         result.push(Card {
             suit,
             value,
-            index: card_num,
+            index: card_num as u8,
         });
     }
 

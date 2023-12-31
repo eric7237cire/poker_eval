@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 //52 * 51 / 2
 pub type InRangeType = BitArr!(for NUMBER_OF_HOLE_CARDS, in usize, Lsb0);
 
-#[derive(Serialize, Deserialize, Default, PartialEq, Eq, Debug)]
+#[derive(Serialize, Deserialize, Default, PartialEq, Eq, Debug, Clone)]
 pub struct BoolRange {
     pub data: InRangeType,
 }

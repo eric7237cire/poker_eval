@@ -34,7 +34,7 @@ impl Deck {
     }
 
     pub fn is_used(&self, card: Card) -> bool {
-        self.used_cards[card.index]
+        self.used_cards[card.index as usize]
     }
 
     pub fn choose_new_board(&mut self) -> Vec<Card> {
@@ -47,9 +47,9 @@ impl Deck {
     }
 
     pub fn set_used_card(&mut self, card: Card) {
-        assert!(!self.used_cards[card.index]);
+        assert!(!self.used_cards[card.index as usize]);
         //let count_before = self.used_cards.count_ones();
-        self.used_cards.set(card.index, true);
+        self.used_cards.set(card.index as usize, true);
 
         //self.available_range.data &= &ALL_CARD_RANGES[card.index].inverse.data;
 
@@ -96,10 +96,10 @@ impl Deck {
                 .into());
             }
 
-            if self.used_cards[hole_cards.get_hi_card().index] {
+            if self.used_cards[hole_cards.get_hi_card().index as usize] {
                 continue;
             }
-            if self.used_cards[hole_cards.get_lo_card().index] {
+            if self.used_cards[hole_cards.get_lo_card().index as usize] {
                 continue;
             }
 
