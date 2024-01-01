@@ -1,5 +1,5 @@
 use boomphf::Mphf;
-use log::info;
+//use log::info;
 #[cfg(not(target_arch = "wasm32"))]
 use ph::fmph;
 use std::cmp::max;
@@ -92,7 +92,7 @@ pub fn enumerate_all_unique_sets() -> Vec<u32> {
 pub fn create_perfect_hash() {
     let unique_sets = enumerate_all_unique_sets();
 
-    info!("Unique sets: {}", unique_sets.len());
+    //info!("Unique sets: {}", unique_sets.len());
 
     let f = fmph::Function::from(unique_sets.as_ref());
 
@@ -109,7 +109,7 @@ pub fn create_perfect_hash() {
 pub fn create_perfect_hash_boom_phf() {
     let unique_sets = enumerate_all_unique_sets();
 
-    info!("Unique sets: {}", unique_sets.len());
+    //info!("Unique sets: {}", unique_sets.len());
 
     let phf = Mphf::new(1.7, &unique_sets);
 

@@ -60,8 +60,6 @@
 </template>
 
 <style lang="postcss" scoped>
-.template_root {
-}
 
 .not_editing {
   display: flex;

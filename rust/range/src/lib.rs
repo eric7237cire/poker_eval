@@ -3,7 +3,7 @@ use poker_eval::{BoolRange, PokerError, CardValue, pre_calc::NUMBER_OF_HOLE_CARD
 //use postflop_solver::*;
 use std::cmp::Ordering;
 use wasm_bindgen::prelude::*;
-use log::{info, debug};
+use log::debug;
 
 #[wasm_bindgen]
 pub struct RangeManager {
@@ -18,7 +18,7 @@ impl RangeManager {
             wasm_logger::init(wasm_logger::Config::default());
         }
 
-        info!("RangeManager::new()");
+        debug!("RangeManager::new()");
 
         Self {
             range: BoolRange::default()

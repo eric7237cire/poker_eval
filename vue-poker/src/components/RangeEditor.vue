@@ -137,8 +137,6 @@
     background: white;
   }
 
-  .item-picker {
-  }
 }
 </style>
 <script setup lang="ts">
