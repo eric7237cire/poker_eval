@@ -31,7 +31,7 @@ import { computed, ref } from 'vue';
 function initializePlayers(): Array<Player> {
   const players: Array<Player> = [];
 
-  for (let i = 0; i < 9; i++) {
+  for (let i = 0; i < 10; i++) {
     players.push({
       index: i,
       name: `Player ${i}`,

@@ -1,5 +1,11 @@
 <template>
   <div class="root">
+    <div class="street-toggles">
+      <Toggle v-model="resultsStore.streetVisible[0]" on-label="Flop" off-label="Flop" />
+      <Toggle v-model="resultsStore.streetVisible[1]" on-label="Turn" off-label="Turn" />
+      <Toggle v-model="resultsStore.streetVisible[2]" on-label="River" off-label="River" />
+    </div>
+
     <div class="flex flex-col w-full border-l border-gray-500 overflow-x-auto">
       <div ref="tableDiv" class="flex-grow overflow-y-scroll will-change-scroll">
         <table class="w-full h-full text-sm text-center align-middle">
@@ -33,10 +39,16 @@
             <!--3 rows per flop result -->
             <template v-for="item in results" :key="item.player_index">
               <template v-for="street_index in 3" :key="street_index">
-                <tr class="relative" style="height: calc(1.9rem + 1px)">
+                <tr
+                  class="relative"
+                  style="height: calc(1.9rem + 1px)"
+                  v-if="resultsStore.streetVisible[street_index - 1]"
+                >
                   <td>
                     <template v-if="item.player_index >= 0">
-                      {{playerStore.players[item.player_index].name || ('Player ' + item.player_index)}}
+                      {{
+                        playerStore.players[item.player_index].name || 'Player ' + item.player_index
+                      }}
                     </template>
                     <template v-else> Player >= 1 </template>
                   </td>
@@ -230,6 +242,8 @@ import Percentage from '@src/components/result/Percentage.vue';
 import PlayerPreflop from './result/PlayerPreflop.vue';
 import RangeEquityViewer from './result/RangeEquityViewer.vue';
 import { usePlayerStore } from '@src/stores/player';
+import { useResultsStore } from '@src/stores/results';
+import Toggle from '@vueform/toggle';
 
 const props = defineProps<{
   results: Array<ResultsInterface>;
@@ -257,6 +271,8 @@ const playerStore = usePlayerStore();
 
 const results = computed(() => props.results);
 
+const resultsStore = useResultsStore();
+
 function getStreetName(street_index: number) {
   switch (street_index) {
     case 1:
@@ -274,6 +290,15 @@ function getStreetName(street_index: number) {
 <style scoped>
 .root {
   background-color: rgb(20, 20, 20);
+
+  .street-toggles {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 10px;
+  }
 
   thead {
     color: green;
@@ -294,3 +319,5 @@ function getStreetName(street_index: number) {
   content: '';
 }
 </style>
+
+<style src="@vueform/toggle/themes/default.css"></style>

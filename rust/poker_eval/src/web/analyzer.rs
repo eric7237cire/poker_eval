@@ -27,7 +27,7 @@ pub struct flop_analyzer {
 }
 
 //hero is 0
-pub const MAX_PLAYERS: usize = 5;
+pub const MAX_PLAYERS: usize = 10;
 
 pub const MAX_RAND_NUMBER_ATTEMPS: usize = 1000;
 

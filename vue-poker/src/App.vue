@@ -35,8 +35,8 @@
     <!--Show 'players'-->
     <div class="players-container">
       <div class="players">
-        <div v-for="player in players" :key="player.id" :class="['player', player.class]">
-          <Player :playerId="player.id" />
+        <div v-for="player in playerStore.players" :key="player.index" class="player">
+          <Player :playerId="player.index" />
         </div>
       </div>
     </div>
@@ -103,7 +103,7 @@ import ResultTable from './components/ResultTable.vue';
 import { Ref, computed, defineComponent, onMounted, ref } from 'vue';
 import { useNavStore, CurrentPage } from './stores/navigation';
 import { init, handler } from './worker/global-worker';
-import { PlayerIds, PlayerState, usePlayerStore } from './stores/player';
+import { PlayerState, usePlayerStore } from './stores/player';
 import { useBoardStore } from './stores/board';
 import { useResultsStore } from './stores/results';
 import { useRangesStore } from './stores/ranges';
@@ -180,14 +180,6 @@ onMounted(() => {
 const userMessage = ref(
   'Welcome, to get started, choose the flop, optionally the turn and river.  Then either specify the exact hole cards or a range for the players you want to simulate'
 );
-
-const players = [
-  { id: 0, class: 'player0' },
-  { id: 1, class: 'player1' },
-  { id: 2, class: 'player2' },
-  { id: 3, class: 'player3' },
-  { id: 4, class: 'player4' }
-];
 
 const num_iterations = ref(0);
 const setTimeoutReturn: Ref<NodeJS.Timeout | null> = ref(null);

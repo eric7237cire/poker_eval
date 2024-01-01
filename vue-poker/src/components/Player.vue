@@ -53,10 +53,9 @@ div.title {
   align-items: center;
 
   .player-name {
-    
     font-size: 1rem;
     font-weight: bold;
-    text-align:center;
+    text-align: center;
     display: block;
 
     input {

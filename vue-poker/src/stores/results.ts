@@ -1,12 +1,17 @@
 import { defineStore } from 'pinia';
 import { ResultsInterface } from '@src/worker/result_types';
+import { ref } from 'vue';
+import { useLocalStorage } from '@vueuse/core';
 
-export const useResultsStore = defineStore('results', {
-  state: () => {
-    return {
-      results: [] as Array<ResultsInterface>
-    };
-  },
-  getters: {},
-  actions: {}
+export const useResultsStore = defineStore('results', () => {
+  const results = ref([] as Array<ResultsInterface>);
+
+  const streetVisible = useLocalStorage('streetVisible', () => {
+    return [true, true, true];
+  });
+
+  return {
+    results,
+    streetVisible
+  };
 });
