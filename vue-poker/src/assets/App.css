@@ -5,11 +5,10 @@
 }
 
 .board-selector-container {
-  display: grid;
-  grid-gap: 10;
-  grid-template-columns: repeat(8, minmax(75px, 90px));
-  /*display: block;*/
-  margin-left: 30px;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
 }
 
 .go-row-container {
