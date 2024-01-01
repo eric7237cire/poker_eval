@@ -73,7 +73,9 @@ function()s become actions*/
 
   const currentPlayer = ref(PLAYER_ID_HERO);
 
-  const players = useLocalStorage('playerData', initializePlayers());
+  const players = useLocalStorage('playerData', initializePlayers(), {
+    mergeDefaults: true
+  });
 
   const curPlayerData = computed(() => {
     return players.value[currentPlayer.value];

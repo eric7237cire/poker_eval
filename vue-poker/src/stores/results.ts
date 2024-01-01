@@ -8,6 +8,8 @@ export const useResultsStore = defineStore('results', () => {
 
   const streetVisible = useLocalStorage('streetVisible', () => {
     return [true, true, true];
+  }, {
+    mergeDefaults: true
   });
 
   return {

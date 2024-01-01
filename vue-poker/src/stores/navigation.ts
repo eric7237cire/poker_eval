@@ -10,7 +10,9 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
 export const useNavStore = defineStore('nav', () => {
-  const currentPage = useLocalStorage('pinia/current_page', CurrentPage.MAIN);
+  const currentPage = useLocalStorage('pinia/current_page', CurrentPage.MAIN, {
+    mergeDefaults: true
+  });
 
   const rangeEditorTryTopY = ref(0);
 

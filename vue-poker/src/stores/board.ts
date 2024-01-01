@@ -14,6 +14,8 @@ export const useBoardStore = defineStore('board', {
       board: useLocalStorage('boardText', {
         cardText: '',
         cards: [] as number[]
+      }, {
+        mergeDefaults: true
       })
     };
   },
