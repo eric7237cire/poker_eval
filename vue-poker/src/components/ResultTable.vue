@@ -328,4 +328,3 @@ function getStreetName(street_index: number) {
 }
 </style>
 
-<style src="@vueform/toggle/themes/default.css"></style>
