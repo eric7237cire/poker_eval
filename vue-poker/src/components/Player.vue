@@ -30,6 +30,13 @@ or select a range
       >
         Hole
       </button>
+      <button
+        @click="handleNarrowRange()"
+        v-if="playerData.state == PlayerState.USE_RANGE"
+        class="button-base button-green"
+      >
+        Narrow
+      </button>
     </div>
   </div>
   <RangeMiniViewer
@@ -107,6 +114,10 @@ import { PlayerState, usePlayerStore } from '../stores/player';
 import RangeMiniViewer from './RangeMiniViewer.vue';
 import BoardSelector from './BoardSelector.vue';
 import * as _ from 'lodash';
+import { handler } from '@src/worker/global-worker';
+import { useNarrowStore } from '@src/stores/narrow';
+import { useBoardStore } from '@src/stores/board';
+import { SELECTABLE_RANGES } from '@src/stores/ranges';
 
 const selectedRange = ref('');
 
@@ -118,42 +129,29 @@ const props = defineProps({
 });
 const navStore = useNavStore();
 const playerStore = usePlayerStore();
-
+const narrowStore = useNarrowStore();
+const boardStore = useBoardStore();
 const playerData = computed(() => playerStore.playerDataForId(props.playerId));
-
-const selectableRanges: Array<{ title: string; value: string }> = [
-  { title: '9max UTG-UTG+2', value: '77+,AJs+,AQo+,KQs,QJs,JTs' },
-  { title: '9max MP1-MP2', value: '55+,A6s+,ATo+,KTs+,KQo,Q9s+,J9s+'},
-  { title: '9max HJ-CO', value: '22+,A2s+,A8o+,K8s+,KTo+,Q6s+,QTo+,J7s+,JTo,T8s+,97s+,87s'},
-  { title: '9max Button', value: '22+,A2+,K4s+,K6o+,Q2s+,Q6o+,J4s+,J7o+,T6s+,T9o,95s+,98o,85s+,87o,75s+,76o,64s+'},
-  { title: '9max SB', value: '22+,A2+,K2+,Q2+,J2+,T2s+,T6o+,92s+,95o+,82s+,84o+,72s+,74o+,62s+,65o,53s+'},
-  { title: 'All', value: '22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32'},
-  //
-  {
-    title: 'Custom',
-    value: ''
-  }
-];
-
+const selectableRanges = SELECTABLE_RANGES;
 
 if (selectableRanges.find((r) => r.value == playerData.value.rangeStr)) {
-    
-      selectedRange.value = playerData.value.rangeStr;
-    }
+  selectedRange.value = playerData.value.rangeStr;
+}
 
 //Any updates to player range resets combo box
 watch(
   () => playerData.value.rangeStr,
   (newPlayerRangeString) => {
-    const check = playerData.value.range.filter(r => r>0).length;
-    console.log(`Player ${props.playerId} updated range to ${newPlayerRangeString}; check ${check}`);
+    const check = playerData.value.range.filter((r) => r > 0).length;
+    console.log(
+      `Player ${props.playerId} updated range to ${newPlayerRangeString}; check ${check}`
+    );
     if (!selectableRanges.find((r) => r.value == newPlayerRangeString)) {
-      selectedRange.value = "";
+      selectedRange.value = '';
       return;
     } else {
       selectedRange.value = newPlayerRangeString;
     }
-    
   }
 );
 
@@ -165,8 +163,6 @@ watch(selectedRange, (wSelRange) => {
   }
   playerStore.updateRangeStrForPlayer(props.playerId, wSelRange);
 });
-
-
 
 function handleRangeClick(event: MouseEvent) {
   console.log(`range clicked y ${event.clientY}`);
@@ -186,5 +182,22 @@ function formatNumber(num: number) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 1
   });
+}
+
+async function handleNarrowRange() {
+  if (!handler) {
+    console.log('handler not initialized');
+    return;
+  }
+  const boardCards = Uint8Array.from(boardStore.board.cards);
+  const response = await handler.narrowRange(
+    narrowStore.state.rangeToNarrow.rangeStr,
+    narrowStore.state.opponentRanges.map((r) => r.rangeStr),
+    narrowStore.state.minEquity,
+    boardCards,
+    narrowStore.state.numSimulations
+  );
+
+  playerStore.updateRangeStrForPlayer(props.playerId, response);
 }
 </script>

@@ -108,7 +108,7 @@ function()s become actions*/
     for (let i = 0; i < 13 * 13; ++i) {
       players.value[playerId].range[i] = weights[i] * 100;
     }
-    const check = players.value[playerId].range.filter(r => r>0).length;
+    const check = players.value[playerId].range.filter((r) => r > 0).length;
     console.log(`updateRangeStrForPlayer range check ${check}`);
   }
 

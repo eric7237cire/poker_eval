@@ -171,7 +171,6 @@ const rangeText = ref('');
 const rangeTextError = ref('');
 const rangeArray = reactive(new Array(13 * 13).fill(0));
 
-
 const percRange = ref(100);
 const numCombos = ref(0);
 
@@ -258,7 +257,7 @@ function onUpdate() {
     console.log('range is not ready');
     return;
   }
-  
+
   //rangeStoreRaw.set();
   rangeText.value = range.to_string();
   playerStore.updateRangeStr(rangeText.value);
@@ -302,13 +301,11 @@ function onRangeTextChange() {
 
   range.from_string(trimmed);
 
-  
-    const weights = range.get_weights();
-    for (let i = 0; i < 13 * 13; ++i) {
-      rangeArray[i] = weights[i] * 100;
-    }
-    onUpdate();
-  
+  const weights = range.get_weights();
+  for (let i = 0; i < 13 * 13; ++i) {
+    rangeArray[i] = weights[i] * 100;
+  }
+  onUpdate();
 }
 
 const dragStart = (row: number, col: number) => {
