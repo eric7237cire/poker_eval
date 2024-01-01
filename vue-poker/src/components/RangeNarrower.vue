@@ -22,7 +22,7 @@
           />
           <label :for="'from' + player.index.toString()">{{ player.name }}</label>
           <div class="range">
-            Range: {{ player.rangeStr.length }}
+            Range:
             {{ player.rangeStr }}
           </div>
         </li>

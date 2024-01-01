@@ -128,5 +128,14 @@ mod tests {
         let narrowed_range = narrow_range_by_equity(&to_narrow, &[hero_range, other_guy], 0.25, &board, 1);
 
         println!("Narrowed range:\n{}", narrowed_range.to_string());
+
+        // let board: Board = "Jh 6h 5d".parse().unwrap();
+        // let to_narrow : BoolRange = "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,95s+,96o+,85s+,87o,76s".parse().unwrap();
+        // let op1 : BoolRange = "22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32".parse().unwrap();
+        // let op2 : BoolRange = "22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32".parse().unwrap();
+
+        // let narrowed_range = narrow_range_by_equity(&to_narrow, &[op1, op2], 0.35, &board, 3_000);
+
+        // println!("Narrowed range:\n{}", narrowed_range.to_string());
     }
 }
