@@ -33,7 +33,7 @@ or select a range
     </div>
   </div>
   <RangeMiniViewer
-    :playerId="playerId"
+    :range="playerData.range"
     @click="handleRangeClick($event)"
     v-if="playerData.state == PlayerState.USE_RANGE"
   />

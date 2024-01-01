@@ -388,7 +388,6 @@ const handleDone = () => {
 };
 
 function positionEditor(y_coord: number) {
-  
   const editorHeight = 600;
 
   let top = y_coord - editorHeight / 2;

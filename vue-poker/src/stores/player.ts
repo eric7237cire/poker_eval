@@ -5,17 +5,20 @@ export enum PlayerState {
   USE_RANGE = 2
 }
 
-export interface Player {
-  index: number;
-  name: string;
-
-  state: PlayerState;
-  holeCards: CardList;
+export interface RangeInStore {
   rangeStr: string;
   percHands: number;
 
   //13 * 13 array with 0 to 100%
   range: Array<number>;
+}
+
+export interface Player extends RangeInStore {
+  index: number;
+  name: string;
+
+  state: PlayerState;
+  holeCards: CardList;
 }
 
 const PLAYER_ID_HERO = 0;
