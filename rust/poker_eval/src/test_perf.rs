@@ -3,6 +3,7 @@ use std::time::Instant;
 use poker_eval::{monte_carlo_equity::calc_equity, Board, BoolRange};
 use poker_eval::web::{PlayerPreFlopState, flop_analyzer};
 
+#[allow(dead_code)]
 fn main2() {
     let board: Board = "9d 8h 9c".parse().unwrap();
 

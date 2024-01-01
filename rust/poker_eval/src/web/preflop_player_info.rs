@@ -4,7 +4,7 @@ use rand::rngs::StdRng;
 use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::{
-    get_unused_card, web::MAX_RAND_NUMBER_ATTEMPS, Card, CardUsedType, HoleCards, InRangeType,
+    get_unused_card, web::MAX_RAND_NUMBER_ATTEMPS, CardUsedType, HoleCards, InRangeType,
     PokerError, ALL_CARDS,
 };
 
