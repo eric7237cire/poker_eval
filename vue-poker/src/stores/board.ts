@@ -11,12 +11,16 @@ export interface CardList {
 export const useBoardStore = defineStore('board', {
   state: () => {
     return {
-      board: useLocalStorage('boardText', {
-        cardText: '',
-        cards: [] as number[]
-      }, {
-        mergeDefaults: true
-      })
+      board: useLocalStorage(
+        'boardText',
+        {
+          cardText: '',
+          cards: [] as number[]
+        },
+        {
+          mergeDefaults: true
+        }
+      )
     };
   },
   getters: {

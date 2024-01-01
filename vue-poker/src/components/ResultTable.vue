@@ -1,9 +1,9 @@
 <template>
   <div class="root">
     <div class="street-toggles">
-      <v-switch v-model="resultsStore.streetVisible[0]" label="Flop"   />
-      <v-switch v-model="resultsStore.streetVisible[1]" label="Turn"  />
-      <v-switch v-model="resultsStore.streetVisible[2]" label="River"  />
+      <v-switch v-model="resultsStore.streetVisible[0]" label="Flop" />
+      <v-switch v-model="resultsStore.streetVisible[1]" label="Turn" />
+      <v-switch v-model="resultsStore.streetVisible[2]" label="River" />
     </div>
 
     <div class="flex flex-col w-full border-l border-gray-500 overflow-x-auto">
@@ -244,7 +244,6 @@ import RangeEquityViewer from './result/RangeEquityViewer.vue';
 import { usePlayerStore } from '@src/stores/player';
 import { useResultsStore } from '@src/stores/results';
 
-
 const props = defineProps<{
   results: Array<ResultsInterface>;
   equityOnly: boolean;
@@ -327,4 +326,3 @@ function getStreetName(street_index: number) {
   content: '';
 }
 </style>
-

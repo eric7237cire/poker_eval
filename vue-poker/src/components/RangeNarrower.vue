@@ -91,17 +91,16 @@
             v-model="copyResultTo"
           />
           <label :for="'resultTo' + player.index.toString()">{{ player.name }}</label>
-          
         </li>
       </ul>
     </div>
   </div>
-  
 </template>
 
 <style lang="postcss" scoped>
 .root {
   background-color: rgba(0, 0, 255, 0.05);
+  color: white;
   border-radius: 4px;
 
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
@@ -116,35 +115,37 @@
     grid-template-columns: 100px 1fr;
 
     .pane-one {
-        button {
-            margin: 5px;
-        }
+      button {
+        margin: 5px;
+      }
     }
 
     .pane-two {
-        input {
-            background-color: white;
-        }
-        .result {
-            max-width: 400px;
+      input {
+        background-color: white;
+      }
+      .result {
+        max-width: 400px;
 
-            .range {
-                text-wrap: wrap;
-                overflow: hidden;
-            }
+        .range {
+          text-wrap: wrap;
+          overflow: hidden;
         }
+      }
     }
   }
 
   .copy-from,
   .copy-to,
-  .range-to-narrow, .copy-results-to {
+  .range-to-narrow,
+  .copy-results-to {
     label {
       margin-left: 10px;
     }
   }
 
-  .copy-from, .copy-results-to {
+  .copy-from,
+  .copy-results-to {
     border: 1px solid blue;
     padding: 10px;
 
@@ -152,7 +153,6 @@
       display: inline;
     }
   }
-
 }
 </style>
 
@@ -253,19 +253,18 @@ async function handleCalculate() {
 }
 
 function handleCopyResult() {
-    if (!range) {
-        console.log('range not initialized');
-        return;
-    }
-    const resultPlayer = playerStore.players[copyResultTo.value];
-    
-    resultPlayer.rangeStr = narrowStore.state.result.rangeStr;
-    
-    range.from_string(resultPlayer.rangeStr);
-    const weights = range.get_weights();
-    for (let i = 0; i < 13 * 13; ++i) {
-      resultPlayer.range[i] = weights[i] * 100;
-    }
+  if (!range) {
+    console.log('range not initialized');
+    return;
+  }
+  const resultPlayer = playerStore.players[copyResultTo.value];
 
+  resultPlayer.rangeStr = narrowStore.state.result.rangeStr;
+
+  range.from_string(resultPlayer.rangeStr);
+  const weights = range.get_weights();
+  for (let i = 0; i < 13 * 13; ++i) {
+    resultPlayer.range[i] = weights[i] * 100;
+  }
 }
 </script>

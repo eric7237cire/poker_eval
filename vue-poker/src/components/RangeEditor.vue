@@ -95,8 +95,6 @@
               %
             </div>
 
-            
-
             <span class="inline-block ml-auto">
               {{ numCombos.toFixed(1) }} combos ({{
                 ((numCombos * 100) / ((52 * 51) / 2)).toFixed(1)
@@ -134,12 +132,12 @@
   z-index: 210;
   position: relative;
 
-  .range-text, .range-perc-input {
+  .range-text,
+  .range-perc-input {
     background: white;
   }
 
   .item-picker {
-    
   }
 }
 </style>
@@ -172,8 +170,8 @@ const navStore = useNavStore();
 const rangeText = ref('');
 const rangeTextError = ref('');
 const rangeArray = reactive(new Array(13 * 13).fill(0));
-let rangeArrayRaw = new Float32Array();
-const weight = ref(100);
+
+
 const percRange = ref(100);
 const numCombos = ref(0);
 
@@ -194,15 +192,18 @@ watch(
   }
 );
 
-watch(() => navStore.currentPage, (newValue, oldValue) => {
-  console.log(`Nav from ${oldValue} to ${newValue}`);
-  //const playerIndex = currentPlayer.value.valueOf();
-  const p = playerStore.curPlayerData;
-  console.log(`p is ${JSON.stringify(p)}`);
-  console.log(`range text is set to [ ${p.rangeStr} ]`);
-  rangeText.value = p.rangeStr;
-  onRangeTextChange();
-});
+watch(
+  () => navStore.currentPage,
+  (newValue, oldValue) => {
+    console.log(`Nav from ${oldValue} to ${newValue}`);
+    //const playerIndex = currentPlayer.value.valueOf();
+    const p = playerStore.curPlayerData;
+    console.log(`p is ${JSON.stringify(p)}`);
+    console.log(`range text is set to [ ${p.rangeStr} ]`);
+    rangeText.value = p.rangeStr;
+    onRangeTextChange();
+  }
+);
 
 watch(
   () => navStore.rangeEditorTryTopY,
@@ -257,25 +258,25 @@ function onUpdate() {
     console.log('range is not ready');
     return;
   }
-  const rawData = range.raw_data();
-  rangeArrayRaw = rawData;
+  
   //rangeStoreRaw.set();
   rangeText.value = range.to_string();
   playerStore.updateRangeStr(rangeText.value);
   rangeTextError.value = '';
+  const rawData = range.raw_data();
   numCombos.value = rawData.reduce((acc, cur) => acc + cur, 0);
 
   percRange.value = Math.round((numCombos.value / ((52 * 51) / 2)) * 100);
 }
 
-function update(row: number, col: number, weight: number) {
+function update(row: number, col: number, enabled: boolean) {
   if (!range) {
     console.log('range is not ready');
     return;
   }
   const idx = 13 * (row - 1) + col - 1;
-  range.update(row, col, weight / 100);
-  rangeArray[idx] = weight;
+  range.update(row, col, enabled);
+  rangeArray[idx] = enabled ? 100 : 0;
   onUpdate();
 }
 
@@ -299,28 +300,26 @@ function onRangeTextChange() {
     }
   }
 
-  const errorString = range.from_string(trimmed);
+  range.from_string(trimmed);
 
-  if (errorString) {
-    rangeTextError.value = errorString;
-  } else {
+  
     const weights = range.get_weights();
     for (let i = 0; i < 13 * 13; ++i) {
       rangeArray[i] = weights[i] * 100;
     }
     onUpdate();
-  }
+  
 }
 
 const dragStart = (row: number, col: number) => {
   const idx = 13 * (row - 1) + col - 1;
 
-  if (rangeArray[idx] !== weight.value) {
+  if (rangeArray[idx] <= 0) {
     draggingMode = 'enabling';
-    update(row, col, weight.value);
+    update(row, col, true);
   } else {
     draggingMode = 'disabling';
-    update(row, col, 0);
+    update(row, col, false);
   }
 };
 
@@ -330,9 +329,9 @@ const dragEnd = () => {
 
 const mouseEnter = (row: number, col: number) => {
   if (draggingMode === 'enabling') {
-    update(row, col, weight.value);
+    update(row, col, true);
   } else if (draggingMode === 'disabling') {
-    update(row, col, 0);
+    update(row, col, false);
   }
 };
 
@@ -363,10 +362,8 @@ const clearRange = () => {
 
   range.clear();
   rangeArray.fill(0);
-  rangeArrayRaw.fill(0);
   rangeText.value = '';
   rangeTextError.value = '';
-  weight.value = 100;
   numCombos.value = 0;
   percRange.value = 0;
   playerStore.updateRangeStr('');

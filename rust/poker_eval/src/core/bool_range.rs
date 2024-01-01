@@ -105,6 +105,36 @@ impl BoolRange {
         result
     }
 
+    pub fn set_enabled_pair(&mut self, rank: CardValue, enabled: bool) {
+        self.set_enabled(&pair_indices(rank), enabled)
+    }
+    pub fn set_enabled_suited(&mut self, rank1: CardValue, rank2: CardValue, enabled: bool) {
+        self.set_enabled(&suited_indices(rank1, rank2), enabled)
+    }
+    pub fn set_enabled_offsuit(&mut self, rank1: CardValue, rank2: CardValue, enabled: bool) {
+        self.set_enabled(&offsuit_indices(rank1, rank2), enabled)
+    }
+    pub fn get_weight_pair(&self, rank: CardValue) -> f32 {
+        self.get_weight(&pair_indices(rank))
+    }
+    pub fn get_weight_suited(&self, rank1: CardValue, rank2: CardValue) -> f32 {
+        self.get_weight(&suited_indices(rank1, rank2))
+    }
+    pub fn get_weight_offsuit(&self, rank1: CardValue, rank2: CardValue) -> f32 {
+        self.get_weight(&offsuit_indices(rank1, rank2))
+    }
+
+    fn get_weight(&self, indices: &[usize]) -> f32 {
+        let mut result = 0.0;
+        for &i in indices {
+            if self.data[i] {
+                result += 1.0;
+            }
+        }
+        result / indices.len() as f32
+    }
+
+
     #[inline]
     fn update_with_singleton(&mut self, combo: &str, enabled: bool) -> Result<(), PokerError> {
         let (rank1, rank2, suitedness) = parse_singleton(combo)?;
