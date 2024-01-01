@@ -62,7 +62,7 @@
         </div>
         <div class="num-simul">
           Number of simulations
-          <input type="number" v-model="narrowStore.state.numOpponents" />
+          <input type="number" v-model="narrowStore.state.numSimulations" />
         </div>
         <div class="min-equity">
           Minimum equity
@@ -122,6 +122,9 @@
     }
 
     .pane-two {
+        input {
+            background-color: white;
+        }
         .result {
             max-width: 400px;
 
