@@ -24,6 +24,8 @@
 <style lang="postcss" scoped>
 table {
   width: 150px;
+  z-index: 0;
+  position: relative;
 }
 </style>
 <script lang="ts">

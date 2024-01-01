@@ -34,7 +34,7 @@ or select a range
   </div>
   <RangeMiniViewer
     :playerId="playerId"
-    @click="handleRangeClick()"
+    @click="handleRangeClick($event)"
     v-if="playerData.state == PlayerState.USE_RANGE"
   />
   <div v-if="playerData.state == PlayerState.USE_RANGE" class="text-center">
@@ -104,10 +104,12 @@ const playerStore = usePlayerStore();
 
 const playerData = computed(() => playerStore.playerDataForId(props.playerId));
 
-function handleRangeClick() {
-  console.log('range clicked');
-  navStore.setCurrentPage(CurrentPage.RANGE_EDITOR);
-  playerStore.setCurrentPlayer(props.playerId);
+function handleRangeClick(event: MouseEvent) {
+  console.log(`range clicked y ${event.clientY}`);
+  navStore.currentPage = CurrentPage.RANGE_EDITOR;
+  playerStore.currentPlayer = props.playerId;
+
+  navStore.rangeEditorTryTopY = event.clientY;
 }
 
 function handleChangeState(state: PlayerState) {

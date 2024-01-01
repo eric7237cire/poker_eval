@@ -1,97 +1,101 @@
 <template>
-  <div class="flex mt-1">
-    <div class="shrink-0 ml-1">
-      <table class="shadow-md select-none snug" @mouseleave="dragEnd">
-        <tr v-for="row in 13" :key="row" class="h-9">
-          <td
-            v-for="col in 13"
-            :key="col"
-            class="relative w-[2.625rem] border border-black"
-            @mousedown="dragStart(row, col)"
-            @mouseup="dragEnd"
-            @mouseenter="mouseEnter(row, col)"
-          >
-            <div
-              :class="
-                'absolute w-full h-full left-0 top-0 ' +
-                (row === col ? 'bg-neutral-700' : 'bg-neutral-800')
-              "
-            >
-              <div
-                class="absolute w-full h-full left-0 top-0 bg-bottom bg-no-repeat"
-                :style="{
-                  'background-image': `linear-gradient(${yellow500} 0% 100%)`,
-                  'background-size': `100% ${cellValue(row, col)}%`
-                }"
-              ></div>
+  <div>
+    <div id="overlay"></div>
+    <div class="root mt-1" :style="rootStyle">
+      <div>Editing player # {{ currentPlayerComputed }}</div>
+      <div class="flex">
+        <div class="shrink-0 ml-1">
+          <table class="shadow-md select-none snug" @mouseleave="dragEnd">
+            <tr v-for="row in 13" :key="row" class="h-9">
+              <td
+                v-for="col in 13"
+                :key="col"
+                class="relative w-[2.625rem] border border-black"
+                @mousedown="dragStart(row, col)"
+                @mouseup="dragEnd"
+                @mouseenter="mouseEnter(row, col)"
+              >
+                <div
+                  :class="
+                    'absolute w-full h-full left-0 top-0 ' +
+                    (row === col ? 'bg-neutral-700' : 'bg-neutral-800')
+                  "
+                >
+                  <div
+                    class="absolute w-full h-full left-0 top-0 bg-bottom bg-no-repeat"
+                    :style="{
+                      'background-image': `linear-gradient(${yellow500} 0% 100%)`,
+                      'background-size': `100% ${cellValue(row, col)}%`
+                    }"
+                  ></div>
+                </div>
+                <div
+                  :class="
+                    'absolute -top-px left-[0.1875rem] z-10 text-shadow ' +
+                    (cellValue(row, col) > 0 ? 'text-white' : 'text-neutral-500')
+                  "
+                >
+                  {{ cellText(row, col) }}
+                </div>
+                <div class="absolute bottom-px right-1 z-10 text-sm text-shadow text-white">
+                  {{
+                    cellValue(row, col) > 0 && cellValue(row, col) < 100
+                      ? cellValue(row, col).toFixed(1)
+                      : ''
+                  }}
+                </div>
+              </td>
+            </tr>
+          </table>
+
+          <div class="mt-5">
+            <div class="flex">
+              <input
+                v-model="rangeText"
+                type="text"
+                :class="
+                  'flex-grow mr-6 px-2 py-1 rounded-lg text-sm text-black ' +
+                  (rangeTextError ? 'input-error' : '')
+                "
+                @focus="($event.target as HTMLInputElement).select()"
+                @change="onRangeTextChange"
+              />
+
+              <button class="button-base button-blue" @click="clearRange">Clear</button>
+              <button class="ml-3 button-base button-blue" @click="handleDone">Done</button>
             </div>
-            <div
-              :class="
-                'absolute -top-px left-[0.1875rem] z-10 text-shadow ' +
-                (cellValue(row, col) > 0 ? 'text-white' : 'text-neutral-500')
-              "
-            >
-              {{ cellText(row, col) }}
+
+            <div v-if="rangeTextError" class="mt-1 text-red-500">Error: {{ rangeTextError }}</div>
+          </div>
+
+          <div class="flex mt-3.5 items-center">
+            <div>
+              Range
+              <input
+                v-model="percRange"
+                type="range"
+                class="ml-3 w-40 align-middle"
+                min="0"
+                max="100"
+                step="1"
+                @change="onPercRangeChange"
+              />
+              <input
+                v-model="percRange"
+                type="number"
+                :class="
+                  'w-20 ml-4 px-2 py-1 rounded-lg text-sm text-center text-black' +
+                  (percRange < 0 || percRange > 100 ? 'input-error' : '')
+                "
+                min="0"
+                max="100"
+                step="5"
+                @change="onPercRangeChange"
+              />
+              %
             </div>
-            <div class="absolute bottom-px right-1 z-10 text-sm text-shadow text-white">
-              {{
-                cellValue(row, col) > 0 && cellValue(row, col) < 100
-                  ? cellValue(row, col).toFixed(1)
-                  : ''
-              }}
-            </div>
-          </td>
-        </tr>
-      </table>
 
-      <div class="mt-5">
-        <div class="flex">
-          <input
-            v-model="rangeText"
-            type="text"
-            :class="
-              'flex-grow mr-6 px-2 py-1 rounded-lg text-sm text-black ' +
-              (rangeTextError ? 'input-error' : '')
-            "
-            @focus="($event.target as HTMLInputElement).select()"
-            @change="onRangeTextChange"
-          />
-
-          <button class="button-base button-blue" @click="clearRange">Clear</button>
-          <button class="ml-3 button-base button-blue" @click="handleDone">Done</button>
-        </div>
-
-        <div v-if="rangeTextError" class="mt-1 text-red-500">Error: {{ rangeTextError }}</div>
-      </div>
-
-      <div class="flex mt-3.5 items-center">
-        <div>
-          Range
-          <input
-            v-model="percRange"
-            type="range"
-            class="ml-3 w-40 align-middle"
-            min="0"
-            max="100"
-            step="1"
-            @change="onPercRangeChange"
-          />
-          <input
-            v-model="percRange"
-            type="number"
-            :class="
-              'w-20 ml-4 px-2 py-1 rounded-lg text-sm text-center text-black' +
-              (percRange < 0 || percRange > 100 ? 'input-error' : '')
-            "
-            min="0"
-            max="100"
-            step="5"
-            @change="onPercRangeChange"
-          />
-          %
-        </div>
-
-        <!-- <div>
+            <!-- <div>
           Weight:
           <input
             v-model="weight"
@@ -117,25 +121,44 @@
           %
         </div> -->
 
-        <span class="inline-block ml-auto">
-          {{ numCombos.toFixed(1) }} combos ({{
-            ((numCombos * 100) / ((52 * 51) / 2)).toFixed(1)
-          }}%)
-        </span>
-      </div>
-    </div>
+            <span class="inline-block ml-auto">
+              {{ numCombos.toFixed(1) }} combos ({{
+                ((numCombos * 100) / ((52 * 51) / 2)).toFixed(1)
+              }}%)
+            </span>
+          </div>
+        </div>
 
-    <div class="flex-grow max-w-[18rem] ml-6">
-      <DbItemPicker
-        store-name="ranges"
-        :value="rangeText"
-        :allow-save="rangeText !== '' && rangeTextError === ''"
-        @load-item="loadRange"
-      />
+        <div class="flex-grow max-w-[18rem] ml-6">
+          <DbItemPicker
+            store-name="ranges"
+            :value="rangeText"
+            :allow-save="rangeText !== '' && rangeTextError === ''"
+            @load-item="loadRange"
+          />
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
+<style lang="postcss" scoped>
+#overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 200;
+
+  background-color: rgba(0, 0, 0, 0.98);
+}
+.root {
+  margin-left: 10px;
+  z-index: 210;
+  position: relative;
+}
+</style>
 <script setup lang="ts">
 import { computed, defineComponent, reactive, ref, watch } from 'vue';
 //import { useConfigStore } from "../store";
@@ -170,28 +193,36 @@ const weight = ref(100);
 const percRange = ref(100);
 const numCombos = ref(0);
 
+const rootStyle = ref({});
+
 const rangeStore = useRangesStore();
-//const { currentPlayer } = storeToRefs(playerStore);
 
-//update when player changes
-//tried to replace with comptude but didn't work...
-// watch(currentPlayer, (newValue, oldValue) => {
-//   console.log(`The re cp changed from ${oldValue} to ${newValue}`);
-//   //const playerIndex = currentPlayer.value.valueOf();
-//   const p = playerStore.curPlayerData;
-//   console.log(`p is ${JSON.stringify(p)}`);
-//   console.log(`range text is set to [ ${p.rangeStr} ]`);
-//   rangeText.value = p.rangeStr;
-//   onRangeTextChange();
-// });
+watch(
+  () => playerStore.currentPlayer,
+  (newValue, oldValue) => {
+    console.log(`The re cp changed from ${oldValue} to ${newValue}`);
+    //const playerIndex = currentPlayer.value.valueOf();
+    const p = playerStore.curPlayerData;
+    console.log(`p is ${JSON.stringify(p)}`);
+    console.log(`range text is set to [ ${p.rangeStr} ]`);
+    rangeText.value = p.rangeStr;
+    onRangeTextChange();
+  }
+);
 
-//  const currentPlayerComputed = computed(() => {
-//   rangeText.value = playerStore.curPlayerData.rangeStr;
-//   console.log(`range text is set to [ ${rangeText.value} ]`);
-//   onRangeTextChange();
+watch(
+  () => navStore.rangeEditorTryTopY,
+  (newValue, oldValue) => {
+    console.log(`The re top changed from ${oldValue} to ${newValue}`);
+    positionEditor(newValue);
+  }
+);
 
-//   return playerStore.currentPlayer;
-// });
+const currentPlayerComputed = computed(() => {
+  let cp = playerStore.currentPlayer;
+  console.log(`Current player is now ${cp}`);
+  return cp;
+});
 
 let draggingMode: DraggingMode = 'none';
 
@@ -311,10 +342,6 @@ const mouseEnter = (row: number, col: number) => {
   }
 };
 
-const onWeightChange = () => {
-  weight.value = Math.round(Math.max(0, Math.min(100, weight.value)));
-};
-
 function onPercRangeChange() {
   percRange.value = Math.round(Math.max(0, Math.min(100, percRange.value)));
 
@@ -359,4 +386,24 @@ const loadRange = (rangeStr: unknown) => {
 const handleDone = () => {
   navStore.currentPage = CurrentPage.MAIN;
 };
+
+function positionEditor(y_coord: number) {
+  
+  const editorHeight = 600;
+
+  let top = y_coord - editorHeight / 2;
+
+  if (top < 0) {
+    top = 0;
+  }
+  if (top + editorHeight > window.innerHeight) {
+    top -= top + editorHeight - window.innerHeight;
+  }
+
+  rootStyle.value = {
+    position: 'fixed',
+    left: `0px`,
+    top: `${top}px`
+  };
+}
 </script>
