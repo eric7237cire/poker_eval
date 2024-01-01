@@ -22,7 +22,7 @@
     </div>
   </div>
 
-  <div class="ml-10">
+  <div class="">
     <div class="board-selector-container" style="height: calc(100% - 2rem)">
       <BoardSelector class="child" v-model="boardStore.board" :expected_length="3" />
     </div>
@@ -40,6 +40,9 @@
         </div>
       </div>
     </div>
+
+    <!--Range Narrower-->
+    <RangeNarrower />
 
     <div class="footer-container">
       <Suspense>
@@ -65,6 +68,7 @@
 
 .results-table-container {
   width: 100vw;
+  box-sizing: border-box;
 }
 
 .fade-in {
@@ -107,6 +111,7 @@ import { PlayerState, usePlayerStore } from './stores/player';
 import { useBoardStore } from './stores/board';
 import { useResultsStore } from './stores/results';
 import { useRangesStore } from './stores/ranges';
+import RangeNarrower from './components/RangeNarrower.vue';
 import { useCssVar } from '@vueuse/core';
 import Footer from './components/Footer.vue';
 import { loadCardsFromUrl } from './utils';
