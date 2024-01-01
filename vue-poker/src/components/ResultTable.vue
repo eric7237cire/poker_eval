@@ -303,7 +303,7 @@ function getStreetName(street_index: number) {
       max-width: 100px;
     }
 
-    ::v-deep label {
+    :deep(label) {
       color: white;
     }
   }
