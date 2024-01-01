@@ -10,7 +10,16 @@
         <li>5. See result</li>
       </ol>
     </div> -->
-
+    <div class="min-equity">
+      Minimum equity
+      <v-slider
+        v-model="narrowStore.state.minEquity"
+        :min="0"
+        :max="1"
+        :step="0.01"
+        thumb-label="always"
+      ></v-slider>
+    </div>
     <div class="num-opponents">      
       <v-text-field type="number" label="Number of opponents" v-model.number="narrowStore.state.numOpponents"></v-text-field>
     </div>
@@ -33,16 +42,7 @@
     <div class="num-simul">
       <v-text-field type="number" label="Number of simulations" v-model.number="narrowStore.state.numSimulations"></v-text-field>
     </div>
-    <div class="min-equity">
-      Minimum equity
-      <v-slider
-        v-model="narrowStore.state.minEquity"
-        :min="0"
-        :max="1"
-        :step="0.01"
-        thumb-label="always"
-      ></v-slider>
-    </div>
+    
   </div>
 </template>
 

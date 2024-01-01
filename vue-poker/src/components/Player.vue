@@ -191,7 +191,7 @@ async function handleNarrowRange() {
   }
   const boardCards = Uint8Array.from(boardStore.board.cards);
   const response = await handler.narrowRange(
-    narrowStore.state.rangeToNarrow.rangeStr,
+    playerStore.players[props.playerId].rangeStr,
     narrowStore.state.opponentRanges.map((r) => r.rangeStr),
     narrowStore.state.minEquity,
     boardCards,

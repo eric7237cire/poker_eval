@@ -43,10 +43,10 @@ impl RangeManager {
     }
 
     pub fn from_string(&mut self, s: &str) -> Result<(), PokerError> {
-        info!("from_string: {}", s);
+        //info!("from_string: {}", s);
         let result: BoolRange = s.parse()?;
         self.range = result;
-            Ok(())
+        Ok(())
     }
 
     pub fn to_string(&self) -> String {
