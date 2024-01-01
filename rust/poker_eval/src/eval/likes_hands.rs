@@ -290,7 +290,7 @@ mod test {
     }
 
     #[test]
-    #[allow(dead_code)]
+    #[cfg(not(target_arch = "wasm32"))]
     fn test_likes_hand() {
         /*
         cargo test test_likes_hand --release -- --nocapture
