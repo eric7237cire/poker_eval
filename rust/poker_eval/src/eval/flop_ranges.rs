@@ -125,7 +125,7 @@ mod tests {
         let other_guy: BoolRange = "22+,A2+,K2+,Q2s+,Q3o+,J3s+,J6o+,T5s+,T7o+,97s+,98o,87s".parse().unwrap();
         let to_narrow: BoolRange = "22+,A2+,K2+,Q2+,J2+,T2s+,T3o+,92s+,95o+,84s+,86o+,74s+,76o,65s".parse().unwrap();
     
-        let narrowed_range = narrow_range_by_equity(&to_narrow, &[hero_range, other_guy], 0.25, &board, 10_000);
+        let narrowed_range = narrow_range_by_equity(&to_narrow, &[hero_range, other_guy], 0.25, &board, 1);
 
         println!("Narrowed range:\n{}", narrowed_range.to_string());
     }
