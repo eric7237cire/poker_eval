@@ -52,13 +52,13 @@ function initializePlayers(): Array<Player> {
 }
 
 //private local to update some stats
-let range: RangeManager | null = null;
+let range = ref(null as RangeManager | null );
 
 async function initRangeManager() {
   let mod = await import('@pkg/range');
   await mod.default();
 
-  range = RangeManager.new();
+  range.value = RangeManager.new();
 }
 
 initRangeManager().then(() => {
@@ -92,19 +92,20 @@ function()s become actions*/
     updateRangeStrForPlayer(currentPlayer.value, newRangeStr);
   }
   function updateRangeStrForPlayer(playerId: number, newRangeStr: string) {
-    if (range == null) {
+    
+    if (range.value == null) {
       console.log('Range not initialized yet');
       return;
     }
-    console.log('updateRangeStrForPlayer', playerId, newRangeStr);
+    //console.log('updateRangeStrForPlayer', playerId, newRangeStr);
     players.value[playerId].rangeStr = newRangeStr;
 
     //update stats
-    range.from_string(newRangeStr);
-    const rawData = range.raw_data();
+    range.value.from_string(newRangeStr);
+    const rawData = range.value.raw_data();
     const numCombos = rawData.reduce((acc, cur) => acc + cur, 0);
     players.value[playerId].percHands = numCombos / ((52 * 51) / 2);
-    const weights = range.get_weights();
+    const weights = range.value.get_weights();
     for (let i = 0; i < 13 * 13; ++i) {
       players.value[playerId].range[i] = weights[i] * 100;
     }
@@ -119,7 +120,9 @@ function()s become actions*/
     playerDataForId,
     updateRangeStr,
     updateRangeStrForPlayer,
-    curPlayerData
+    curPlayerData,
+    //wsm object
+    range
   };
 });
 

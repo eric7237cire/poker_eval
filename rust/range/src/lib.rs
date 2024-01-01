@@ -1,5 +1,5 @@
 extern crate wasm_bindgen;
-use poker_eval::{BoolRange, PokerError, CardValue, pre_calc::{NUMBER_OF_CARDS, NUMBER_OF_HOLE_CARDS}};
+use poker_eval::{BoolRange, PokerError, CardValue, pre_calc::NUMBER_OF_HOLE_CARDS};
 //use postflop_solver::*;
 use std::cmp::Ordering;
 use wasm_bindgen::prelude::*;

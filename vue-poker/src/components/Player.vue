@@ -142,10 +142,10 @@ if (selectableRanges.find((r) => r.value == playerData.value.rangeStr)) {
 watch(
   () => playerData.value.rangeStr,
   (newPlayerRangeString) => {
-    const check = playerData.value.range.filter((r) => r > 0).length;
-    console.log(
-      `Player ${props.playerId} updated range to ${newPlayerRangeString}; check ${check}`
-    );
+    // const check = playerData.value.range.filter((r) => r > 0).length;
+    // console.log(
+    //   `Player ${props.playerId} updated range to ${newPlayerRangeString}; check ${check}`
+    // );
     if (!selectableRanges.find((r) => r.value == newPlayerRangeString)) {
       selectedRange.value = '';
       return;

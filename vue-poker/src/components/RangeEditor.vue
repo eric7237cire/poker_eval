@@ -178,27 +178,31 @@ const rootStyle = ref({});
 
 const rangeStore = useRangesStore();
 
+//Player store now does range string => weights; may not need these anymore
+
+//If current player changes, update the range text & reparse
 watch(
   () => playerStore.currentPlayer,
   (newValue, oldValue) => {
     console.log(`The re cp changed from ${oldValue} to ${newValue}`);
     //const playerIndex = currentPlayer.value.valueOf();
     const p = playerStore.curPlayerData;
-    console.log(`p is ${JSON.stringify(p)}`);
-    console.log(`range text is set to [ ${p.rangeStr} ]`);
+    // console.log(`p is ${JSON.stringify(p)}`);
+    // console.log(`range text is set to [ ${p.rangeStr} ]`);
     rangeText.value = p.rangeStr;
     onRangeTextChange();
   }
 );
 
+//If range editor activated, reparse range text
 watch(
   () => navStore.currentPage,
   (newValue, oldValue) => {
     console.log(`Nav from ${oldValue} to ${newValue}`);
     //const playerIndex = currentPlayer.value.valueOf();
     const p = playerStore.curPlayerData;
-    console.log(`p is ${JSON.stringify(p)}`);
-    console.log(`range text is set to [ ${p.rangeStr} ]`);
+    // console.log(`p is ${JSON.stringify(p)}`);
+    // console.log(`range text is set to [ ${p.rangeStr} ]`);
     rangeText.value = p.rangeStr;
     onRangeTextChange();
   }
@@ -222,21 +226,9 @@ let draggingMode: DraggingMode = 'none';
 
 //private local to update some stats
 
-//web assembly reference
-let range: RangeManager | null = null;
 
-initRangeManager().then(() => {
-  console.log('Range initialized');
-});
 
 //below are functions only
-
-async function initRangeManager() {
-  let mod = await import('@pkg/range');
-  await mod.default();
-
-  range = RangeManager.new();
-}
 
 const cellText = (row: number, col: number) => {
   const r1 = 13 - Math.min(row, col);
@@ -253,6 +245,7 @@ const cellValue = (row: number, col: number) => {
 };
 
 function onUpdate() {
+  const range = playerStore.range;
   if (!range) {
     console.log('range is not ready');
     return;
@@ -269,6 +262,7 @@ function onUpdate() {
 }
 
 function update(row: number, col: number, enabled: boolean) {
+  const range = playerStore.range;
   if (!range) {
     console.log('range is not ready');
     return;
@@ -280,6 +274,7 @@ function update(row: number, col: number, enabled: boolean) {
 }
 
 function onRangeTextChange() {
+  const range = playerStore.range;
   if (!range) {
     console.log('range is not ready');
     return;
@@ -352,6 +347,7 @@ function onPercRangeChange() {
 }
 
 const clearRange = () => {
+  const range = playerStore.range;
   if (!range) {
     console.log('range is not ready');
     return;
