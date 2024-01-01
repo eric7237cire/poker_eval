@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@heroicons/vue": "^2.0.18",
-    "@vueform/toggle": "^2.1.4",
+    
     "@vueuse/core": "^10.7.0",
     "comlink": "^4.4.1",
     "dexie": "^3.2.4",
