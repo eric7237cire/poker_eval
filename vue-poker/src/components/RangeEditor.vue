@@ -54,7 +54,7 @@
                 v-model="rangeText"
                 type="text"
                 :class="
-                  'flex-grow mr-6 px-2 py-1 rounded-lg text-sm text-black ' +
+                  'range-text flex-grow mr-6 px-2 py-1 rounded-lg text-sm text-black ' +
                   (rangeTextError ? 'input-error' : '')
                 "
                 @focus="($event.target as HTMLInputElement).select()"
@@ -84,7 +84,7 @@
                 v-model="percRange"
                 type="number"
                 :class="
-                  'w-20 ml-4 px-2 py-1 rounded-lg text-sm text-center text-black' +
+                  'range-perc-input w-20 ml-4 px-2 py-1 rounded-lg text-sm text-center text-black' +
                   (percRange < 0 || percRange > 100 ? 'input-error' : '')
                 "
                 min="0"
@@ -95,31 +95,7 @@
               %
             </div>
 
-            <!-- <div>
-          Weight:
-          <input
-            v-model="weight"
-            type="range"
-            class="ml-3 w-40 align-middle"
-            min="0"
-            max="100"
-            step="5"
-            @change="onWeightChange"
-          />
-          <input
-            v-model="weight"
-            type="number"
-            :class="
-              'w-20 ml-4 px-2 py-1 rounded-lg text-sm text-center text-black' +
-              (weight < 0 || weight > 100 ? 'input-error' : '')
-            "
-            min="0"
-            max="100"
-            step="5"
-            @change="onWeightChange"
-          />
-          %
-        </div> -->
+            
 
             <span class="inline-block ml-auto">
               {{ numCombos.toFixed(1) }} combos ({{
@@ -129,7 +105,7 @@
           </div>
         </div>
 
-        <div class="flex-grow max-w-[18rem] ml-6">
+        <div class="flex-grow max-w-[18rem] ml-6 item-picker">
           <DbItemPicker
             store-name="ranges"
             :value="rangeText"
@@ -157,6 +133,14 @@
   margin-left: 10px;
   z-index: 210;
   position: relative;
+
+  .range-text, .range-perc-input {
+    background: white;
+  }
+
+  .item-picker {
+    
+  }
 }
 </style>
 <script setup lang="ts">
@@ -209,6 +193,16 @@ watch(
     onRangeTextChange();
   }
 );
+
+watch(() => navStore.currentPage, (newValue, oldValue) => {
+  console.log(`Nav from ${oldValue} to ${newValue}`);
+  //const playerIndex = currentPlayer.value.valueOf();
+  const p = playerStore.curPlayerData;
+  console.log(`p is ${JSON.stringify(p)}`);
+  console.log(`range text is set to [ ${p.rangeStr} ]`);
+  rangeText.value = p.rangeStr;
+  onRangeTextChange();
+});
 
 watch(
   () => navStore.rangeEditorTryTopY,

@@ -1,10 +1,11 @@
+use crate::flop_ranges::narrow_range_by_equity;
 use crate::pre_calc::perfect_hash::load_boomperfect_hash;
 use crate::web::player_results::PlayerFlopResults;
 use crate::web::{
     eval_current, eval_current_draws, get_all_player_hole_cards, FlopSimulationResults,
     PlayerPreFlopState, PreflopPlayerInfo,
 };
-use crate::{add_eval_card, get_unused_card, set_used_card, BoolRange, HoleCards, PokerError};
+use crate::{add_eval_card, get_unused_card, set_used_card, BoolRange, HoleCards, PokerError, Board, ALL_CARDS};
 use boomphf::Mphf;
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
@@ -435,5 +436,44 @@ impl flop_analyzer {
         }
 
         Ok(num_chosen)
+    }
+
+    pub fn narrow_range(&self,
+        str_range_to_narrow: &str,
+        //seperated by ;
+        str_opponent_ranges: &str,
+        min_equity: f64,
+        cards: &[u8],
+        //This is per hole card
+        num_simulations: usize,
+    ) -> Result<String, PokerError> {
+        info!("Starting narrow range {} simulations per hole card, min equity {:.2}", num_simulations, min_equity);
+
+        let range_to_narrow : BoolRange = str_range_to_narrow.parse()?;
+        info!("range_to_narrow {} hands", range_to_narrow.data.count_ones());
+
+        let mut opponent_ranges = Vec::with_capacity(str_opponent_ranges.len());
+        for r in str_opponent_ranges.split(';') {
+            opponent_ranges.push(r.parse()?);
+        }
+        info!("opponent_ranges.len() {}", opponent_ranges.len());
+
+        let mut board = Board::new();
+        for c in cards.iter() {
+            board.add_card(ALL_CARDS[*c as usize])?;
+        }
+        info!("board {}", board.to_string());
+
+        let narrowed_range = narrow_range_by_equity(
+            &range_to_narrow,
+            &opponent_ranges,
+            min_equity,
+            &board,
+            num_simulations,
+        );
+
+        info!("narrowed range {} hands", narrowed_range.data.count_ones());
+
+        Ok(narrowed_range.to_string())
     }
 }

@@ -148,6 +148,7 @@ pub fn calc_equity(
     let possible_hole_cards: Vec<(usize, Vec<HoleCards>)> = {
         let mut pv = ranges
         .iter().enumerate()
+        //These are irrespective of used cards, we try later on which hole cards are still valid
         .map(|(player_index, r)| (player_index, r.get_all_enabled_holecards()))
         .collect_vec();
 
@@ -184,6 +185,8 @@ pub fn calc_equity(
             //     p,
             //     possible_hole_cards[p].len()
             // );
+
+            //This takes into account the used cards
             player_hole_cards[*player_index] = deck
                 .choose_available_in_range(player_possible_hold_cards)?;
         }

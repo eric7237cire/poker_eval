@@ -20,13 +20,11 @@ pub mod board_eval_cache_redb;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod board_hc_eval_cache_redb;
 
-#[cfg(not(target_arch = "wasm32"))]
-mod flop_ranges;
+pub mod flop_ranges;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod likes_hands;
 
-#[cfg(not(target_arch = "wasm32"))]
 pub mod monte_carlo_equity;
 
 #[allow(dead_code)]

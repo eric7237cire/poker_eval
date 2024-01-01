@@ -31,6 +31,8 @@
     <div class="two-pane">
       <div class="pane-one">
         <button class="button-base button-blue" @click="handleCopyRange()">Copy</button>
+        <button class="button-base button-red" @click="handleCalculate()">Calculate</button>
+        <button class="button-base button-blue" @click="handleCopyResult()">Copy Result</button>
       </div>
       <div class="pane-two">
         <div class="range-to-narrow">
@@ -72,9 +74,29 @@
             thumb-label
           ></v-slider>
         </div>
+        <div class="result">
+          Result:
+          <div class="range">{{ narrowStore.state.result.rangeStr }}</div>
+        </div>
       </div>
     </div>
+    <div class="copy-results-to">
+      Copy Results To:
+      <ul>
+        <li v-for="player in playerStore.players">
+          <input
+            type="radio"
+            :id="'resultTo' + player.index.toString()"
+            :value="player.index"
+            v-model="copyResultTo"
+          />
+          <label :for="'resultTo' + player.index.toString()">{{ player.name }}</label>
+          
+        </li>
+      </ul>
+    </div>
   </div>
+  
 </template>
 
 <style lang="postcss" scoped>
@@ -92,17 +114,34 @@
   .two-pane {
     display: grid;
     grid-template-columns: 100px 1fr;
+
+    .pane-one {
+        button {
+            margin: 5px;
+        }
+    }
+
+    .pane-two {
+        .result {
+            max-width: 400px;
+
+            .range {
+                text-wrap: wrap;
+                overflow: hidden;
+            }
+        }
+    }
   }
 
   .copy-from,
   .copy-to,
-  .range-to-narrow {
+  .range-to-narrow, .copy-results-to {
     label {
       margin-left: 10px;
     }
   }
 
-  .copy-from {
+  .copy-from, .copy-results-to {
     border: 1px solid blue;
     padding: 10px;
 
@@ -111,8 +150,6 @@
     }
   }
 
-  .copy-to {
-  }
 }
 </style>
 
@@ -123,17 +160,36 @@ import { usePlayerStore } from '@src/stores/player';
 import { computed, ref, watch } from 'vue';
 import RangeMiniViewer from '@src/components/RangeMiniViewer.vue';
 import * as _ from 'lodash';
+import { init, handler } from '@src/worker/global-worker';
+import { useBoardStore } from '@src/stores/board';
+import { RangeManager } from '@pkg/range';
 
 const playerStore = usePlayerStore();
-const navStore = useNavStore();
 const narrowStore = useNarrowStore();
+const boardStore = useBoardStore();
 
 const copyFrom = ref(0);
 const copyTo = ref(0);
+const copyResultTo = ref(0);
 
 const playersWithRanges = computed(() => {
   return playerStore.players.filter((p) => p.rangeStr.length > 0);
 });
+
+let range: RangeManager | null = null;
+
+initRangeManager().then(() => {
+  console.log('Range initialized');
+});
+
+//below are functions only
+
+async function initRangeManager() {
+  let mod = await import('@pkg/range');
+  await mod.default();
+
+  range = RangeManager.new();
+}
 
 watch(
   () => narrowStore.state.numOpponents,
@@ -172,5 +228,41 @@ function handleCopyRange() {
     toPlayer.rangeStr = fromPlayer.rangeStr;
     toPlayer.percHands = fromPlayer.percHands;
   }
+}
+
+async function handleCalculate() {
+  const boardCards = Uint8Array.from(boardStore.board.cards);
+
+  if (!handler) {
+    console.log('handler not initialized');
+    return;
+  }
+
+  const response = await handler.narrowRange(
+    narrowStore.state.rangeToNarrow.rangeStr,
+    narrowStore.state.opponentRanges.map((r) => r.rangeStr),
+    narrowStore.state.minEquity,
+    boardCards,
+    narrowStore.state.numSimulations
+  );
+
+  narrowStore.state.result.rangeStr = response;
+}
+
+function handleCopyResult() {
+    if (!range) {
+        console.log('range not initialized');
+        return;
+    }
+    const resultPlayer = playerStore.players[copyResultTo.value];
+    
+    resultPlayer.rangeStr = narrowStore.state.result.rangeStr;
+    
+    range.from_string(resultPlayer.rangeStr);
+    const weights = range.get_weights();
+    for (let i = 0; i < 13 * 13; ++i) {
+      resultPlayer.range[i] = weights[i] * 100;
+    }
+
 }
 </script>

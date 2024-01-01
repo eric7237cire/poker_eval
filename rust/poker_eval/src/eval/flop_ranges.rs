@@ -76,6 +76,11 @@ pub fn narrow_range_by_equity(
         if *hci >= ALL_HOLE_CARDS.len() {
             break;
         }
+
+        //if these hole cards are impossible given the board, skip
+        if board.intersects_holecards(&ALL_HOLE_CARDS[*hci]) {
+            continue;
+        }
         
         all_ranges[0].data.fill(false);
         all_ranges[0].data.set(*hci, true);

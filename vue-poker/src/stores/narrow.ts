@@ -10,6 +10,7 @@ interface NarrowStoreData {
   numSimulations: number;
   // between 0 and 1
   minEquity: number;
+  result: RangeInStore;
 }
 
 export const useNarrowStore = defineStore('narrow', () => {
@@ -35,7 +36,12 @@ export const useNarrowStore = defineStore('narrow', () => {
           range: [],
           percHands: 0
         }
-      ]
+      ],
+      result: {
+        rangeStr: '',
+        range: [],
+        percHands: 0
+      }
     },
     {
       mergeDefaults: true

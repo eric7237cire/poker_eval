@@ -77,6 +77,24 @@ const createHandler = (mod: Mod) => {
       ret.push(buildResultsInterface(r, undefined));
 
       return ret;
+    },
+
+    narrowRange(
+      range_to_narrow: string,
+      opponent_ranges: Array<string>,
+      min_equity: number,
+      cards: Uint8Array,
+      num_simulations: number
+    ): string {
+      const opp_range_str = opponent_ranges.join(';');
+      const result = this.flop_analyzer.narrow_range(
+        range_to_narrow,
+        opp_range_str,
+        min_equity,
+        cards,
+        num_simulations
+      );
+      return result;
     }
   };
 };
