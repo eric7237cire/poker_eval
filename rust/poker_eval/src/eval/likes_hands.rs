@@ -1,12 +1,12 @@
 use std::{
-    cmp::max,
+    cmp::{max, min},
     fmt::{Display, Formatter},
 };
 
 use crate::{
     pre_calc::rank::{Rank, RankEnum},
     Board, BoardTexture, CardValue, FlushDrawType, HoleCards, MadeWith, PartialRankContainer,
-    PokerError, Round, StraightDrawType,
+    PokerError, Round, StraightDrawType, partial_rank_cards,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -255,6 +255,27 @@ pub fn likes_hand(
                 ratio_with_str8 * 100.0
             ));
             likes_hand = max(likes_hand, LikesHandLevel::AllIn);
+        }
+    }
+
+    
+    if RankEnum::Flush == rank.get_rank_enum() {        
+        if ft.same_suited_max_count >= 4 {
+            if prc.pocket_pair.is_some() {
+                let prc2 = partial_rank_cards(&hc, &board.as_slice_card());
+                panic!("Mode flush {:?} {} {}  - {:?}", prc.made_flush, &board, &hc, prc2.made_flush);
+            }
+            if let Some(made_flush) = prc.made_flush {
+                if made_flush == CardValue::Ace {
+                    likes_hand_comments.push(format!("Made nut flush with a good card {}", made_flush));
+                    likes_hand = max(likes_hand, LikesHandLevel::AllIn);
+                } else if made_flush <= CardValue::Ten {
+                    not_like_hand_comments.push(format!("4 on board, and only have {}", made_flush));
+                    likes_hand = min(likes_hand, LikesHandLevel::CallSmallBet);
+                } else {
+                    likes_hand_comments.push(format!("Made decent flush with 4 on the board {}", made_flush));
+                }
+            }
         }
     }
 

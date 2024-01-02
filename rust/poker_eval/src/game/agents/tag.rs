@@ -139,7 +139,7 @@ impl Tag {
                 return CommentedAction {
                     action: ActionEnum::Bet(third_pot),
                     comment: Some(format!(
-                        "Bets 1/3 pot because likes hand @ {}: {}; not {}",
+                        "Bets 1/3 pot because likes hand @ {}: +1 {}; -1 {}",
                         likes_hand_response.likes_hand,
                         likes_hand_response.likes_hand_comments.join(", "),
                         likes_hand_response.not_like_hand_comments.join(", ")

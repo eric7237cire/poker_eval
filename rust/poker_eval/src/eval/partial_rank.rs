@@ -86,6 +86,8 @@ pub struct PartialRankContainer {
     pub flush_draw: Option<FlushDraw>,
     pub straight_draw: Option<StraightDraw>,
 
+    pub made_flush: Option<CardValue>,
+
     pub pocket_pair: Option<PairInfo>,
 
     //Did my higher card pair or better on the board
@@ -106,6 +108,7 @@ pub struct PartialRankContainer {
 impl Default for PartialRankContainer {
     fn default() -> Self {
         PartialRankContainer {
+            made_flush: None,
             flush_draw: None,
             straight_draw: None,
             pocket_pair: None,
@@ -262,7 +265,7 @@ impl PartialRankContainer {
         board_metrics: &BitSetCardsMetrics,
         board_length: usize,
     ) {
-        if board_length == 5 || board_length < 3 {
+        if board_length < 3 {
             return;
         }
 
@@ -277,8 +280,14 @@ impl PartialRankContainer {
                 continue;
             }
 
-            //Ignore made flushes
             if hole_count + board_count >= 5 {
+                let hole_card_value = hole_metrics.suit_value_sets[suit].last_one().unwrap();
+                self.made_flush = Some(CardValue::from(hole_card_value));
+                continue;
+            }
+
+            //no flush draws if we're on the river
+            if board_length >= 5 {
                 continue;
             }
 
@@ -1243,6 +1252,21 @@ mod tests {
                 number_above: 2,
                 number_below: 1
             })
+        );
+    }
+
+    #[test]
+    fn test_flush() {
+        let hole_cards = "Td Tc".parse().unwrap();
+        let board_cards = Board::try_from("9d 6d 5d Ac Ad")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
+        let prc = partial_rank_cards(&hole_cards, &board_cards);
+
+        assert_eq!(
+            prc.made_flush,
+            Some(CardValue::Ten)
         );
     }
 }
