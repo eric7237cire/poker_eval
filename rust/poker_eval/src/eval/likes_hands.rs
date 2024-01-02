@@ -97,7 +97,7 @@ pub fn likes_hand(
             }
         } else if p.number_above == 1 {
             likes_hand_comments.push(format!("mid pair {}", hc.get_hi_card().value));
-            likes_hand = max(likes_hand, LikesHandLevel::SmallBet);
+            likes_hand = max(likes_hand, LikesHandLevel::CallSmallBet);
         } else {
             likes_hand_comments.push(format!("3rd or worse pair {}", hc.get_hi_card().value));
             likes_hand = max(likes_hand, LikesHandLevel::CallSmallBet);
@@ -105,7 +105,7 @@ pub fn likes_hand(
 
         
     } else if let Some(p) = prc.lo_pair {
-        likes_hand = max(likes_hand, LikesHandLevel::SmallBet);
+        //likes_hand = max(likes_hand, LikesHandLevel::SmallBet);
         if p.number_above == 0 {
             if hc.get_lo_card().value <= CardValue::Eight {
                 likes_hand_comments.push(format!(
@@ -134,6 +134,9 @@ pub fn likes_hand(
             if p.number_below == 0 {
                 likes_hand_comments.push(format!("pocket underpair {}", hc.get_hi_card().value));
                 likes_hand = max(likes_hand, LikesHandLevel::CallSmallBet);
+            } else if p.number_above >= 2 {
+                likes_hand_comments.push(format!("pocket pair; but with 2 above {}", hc.get_hi_card().value));
+                likes_hand = max(likes_hand, LikesHandLevel::CallSmallBet);
             } else {
                 likes_hand_comments.push(format!("pocket pair {}", hc.get_hi_card().value));
                 likes_hand = max(likes_hand, LikesHandLevel::SmallBet);
@@ -153,7 +156,7 @@ pub fn likes_hand(
                 hc.get_hi_card().value,
                 hc.get_lo_card().value
             ));
-            likes_hand = max(likes_hand, LikesHandLevel::SmallBet);
+            likes_hand = max(likes_hand, LikesHandLevel::CallSmallBet);
         
         } else 
         if hc.get_hi_card().value >= CardValue::Ten {

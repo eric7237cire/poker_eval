@@ -17,7 +17,9 @@ crate-type = ["cdylib", "rlib"]
 name = "test_perf"
 path = "src/test_perf.rs"
 
-
+[[bin]]
+name = "try_agent"
+path = "src/try_agent.rs"
 
 [dependencies]
 bitvec = {version = "1.0.1", features=["serde"]}

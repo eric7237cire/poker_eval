@@ -139,14 +139,20 @@ impl Tag {
                 return CommentedAction {
                     action: ActionEnum::Bet(third_pot),
                     comment: Some(format!(
-                        "Bets 1/3 pot because likes hand: {}",
-                        likes_hand_response.likes_hand_comments.join(", ")
+                        "Bets 1/3 pot because likes hand @ {}: {}; not {}",
+                        likes_hand_response.likes_hand,
+                        likes_hand_response.likes_hand_comments.join(", "),
+                        likes_hand_response.not_like_hand_comments.join(", ")
                     )),
                 };
             } else {
                 return CommentedAction {
                     action: ActionEnum::Check,
-                    comment: Some("Checking because does not like hand".to_string()),
+                    comment: Some(format!("Checking because does not like hand enough @ {} comments -- {}; {}",
+                        likes_hand_response.likes_hand,
+                        likes_hand_response.likes_hand_comments.join(", "),
+                        likes_hand_response.not_like_hand_comments.join(", "))
+                ),
                 };
             }
         } else {
