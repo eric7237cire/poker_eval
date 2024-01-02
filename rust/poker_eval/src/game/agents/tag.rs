@@ -113,12 +113,24 @@ impl Tag {
         let third_pot = current_pot / 3;
 
         if game_state.current_to_call == 0 {
+            //Special case, worry about straights
             if non_folded_players >= 4 && ft.num_with_str8 > 150 {
                 return CommentedAction {
                     action: ActionEnum::Check,
                     comment: Some(format!(
                         "Worried someone ({} players) has a straight, {} / {} not betting",
                         non_folded_players, ft.num_with_str8, ft.num_hole_cards
+                    )),
+                };
+            }
+
+            //Special case, lower set on 2 pair board
+            if likes_hand_response.likes_hand >= LikesHandLevel::SmallBet && ft.has_two_pair && prc.made_set_with_n_above(1) {
+                return CommentedAction {
+                    action: ActionEnum::Check,
+                    comment: Some(format!(
+                        "Worried someone has a higher set when has lower set; not betting.  {}",
+                        likes_hand_response.likes_hand_comments.join(", ")
                     )),
                 };
             }

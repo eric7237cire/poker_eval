@@ -178,6 +178,22 @@ impl PartialRankContainer {
         return None;
     }
 
+    pub fn made_set_with_n_above(&self, n_above:u8) -> bool {
+        if let Some(hi_pair) = self.hi_pair {
+            if hi_pair.made_set && hi_pair.number_above == n_above {
+                return true;
+            }
+        }
+
+        if let Some(lo_pair) = self.lo_pair {
+            if lo_pair.made_set && lo_pair.number_above == n_above {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     pub fn has_straight_draw(&self) -> bool {
         if let Some(p) = self.straight_draw {
             if p.straight_draw_type == StraightDrawType::OpenEnded

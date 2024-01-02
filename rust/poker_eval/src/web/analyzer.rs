@@ -247,18 +247,12 @@ impl flop_analyzer {
 
         //Store the active player index because we want to change the order in which we choose the ranges
         //Ignores players that already have hole cards set
-        let mut possible_hole_cards: Vec<(usize, Vec<HoleCards>)> = {
-            let mut pv = active_players
+        let mut possible_hole_cards: Vec<(usize, Vec<HoleCards>)> = active_players
             .iter().enumerate()
             .filter(|(_idx, p)| p.1.state == PlayerPreFlopState::UseRange )
             //These are irrespective of used cards, we try later on which hole cards are still valid
             .map(|(active_player_index, r)| (active_player_index, r.1.range.get_all_enabled_holecards()))
             .collect_vec();
-    
-            //pv.sort_by(|a, b| a.1.len().cmp(&b.1.len()));
-            //pv.shuffle(&mut rng);
-            pv
-        };
 
         let mut flop_results = all_flop_results.flop_results;
         let mut villian_results = all_flop_results.all_villians;
