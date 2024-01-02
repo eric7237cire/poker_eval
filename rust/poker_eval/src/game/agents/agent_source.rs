@@ -145,7 +145,7 @@ mod tests {
         agents
     }
 
-    //#[test]
+    #[test]
     #[allow(dead_code)]
     fn test_agents() {
         init_test_logger();

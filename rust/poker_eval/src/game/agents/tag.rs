@@ -1,10 +1,12 @@
 use std::{cell::RefCell, rc::Rc};
 
+use boomphf::Mphf;
+
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
     ActionEnum, BoolRange, CommentedAction, FlushDrawType, GameState, HoleCards, PlayerState,
-    Round, StraightDrawType,
+    Round, StraightDrawType, likes_hands::{likes_hand, LikesHandLevel}, pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash},
 };
 
 use super::Agent;
@@ -17,6 +19,7 @@ pub struct Tag {
     pub name: String,
     flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
     partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
+    hash_func: Mphf<u32>
 }
 
 impl Tag {
@@ -34,6 +37,7 @@ impl Tag {
             name: name.to_string(),
             flop_texture_db,
             partial_rank_db,
+            hash_func: load_boomperfect_hash()
         }
     }
 
@@ -99,53 +103,9 @@ impl Tag {
         let mut ft_db = self.flop_texture_db.borrow_mut();
         let ft = ft_db.get_put(&game_state.board).unwrap();
 
-        let mut likes_hand_comments: Vec<String> = Vec::new();
+        let rank = fast_hand_eval(game_state.board.get_iter().chain(hc.get_iter()), &self.hash_func);
 
-        if let Some(p) = prc.lo_pair {
-            if p.made_quads {
-                likes_hand_comments.push(format!("lo pair Quads {}", hc.get_hi_card().value));
-            }
-            if p.made_set {
-                likes_hand_comments.push(format!("lo pair Set {}", hc.get_hi_card().value));
-            }
-        }
-        if let Some(p) = prc.hi_pair {
-            if p.number_above == 0 {
-                likes_hand_comments.push(format!("Top pair {}", hc.get_hi_card().value));
-            }
-            if p.made_quads {
-                likes_hand_comments.push(format!("Quads {}", hc.get_hi_card().value));
-            }
-            if p.made_set {
-                likes_hand_comments.push(format!("Set {}", hc.get_hi_card().value));
-            }
-        }
-        if let Some(p) = prc.pocket_pair {
-            if p.number_above == 0 {
-                likes_hand_comments.push(format!("Overpair {}", hc.get_hi_card().value));
-            }
-            if p.made_set {
-                likes_hand_comments.push(format!("Pocket Pair Set {}", hc.get_hi_card().value));
-            }
-            if p.made_quads {
-                likes_hand_comments.push(format!("Pocket Pair Quads {}", hc.get_hi_card().value));
-            }
-        }
-        if game_state.current_round != Round::River {
-            if let Some(p) = prc.flush_draw {
-                if p.flush_draw_type == FlushDrawType::FlushDraw {
-                    likes_hand_comments.push(format!("Flush draw {}", p.hole_card_value));
-                }
-            }
-            if let Some(p) = prc.straight_draw {
-                if p.straight_draw_type == StraightDrawType::OpenEnded
-                    || p.straight_draw_type == StraightDrawType::DoubleGutShot
-                {
-                    likes_hand_comments.push(format!("Straight draw"));
-                }
-                //likes_hand_comments.push( format!("Gutshot straight draw {}", p.) );
-            }
-        }
+        let likes_hand_response = likes_hand(&prc, &ft, &rank, &game_state.board, &hc).unwrap();
 
         let current_pot = game_state.pot();
 
@@ -163,12 +123,12 @@ impl Tag {
                 };
             }
 
-            if likes_hand_comments.len() > 0 {
+            if likes_hand_response.likes_hand >= LikesHandLevel::SmallBet {
                 return CommentedAction {
                     action: ActionEnum::Bet(third_pot),
                     comment: Some(format!(
                         "Bets 1/3 pot because likes hand: {}",
-                        likes_hand_comments.join(", ")
+                        likes_hand_response.likes_hand_comments.join(", ")
                     )),
                 };
             } else {
@@ -181,7 +141,7 @@ impl Tag {
             let pot_eq = (100. * game_state.current_to_call as f64)
                 / ((current_pot + game_state.pot()) as f64);
 
-            if likes_hand_comments.is_empty() {
+            if  likes_hand_response.likes_hand <= LikesHandLevel::None {
                 return CommentedAction {
                     action: ActionEnum::Fold,
                     comment: Some(
@@ -189,12 +149,12 @@ impl Tag {
                     ),
                 };
             }
-            if game_state.current_to_call < third_pot {
+            if game_state.current_to_call < third_pot && likes_hand_response.likes_hand >= LikesHandLevel::LargeBet {
                 return CommentedAction {
                     action: ActionEnum::Raise(third_pot),
                     comment: Some(format!(
                         "Raising because wants 1/3 pot bet and likes hand: {}",
-                        likes_hand_comments.join(", ")
+                        likes_hand_response.likes_hand_comments.join(", ")
                     )),
                 };
             }
@@ -203,7 +163,7 @@ impl Tag {
                     action: ActionEnum::Call,
                     comment: Some(format!(
                         "Calling because likes hand and willing to call a 1/2 pot bet: {}",
-                        likes_hand_comments.join(", ")
+                        likes_hand_response.likes_hand_comments.join(", ")
                     )),
                 };
             }

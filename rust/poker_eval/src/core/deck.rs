@@ -1,8 +1,10 @@
+use rand::{rngs::StdRng, SeedableRng, Rng};
+
 use crate::{Card, CardUsedType, HoleCards, PokerError, ALL_CARDS};
 
 pub struct Deck {
-    //rng: StdRng,
-    used_cards: CardUsedType,
+    pub(crate) rng: StdRng,
+    pub(crate) used_cards: CardUsedType,
     //available_range: BoolRange,
 }
 
@@ -10,11 +12,11 @@ const MAX_RAND_NUMBER_ATTEMPS: usize = 1_000;
 
 impl Deck {
     pub fn new() -> Self {
-        //let rng = StdRng::seed_from_u64(42);
-        fastrand::seed(42);
+        let rng = StdRng::seed_from_u64(42);
+        //fastrand::seed(42);
 
         let mut d = Deck {
-            //rng,
+            rng,
             used_cards: CardUsedType::default(),
             // available_range: BoolRange::default(),
         };
@@ -57,34 +59,21 @@ impl Deck {
         //assert_eq!(count_after, count_before + 1);
     }
 
+    /*
+    Chooses from the list, retrying if those cards are already used
+    Sets the used cards in the deck
+    */
     pub fn choose_available_in_range(
         &mut self,
-        //range: &BoolRange,
         possible_hole_cards: &Vec<HoleCards>,
     ) -> Result<HoleCards, PokerError> {
-        // let possible_range = range.data & self.available_range.data;
-
-        // if possible_range.data.is_empty() {
-        //     return Err(PokerError::from_string(format!(
-        //         "No available hole cards in range {}",
-        //         range.data.count_ones()
-        //     )));
-        // }
-
-        //let num_possible = possible_range.count_ones();
-
-        //let rand_int: usize = self.rng.gen_range(0..num_possible);
-        //let rand_int: usize = fastrand::usize(0..possible_hole_cards.len());
-
-        //let hole_position = possible_range.iter_ones().skip(rand_int).take(1).next().unwrap();
-
-        //let hole_cards = ALL_HOLE_CARDS[hole_position];
-
+        
         let mut attempts = 0;
         loop {
             attempts += 1;
             //trace!("Attempt {}", attempts);
-            let rand_int: usize = fastrand::usize(0..possible_hole_cards.len());
+            //let rand_int: usize = fastrand::usize(0..possible_hole_cards.len());
+            let rand_int: usize = self.rng.gen_range(0..possible_hole_cards.len());
             let hole_cards = possible_hole_cards[rand_int];
 
             if attempts > MAX_RAND_NUMBER_ATTEMPS {
@@ -113,8 +102,8 @@ impl Deck {
         //Usually most of the deck is available
         let mut attempts = 0;
         loop {
-            //let rand_int: usize = self.rng.gen_range(0..52);
-            let rand_int: usize = fastrand::usize(0..52);
+            let rand_int: usize = self.rng.gen_range(0..52);
+            //let rand_int: usize = fastrand::usize(0..52);
             assert!(rand_int < 52);
 
             attempts += 1;

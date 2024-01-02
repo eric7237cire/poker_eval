@@ -5,11 +5,12 @@ use crate::web::{
     eval_current, eval_current_draws, get_all_player_hole_cards, FlopSimulationResults,
     PlayerPreFlopState, PreflopPlayerInfo,
 };
-use crate::{add_eval_card, get_unused_card, set_used_card, BoolRange, HoleCards, PokerError, Board, ALL_CARDS};
+use crate::{set_used_card, BoolRange, HoleCards, PokerError, Board, ALL_CARDS, Deck};
 use boomphf::Mphf;
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
 
+use rand::seq::SliceRandom;
 #[cfg(not(test))]
 use rand::thread_rng;
 use rand::{rngs::StdRng, SeedableRng};
@@ -142,7 +143,7 @@ impl flop_analyzer {
 
         info!("% is {}", range.data.count_ones() as f64 / 2652.0);
 
-        self.player_info[player_idx].range_set = range.data;
+        self.player_info[player_idx].range = range;
         self.player_info[player_idx].range_string = range_str.to_string();
 
         Ok(())
@@ -168,6 +169,9 @@ impl flop_analyzer {
         }
     }
 
+    /*
+    Creates bit set with all board cards & chosen hole cards set
+    */
     fn init_cards_used(&self) -> Result<CardUsedType, PokerError> {
         let mut cards_used = CardUsedType::default();
 
@@ -220,10 +224,10 @@ impl flop_analyzer {
     ) -> Result<FlopSimulationResults, PokerError> {
         //let n_players = self.player_info.len();
         #[cfg(test)]
-        let mut rng = StdRng::seed_from_u64(42);
+        let rng = StdRng::seed_from_u64(42);
 
         #[cfg(not(test))]
-        let mut rng = StdRng::from_rng(thread_rng())
+        let rng = StdRng::from_rng(thread_rng())
             .ok()
             .ok_or(PokerError::from_str("Failed to create rng"))?;
 
@@ -240,6 +244,21 @@ impl flop_analyzer {
                 active_players.len()
             )));
         }
+
+        //Store the active player index because we want to change the order in which we choose the ranges
+        //Ignores players that already have hole cards set
+        let mut possible_hole_cards: Vec<(usize, Vec<HoleCards>)> = {
+            let mut pv = active_players
+            .iter().enumerate()
+            .filter(|(_idx, p)| p.1.state == PlayerPreFlopState::UseRange )
+            //These are irrespective of used cards, we try later on which hole cards are still valid
+            .map(|(active_player_index, r)| (active_player_index, r.1.range.get_all_enabled_holecards()))
+            .collect_vec();
+    
+            //pv.sort_by(|a, b| a.1.len().cmp(&b.1.len()));
+            //pv.shuffle(&mut rng);
+            pv
+        };
 
         let mut flop_results = all_flop_results.flop_results;
         let mut villian_results = all_flop_results.all_villians;
@@ -261,27 +280,35 @@ impl flop_analyzer {
 
         let base_cards_used = self.init_cards_used()?;
 
+        let mut deck = Deck {
+            rng,
+            used_cards: base_cards_used.clone(),
+        };
+
         for _it_num in 0..num_iterations {
             //debug!("simulate_flop: iteration {}", it_num);
 
-            //let mut deck = self.prepare_deck();
+            possible_hole_cards.shuffle(&mut deck.rng);
+
+            deck.used_cards = base_cards_used.clone();
 
             //with flop, players with hole cards
-            let mut eval_cards = Vec::with_capacity(15);
-            let mut cards_used = base_cards_used.clone();
-            let num_added = self.add_flop(&mut rng, &mut eval_cards, &mut cards_used)?;
+            let mut eval_cards = Vec::with_capacity(15);            
+            
+            //let mut cards_used = base_cards_used.clone();
+            let num_added = self.add_flop(&mut deck, &mut eval_cards)?;
 
             assert_eq!(3, eval_cards.len());
 
             //First we choose hole cards for players that are using a range
             let player_cards =
-                get_all_player_hole_cards(&active_players, &mut rng, &mut cards_used)?;
+                get_all_player_hole_cards(&active_players, &mut deck, &possible_hole_cards)?;
 
             assert_eq!(player_cards.len(), active_players.len());
 
             assert_eq!(
                 num_added + self.board_cards.len() + 2 * active_players.len(),
-                cards_used.count_ones()
+                deck.used_cards.count_ones()
             );
 
             if !equity_only {
@@ -311,25 +338,21 @@ impl flop_analyzer {
 
             //Do we have a 4th card on our board?
             if self.board_cards.len() < 4 {
-                //choose one
-                add_eval_card(
-                    get_unused_card(&mut rng, &cards_used).unwrap(),
-                    &mut eval_cards,
-                    &mut cards_used,
-                )?;
-
+                let turn_card = deck.get_unused_card()?;
+                eval_cards.push(turn_card);
+                
                 assert_eq!(3, self.board_cards.len() + num_added);
-                assert_eq!(4 + 2 * active_players.len(), cards_used.count_ones());
+                assert_eq!(4 + 2 * active_players.len(), deck.used_cards.count_ones());
             } else {
                 //Just do a simple push since we already added it to used cards
                 let turn_card_index: usize = self.board_cards[3].into();
-                assert!(cards_used[turn_card_index]);
+                assert!(deck.used_cards[turn_card_index]);
                 eval_cards.push(self.board_cards[3].into());
                 assert_eq!(num_added, 0);
 
                 assert_eq!(
                     self.board_cards.len() + 2 * active_players.len(),
-                    cards_used.count_ones()
+                    deck.used_cards.count_ones()
                 );
             }
 
@@ -359,24 +382,21 @@ impl flop_analyzer {
             //River
             //Perhaps iterate on the remaining cards instead of each eval round doing flop/turn/river
             if self.board_cards.len() < 5 {
-                add_eval_card(
-                    get_unused_card(&mut rng, &mut cards_used).unwrap(),
-                    &mut eval_cards,
-                    &mut cards_used,
-                )?;
-
-                assert_eq!(5 + 2 * active_players.len(), cards_used.count_ones());
+                let river_card = deck.get_unused_card()?;
+                eval_cards.push(river_card);
+                
+                assert_eq!(5 + 2 * active_players.len(), deck.used_cards.count_ones());
             } else {
                 //Just do a simple push since we already added it to used cards
                 let river_card_index: usize = self.board_cards[4].into();
-                assert!(cards_used[river_card_index]);
+                assert!(deck.used_cards[river_card_index]);
                 eval_cards.push(self.board_cards[4]);
 
                 assert_eq!(num_added, 0);
 
                 assert_eq!(
                     self.board_cards.len() + 2 * active_players.len(),
-                    cards_used.count_ones()
+                    deck.used_cards.count_ones()
                 );
             }
 
@@ -401,9 +421,8 @@ impl flop_analyzer {
 
     fn add_flop(
         &self,
-        rng: &mut StdRng,
+        deck: &mut Deck,
         eval_cards: &mut Vec<Card>,
-        cards_used: &mut CardUsedType,
     ) -> Result<usize, PokerError> {
         assert!(eval_cards.is_empty());
 
@@ -414,7 +433,7 @@ impl flop_analyzer {
         for (c_idx, c) in self.board_cards.iter().enumerate() {
             //Should have been initialized already in init_cards_used
             let card_as_usize: usize = (*c).into();
-            assert!(cards_used[card_as_usize]);
+            assert!(deck.used_cards[card_as_usize]);
 
             if c_idx < num_cards_needed_for_flop {
                 eval_cards.push(*c);
@@ -427,11 +446,8 @@ impl flop_analyzer {
 
         let mut num_chosen = 0;
         for _ in eval_cards.len()..num_cards_needed_for_flop {
-            add_eval_card(
-                get_unused_card(rng, &cards_used).unwrap(),
-                eval_cards,
-                cards_used,
-            )?;
+            let unused_card = deck.get_unused_card()?;
+            eval_cards.push(unused_card);            
             num_chosen += 1;
         }
 

@@ -132,6 +132,7 @@ use crate::{
 
 pub fn calc_equity(
     board: &Board,
+    //The player ranges we are calculating equity for
     ranges: &Vec<BoolRange>,
     num_simulations: usize,
 ) -> Result<Vec<f64>, PokerError> {
