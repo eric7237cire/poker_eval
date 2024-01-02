@@ -96,7 +96,8 @@ mod tests {
 
         let num_it = 4_000;
 
-        let tolerance = 0.5;
+        //low # of iterations so tolerance is higher
+        let tolerance = 1.6;
         //let tolerance = 0.1;
 
         let f_results = analyzer.build_results();
@@ -110,14 +111,14 @@ mod tests {
         assert_equity(
             100.0 * results[0].street_rank_results[2].win_eq
                 / results[0].street_rank_results[2].num_iterations as f64,
-            21.03,
+            21.03, //confirmed with equilab
             tolerance,
         );
         assert_equity(
             100.0 * results[0].street_rank_results[2].tie_eq
                 / results[0].street_rank_results[2].num_iterations as f64,
             0.12,
-            0.05,
+            0.10,
         );
 
         assert_eq!(results[2].street_rank_results[2].num_iterations, num_it);
