@@ -136,7 +136,6 @@
   .range-perc-input {
     background: white;
   }
-
 }
 </style>
 <script setup lang="ts">
@@ -223,8 +222,6 @@ const currentPlayerComputed = computed(() => {
 let draggingMode: DraggingMode = 'none';
 
 //private local to update some stats
-
-
 
 //below are functions only
 

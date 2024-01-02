@@ -21,6 +21,7 @@ impl FlopSimulationResults {
         active_player_index: Option<usize>,
         street_index: usize,
         family_index: usize,
+        is_winning: bool,
     ) -> f64 {
         let r = if let Some(p_idx) = active_player_index {
             &self.flop_results[p_idx].street_rank_results[street_index]
@@ -28,17 +29,23 @@ impl FlopSimulationResults {
             &self.all_villians.street_rank_results[street_index]
         };
 
-        r.rank_family_count[family_index] as f64 / r.num_iterations as f64
+        if is_winning {
+            r.win_rank_family_count[family_index] as f64 / r.num_iterations as f64
+        } else {
+            r.lose_rank_family_count[family_index] as f64 / r.num_iterations as f64
+        }
+        
     }
     pub fn get_perc_family_or_better(
         &self,
         active_player_index: Option<usize>,
         street_index: usize,
         family_index: usize,
+        is_winning: bool,
     ) -> f64 {
         let mut total = 0.0;
         for i in family_index..NUM_RANK_FAMILIES {
-            total += self.get_perc_family(active_player_index, street_index, i)
+            total += self.get_perc_family(active_player_index, street_index, i, is_winning)
         }
         total
     }

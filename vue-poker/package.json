@@ -18,8 +18,7 @@
     "write-build-info": "node ../dev/writeBuildInfo.js"
   },
   "dependencies": {
-    "@heroicons/vue": "^2.0.18",
-    
+    "@heroicons/vue": "^2.1.1",
     "@vueuse/core": "^10.7.0",
     "comlink": "^4.4.1",
     "dexie": "^3.2.4",

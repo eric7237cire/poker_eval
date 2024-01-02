@@ -52,7 +52,7 @@ function initializePlayers(): Array<Player> {
 }
 
 //private local to update some stats
-let range = ref(null as RangeManager | null );
+let range = ref(null as RangeManager | null);
 
 async function initRangeManager() {
   let mod = await import('@pkg/range');
@@ -92,7 +92,6 @@ function()s become actions*/
     updateRangeStrForPlayer(currentPlayer.value, newRangeStr);
   }
   function updateRangeStrForPlayer(playerId: number, newRangeStr: string) {
-    
     if (range.value == null) {
       console.log('Range not initialized yet');
       return;

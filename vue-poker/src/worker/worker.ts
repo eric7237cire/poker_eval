@@ -110,10 +110,16 @@ function buildResultsInterface(
   for (let i = 0; i < 3; i++) {
     const sr: StreetResults = {
       equity: r.get_equity(active_player_index, i),
-      rank_family_count: rankIndexes.map((ri) => {
+      win_rank_family_count: rankIndexes.map((ri) => {
         return {
-          perc: r.get_perc_family(active_player_index, i, ri),
-          better: r.get_perc_family_or_better(active_player_index, i, ri)
+          perc: r.get_perc_family(active_player_index, i, ri, true),
+          better: r.get_perc_family_or_better(active_player_index, i, ri, true)
+        } as PercOrBetter;
+      }),
+      lose_rank_family_count: rankIndexes.map((ri) => {
+        return {
+          perc: r.get_perc_family(active_player_index, i, ri, false),
+          better: r.get_perc_family_or_better(active_player_index, i, ri, false)
         } as PercOrBetter;
       }),
       eq_by_simple_range_idx: [],

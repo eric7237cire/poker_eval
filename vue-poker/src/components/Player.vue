@@ -49,7 +49,11 @@ or select a range
   </div>
 
   <div v-if="playerData.state == PlayerState.USE_HOLE" class="board-selector">
-    <BoardSelector v-model="playerData.holeCards" :expected_length="2" />
+    <BoardSelector
+      v-model="playerData.holeCards"
+      :max_expected_length="2"
+      :min_expected_length="2"
+    />
   </div>
 
   <div class="selectRangeContainer">

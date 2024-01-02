@@ -4,7 +4,6 @@ import { ref } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 
 interface NarrowStoreData {
-  
   numOpponents: number;
   opponentRanges: Array<RangeInStore>;
   numSimulations: number;
@@ -16,7 +15,6 @@ export const useNarrowStore = defineStore('narrow', () => {
   const state = useLocalStorage<NarrowStoreData>(
     'narrow',
     {
-      
       numOpponents: 2,
       numSimulations: 1000,
       minEquity: 0.3,
@@ -31,8 +29,7 @@ export const useNarrowStore = defineStore('narrow', () => {
           range: [],
           percHands: 0
         }
-      ],
-      
+      ]
     },
     {
       mergeDefaults: true

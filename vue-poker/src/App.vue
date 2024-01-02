@@ -24,7 +24,70 @@
 
   <div class="">
     <div class="board-selector-container" style="height: calc(100% - 2rem)">
-      <BoardSelector class="child" v-model="boardStore.board" :expected_length="3" />
+      <BoardSelector
+        class="child"
+        v-model="boardStore.board"
+        :max_expected_length="5"
+        :min_expected_length="3"
+      />
+      <v-btn v-if="boardStore.board.cards.length > 3" @click="handleStashCard()">
+        <!--right-->
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="w-6 h-6"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M17.25 8.25 21 12m0 0-3.75 3.75M21 12H3"
+          />
+        </svg>
+      </v-btn>
+      
+      <v-btn v-if="boardStore.reserveCards.length > 0 && boardStore.board.cards.length != 4" @click="handleUnstashCard()">
+        <!--left -->
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="w-6 h-6"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M6.75 15.75 3 12m0 0 3.75-3.75M3 12h18"
+          />
+        </svg>
+      </v-btn>
+      <BoardSelectorCard
+          v-for="card in boardStore.reserveCards"
+          :key="card"
+          class="m-1"
+          :card-id="card"
+        />
+        <v-btn v-if="boardStore.reserveCards.length > 0" @click="handleUnstashCard()">
+        <!--left -->
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="w-6 h-6"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M6.75 15.75 3 12m0 0 3.75-3.75M3 12h18"
+          />
+        </svg>
+      </v-btn>
     </div>
 
     <!-- This pops up if we are editing a range -->
@@ -114,7 +177,9 @@ import { useRangesStore } from './stores/ranges';
 import RangeNarrower from './components/RangeNarrower.vue';
 import { useCssVar } from '@vueuse/core';
 import Footer from './components/Footer.vue';
+import BoardSelectorCard from './components/BoardSelectorCard.vue';
 import { loadCardsFromUrl } from './utils';
+import * as _ from 'lodash';
 
 const navStore = useNavStore();
 const playerStore = usePlayerStore();
@@ -299,5 +364,22 @@ async function stop() {
   } else {
     console.warn('Timeout is null');
   }
+
+
+  
 }
+
+function handleStashCard() {
+    const card = boardStore.board.cards.pop();
+    if (_.isInteger(card)) {
+      boardStore.reserveCards.unshift(card!);
+    }
+  }
+
+  function handleUnstashCard() {
+    const card = boardStore.reserveCards.shift();
+    if (_.isInteger(card)) {
+      boardStore.board.cards.push(card!);
+    }
+  }
 </script>

@@ -20,29 +20,36 @@
         thumb-label="always"
       ></v-slider>
     </div>
-    <div class="num-opponents">      
-      <v-text-field type="number" label="Number of opponents" v-model.number="narrowStore.state.numOpponents"></v-text-field>
+    <div class="num-opponents">
+      <v-text-field
+        type="number"
+        label="Number of opponents"
+        v-model.number="narrowStore.state.numOpponents"
+      ></v-text-field>
     </div>
     <div class="copy-to">
       Opponent ranges
       <ul>
         <li v-for="(oppRange, opp_index) in narrowStore.state.opponentRanges">
-          <label :for="'to' + (opp_index + 1)">Opponent {{ opp_index }}</label>          
+          <label :for="'to' + (opp_index + 1)">Opponent {{ opp_index }}</label>
           <div class="selectRangeContainer">
             <v-select
               label="Common Ranges"
               v-model="oppRange.rangeStr"
               :items="selectableRanges"
             ></v-select>
-          </div>                    
+          </div>
           <v-text-field label="Range" v-model="oppRange.rangeStr"></v-text-field>
         </li>
       </ul>
     </div>
     <div class="num-simul">
-      <v-text-field type="number" label="Number of simulations" v-model.number="narrowStore.state.numSimulations"></v-text-field>
+      <v-text-field
+        type="number"
+        label="Number of simulations"
+        v-model.number="narrowStore.state.numSimulations"
+      ></v-text-field>
     </div>
-    
   </div>
 </template>
 
