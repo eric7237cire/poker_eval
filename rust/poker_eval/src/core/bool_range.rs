@@ -134,7 +134,6 @@ impl BoolRange {
         result / indices.len() as f32
     }
 
-
     #[inline]
     fn update_with_singleton(&mut self, combo: &str, enabled: bool) -> Result<(), PokerError> {
         let (rank1, rank2, suitedness) = parse_singleton(combo)?;

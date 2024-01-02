@@ -1,4 +1,4 @@
-use rand::{rngs::StdRng, SeedableRng, Rng};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{Card, CardUsedType, HoleCards, PokerError, ALL_CARDS};
 
@@ -67,7 +67,6 @@ impl Deck {
         &mut self,
         possible_hole_cards: &Vec<HoleCards>,
     ) -> Result<HoleCards, PokerError> {
-        
         let mut attempts = 0;
         loop {
             attempts += 1;

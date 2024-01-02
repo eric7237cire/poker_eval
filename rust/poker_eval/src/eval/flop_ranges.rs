@@ -55,23 +55,22 @@ use itertools::Itertools;
 use log::{debug, trace};
 
 pub fn narrow_range_by_equity(
-    range_to_narrow: &BoolRange, 
+    range_to_narrow: &BoolRange,
     opponent_ranges: &[BoolRange],
     min_equity: f64,
     board: &Board,
-    num_simulations: usize
-) -> BoolRange 
-{
+    num_simulations: usize,
+) -> BoolRange {
     let mut narrowed_range = BoolRange::default();
-    
+
     //we'll calc equity on every hole card against the opponent ranges
-    
+
     let mut all_ranges: Vec<BoolRange> = Vec::with_capacity(opponent_ranges.len() + 1);
     all_ranges.push(BoolRange::default());
     all_ranges.extend(opponent_ranges.iter().cloned());
 
     let hole_card_indexes = range_to_narrow.data.iter_ones().collect_vec();
-    
+
     for hci in hole_card_indexes.iter() {
         if *hci >= ALL_HOLE_CARDS.len() {
             break;
@@ -81,7 +80,7 @@ pub fn narrow_range_by_equity(
         if board.intersects_holecards(&ALL_HOLE_CARDS[*hci]) {
             continue;
         }
-        
+
         all_ranges[0].data.fill(false);
         all_ranges[0].data.set(*hci, true);
         let results = calc_equity(board, &all_ranges, num_simulations);
@@ -93,15 +92,17 @@ pub fn narrow_range_by_equity(
                 continue;
             }
             Ok(results) => {
-                trace!("Equity was {:.2} for {} in board {}", results[0], ALL_HOLE_CARDS[*hci], &board );
+                trace!(
+                    "Equity was {:.2} for {} in board {}",
+                    results[0],
+                    ALL_HOLE_CARDS[*hci],
+                    &board
+                );
                 if results[0] >= min_equity {
                     narrowed_range.data.set(*hci, true);
                 }
             }
         }
-            
-
-
     }
 
     narrowed_range
@@ -109,8 +110,8 @@ pub fn narrow_range_by_equity(
 
 #[cfg(test)]
 mod tests {
-    use crate::{Board, BoolRange, init_test_logger};
     use super::*;
+    use crate::{init_test_logger, Board, BoolRange};
 
     #[test]
     fn test_narrow_range() {
@@ -121,11 +122,18 @@ mod tests {
         init_test_logger();
 
         //let hero_range: BoolRange = "Jd9s".parse().unwrap();
-        let hero_range = "22+,A2+,K2+,Q3s+,Q5o+,J7s+,J8o+,T7s+,T8o+,97s+,98o,87s,76s,65s,54s".parse().unwrap();
-        let other_guy: BoolRange = "22+,A2+,K2+,Q2s+,Q3o+,J3s+,J6o+,T5s+,T7o+,97s+,98o,87s".parse().unwrap();
-        let to_narrow: BoolRange = "22+,A2+,K2+,Q2+,J2+,T2s+,T3o+,92s+,95o+,84s+,86o+,74s+,76o,65s".parse().unwrap();
-    
-        let narrowed_range = narrow_range_by_equity(&to_narrow, &[hero_range, other_guy], 0.25, &board, 1);
+        let hero_range = "22+,A2+,K2+,Q3s+,Q5o+,J7s+,J8o+,T7s+,T8o+,97s+,98o,87s,76s,65s,54s"
+            .parse()
+            .unwrap();
+        let other_guy: BoolRange = "22+,A2+,K2+,Q2s+,Q3o+,J3s+,J6o+,T5s+,T7o+,97s+,98o,87s"
+            .parse()
+            .unwrap();
+        let to_narrow: BoolRange = "22+,A2+,K2+,Q2+,J2+,T2s+,T3o+,92s+,95o+,84s+,86o+,74s+,76o,65s"
+            .parse()
+            .unwrap();
+
+        let narrowed_range =
+            narrow_range_by_equity(&to_narrow, &[hero_range, other_guy], 0.25, &board, 1);
 
         println!("Narrowed range:\n{}", narrowed_range.to_string());
 

@@ -32,7 +32,7 @@ use log::trace;
 
 use crate::{
     pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash, rank::Rank},
-    Board, BoolRange, Deck, PokerError, ALL_CARDS, ALL_HOLE_CARDS, HoleCards,
+    Board, BoolRange, Deck, HoleCards, PokerError, ALL_CARDS, ALL_HOLE_CARDS,
 };
 
 //A more direct version of the flop analyze code
@@ -148,10 +148,11 @@ pub fn calc_equity(
     //Store the player index because we want to pick the most restrictive hole cards first
     let possible_hole_cards: Vec<(usize, Vec<HoleCards>)> = {
         let mut pv = ranges
-        .iter().enumerate()
-        //These are irrespective of used cards, we try later on which hole cards are still valid
-        .map(|(player_index, r)| (player_index, r.get_all_enabled_holecards()))
-        .collect_vec();
+            .iter()
+            .enumerate()
+            //These are irrespective of used cards, we try later on which hole cards are still valid
+            .map(|(player_index, r)| (player_index, r.get_all_enabled_holecards()))
+            .collect_vec();
 
         pv.sort_by(|a, b| a.1.len().cmp(&b.1.len()));
         pv
@@ -188,10 +189,10 @@ pub fn calc_equity(
             // );
 
             //This takes into account the used cards
-            player_hole_cards[*player_index] = deck
-                .choose_available_in_range(player_possible_hold_cards)?;
+            player_hole_cards[*player_index] =
+                deck.choose_available_in_range(player_possible_hold_cards)?;
         }
-        
+
         for board_index in board.get_num_cards()..5 {
             let card = deck.get_unused_card().unwrap();
             board_cards[board_index] = card;

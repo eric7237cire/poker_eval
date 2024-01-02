@@ -2,10 +2,7 @@ use std::{cmp, mem};
 
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use crate::{
-     HoleCards, 
-    PokerError,  BoolRange, Deck, ALL_HOLE_CARDS,
-};
+use crate::{BoolRange, Deck, HoleCards, PokerError, ALL_HOLE_CARDS};
 
 #[derive(Eq, PartialEq, Debug)]
 #[repr(u8)]
@@ -41,11 +38,10 @@ pub fn get_all_player_hole_cards(
     //usize is the original player index
     // we may have removed some players
     active_players: &[(usize, &PreflopPlayerInfo)],
-    deck: &mut Deck,    
+    deck: &mut Deck,
     //usize is the index in active players
-    all_possible_hole_cards: &Vec<(usize, Vec<HoleCards>)>
+    all_possible_hole_cards: &Vec<(usize, Vec<HoleCards>)>,
 ) -> Result<Vec<HoleCards>, PokerError> {
-
     let mut player_cards: Vec<HoleCards> = vec![ALL_HOLE_CARDS[0]; active_players.len()];
 
     let mut hole_cards_set = 0;
@@ -61,13 +57,14 @@ pub fn get_all_player_hole_cards(
             "Player missing hole cards"
         )))?;
         player_cards[active_player_index] = pc;
-        
     }
 
-    assert_eq!(active_players.len(), all_possible_hole_cards.len()+hole_cards_set);
+    assert_eq!(
+        active_players.len(),
+        all_possible_hole_cards.len() + hole_cards_set
+    );
 
     for (active_player_index, possible_hole_cards) in all_possible_hole_cards.iter() {
-
         let p = active_players[*active_player_index].1;
         assert!(p.state == PlayerPreFlopState::UseRange);
 

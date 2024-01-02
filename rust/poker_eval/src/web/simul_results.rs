@@ -34,7 +34,6 @@ impl FlopSimulationResults {
         } else {
             r.lose_rank_family_count[family_index] as f64 / r.num_iterations as f64
         }
-        
     }
     pub fn get_perc_family_or_better(
         &self,
@@ -66,11 +65,12 @@ impl FlopSimulationResults {
         active_player_index: Option<usize>,
         street_index: usize,
     ) -> Result<JsValue, PokerError> {
-        let api = active_player_index.ok_or(PokerError::from_str(
-            "Villian range equity not supported yet",
-        ))?;
-
-        let r = &self.flop_results[api].street_rank_results[street_index].eq_by_range_index;
+        
+        let r = if let Some(api) = active_player_index {
+            &self.flop_results[api].street_rank_results[street_index].eq_by_range_index
+        } else {
+            &self.all_villians.street_rank_results[street_index].eq_by_range_index
+        };
 
         Ok(serde_wasm_bindgen::to_value(r)
             .ok()
@@ -81,11 +81,12 @@ impl FlopSimulationResults {
         active_player_index: Option<usize>,
         street_index: usize,
     ) -> Result<JsValue, PokerError> {
-        let api = active_player_index.ok_or(PokerError::from_str(
-            "Villian range equity not supported yet",
-        ))?;
-
-        let r = &self.flop_results[api].street_rank_results[street_index].num_it_by_range_index;
+        
+        let r = if let Some(api) = active_player_index {
+            &self.flop_results[api].street_rank_results[street_index].num_it_by_range_index
+        } else {
+            &self.all_villians.street_rank_results[street_index].num_it_by_range_index
+        };
 
         Ok(serde_wasm_bindgen::to_value(r)
             .ok()

@@ -5,7 +5,7 @@ use crate::web::{
     eval_current, eval_current_draws, get_all_player_hole_cards, FlopSimulationResults,
     PlayerPreFlopState, PreflopPlayerInfo,
 };
-use crate::{set_used_card, BoolRange, HoleCards, PokerError, Board, ALL_CARDS, Deck};
+use crate::{set_used_card, Board, BoolRange, Deck, HoleCards, PokerError, ALL_CARDS};
 use boomphf::Mphf;
 use itertools::Itertools;
 use log::{debug, error, info, trace, warn};
@@ -248,10 +248,13 @@ impl flop_analyzer {
         //Store the active player index because we want to change the order in which we choose the ranges
         //Ignores players that already have hole cards set
         let mut possible_hole_cards: Vec<(usize, Vec<HoleCards>)> = active_players
-            .iter().enumerate()
-            .filter(|(_idx, p)| p.1.state == PlayerPreFlopState::UseRange )
+            .iter()
+            .enumerate()
+            .filter(|(_idx, p)| p.1.state == PlayerPreFlopState::UseRange)
             //These are irrespective of used cards, we try later on which hole cards are still valid
-            .map(|(active_player_index, r)| (active_player_index, r.1.range.get_all_enabled_holecards()))
+            .map(|(active_player_index, r)| {
+                (active_player_index, r.1.range.get_all_enabled_holecards())
+            })
             .collect_vec();
 
         let mut flop_results = all_flop_results.flop_results;
@@ -287,8 +290,8 @@ impl flop_analyzer {
             deck.used_cards = base_cards_used.clone();
 
             //with flop, players with hole cards
-            let mut eval_cards = Vec::with_capacity(15);            
-            
+            let mut eval_cards = Vec::with_capacity(15);
+
             //let mut cards_used = base_cards_used.clone();
             let num_added = self.add_flop(&mut deck, &mut eval_cards)?;
 
@@ -334,7 +337,7 @@ impl flop_analyzer {
             if self.board_cards.len() < 4 {
                 let turn_card = deck.get_unused_card()?;
                 eval_cards.push(turn_card);
-                
+
                 assert_eq!(3, self.board_cards.len() + num_added);
                 assert_eq!(4 + 2 * active_players.len(), deck.used_cards.count_ones());
             } else {
@@ -378,7 +381,7 @@ impl flop_analyzer {
             if self.board_cards.len() < 5 {
                 let river_card = deck.get_unused_card()?;
                 eval_cards.push(river_card);
-                
+
                 assert_eq!(5 + 2 * active_players.len(), deck.used_cards.count_ones());
             } else {
                 //Just do a simple push since we already added it to used cards
@@ -413,11 +416,7 @@ impl flop_analyzer {
         })
     }
 
-    fn add_flop(
-        &self,
-        deck: &mut Deck,
-        eval_cards: &mut Vec<Card>,
-    ) -> Result<usize, PokerError> {
+    fn add_flop(&self, deck: &mut Deck, eval_cards: &mut Vec<Card>) -> Result<usize, PokerError> {
         assert!(eval_cards.is_empty());
 
         let num_cards_needed_for_flop = 3;
@@ -441,14 +440,15 @@ impl flop_analyzer {
         let mut num_chosen = 0;
         for _ in eval_cards.len()..num_cards_needed_for_flop {
             let unused_card = deck.get_unused_card()?;
-            eval_cards.push(unused_card);            
+            eval_cards.push(unused_card);
             num_chosen += 1;
         }
 
         Ok(num_chosen)
     }
 
-    pub fn narrow_range(&self,
+    pub fn narrow_range(
+        &self,
         str_range_to_narrow: &str,
         //seperated by ;
         str_opponent_ranges: &str,
@@ -457,10 +457,16 @@ impl flop_analyzer {
         //This is per hole card
         num_simulations: usize,
     ) -> Result<String, PokerError> {
-        info!("Starting narrow range {} simulations per hole card, min equity {:.2}", num_simulations, min_equity);
+        info!(
+            "Starting narrow range {} simulations per hole card, min equity {:.2}",
+            num_simulations, min_equity
+        );
 
-        let range_to_narrow : BoolRange = str_range_to_narrow.parse()?;
-        info!("range_to_narrow {} hands", range_to_narrow.data.count_ones());
+        let range_to_narrow: BoolRange = str_range_to_narrow.parse()?;
+        info!(
+            "range_to_narrow {} hands",
+            range_to_narrow.data.count_ones()
+        );
 
         let mut opponent_ranges = Vec::with_capacity(str_opponent_ranges.len());
         for r in str_opponent_ranges.split(';') {

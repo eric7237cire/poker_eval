@@ -524,10 +524,9 @@ where
 
 #[cfg(test)]
 mod tests {
-   use crate::{init_test_logger, Board, BoolRange};
-    
+    use crate::{init_test_logger, Board, BoolRange};
 
-    use crate::{get_possible_hole_cards, rank_cards, CardUsedType,  OldRank};
+    use crate::{get_possible_hole_cards, rank_cards, CardUsedType, OldRank};
 
     #[test]
     fn test_flop_rank() {

@@ -126,25 +126,25 @@ function buildResultsInterface(
       it_num_by_simple_range_idx: []
     };
 
-    if (!_.isNil(active_player_index)) {
-      const r_eq = r.get_range_equity(active_player_index, i);
-      const r_it = r.get_range_it_count(active_player_index, i);
+    
+    const r_eq = r.get_range_equity(active_player_index, i);
+    const r_it = r.get_range_it_count(active_player_index, i);
 
-      //assert(r_eq.length === r_it.length);
+    //assert(r_eq.length === r_it.length);
 
-      const eq_range = [] as Array<number | null>;
+    const eq_range = [] as Array<number | null>;
 
-      for (let ri = 0; ri < r_eq.length; ++ri) {
-        if (r_it[ri] > 0) {
-          eq_range.push(r_eq[ri] / r_it[ri]);
-        } else {
-          eq_range.push(null);
-        }
+    for (let ri = 0; ri < r_eq.length; ++ri) {
+      if (r_it[ri] > 0) {
+        eq_range.push(r_eq[ri] / r_it[ri]);
+      } else {
+        eq_range.push(null);
       }
-
-      sr.eq_by_simple_range_idx = eq_range;
-      sr.it_num_by_simple_range_idx = r_it;
     }
+
+    sr.eq_by_simple_range_idx = eq_range;
+    sr.it_num_by_simple_range_idx = r_it;
+    
 
     street_results.push(sr);
   }

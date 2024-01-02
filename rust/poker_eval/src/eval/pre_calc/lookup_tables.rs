@@ -524,7 +524,7 @@ mod tests {
     fn test_adjust_hand_rank() {
         let rank: Rank = adjust_hand_rank(1).into();
         assert_eq!(rank.get_rank_enum(), RankEnum::StraightFlush);
-        assert_eq!(rank.get_kicker(),9);
+        assert_eq!(rank.get_kicker(), 9);
     }
 
     //#[test]

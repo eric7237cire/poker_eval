@@ -1,7 +1,16 @@
-use std::{cell::RefCell, rc::Rc, collections::BinaryHeap};
+use std::{cell::RefCell, collections::BinaryHeap, rc::Rc};
 
 use log::debug;
-use poker_eval::{init_logger, board_hc_eval_cache_redb::{ProducePartialRankCards, EvalCacheWithHcReDb}, board_eval_cache_redb::{ProduceFlopTexture, EvalCacheReDb}, Deck, agents::{Agent, PassiveCallingStation, set_agent_hole_cards, build_initial_players_from_agents, AgentSource, Tag}, InitialPlayerState, Card, game_runner_source::GameRunnerSourceEnum, test_game_runner, GameRunner};
+use poker_eval::{
+    agents::{
+        build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource,
+        PassiveCallingStation, Tag,
+    },
+    board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
+    board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
+    game_runner_source::GameRunnerSourceEnum,
+    init_logger, test_game_runner, Card, Deck, GameRunner, InitialPlayerState,
+};
 
 fn build_agents(
     flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
@@ -46,78 +55,78 @@ fn build_agents(
     agents
 }
 
-
 fn main() {
-     /*
-        cargo run --release --bin try_agent
-        */
-        init_logger();
-        
-        let partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards> =
-            EvalCacheWithHcReDb::new().unwrap();
+    /*
+    cargo run --release --bin try_agent
+    */
+    init_logger();
 
-        let rcref_pdb = Rc::new(RefCell::new(partial_rank_db));
+    let partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards> =
+        EvalCacheWithHcReDb::new().unwrap();
 
-        let flop_texture_db: EvalCacheReDb<ProduceFlopTexture> = EvalCacheReDb::new().unwrap();
+    let rcref_pdb = Rc::new(RefCell::new(partial_rank_db));
 
-        let rcref_ftdb = Rc::new(RefCell::new(flop_texture_db));
+    let flop_texture_db: EvalCacheReDb<ProduceFlopTexture> = EvalCacheReDb::new().unwrap();
 
-        let mut agent_deck = Deck::new();
+    let rcref_ftdb = Rc::new(RefCell::new(flop_texture_db));
 
-        let mut hero_winnings: i64 = 0;
+    let mut agent_deck = Deck::new();
 
-        //we want to track the worst loses
-        let mut heap: BinaryHeap<(i64, i32, String)> = BinaryHeap::new();
+    let mut hero_winnings: i64 = 0;
 
-        for it_num in 0..200 {
-            agent_deck.reset();
+    //we want to track the worst loses
+    let mut heap: BinaryHeap<(i64, i32, String)> = BinaryHeap::new();
 
-            let mut agents = build_agents(rcref_ftdb.clone(), rcref_pdb.clone());
-            set_agent_hole_cards(&mut agent_deck, &mut agents);
+    for it_num in 0..200 {
+        agent_deck.reset();
 
-            let players: Vec<InitialPlayerState> = build_initial_players_from_agents(&agents);
+        let mut agents = build_agents(rcref_ftdb.clone(), rcref_pdb.clone());
+        set_agent_hole_cards(&mut agent_deck, &mut agents);
 
-            let board: Vec<Card> = agent_deck.choose_new_board();
-            let agent_source = AgentSource {
-                agents,
-                players,
-                sb: 2,
-                bb: 5,
-                board,
-            };
+        let players: Vec<InitialPlayerState> = build_initial_players_from_agents(&agents);
 
-            let mut game_runner =
-                GameRunner::new(GameRunnerSourceEnum::from(agent_source)).unwrap();
+        let board: Vec<Card> = agent_deck.choose_new_board();
+        let agent_source = AgentSource {
+            agents,
+            players,
+            sb: 2,
+            bb: 5,
+            board,
+        };
 
-            test_game_runner(&mut game_runner).unwrap();
+        let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(agent_source)).unwrap();
 
-            let change = game_runner.game_state.player_states[4].stack as i64
-                - game_runner.game_state.player_states[4].initial_stack as i64;
+        test_game_runner(&mut game_runner).unwrap();
 
-            hero_winnings += change;
+        let change = game_runner.game_state.player_states[4].stack as i64
+            - game_runner.game_state.player_states[4].initial_stack as i64;
 
-            heap.push((change, it_num, game_runner.to_game_log_string(true, true)));
+        hero_winnings += change;
 
-            if heap.len() > 5 {
-                heap.pop();
-            }
+        heap.push((change, it_num, game_runner.to_game_log_string(true, true)));
 
-            //if it_num == 5 || it_num == 36 
-            //if it_num == 35
-            //if it_num == 70
-            // if it_num == 101
-            // {
-            //     debug!(
-            //         "Losing hand #{}\n{}",
-            //         it_num,
-            //         game_runner.to_game_log_string(true, true)
-            //     );
-            //     panic!();
-            // }
+        if heap.len() > 5 {
+            heap.pop();
         }
 
-        for (i, (change, it_num, log)) in heap.into_iter().enumerate() {
-            
-            debug!("Losing hand #{} (iteration {})\nLoss: {}\n{}", i, it_num, change, log);
-        }
+        //if it_num == 5 || it_num == 36
+        //if it_num == 35
+        //if it_num == 70
+        // if it_num == 101
+        // {
+        //     debug!(
+        //         "Losing hand #{}\n{}",
+        //         it_num,
+        //         game_runner.to_game_log_string(true, true)
+        //     );
+        //     panic!();
+        // }
+    }
+
+    for (i, (change, it_num, log)) in heap.into_iter().enumerate() {
+        debug!(
+            "Losing hand #{} (iteration {})\nLoss: {}\n{}",
+            i, it_num, change, log
+        );
+    }
 }

@@ -46,7 +46,7 @@ pub enum RankEnum {
     Flush = 5,
     FullHouse = 6,
     FourOfAKind = 7,
-    StraightFlush = 8
+    StraightFlush = 8,
 }
 
 impl From<u16> for Rank {

@@ -5,8 +5,10 @@ use boomphf::Mphf;
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
+    likes_hands::{likes_hand, LikesHandLevel},
+    pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash},
     ActionEnum, BoolRange, CommentedAction, FlushDrawType, GameState, HoleCards, PlayerState,
-    Round, StraightDrawType, likes_hands::{likes_hand, LikesHandLevel}, pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash},
+    Round, StraightDrawType,
 };
 
 use super::Agent;
@@ -19,7 +21,7 @@ pub struct Tag {
     pub name: String,
     flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
     partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
-    hash_func: Mphf<u32>
+    hash_func: Mphf<u32>,
 }
 
 impl Tag {
@@ -37,7 +39,7 @@ impl Tag {
             name: name.to_string(),
             flop_texture_db,
             partial_rank_db,
-            hash_func: load_boomperfect_hash()
+            hash_func: load_boomperfect_hash(),
         }
     }
 
@@ -103,7 +105,10 @@ impl Tag {
         let mut ft_db = self.flop_texture_db.borrow_mut();
         let ft = ft_db.get_put(&game_state.board).unwrap();
 
-        let rank = fast_hand_eval(game_state.board.get_iter().chain(hc.get_iter()), &self.hash_func);
+        let rank = fast_hand_eval(
+            game_state.board.get_iter().chain(hc.get_iter()),
+            &self.hash_func,
+        );
 
         let likes_hand_response = likes_hand(&prc, &ft, &rank, &game_state.board, &hc).unwrap();
 
@@ -125,7 +130,10 @@ impl Tag {
             }
 
             //Special case, lower set on 2 pair board
-            if likes_hand_response.likes_hand >= LikesHandLevel::SmallBet && ft.has_two_pair && prc.made_set_with_n_above(1) {
+            if likes_hand_response.likes_hand >= LikesHandLevel::SmallBet
+                && ft.has_two_pair
+                && prc.made_set_with_n_above(1)
+            {
                 return CommentedAction {
                     action: ActionEnum::Check,
                     comment: Some(format!(
@@ -148,18 +156,19 @@ impl Tag {
             } else {
                 return CommentedAction {
                     action: ActionEnum::Check,
-                    comment: Some(format!("Checking because does not like hand enough @ {} comments -- {}; {}",
+                    comment: Some(format!(
+                        "Checking because does not like hand enough @ {} comments -- {}; {}",
                         likes_hand_response.likes_hand,
                         likes_hand_response.likes_hand_comments.join(", "),
-                        likes_hand_response.not_like_hand_comments.join(", "))
-                ),
+                        likes_hand_response.not_like_hand_comments.join(", ")
+                    )),
                 };
             }
         } else {
             let pot_eq = (100. * game_state.current_to_call as f64)
                 / ((current_pot + game_state.pot()) as f64);
 
-            if  likes_hand_response.likes_hand <= LikesHandLevel::None {
+            if likes_hand_response.likes_hand <= LikesHandLevel::None {
                 return CommentedAction {
                     action: ActionEnum::Fold,
                     comment: Some(
@@ -167,7 +176,9 @@ impl Tag {
                     ),
                 };
             }
-            if game_state.current_to_call < third_pot && likes_hand_response.likes_hand >= LikesHandLevel::LargeBet {
+            if game_state.current_to_call < third_pot
+                && likes_hand_response.likes_hand >= LikesHandLevel::LargeBet
+            {
                 return CommentedAction {
                     action: ActionEnum::Raise(third_pot),
                     comment: Some(format!(

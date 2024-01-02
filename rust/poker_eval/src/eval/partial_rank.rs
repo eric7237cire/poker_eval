@@ -181,7 +181,7 @@ impl PartialRankContainer {
         return None;
     }
 
-    pub fn made_set_with_n_above(&self, n_above:u8) -> bool {
+    pub fn made_set_with_n_above(&self, n_above: u8) -> bool {
         if let Some(hi_pair) = self.hi_pair {
             if hi_pair.made_set && hi_pair.number_above == n_above {
                 return true;
@@ -1264,9 +1264,6 @@ mod tests {
             .to_vec();
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
-        assert_eq!(
-            prc.made_flush,
-            Some(CardValue::Ten)
-        );
+        assert_eq!(prc.made_flush, Some(CardValue::Ten));
     }
 }
