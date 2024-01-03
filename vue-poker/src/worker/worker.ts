@@ -95,7 +95,23 @@ const createHandler = (mod: Mod) => {
         num_simulations
       );
       return result;
-    }
+    },
+
+    narrowRangeByPref(
+      range_to_narrow: string,
+      likes_hand_min_level: number,
+      cards: Uint8Array,
+      num_active_players: number
+    ): string {
+      
+      const result = this.flop_analyzer.narrow_range_by_pref(
+        range_to_narrow,
+        likes_hand_min_level,        
+        cards,
+        num_active_players
+      );
+      return result;
+    },
   };
 };
 

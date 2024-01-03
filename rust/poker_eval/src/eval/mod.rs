@@ -22,7 +22,6 @@ pub mod board_hc_eval_cache_redb;
 
 pub mod narrow_range;
 
-#[cfg(not(target_arch = "wasm32"))]
 pub mod likes_hands;
 
 pub mod monte_carlo_equity;

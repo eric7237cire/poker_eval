@@ -194,14 +194,26 @@ async function handleNarrowRange() {
     return;
   }
   const boardCards = Uint8Array.from(boardStore.board.cards);
-  const response = await handler.narrowRange(
-    playerStore.players[props.playerId].rangeStr,
-    narrowStore.state.opponentRanges.map((r) => r.rangeStr),
-    narrowStore.state.minEquity,
-    boardCards,
-    narrowStore.state.numSimulations
-  );
 
-  playerStore.updateRangeStrForPlayer(props.playerId, response);
+  if (narrowStore.state.useEquity) {
+    const response = await handler.narrowRange(
+      playerStore.players[props.playerId].rangeStr,
+      narrowStore.state.opponentRanges.map((r) => r.rangeStr),
+      narrowStore.state.minEquity,
+      boardCards,
+      narrowStore.state.numSimulations
+    );
+
+    playerStore.updateRangeStrForPlayer(props.playerId, response);
+  } else {
+    const response = await handler.narrowRangeByPref(
+      playerStore.players[props.playerId].rangeStr,
+      narrowStore.state.likesHandMinimum,
+      boardCards,
+      narrowStore.state.numOpponents+1
+    );
+
+    playerStore.updateRangeStrForPlayer(props.playerId, response);
+  }
 }
 </script>
