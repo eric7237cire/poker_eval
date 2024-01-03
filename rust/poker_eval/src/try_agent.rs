@@ -129,4 +129,6 @@ fn main() {
             i, it_num, change, log
         );
     }
+
+    debug!("Hero winnings: {}", hero_winnings);
 }

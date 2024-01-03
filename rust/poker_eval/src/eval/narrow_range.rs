@@ -49,8 +49,9 @@ Maybe have this take a decision profile, but we'll start with what
 seems reasonable and the most 'fishy'
 */
 
-use crate::{core::BoolRange, monte_carlo_equity::calc_equity, Board, ALL_HOLE_CARDS};
+use crate::{core::BoolRange, monte_carlo_equity::calc_equity, Board, ALL_HOLE_CARDS, likes_hands::{LikesHandLevel, likes_hand}, partial_rank_cards, calc_board_texture, pre_calc::fast_eval::fast_hand_eval, PokerError};
 
+use boomphf::Mphf;
 use itertools::Itertools;
 use log::{debug, trace};
 
@@ -106,6 +107,56 @@ pub fn narrow_range_by_equity(
     }
 
     narrowed_range
+}
+
+pub fn narrow_range_by_pref(range_to_narrow: &BoolRange,
+    min_likes_hand_level: LikesHandLevel,
+    board: &Board,
+    num_players: u8,
+    hash_func: &Mphf<u32>,
+) -> Result<BoolRange, PokerError>
+{
+    let mut narrowed_range = BoolRange::default();
+
+    let hole_card_indexes = range_to_narrow.data.iter_ones().collect_vec();
+
+    for hci in hole_card_indexes.iter() {
+        if *hci >= ALL_HOLE_CARDS.len() {
+            break;
+        }
+
+        //if these hole cards are impossible given the board, skip
+        if board.intersects_holecards(&ALL_HOLE_CARDS[*hci]) {
+            continue;
+        }    
+
+        let hc = ALL_HOLE_CARDS[*hci];
+
+        let prc = partial_rank_cards(&hc, board.as_slice_card());
+
+        let board_texture = calc_board_texture(board.as_slice_card());
+
+        let rank = fast_hand_eval(
+            board.get_iter().chain(hc.get_iter()),
+            hash_func,
+        );
+
+        let likes_hand_response = likes_hand(
+            &prc,
+            &board_texture,
+            &rank,
+            board,
+            &hc,
+            num_players,
+        )?;
+
+        if likes_hand_response.likes_hand >= min_likes_hand_level {
+            narrowed_range.data.set(*hci, true);
+        }
+
+    }
+
+    Ok(narrowed_range)
 }
 
 #[cfg(test)]

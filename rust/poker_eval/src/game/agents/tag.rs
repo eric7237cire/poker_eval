@@ -7,8 +7,8 @@ use crate::{
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
     likes_hands::{likes_hand, LikesHandLevel},
     pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash},
-    ActionEnum, BoolRange, CommentedAction, FlushDrawType, GameState, HoleCards, PlayerState,
-    Round, StraightDrawType,
+    ActionEnum, BoolRange, CommentedAction, GameState, HoleCards, PlayerState,
+    Round,
 };
 
 use super::Agent;
@@ -110,7 +110,7 @@ impl Tag {
             &self.hash_func,
         );
 
-        let likes_hand_response = likes_hand(&prc, &ft, &rank, &game_state.board, &hc).unwrap();
+        let likes_hand_response = likes_hand(&prc, &ft, &rank, &game_state.board, &hc, 4).unwrap();
 
         let current_pot = game_state.pot();
 

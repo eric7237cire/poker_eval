@@ -5,8 +5,8 @@ use boomphf::Mphf;
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
-    ActionEnum, BoolRange, CardValue, CommentedAction, FlushDrawType, GameState, HoleCards,
-    PlayerState, Round, StraightDrawType, pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash}, likes_hands::{likes_hand, LikesHandLevel},
+    ActionEnum, BoolRange, CommentedAction, GameState, HoleCards,
+    PlayerState, Round, pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash}, likes_hands::{likes_hand, LikesHandLevel},
 };
 
 use super::Agent;
@@ -67,7 +67,7 @@ impl PassiveCallingStation {
             &self.hash_func,
         );
         
-        let likes_hand_response = likes_hand(&prc, &ft, &rank, &game_state.board, &hc).unwrap();
+        let likes_hand_response = likes_hand(&prc, &ft, &rank, &game_state.board, &hc, 4).unwrap();
 
         let half_pot = game_state.pot() / 2;
 

@@ -1,4 +1,6 @@
-use crate::flop_ranges::narrow_range_by_equity;
+use std::cmp::{max, min};
+
+use crate::narrow_range::{narrow_range_by_equity, narrow_range_by_pref};
 use crate::pre_calc::perfect_hash::load_boomperfect_hash;
 use crate::web::player_results::PlayerFlopResults;
 use crate::web::{
@@ -282,9 +284,14 @@ impl flop_analyzer {
             used_cards: base_cards_used.clone(),
         };
 
-        for _it_num in 0..num_iterations {
+        let mut num_errors = 0;
+        let allowed_errors = max(5, min(num_iterations / 500, 100));
+
+        for it_num in 0..num_iterations {
             //debug!("simulate_flop: iteration {}", it_num);
 
+            //We don't want any selection bias; like choosing first I think makes it
+            //more likely they get pocket pairs for example
             possible_hole_cards.shuffle(&mut deck.rng);
 
             deck.used_cards = base_cards_used.clone();
@@ -299,7 +306,20 @@ impl flop_analyzer {
 
             //First we choose hole cards for players that are using a range
             let player_cards =
-                get_all_player_hole_cards(&active_players, &mut deck, &possible_hole_cards)?;
+                get_all_player_hole_cards(&active_players, &mut deck, &possible_hole_cards);
+
+            if let Err(e) = player_cards {
+                warn!("Failed to get player cards: {} in iteration {}", e, it_num);
+                num_errors += 1;
+                if num_errors > allowed_errors {
+                    return Err(PokerError::from_string(format!(
+                        "simulate_flop: too many errors {}",
+                        num_errors
+                    )));
+                }
+                continue;
+            }
+            let player_cards = player_cards.unwrap();
 
             assert_eq!(player_cards.len(), active_players.len());
 
@@ -487,6 +507,43 @@ impl flop_analyzer {
             &board,
             num_simulations,
         );
+
+        info!("narrowed range {} hands", narrowed_range.data.count_ones());
+
+        Ok(narrowed_range.to_string())
+    }
+
+    pub fn narrow_range_by_pref(
+        &self,
+        str_range_to_narrow: &str,
+        likes_hand_level: u8,        
+        cards: &[u8],        
+        num_players: u8
+    ) -> Result<String, PokerError> {
+        info!(
+            "Starting narrow range {} by preference with {} vs {} opponents",
+            str_range_to_narrow, likes_hand_level, num_players
+        );
+
+        let range_to_narrow: BoolRange = str_range_to_narrow.parse()?;
+        info!(
+            "range_to_narrow {} hands",
+            range_to_narrow.data.count_ones()
+        );
+
+        let mut board = Board::new();
+        for c in cards.iter() {
+            board.add_card(ALL_CARDS[*c as usize])?;
+        }
+        info!("board {}", board.to_string());
+
+        let narrowed_range = narrow_range_by_pref(
+            &range_to_narrow,
+            likes_hand_level.try_into()?,
+            &board,
+            num_players,
+            &self.hash_func,
+        )?;
 
         info!("narrowed range {} hands", narrowed_range.data.count_ones());
 

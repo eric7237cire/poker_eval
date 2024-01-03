@@ -1,10 +1,9 @@
 use std::{
     cmp::{max, min},
-    fmt::{Display, Formatter},
+    fmt::{Display, Formatter}, mem,
 };
 
 use crate::{
-    partial_rank_cards,
     pre_calc::rank::{Rank, RankEnum},
     Board, BoardTexture, CardValue, FlushDrawType, HoleCards, MadeWith, PartialRankContainer,
     PokerError, Round, StraightDrawType,
@@ -13,11 +12,11 @@ use crate::{
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 #[repr(u8)]
 pub enum LikesHandLevel {
-    None, //might even fold instead of checking
-    CallSmallBet,
-    SmallBet,
-    LargeBet,
-    AllIn,
+    None=0, //might even fold instead of checking
+    CallSmallBet=1,
+    SmallBet=2, // corresponds to calling a 1/3 pot bet, so roughly 20% equity
+    LargeBet=3, // up to a pot size bet 
+    AllIn=4, // calling overbets, going all in etc. 
 }
 
 impl Display for LikesHandLevel {
@@ -29,6 +28,18 @@ impl Display for LikesHandLevel {
             LikesHandLevel::LargeBet => write!(f, "LargeBet"),
             LikesHandLevel::AllIn => write!(f, "AllIn"),
         }
+    }
+}
+
+impl TryFrom<u8> for LikesHandLevel {
+    type Error = PokerError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        if value > LikesHandLevel::AllIn as u8 {
+            return Err(PokerError::from_string(format!("Invalid value: {}", value)));
+        }
+
+        Ok(unsafe { mem::transmute(value) })
     }
 }
 
@@ -44,7 +55,12 @@ pub fn likes_hand(
     rank: &Rank,
     board: &Board,
     hc: &HoleCards,
+    //Idea is to tweak responses based on 2 vs more players
+    num_in_pot: u8, 
 ) -> Result<LikesHandResponse, PokerError> {
+
+    assert!(num_in_pot >= 2 && num_in_pot <= 10);
+
     let round = board.get_round()?;
 
     let mut likes_hand_comments: Vec<String> = Vec::new();
@@ -393,7 +409,7 @@ mod test {
                             let rank =
                                 fast_hand_eval(board.get_iter().chain(hc.get_iter()), &hash_func);
 
-                            let likes_hand_res = likes_hand(&prc, &ft, &rank, &board, &hc).unwrap();
+                            let likes_hand_res = likes_hand(&prc, &ft, &rank, &board, &hc, 4).unwrap();
 
                             //Get equity
                             ranges[0].data.fill(false);
