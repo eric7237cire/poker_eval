@@ -175,23 +175,8 @@ const rootStyle = ref({});
 
 const rangeStore = useRangesStore();
 
-//Player store now does range string => weights; may not need these anymore
-
-//If current player changes, update the range text & reparse
-watch(
-  () => playerStore.currentPlayer,
-  (newValue, oldValue) => {
-    console.log(`The re cp changed from ${oldValue} to ${newValue}`);
-    //const playerIndex = currentPlayer.value.valueOf();
-    const p = playerStore.curPlayerData;
-    // console.log(`p is ${JSON.stringify(p)}`);
-    // console.log(`range text is set to [ ${p.rangeStr} ]`);
-    rangeText.value = p.rangeStr;
-    onRangeTextChange();
-  }
-);
-
-//If range editor activated, reparse range text
+//This is needed because there is 1 range editor for all players
+//If range editor activated, reparse range text to get full weights
 watch(
   () => navStore.currentPage,
   (newValue, oldValue) => {
