@@ -43,6 +43,7 @@ impl TryFrom<u8> for LikesHandLevel {
     }
 }
 
+#[derive(Debug)]
 pub struct LikesHandResponse {
     pub likes_hand: LikesHandLevel,
     pub likes_hand_comments: Vec<String>,
@@ -304,7 +305,7 @@ pub fn likes_hand(
 
 #[cfg(test)]
 mod test {
-    use log::info;
+    use log::{info, debug};
 
     use crate::{
         board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
@@ -314,7 +315,7 @@ mod test {
         pre_calc::{
             fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash, NUMBER_OF_RANKS,
         },
-        Board, BoolRange, Card, CardValue, Deck, Suit,
+        Board, BoolRange, Card, CardValue, Deck, Suit, partial_rank_cards, calc_board_texture,
     };
 
     use super::*;
@@ -329,10 +330,75 @@ mod test {
         }
     }
 
+    #[test]
+    fn test_likes_pair_in_flush() {
+        init_test_logger();
+
+        let hc: HoleCards = "8h 8d".parse().unwrap();
+
+        let board: Board = "Ad 5d 6h Kd".parse().unwrap();
+
+        let prc = partial_rank_cards(&hc, board.as_slice_card());
+
+        let board_texture = calc_board_texture(board.as_slice_card());
+
+        let hash_func = load_boomperfect_hash();
+
+        let rank = fast_hand_eval(
+            board.get_iter().chain(hc.get_iter()),
+            &hash_func,
+        );
+
+        let likes_hand_response = likes_hand(
+            &prc,
+            &board_texture,
+            &rank,
+            &board,
+            &hc,
+            4,
+        ).unwrap();
+
+        debug!("Likes hand response: {:?}", likes_hand_response);
+        
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::SmallBet);
+
+        //not a diamond
+        let hc: HoleCards = "8h 8c".parse().unwrap();
+
+        let board: Board = "Ad 5d 6h Kd".parse().unwrap();
+
+        let prc = partial_rank_cards(&hc, board.as_slice_card());
+
+        let board_texture = calc_board_texture(board.as_slice_card());
+
+        let hash_func = load_boomperfect_hash();
+
+        let rank = fast_hand_eval(
+            board.get_iter().chain(hc.get_iter()),
+            &hash_func,
+        );
+
+        let likes_hand_response = likes_hand(
+            &prc,
+            &board_texture,
+            &rank,
+            &board,
+            &hc,
+            4,
+        ).unwrap();
+
+        debug!("Likes hand response: {:?}", likes_hand_response);
+        
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::CallSmallBet);
+    }
+
     //#[test]
     #[cfg(not(target_arch = "wasm32"))]
     #[allow(dead_code)]
     fn test_likes_hand() {
+
+        //compares likes hand with actual equity
+
         /*
         cargo test test_likes_hand --release -- --nocapture
          */

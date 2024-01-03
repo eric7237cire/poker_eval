@@ -195,7 +195,11 @@ async function handleNarrowRange() {
   }
   const boardCards = Uint8Array.from(boardStore.board.cards);
 
+  console.log('handleNarrowRange', narrowStore.state);
+
   if (narrowStore.state.useEquity) {
+    console.log('handleNarrowRange by equity', narrowStore.state.minEquity);
+
     const response = await handler.narrowRange(
       playerStore.players[props.playerId].rangeStr,
       narrowStore.state.opponentRanges.map((r) => r.rangeStr),
@@ -206,6 +210,8 @@ async function handleNarrowRange() {
 
     playerStore.updateRangeStrForPlayer(props.playerId, response);
   } else {
+    console.log('handleNarrowRange by pref', narrowStore.state.likesHandMinimum);
+
     const response = await handler.narrowRangeByPref(
       playerStore.players[props.playerId].rangeStr,
       narrowStore.state.likesHandMinimum,

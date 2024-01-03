@@ -1,5 +1,6 @@
 use std::cmp::{max, min};
 
+use crate::likes_hands::LikesHandLevel;
 use crate::narrow_range::{narrow_range_by_equity, narrow_range_by_pref};
 use crate::pre_calc::perfect_hash::load_boomperfect_hash;
 use crate::web::player_results::PlayerFlopResults;
@@ -520,15 +521,13 @@ impl flop_analyzer {
         cards: &[u8],        
         num_players: u8
     ) -> Result<String, PokerError> {
-        info!(
-            "Starting narrow range {} by preference with {} vs {} opponents",
-            str_range_to_narrow, likes_hand_level, num_players
-        );
+        
 
         let range_to_narrow: BoolRange = str_range_to_narrow.parse()?;
+        let likes_hand: LikesHandLevel = likes_hand_level.try_into()?;
         info!(
-            "range_to_narrow {} hands",
-            range_to_narrow.data.count_ones()
+            "Starting narrow range {} by preference with min likes hand {} vs {} opponents",
+            range_to_narrow.data.count_ones(), likes_hand, num_players
         );
 
         let mut board = Board::new();
@@ -539,7 +538,7 @@ impl flop_analyzer {
 
         let narrowed_range = narrow_range_by_pref(
             &range_to_narrow,
-            likes_hand_level.try_into()?,
+            likes_hand,
             &board,
             num_players,
             &self.hash_func,
