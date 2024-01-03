@@ -59,6 +59,11 @@ pub fn likes_hand(
     //Idea is to tweak responses based on 2 vs more players
     num_in_pot: u8, 
 ) -> Result<LikesHandResponse, PokerError> {
+    /*
+    establish maxes based on what we like
+    
+    at the end we enforce mins (e.g. 4 to a flush on board)
+    */
 
     assert!(num_in_pot >= 2 && num_in_pot <= 10);
 
@@ -96,6 +101,22 @@ pub fn likes_hand(
     if !ft.has_quads && rank.get_rank_enum() >= RankEnum::FourOfAKind {
         likes_hand_comments.push(format!("Made Quads or better"));
         likes_hand = max(likes_hand, LikesHandLevel::AllIn);
+    }
+
+    if let Some(num_above) = prc.made_two_pair() {
+        if board.get_num_cards() == 3 {
+            likes_hand_comments.push(format!(
+                "Made two pair on flop with {} above hi card ",
+                num_above
+            ));
+            likes_hand = max(likes_hand, LikesHandLevel::AllIn);
+        } else {
+            likes_hand_comments.push(format!(
+                "Made two pair with {} above hi card ",
+                num_above
+            ));
+            likes_hand = max(likes_hand, LikesHandLevel::LargeBet);
+        }
     }
 
     if let Some(p) = prc.hi_pair {
@@ -390,6 +411,40 @@ mod test {
         debug!("Likes hand response: {:?}", likes_hand_response);
         
         assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::CallSmallBet);
+    }
+
+    #[test]
+    fn test_likes_two_pair() {
+        init_test_logger();
+
+        let hc: HoleCards = "3c 5s".parse().unwrap();
+
+        let board: Board = "Qh 3d 5c".parse().unwrap();
+
+        let prc = partial_rank_cards(&hc, board.as_slice_card());
+
+        let board_texture = calc_board_texture(board.as_slice_card());
+
+        let hash_func = load_boomperfect_hash();
+
+        let rank = fast_hand_eval(
+            board.get_iter().chain(hc.get_iter()),
+            &hash_func,
+        );
+
+        let likes_hand_response = likes_hand(
+            &prc,
+            &board_texture,
+            &rank,
+            &board,
+            &hc,
+            4,
+        ).unwrap();
+
+        debug!("Likes hand response: {:?}", likes_hand_response);
+        
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::AllIn);
+
     }
 
     //#[test]

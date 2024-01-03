@@ -181,6 +181,13 @@ impl PartialRankContainer {
         return None;
     }
 
+    pub fn made_two_pair(&self) -> Option<u8> {
+        if self.hi_pair.is_some() && self.lo_pair.is_some() {
+            return Some(self.hi_pair.unwrap().number_above);
+        }
+        None
+    }
+
     pub fn made_set_with_n_above(&self, n_above: u8) -> bool {
         if let Some(hi_pair) = self.hi_pair {
             if hi_pair.made_set && hi_pair.number_above == n_above {
