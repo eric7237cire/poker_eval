@@ -296,7 +296,7 @@ async function go() {
   }
 
   num_iterations.value = 0;
-  userMessage.value = `Simulating until ${maxIterations} or Stop is clicked...`;
+  userMessage.value = `Simulating until ${maxIterations.value} or Stop is clicked...`;
 
   const resultsOk = await handler.initResults();
 
@@ -352,10 +352,10 @@ async function tick(numIterations: number) {
 async function stop() {
   stopping = true;
 
-  num_iterations.value = 0;
+  //num_iterations.value = 0;
   userMessage.value = ``;
 
-  resultsStore.results = [];
+  //resultsStore.results = [];
 
   if (setTimeoutReturn.value) {
     console.info('clearTimeout');
