@@ -14,12 +14,14 @@ path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
 [[bin]]
-name = "runner"
-path = "src/bin.rs"
+name = "test_perf"
+path = "src/test_perf.rs"
+
+[[bin]]
+name = "try_agent"
+path = "src/try_agent.rs"
 
 [dependencies]
-# poker_rs = { path = "../poker_rs", features=["arena"] }
-postflop-solver = {path = "../postflop-solver"}
 bitvec = {version = "1.0.1", features=["serde"]}
 itertools = "*"
 log = "*"
@@ -40,7 +42,7 @@ serde = { version = "1.0", features = ["derive"] }
 # To return jsvalue
 serde-wasm-bindgen = "0.6"
 
-# error object
+# error object PokerError=>JsError
 js-sys = "0.3"
 
 enum_dispatch = "0.3.12"
@@ -51,6 +53,8 @@ once_cell = "1.19"
 
 boomphf = {version="0.6.0", features=["serde"]}
 bincode = "1.3.3"
+
+fastrand = "2.0.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 jammdb = "0.11"

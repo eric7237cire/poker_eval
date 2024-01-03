@@ -57,6 +57,9 @@ pub struct BoardTexture {
     pub num_with_gut_shot: u16,
     pub num_hole_cards: u16,
 
+    //these are all mutually exclusive
+    pub has_quads: bool,
+    pub has_fh: bool,
     pub has_trips: bool,
     pub has_pair: bool,
     pub has_two_pair: bool,
@@ -75,6 +78,8 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
         has_trips: false,
         has_pair: false,
         has_two_pair: false,
+        has_fh: false,
+        has_quads: false,
         high_value_count: 0,
         med_value_count: 0,
         low_value_count: 0,
@@ -128,11 +133,16 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
         texture.same_suited_max_count = max(texture.same_suited_max_count, svs.count_ones() as u8);
     }
 
-    if cards_metrics.count_to_value[3] != 0 {
-        texture.has_trips = true;
-    }
     let pair_count = cards_metrics.count_to_value[2].count_ones();
-    if pair_count >= 2 {
+    if cards_metrics.count_to_value[4] != 0 {
+        texture.has_quads = true;
+    } else if cards_metrics.count_to_value[3] != 0 {
+        if pair_count == 0 {
+            texture.has_trips = true;
+        } else {
+            texture.has_fh = true;
+        }
+    } else if pair_count >= 2 {
         texture.has_two_pair = true;
     } else if pair_count == 1 {
         texture.has_pair = true;

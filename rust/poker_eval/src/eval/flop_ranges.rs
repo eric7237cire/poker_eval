@@ -49,69 +49,101 @@ Maybe have this take a decision profile, but we'll start with what
 seems reasonable and the most 'fishy'
 */
 
-use std::{cell::RefCell, rc::Rc};
+use crate::{core::BoolRange, monte_carlo_equity::calc_equity, Board, ALL_HOLE_CARDS};
 
-use crate::{
-    board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
-    core::BoolRange,
-    Board, Card, HoleCards, PartialRankContainer, PokerError,
-};
+use itertools::Itertools;
+use log::{debug, trace};
 
-use serde::{Deserialize, Serialize};
-const BET_SIZE_COUNT: usize = 3;
-
-const BET_ZERO: usize = 0;
-const BET_SMALL: usize = 1;
-const BET_LARGE: usize = 2;
-
-#[derive(Serialize, Deserialize)]
-pub struct FlopRangeContainer {
-    //This is what we start with
-    pub flop_range: BoolRange,
-    pub turn_ranges: [BoolRange; BET_SIZE_COUNT],
-    pub river_ranges: [BoolRange; BET_SIZE_COUNT * BET_SIZE_COUNT],
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct FlopRanges {
-    pub all: FlopRangeContainer,
-
-    pub top_75: FlopRangeContainer,
-
-    pub top_50: FlopRangeContainer,
-}
-
-fn narrow_range(
+pub fn narrow_range_by_equity(
+    range_to_narrow: &BoolRange,
+    opponent_ranges: &[BoolRange],
+    min_equity: f64,
     board: &Board,
-    in_range: &BoolRange,
-    _bet_size: usize,
-    partial_rank_db: Rc<
-        RefCell<EvalCacheWithHcReDb<ProducePartialRankCards, PartialRankContainer>>,
-    >,
-) -> Result<BoolRange, PokerError> {
-    //bet 0 is nothing, 1 is small bet
-    let out_range = BoolRange::default();
+    num_simulations: usize,
+) -> BoolRange {
+    let mut narrowed_range = BoolRange::default();
 
-    let mut p_db = partial_rank_db.borrow_mut();
+    //we'll calc equity on every hole card against the opponent ranges
 
-    let mut index_check = 0;
-    for lo_card in 0..52u8 {
-        for hi_card in lo_card + 1..52u8 {
-            let hc = HoleCards::new(Card::try_from(lo_card)?, Card::try_from(hi_card)?)?;
+    let mut all_ranges: Vec<BoolRange> = Vec::with_capacity(opponent_ranges.len() + 1);
+    all_ranges.push(BoolRange::default());
+    all_ranges.extend(opponent_ranges.iter().cloned());
 
-            let hc_index = hc.to_range_index();
-            assert_eq!(hc_index, index_check);
-            index_check += 1;
+    let hole_card_indexes = range_to_narrow.data.iter_ones().collect_vec();
 
-            if !in_range.data[hc_index] {
+    for hci in hole_card_indexes.iter() {
+        if *hci >= ALL_HOLE_CARDS.len() {
+            break;
+        }
+
+        //if these hole cards are impossible given the board, skip
+        if board.intersects_holecards(&ALL_HOLE_CARDS[*hci]) {
+            continue;
+        }
+
+        all_ranges[0].data.fill(false);
+        all_ranges[0].data.set(*hci, true);
+        let results = calc_equity(board, &all_ranges, num_simulations);
+
+        match results {
+            Err(e) => {
+                let hc = ALL_HOLE_CARDS[*hci];
+                debug!("Unable to calculate {}, error: {}", &hc, e);
                 continue;
             }
-
-            let _prc = p_db.get_put(board, &hc).unwrap();
-
-            //out_range.set(hc_index);
+            Ok(results) => {
+                trace!(
+                    "Equity was {:.2} for {} in board {}",
+                    results[0],
+                    ALL_HOLE_CARDS[*hci],
+                    &board
+                );
+                if results[0] >= min_equity {
+                    narrowed_range.data.set(*hci, true);
+                }
+            }
         }
     }
 
-    Ok(out_range)
+    narrowed_range
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{init_test_logger, Board, BoolRange};
+
+    #[test]
+    fn test_narrow_range() {
+        /*
+        cargo test --lib test_narrow_range --release -- --nocapture
+         */
+        let board: Board = "Jh Td 7c".parse().unwrap();
+        init_test_logger();
+
+        //let hero_range: BoolRange = "Jd9s".parse().unwrap();
+        let hero_range = "22+,A2+,K2+,Q3s+,Q5o+,J7s+,J8o+,T7s+,T8o+,97s+,98o,87s,76s,65s,54s"
+            .parse()
+            .unwrap();
+        let other_guy: BoolRange = "22+,A2+,K2+,Q2s+,Q3o+,J3s+,J6o+,T5s+,T7o+,97s+,98o,87s"
+            .parse()
+            .unwrap();
+        let to_narrow: BoolRange = "22+,A2+,K2+,Q2+,J2+,T2s+,T3o+,92s+,95o+,84s+,86o+,74s+,76o,65s"
+            .parse()
+            .unwrap();
+
+        let narrowed_range =
+            narrow_range_by_equity(&to_narrow, &[hero_range, other_guy], 0.25, &board, 1);
+
+        println!("Narrowed range:\n{}", narrowed_range.to_string());
+
+        // let board: Board = "Jh 6h 5d".parse().unwrap();
+        // let to_narrow : BoolRange = "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,95s+,96o+,85s+,87o,76s".parse().unwrap();
+        // let op1 : BoolRange = "22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32".parse().unwrap();
+        // let op2 : BoolRange = "22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32".parse().unwrap();
+
+        // let narrowed_range = narrow_range_by_equity(&to_narrow, &[op1, op2], 0.35, &board, 3_000);
+
+        // println!("Narrowed range:\n{}", narrowed_range.to_string());
+    }
 }

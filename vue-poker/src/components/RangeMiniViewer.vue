@@ -21,34 +21,29 @@
   </table>
 </template>
 
-<script lang="ts">
-import { defineComponent } from 'vue';
+<style lang="postcss" scoped>
+table {
+  width: 150px;
+  z-index: 0;
+  position: relative;
+}
+</style>
+<script setup lang="ts">
 import { usePlayerStore } from '../stores/player';
 
 const yellow500 = '#eab308';
 
-export default defineComponent({
-  props: {
-    playerId: {
-      type: Number,
-      required: true
-    }
-  },
+const props = defineProps<{ range: Array<number> }>();
 
-  setup(props) {
-    const playerStore = usePlayerStore();
+const playerStore = usePlayerStore();
 
-    const cellValue = (row: number, col: number) => {
-      const cellIndex = (row - 1) * 13 + (col - 1);
-      // console.log(
-      //   `Player ${props.playerId} cell ${cellIndex} --> ${
-      //     playerStore.playerDataForId(props.playerId).range[cellIndex]
-      //   }`
-      // );
-      return playerStore.playerDataForId(props.playerId).range[cellIndex];
-    };
-
-    return { yellow500, cellValue };
-  }
-});
+function cellValue(row: number, col: number) {
+  const cellIndex = (row - 1) * 13 + (col - 1);
+  // console.log(
+  //   `Player ${props.playerId} cell ${cellIndex} --> ${
+  //     playerStore.playerDataForId(props.playerId).range[cellIndex]
+  //   }`
+  // );
+  return props.range[cellIndex];
+}
 </script>

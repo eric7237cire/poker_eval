@@ -1,4 +1,4 @@
-import { CardList } from "./stores/board";
+import { CardList } from './stores/board';
 
 export const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
 
@@ -312,35 +312,33 @@ export const readableLineString = (s: string): string => {
   return ret;
 };
 
-
-
 export function loadCardsFromUrl(urlQueryParam: string): CardList | null {
-    const urlParams = new URLSearchParams(window.location.search);
-    const queryParamCardText = urlParams.get(urlQueryParam) || '';
-  
-      if (!queryParamCardText) {
-          return null;
-      }
-  
-      let cards: number[] = [];
-      let cardsText : Array<string> = [];
-  
-      for (let i = 0; i < queryParamCardText.length; i += 2) {
-          let cardText = queryParamCardText.substring(i, i + 2);
-          let card = parseCardString(cardText);
-          if (card === null) {
-              continue;
-          }
-          cards.push(card);
-          cardsText.push(cardText);
-      }
-  
-      if (cards.length <= 0) {
-          return null;
-      }
-  
-    return {
-      cardText: cardsText.join(', '),
-      cards
-    };
+  const urlParams = new URLSearchParams(window.location.search);
+  const queryParamCardText = urlParams.get(urlQueryParam) || '';
+
+  if (!queryParamCardText) {
+    return null;
   }
+
+  let cards: number[] = [];
+  let cardsText: Array<string> = [];
+
+  for (let i = 0; i < queryParamCardText.length; i += 2) {
+    let cardText = queryParamCardText.substring(i, i + 2);
+    let card = parseCardString(cardText);
+    if (card === null) {
+      continue;
+    }
+    cards.push(card);
+    cardsText.push(cardText);
+  }
+
+  if (cards.length <= 0) {
+    return null;
+  }
+
+  return {
+    cardText: cardsText.join(', '),
+    cards
+  };
+}

@@ -14,7 +14,7 @@
           @click="startEditing"
           v-if="cardListRef.cards.length == 0"
         >
-          Edit {{ props.expected_length == 2 ? 'Hole Cards' : 'Board' }}
+          Edit {{ props.max_expected_length == 2 ? 'Hole Cards' : 'Board' }}
         </button>
       </div>
     </template>
@@ -47,12 +47,23 @@
 
         <div
           v-if="
-            props.expected_length > 0 && props.modelValue.cards.length !== props.expected_length
+            props.min_expected_length > 0 &&
+            props.modelValue.cards.length < props.min_expected_length
           "
           class="mt-5 text-orange-500 font-semibold"
         >
           <span class="underline">Warning:</span>
-          Expecting {{ props.expected_length }} Cards
+          Expecting {{ props.min_expected_length }} Cards
+        </div>
+        <div
+          v-if="
+            props.max_expected_length > 0 &&
+            props.modelValue.cards.length > props.max_expected_length
+          "
+          class="mt-5 text-orange-500 font-semibold"
+        >
+          <span class="underline">Warning:</span>
+          Expecting {{ props.max_expected_length }} Cards
         </div>
       </div>
     </template>
@@ -60,18 +71,13 @@
 </template>
 
 <style lang="postcss" scoped>
-
-.template_root {
-  
-}
-
 .not_editing {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
 }
-.editor {  
+.editor {
   z-index: 10;
   position: relative;
   width: var(--editorWidth);
@@ -93,10 +99,11 @@ import { useCssVar } from '@vueuse/core';
 
 const BOARD_EDITOR_PIXEL_WIDTH = 600;
 const BOARD_EDITOR_PIXEL_HEIGHT = 400;
-const BOARD_EDITOR_CSS_VAR_NAME = "--editorWidth";
+const BOARD_EDITOR_CSS_VAR_NAME = '--editorWidth';
 
 interface Props {
-  expected_length: number;
+  min_expected_length: number;
+  max_expected_length: number;
 
   //Part of v-model
   modelValue: CardList;
@@ -109,16 +116,16 @@ const emit = defineEmits<{
   updateModelValue: [value: CardList];
 }>();
 
-//Be responsive to model changes, not sure if this is 
+//Be responsive to model changes, not sure if this is
 //really needed
-const cardListRef = computed( () => {
-    const cardListComputed = props.modelValue;
+const cardListRef = computed(() => {
+  const cardListComputed = props.modelValue;
 
-    if (cardListComputed && !Array.isArray(cardListComputed.cards)) {
-        cardListComputed.cards = [];
-    }
-    console.log('cardListComputed', cardListComputed.cards);
-    return cardListComputed;
+  if (cardListComputed && !Array.isArray(cardListComputed.cards)) {
+    cardListComputed.cards = [];
+  }
+  console.log('cardListComputed', cardListComputed.cards);
+  return cardListComputed;
 });
 
 const isEditing = ref(false);
@@ -126,7 +133,7 @@ const isEditing = ref(false);
 //Will be assigned the editor div
 //const editor = ref(null);
 const not_editing = ref(null);
-const root_element = ref<HTMLDivElement|null>(null);
+const root_element = ref<HTMLDivElement | null>(null);
 const width = useCssVar(BOARD_EDITOR_CSS_VAR_NAME, root_element);
 width.value = BOARD_EDITOR_PIXEL_WIDTH + 'px';
 const editorStyle = ref({});
@@ -162,7 +169,7 @@ function positionEditor() {
 
   const rect = root_element.value.getBoundingClientRect();
 
-  const popupWidth = BOARD_EDITOR_PIXEL_WIDTH; 
+  const popupWidth = BOARD_EDITOR_PIXEL_WIDTH;
   const popupHeight = BOARD_EDITOR_PIXEL_HEIGHT;
 
   const extraWidth = 50;
@@ -174,7 +181,7 @@ function positionEditor() {
 
   //console.log('top', top);
   //console.log('left', left);
-  
+
   // Adjust position to keep the popup on screen
   if (right > window.innerWidth) {
     left -= right - window.innerWidth;
@@ -184,31 +191,40 @@ function positionEditor() {
   }
 
   editorStyle.value = {
-    position: "fixed",
+    position: 'fixed',
     left: `${left}px`,
-    top: `${top}px`,
+    top: `${top}px`
   };
 }
 
 function toggleCard(cardId: number, updateText = true) {
-    const cardList = cardListRef.value;
+  const cardList = cardListRef.value;
   if (cardList.cards.includes(cardId)) {
     //removes the card
     cardList.cards = cardList.cards.filter((card) => card !== cardId);
-  } else if (cardList.cards.length < 5) {
-    //adds the card
-
-    //Unless it's used
-    if (usedCards.value.includes(cardId)) {
-      console.log(`Card is used: ${cardId}`);
-      return;
+    if (updateText) {
+      setBoardTextFromButtons();
     }
-
-    cardList.cards.push(cardId);
-    if (cardList.cards.length <= 3) {
-      cardList.cards.sort((a, b) => b - a);
-    }
+    return;
   }
+
+  //If this puts us over the max, we remove a card
+  if (cardList.cards.length + 1 > props.max_expected_length) {
+    cardList.cards.shift();
+  }
+
+  //we should be under the limit
+
+  if (cardList.cards.length >= props.max_expected_length) {
+    return;
+  }
+
+  //adds the card
+
+  cardList.cards.push(cardId);
+  // if (cardList.cards.length <= 3) {
+  //   cardList.cards.sort((a, b) => b - a);
+  // }
 
   if (updateText) {
     setBoardTextFromButtons();
@@ -216,14 +232,13 @@ function toggleCard(cardId: number, updateText = true) {
 }
 
 function setBoardTextFromButtons() {
-    const cardList = cardListRef.value;
+  const cardList = cardListRef.value;
   cardList.cardText = cardList.cards
     .map(cardText)
     .map(({ rank, suitLetter }) => rank + suitLetter)
     .join(', ');
 
   console.log('boardText.value', cardList.cardText);
-  
 }
 
 function editDone() {
@@ -236,7 +251,7 @@ function startEditing() {
 }
 
 function onBoardTextChange() {
-    const cardList = cardListRef.value;
+  const cardList = cardListRef.value;
   cardList.cards = [];
 
   const cardIds = cardList.cardText
@@ -253,16 +268,16 @@ function onBoardTextChange() {
 }
 
 function clearBoard() {
-    const cardList = cardListRef.value;
+  const cardList = cardListRef.value;
   cardList.cards = [];
   setBoardTextFromButtons();
 }
 
 function generateRandomBoard() {
-    const cardList = cardListRef.value;
+  const cardList = cardListRef.value;
   cardList.cards = [];
 
-  while (cardList.cards.length < props.expected_length) {
+  while (cardList.cards.length < props.max_expected_length) {
     const randomCard = Math.floor(Math.random() * 52);
     if (!cardList.cards.includes(randomCard)) {
       cardList.cards.push(randomCard);

@@ -4,13 +4,11 @@
   color: white;
 }
 
-.board-selector-container,
-.players {
-  display: grid;
-  grid-gap: 10;
-  grid-template-columns: repeat(8, minmax(75px, 90px));
-  /*display: block;*/
-  margin-left: 30px;
+.board-selector-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
 }
 
 .go-row-container {
@@ -18,8 +16,10 @@
   flex-direction: row;
   justify-content: center;
   align-items: center;
-  width: calc(5 * var(--playerWidth));
-  margin-left: 70px;
+  /*width: calc(5 * var(--playerWidth));*/
+  width: 100%;
+  box-sizing: border-box;
+  /*margin-left: 70px;*/
   /*width: 600px;*/
 
   .go-row {
@@ -32,54 +32,37 @@
     .status {
       color: white;
     }
+
+    label {
+      color: rgb(180, 180, 180);
+    }
   }
 }
 
-.players {
-  /*height: 300px;
-    width: 600px;*/
-  position: relative;
+.players-container {
+  display: block;
+  .players {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
 
-  .player {
-    /*position: absolute;
-      width: 150px;*/
-    width: v-bind(playerWidth);
-    border: 1px solid red;
-    display: inline-grid;
-    margin: 10px;
-  }
-  .player0 {
-    /*grid-column: 3 / 5;*/
-    grid-column-start: 4;
-    grid-column-end: 6;
-    /*grid-row: 3 / 5;*/
-    grid-row-start: 3;
-    grid-row-end: 5;
-    /*bottom: 0px;
-      left: 225px;*/
-  }
-  .player1 {
-    grid-column-start: 1;
-    grid-column-end: 3;
-    grid-row-start: 2;
-    grid-row-end: 4;
-  }
-  .player2 {
-    grid-column-start: 3;
-    grid-column-end: 5;
-    grid-row: 1 / 3;
-  }
-  .player3 {
-    /*grid-column: 4 / 6;*/
-    grid-column-start: 5;
-    grid-column-end: 7;
-    grid-row: 1 / 3;
-  }
-  .player4 {
-    /*grid-column: 6 / 8;*/
-    grid-column-start: 7;
-    grid-column-end: 9;
-    grid-row: 2 / 4;
+    align-items: center;
+    justify-content: center;
+
+    .player {
+      width: 170px;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 0;
+      flex-shrink: 0;
+      flex-basis: fit-content;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid red;
+      /* display: inline-grid; */
+      margin: 10px;
+      padding-bottom: 5px;
+    }
   }
 }
 

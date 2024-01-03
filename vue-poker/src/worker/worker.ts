@@ -43,12 +43,12 @@ const createHandler = (mod: Mod) => {
         return true;
       }
     },
-    simulateFlop(num_iterations: number) {
+    simulateFlop(num_iterations: number, equity_only: boolean) {
       if (!this.results) {
         console.error('results not initialized');
         return false;
       }
-      this.results = this.flop_analyzer.simulate_flop(num_iterations, this.results);
+      this.results = this.flop_analyzer.simulate_flop(num_iterations, this.results, equity_only);
       return true;
     },
     getResults(): Array<ResultsInterface> {
@@ -77,6 +77,24 @@ const createHandler = (mod: Mod) => {
       ret.push(buildResultsInterface(r, undefined));
 
       return ret;
+    },
+
+    narrowRange(
+      range_to_narrow: string,
+      opponent_ranges: Array<string>,
+      min_equity: number,
+      cards: Uint8Array,
+      num_simulations: number
+    ): string {
+      const opp_range_str = opponent_ranges.join(';');
+      const result = this.flop_analyzer.narrow_range(
+        range_to_narrow,
+        opp_range_str,
+        min_equity,
+        cards,
+        num_simulations
+      );
+      return result;
     }
   };
 };
@@ -90,38 +108,43 @@ function buildResultsInterface(
 
   //flop/turn/river
   for (let i = 0; i < 3; i++) {
-
-    const sr : StreetResults = {
+    const sr: StreetResults = {
       equity: r.get_equity(active_player_index, i),
-      rank_family_count: rankIndexes.map((ri) => {
+      win_rank_family_count: rankIndexes.map((ri) => {
         return {
-          perc: r.get_perc_family(active_player_index, i, ri),
-          better: r.get_perc_family_or_better(active_player_index, i, ri)
+          perc: r.get_perc_family(active_player_index, i, ri, true),
+          better: r.get_perc_family_or_better(active_player_index, i, ri, true)
+        } as PercOrBetter;
+      }),
+      lose_rank_family_count: rankIndexes.map((ri) => {
+        return {
+          perc: r.get_perc_family(active_player_index, i, ri, false),
+          better: r.get_perc_family_or_better(active_player_index, i, ri, false)
         } as PercOrBetter;
       }),
       eq_by_simple_range_idx: [],
-      it_num_by_simple_range_idx:[]
+      it_num_by_simple_range_idx: []
     };
 
-    if (!_.isNil(active_player_index)) {
-      const r_eq = r.get_range_equity(active_player_index, i);
-      const r_it = r.get_range_it_count(active_player_index, i);
+    
+    const r_eq = r.get_range_equity(active_player_index, i);
+    const r_it = r.get_range_it_count(active_player_index, i);
 
-      //assert(r_eq.length === r_it.length);
+    //assert(r_eq.length === r_it.length);
 
-      const eq_range = [] as Array<number | null>;
-      
-      for(let ri = 0; ri < r_eq.length; ++ri) {
-        if (r_it[ri] > 0) {
-          eq_range.push(r_eq[ri] / r_it[ri]);
-        } else {
-          eq_range.push(null);
-        }
+    const eq_range = [] as Array<number | null>;
+
+    for (let ri = 0; ri < r_eq.length; ++ri) {
+      if (r_it[ri] > 0) {
+        eq_range.push(r_eq[ri] / r_it[ri]);
+      } else {
+        eq_range.push(null);
       }
-
-      sr.eq_by_simple_range_idx = eq_range;
-      sr.it_num_by_simple_range_idx = r_it;
     }
+
+    sr.eq_by_simple_range_idx = eq_range;
+    sr.it_num_by_simple_range_idx = r_it;
+    
 
     street_results.push(sr);
   }

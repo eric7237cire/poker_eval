@@ -1,8 +1,12 @@
 /// number of ranks
 pub const NUMBER_OF_RANKS: usize = 13;
 
+pub const NUMBER_OF_SUITS: usize = 4;
+
 /// number of ranks
-pub const NUMBER_OF_CARDS: usize = 4 * NUMBER_OF_RANKS;
+pub const NUMBER_OF_CARDS: usize = NUMBER_OF_SUITS * NUMBER_OF_RANKS;
+
+pub const NUMBER_OF_HOLE_CARDS: usize = 1326; //52 choose 2
 
 //We want 32 (not 31) so we can truncate easily via as u32
 pub const GLOBAL_SUIT_SHIFT: u64 = 32;
@@ -125,11 +129,10 @@ pub const CARDS: [(u64, u64); NUMBER_OF_CARDS] = [
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
 
     use crate::eval::pre_calc::perfect_hash::get_value_bits_for_flush;
     use crate::init_test_logger;
-    use log::{info, trace};
+    use log::info;
 
     use super::*;
     use crate::{eval::pre_calc::perfect_hash::enumerate_all_unique_sets, CardValue};
@@ -159,7 +162,7 @@ mod tests {
                 let card_usize: usize = card.into();
                 let (value_suit_key, card_bit) = CARDS[card_usize];
 
-                let value_key = value_suit_key as u32;
+                let _value_key = value_suit_key as u32;
 
                 //Print binary width 64 of value_suit_key
                 // trace!("Card #{:>2} {} {:0>64b} {:>10x}",

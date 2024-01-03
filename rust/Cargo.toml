@@ -2,7 +2,10 @@
 resolver = "2"
 
 members = [
-    "postflop-solver",
     "poker_eval",
     "range",
 ]
+
+[profile.profiling]
+inherits = "release"
+debug = true

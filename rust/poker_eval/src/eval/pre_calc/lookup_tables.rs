@@ -16,15 +16,13 @@ use crate::eval::{
     kev::{eval_5cards, eval_6cards, eval_7cards},
     pre_calc::{
         constants::{GLOBAL_SUIT_SHIFT, INITIAL_SUIT_COUNT, NUMBER_OF_CARDS},
-        get_lookup_path,
-        perfect_hash::{create_perfect_hash, load_perfect_hash},
-        NUMBER_OF_RANKS,
+        get_lookup_path, NUMBER_OF_RANKS,
     },
 };
 use crate::Suit;
 
 use super::{
-    constants::{CARDS, FLUSH_MASK, RANK_FAMILY_OFFEST},
+    constants::{CARDS, RANK_FAMILY_OFFEST},
     perfect_hash::get_value_bits_for_flush,
 };
 
@@ -59,7 +57,7 @@ fn update(
     lookup: &mut HashMap<u64, u16>,
     lookup_flush: &mut HashMap<usize, u16>,
     //mixed_key_perfect_hash_func: &fmph::Function,
-    mixed_key_perfect_hash_func: &Mphf<u32>
+    mixed_key_perfect_hash_func: &Mphf<u32>,
 ) {
     let flush_key = get_value_bits_for_flush(key, mask);
     if let Some(flush_key) = flush_key {
@@ -214,7 +212,7 @@ pub fn generate_lookup_tables() {
     )
     .unwrap();
 
-    println!("wrote result to 'assets/src/lookup.rs'");
+    println!("wrote result to '{:?}'", lookup_path);
 }
 
 /*
@@ -263,7 +261,13 @@ pub fn generate_lookup_tables_fast() {
                         //The suit sums are in the higher bits, so we need to mask them out
                         assert_eq!(x, sum_check & ((1 << 32) - 1));
 
-                        let val = eval_5cards(card1.into(), card2.into(), card3.into(), card4.into(), card5.into());
+                        let val = eval_5cards(
+                            card1.into(),
+                            card2.into(),
+                            card3.into(),
+                            card4.into(),
+                            card5.into(),
+                        );
 
                         assert!(val > 0);
                         assert!(val < 7463);
@@ -281,7 +285,14 @@ pub fn generate_lookup_tables_fast() {
                             //The suit sums are in the higher bits, so we need to mask them out
                             assert_eq!(x, sum_check & ((1 << 32) - 1));
 
-                            let val = eval_6cards(card1.into(), card2.into(), card3.into(), card4.into(), card5.into(), card6.into());
+                            let val = eval_6cards(
+                                card1.into(),
+                                card2.into(),
+                                card3.into(),
+                                card4.into(),
+                                card5.into(),
+                                card6.into(),
+                            );
 
                             assert!(val > 0);
                             assert!(val < 7463);
@@ -300,11 +311,19 @@ pub fn generate_lookup_tables_fast() {
                                 assert_eq!(x, sum_check & ((1 << 32) - 1));
                                 assert_eq!(7, mask_check.count_ones());
 
-                                let val = eval_7cards(card1.into(), card2.into(), card3.into(), card4.into(), card5.into(), card6.into(), card7.into());
+                                let val = eval_7cards(
+                                    card1.into(),
+                                    card2.into(),
+                                    card3.into(),
+                                    card4.into(),
+                                    card5.into(),
+                                    card6.into(),
+                                    card7.into(),
+                                );
 
                                 // if val==0 {
                                 //     info!("Card 1 {} card 2 {} card 3 {} card 4 {} card 5 {} card 6 {} card 7 {}", card1, card2, card3, card4, card5, card6, card7);
-                                //     info!("Card 1 [{}] card 2 [{}] card 3 [{}] card 4 [{}] card 5 [{}] card 6 [{}] card 7 [{}]", 
+                                //     info!("Card 1 [{}] card 2 [{}] card 3 [{}] card 4 [{}] card 5 [{}] card 6 [{}] card 7 [{}]",
                                 //     i, j, k, m, n, p, q
                                 // );
                                 // }
@@ -359,7 +378,13 @@ pub fn generate_lookup_tables_fast() {
                                     .count_ones()
                             );
 
-                            let val = eval_5cards(card1.into(), card2.into(), card3.into(), card4.into(), card5.into());
+                            let val = eval_5cards(
+                                card1.into(),
+                                card2.into(),
+                                card3.into(),
+                                card4.into(),
+                                card5.into(),
+                            );
 
                             assert!(val > 0);
                             assert!(val < 7463);
@@ -389,7 +414,14 @@ pub fn generate_lookup_tables_fast() {
                                         .count_ones()
                                 );
 
-                                let val = eval_6cards(card1.into(), card2.into(), card3.into(), card4.into(), card5.into(), card6.into());
+                                let val = eval_6cards(
+                                    card1.into(),
+                                    card2.into(),
+                                    card3.into(),
+                                    card4.into(),
+                                    card5.into(),
+                                    card6.into(),
+                                );
 
                                 assert!(val > 0);
                                 assert!(val < 7463);
@@ -419,7 +451,15 @@ pub fn generate_lookup_tables_fast() {
                                             .count_ones()
                                     );
 
-                                    let val = eval_7cards(card1.into(), card2.into(), card3.into(), card4.into(), card5.into(), card6.into(), card7.into());
+                                    let val = eval_7cards(
+                                        card1.into(),
+                                        card2.into(),
+                                        card3.into(),
+                                        card4.into(),
+                                        card5.into(),
+                                        card6.into(),
+                                        card7.into(),
+                                    );
 
                                     assert!(val > 0);
                                     assert!(val < 7463);
@@ -476,16 +516,15 @@ pub fn generate_lookup_tables_fast() {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::eval::pre_calc::rank::{Rank, RankEnum};
     use crate::init_test_logger;
-    use super::*;
 
     #[test]
     fn test_adjust_hand_rank() {
-        let rank : Rank = adjust_hand_rank(1).into();
-        assert_eq!(rank.get_rank_enum(), RankEnum::StraightFlush(9));
-        
-        
+        let rank: Rank = adjust_hand_rank(1).into();
+        assert_eq!(rank.get_rank_enum(), RankEnum::StraightFlush);
+        assert_eq!(rank.get_kicker(), 9);
     }
 
     //#[test]
@@ -498,7 +537,7 @@ mod tests {
         //cargo test --lib --release test_generate_lookup_tables -- --nocapture
 
         //cargo test --lib --release test_lookups -- --nocapture
-        
+
         //generate_lookup_tables();
 
         generate_lookup_tables_fast();

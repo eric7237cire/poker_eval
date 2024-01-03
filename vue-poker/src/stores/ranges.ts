@@ -2,6 +2,26 @@ import { defineStore } from 'pinia';
 import { ResultsInterface } from '@src/worker/result_types';
 import { ref } from 'vue';
 
+export const SELECTABLE_RANGES: Array<{ title: string; value: string }> = [
+  { title: '9max UTG-UTG+2', value: '77+,A4s+,AJo+,K9s+,K5s,KQo,QTs+,JTs' },
+  { title: '9max MP1-MP2', value: '55+,A3s+,ATo+,K8s+,K6s-K5s,KJo+,Q9s+,J9s+,T9s,76s' },
+  { title: '9max HJ-CO', value: '33+,A2s+,A9o+,K4s+,KTo+,Q6s+,QTo+,J8s+,JTo,T8s+,97s+,87s' },
+  {
+    title: '9max Button',
+    value: '22+,A2+,K2s+,K7o+,Q2s+,Q8o+,J3s+,J8o+,T5s+,T8o+,96s+,98o,85s+,87o,75s+,76o,64s+,53s+'
+  },
+  {
+    title: '9max SB',
+    value: '22+,A2+,K2+,Q2+,J2+,T2s+,T6o+,92s+,95o+,82s+,84o+,72s+,74o+,62s+,65o,53s+'
+  },
+  { title: 'All', value: '22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32' },
+  //
+  {
+    title: 'Custom',
+    value: ''
+  }
+];
+
 export const useRangesStore = defineStore('ranges', () => {
   /*
   ref()s become state properties

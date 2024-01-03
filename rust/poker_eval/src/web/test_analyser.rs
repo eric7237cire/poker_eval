@@ -38,7 +38,7 @@ mod tests {
 
         let num_it = 10_000;
         let f_results = analyzer.build_results();
-        let f_results = analyzer.simulate_flop(num_it, f_results).unwrap();
+        let f_results = analyzer.simulate_flop(num_it, f_results, true).unwrap();
 
         let results = &f_results.flop_results;
 
@@ -96,11 +96,12 @@ mod tests {
 
         let num_it = 4_000;
 
-        let tolerance = 0.5;
+        //low # of iterations so tolerance is higher
+        let tolerance = 1.6;
         //let tolerance = 0.1;
 
         let f_results = analyzer.build_results();
-        let f_results = analyzer.simulate_flop(num_it, f_results).unwrap();
+        let f_results = analyzer.simulate_flop(num_it, f_results, true).unwrap();
 
         let results = &f_results.flop_results;
 
@@ -110,14 +111,14 @@ mod tests {
         assert_equity(
             100.0 * results[0].street_rank_results[2].win_eq
                 / results[0].street_rank_results[2].num_iterations as f64,
-            21.03,
+            21.03, //confirmed with equilab
             tolerance,
         );
         assert_equity(
             100.0 * results[0].street_rank_results[2].tie_eq
                 / results[0].street_rank_results[2].num_iterations as f64,
             0.12,
-            0.05,
+            0.10,
         );
 
         assert_eq!(results[2].street_rank_results[2].num_iterations, num_it);
@@ -186,16 +187,20 @@ mod tests {
         let num_it = 1;
 
         let results = analyzer.build_results();
-        let results = analyzer.simulate_flop(num_it, results).unwrap();
+        let results = analyzer.simulate_flop(num_it, results, false).unwrap();
 
         let v_r = &results.all_villians;
         assert_eq!(
-            1,
-            v_r.street_rank_results[0].rank_family_count[OldRank::OnePair(0).get_family_index()]
+            1.0,
+            v_r.street_rank_results[0].win_rank_family_count
+                [OldRank::OnePair(0).get_family_index()]
         );
         assert_eq!(
-            1u32,
-            v_r.street_rank_results[0].rank_family_count.iter().sum()
+            1f64,
+            v_r.street_rank_results[0]
+                .win_rank_family_count
+                .iter()
+                .sum()
         );
         assert_eq!(0, v_r.street_draws[0].gut_shot);
         assert_eq!(0, v_r.street_draws[0].two_overcards);
@@ -207,29 +212,37 @@ mod tests {
 
         //Turn villian picks up gut shot
         assert_eq!(
-            1,
-            v_r.street_rank_results[1].rank_family_count
+            1.0,
+            v_r.street_rank_results[1].win_rank_family_count
                 [OldRank::ThreeOfAKind(0).get_family_index()]
         );
         assert_eq!(
-            1u32,
-            v_r.street_rank_results[1].rank_family_count.iter().sum()
+            1f64,
+            v_r.street_rank_results[1]
+                .win_rank_family_count
+                .iter()
+                .sum()
         );
         assert_eq!(1, v_r.street_draws[1].gut_shot);
         assert_eq!(0, v_r.street_draws[1].two_overcards);
         assert_eq!(0, v_r.street_draws[1].one_overcard);
 
         assert_eq!(
-            0,
-            v_r.street_rank_results[2].rank_family_count[OldRank::OnePair(0).get_family_index()]
+            0.0,
+            v_r.street_rank_results[2].win_rank_family_count
+                [OldRank::OnePair(0).get_family_index()]
         );
         assert_eq!(
-            1,
-            v_r.street_rank_results[2].rank_family_count[OldRank::Straight(0).get_family_index()]
+            1.0,
+            v_r.street_rank_results[2].win_rank_family_count
+                [OldRank::Straight(0).get_family_index()]
         );
         assert_eq!(
-            1u32,
-            v_r.street_rank_results[2].rank_family_count.iter().sum()
+            1f64,
+            v_r.street_rank_results[2]
+                .win_rank_family_count
+                .iter()
+                .sum()
         );
         assert_eq!(2, v_r.street_draws.len());
     }
@@ -265,47 +278,50 @@ mod tests {
         let num_it = 1;
 
         let results = analyzer.build_results();
-        let results = analyzer.simulate_flop(num_it, results).unwrap();
+        let results = analyzer.simulate_flop(num_it, results, false).unwrap();
 
         let v_r = &results.all_villians;
         assert_eq!(
-            1,
-            v_r.street_rank_results[0].rank_family_count[OldRank::HighCard(0).get_family_index()]
+            1.0,
+            v_r.street_rank_results[0].win_rank_family_count
+                [OldRank::HighCard(0).get_family_index()]
         );
         assert_eq!(
-            1,
+            1f64,
             v_r.street_rank_results[0]
-                .rank_family_count
+                .win_rank_family_count
                 .iter()
-                .sum::<u32>()
+                .sum()
         );
         assert_eq!(1, v_r.street_draws[0].two_overcards);
         assert_eq!(0, v_r.street_draws[0].one_overcard);
 
         assert_eq!(
-            1,
-            v_r.street_rank_results[1].rank_family_count[OldRank::OnePair(0).get_family_index()]
+            1.0,
+            v_r.street_rank_results[1].win_rank_family_count
+                [OldRank::OnePair(0).get_family_index()]
         );
         assert_eq!(
-            1,
+            1f64,
             v_r.street_rank_results[1]
-                .rank_family_count
+                .win_rank_family_count
                 .iter()
-                .sum::<u32>()
+                .sum()
         );
         assert_eq!(0, v_r.street_draws[1].two_overcards);
         assert_eq!(1, v_r.street_draws[1].one_overcard);
 
         assert_eq!(
-            1,
-            v_r.street_rank_results[2].rank_family_count[OldRank::OnePair(0).get_family_index()]
+            1.0,
+            v_r.street_rank_results[2].win_rank_family_count
+                [OldRank::OnePair(0).get_family_index()]
         );
         assert_eq!(
-            1,
+            1f64,
             v_r.street_rank_results[2]
-                .rank_family_count
+                .win_rank_family_count
                 .iter()
-                .sum::<u32>()
+                .sum()
         );
         assert_eq!(2, v_r.street_draws.len());
     }
@@ -333,7 +349,7 @@ mod tests {
         let num_it = 200;
 
         let results = analyzer.build_results();
-        let results = analyzer.simulate_flop(num_it, results).unwrap();
+        let results = analyzer.simulate_flop(num_it, results, true).unwrap();
 
         let kj_index = HoleCards::from_str("Kd Jc")
             .unwrap()

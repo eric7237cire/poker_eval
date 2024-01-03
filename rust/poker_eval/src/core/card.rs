@@ -1,13 +1,16 @@
+use crate::pre_calc::NUMBER_OF_CARDS;
 use crate::HoleCards;
+use crate::InRangeType;
+
 use bitvec::prelude::*;
-use postflop_solver::card_pair_to_index;
-use postflop_solver::Range;
+use once_cell::sync::Lazy;
 use serde::Deserialize;
 use serde::Serialize;
 use std::cmp;
 use std::convert::TryFrom;
 use std::fmt;
 
+use std::fmt::Display;
 use std::mem;
 use std::str::FromStr;
 
@@ -298,18 +301,18 @@ impl DoubleEndedIterator for CardValueRange {
 #[derive(PartialEq, PartialOrd, Eq, Ord, Debug, Clone, Copy, Hash)]
 #[repr(u8)]
 pub enum Suit {
-    /// Spades
-    Spade = 3,
     /// Clubs
     Club = 0,
-    /// Hearts
-    Heart = 2,
     /// Diamonds
     Diamond = 1,
+    /// Hearts
+    Heart = 2,
+    /// Spades
+    Spade = 3,
 }
 
 /// All of the `Suit`'s. This is what `Suit::suits()` returns.
-const SUITS: [Suit; 4] = [Suit::Spade, Suit::Club, Suit::Heart, Suit::Diamond];
+const SUITS: [Suit; 4] = [Suit::Club, Suit::Diamond, Suit::Heart, Suit::Spade];
 
 /// Impl of Suit
 ///
@@ -380,6 +383,12 @@ impl FromStr for Suit {
     }
 }
 
+impl Display for Suit {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", char::from(*self))
+    }
+}
+
 /// The main struct of this library.
 /// This is a carrier for Suit and Value combined.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -389,35 +398,33 @@ pub struct Card {
     pub value: CardValue,
     /// The suit of this card.
     pub suit: Suit,
+
+    pub index: u8,
 }
+
+pub static ALL_CARDS: Lazy<Vec<Card>> = Lazy::new(|| {
+    let mut result: Vec<Card> = Vec::with_capacity(NUMBER_OF_CARDS);
+    for card_num in 0..NUMBER_OF_CARDS {
+        let value = CardValue::try_from(card_num >> 2).unwrap();
+        let suit = Suit::suits()[card_num & 0x3];
+        result.push(Card {
+            suit,
+            value,
+            index: card_num as u8,
+        });
+    }
+
+    assert_eq!(NUMBER_OF_CARDS, result.len());
+    result
+});
 
 impl Card {
     pub fn new(value: CardValue, suit: Suit) -> Self {
-        Self { value, suit }
+        let index = ((value as usize) << 2) | suit as usize;
+        assert_eq!(ALL_CARDS[index].value, value);
+        assert_eq!(ALL_CARDS[index].suit, suit);
+        ALL_CARDS[index]
     }
-
-    //The way the 0-51 works is we want consecutive values to be together, so like clubs
-    // are in the 1st 13 bits, diamonds in the 2nd 13 bits, etc.
-    // In rank evaluation, we can then shift and mask 13 bits to get all the values of a suit
-
-    // pub fn to_range_index_part(&self) -> usize {
-    //     let value = self.value as usize;
-    //     assert!(value < 13);
-    //     let suit = self.suit as usize;
-    //     assert!(suit < 4);
-    //     let ret = (value << 2) + suit;
-    //     assert!(ret < 52);
-    //     ret
-    // }
-
-    // pub fn from_range_index_part(index: usize) -> Result<Self, PokerError> {
-    //     let value = index >> 2;
-    //     let suit = index & 0x3;
-    //     Ok(Self {
-    //         value: CardValue::try_from(value as u8)?,
-    //         suit: Suit::try_from(suit as u8)?,
-    //     })
-    // }
 }
 
 impl fmt::Debug for Card {
@@ -437,18 +444,6 @@ impl fmt::Display for Card {
     }
 }
 
-// impl From<&str> for Card {
-//     fn from(value: &str) -> Self {
-//         let mut chars = value.chars();
-//         let value_char = chars.next().unwrap();
-//         let suit_char = chars.next().unwrap();
-//         Self {
-//             value: value_char.into(),
-//             suit: suit_char.into(),
-//         }
-//     }
-// }
-
 impl FromStr for Card {
     type Err = PokerError;
 
@@ -456,10 +451,10 @@ impl FromStr for Card {
         let mut chars = s.chars();
         let value_char = chars.next().ok_or(PokerError::from_str("No character"))?;
         let suit_char = chars.next().ok_or(PokerError::from_str("No character"))?;
-        Ok(Self {
-            value: value_char.to_string().parse()?,
-            suit: suit_char.to_string().parse()?,
-        })
+        Ok(Self::new(
+            value_char.to_string().parse()?,
+            suit_char.to_string().parse()?,
+        ))
     }
 }
 
@@ -470,10 +465,10 @@ impl TryFrom<&str> for Card {
         let mut chars = value.chars();
         let value_char = chars.next().ok_or(PokerError::from_str("No character"))?;
         let suit_char = chars.next().ok_or(PokerError::from_str("No character"))?;
-        Ok(Self {
-            value: value_char.to_string().parse()?,
-            suit: suit_char.to_string().parse()?,
-        })
+        Ok(Self::new(
+            value_char.to_string().parse()?,
+            suit_char.to_string().parse()?,
+        ))
     }
 }
 
@@ -493,10 +488,7 @@ impl TryFrom<u8> for Card {
     type Error = PokerError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        Ok(Self {
-            value: CardValue::try_from(value >> 2)?,
-            suit: Suit::try_from(value & 0x3)?,
-        })
+        Ok(ALL_CARDS[value as usize])
     }
 }
 
@@ -504,76 +496,9 @@ impl TryFrom<usize> for Card {
     type Error = PokerError;
 
     fn try_from(value: usize) -> Result<Self, Self::Error> {
-        Ok(Self {
-            value: CardValue::try_from((value >> 2) as u8)?,
-            suit: Suit::try_from((value & 0x3) as u8)?,
-        })
+        Ok(ALL_CARDS[value])
     }
 }
-
-// pub struct CardVec(pub Vec<Card>);
-
-// impl TryFrom<&str> for CardVec {
-//     type Error = PokerError;
-
-//     fn try_from(value: &str) -> Result<Self, Self::Error> {
-//         let mut cards = Vec::with_capacity(7);
-//         let mut chars = value.chars().filter(|c| c.is_alphanumeric());
-//         while let Some(c) = chars.next() {
-//             let value = c;
-//             let suit = chars.next().ok_or(PokerError::from_string(format!(
-//                 "Unable to parse suit from {}",
-//                 value
-//             )))?;
-//             cards.push(Card::new(value.try_into()?, suit.try_into()?));
-//         }
-//         Ok(CardVec(cards))
-//     }
-// }
-
-// impl FromStr for CardVec {
-//     type Err = PokerError;
-
-//     fn from_str(s: &str) -> Result<Self, Self::Err> {
-//         CardVec::try_from(s)
-//     }
-// }
-
-// impl CardVec {
-//     pub fn as_vec_u8(&self) -> Vec<u8> {
-//         self.0
-//             .iter()
-//             .map(|c| {
-//                 let c_u8: u8 = (*c).into();
-//                 c_u8
-//             })
-//             .collect()
-//     }
-// }
-
-// impl Display for CardVec {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         let mut s = String::new();
-//         for card in self.0.iter() {
-//             s.push_str(&format!("{} ", card));
-//         }
-//         write!(f, "{}", s.trim())
-//     }
-// }
-
-// pub fn cards_from_string(a_string: &str) -> Result<Vec<Card>, PokerError> {
-//     let mut cards = Vec::with_capacity(7);
-//     let mut chars = a_string.chars().filter(|c| c.is_alphanumeric());
-//     while let Some(c) = chars.next() {
-//         let value = c;
-//         let suit = chars.next().ok_or(PokerError::from_string(format!(
-//             "Unable to parse suit from {}",
-//             a_string
-//         )))?;
-//         cards.push(Card::new(value.try_into()?, suit.try_into()?));
-//     }
-//     Ok(cards)
-// }
 
 pub fn add_cards_from_string(cards: &mut Vec<Card>, a_string: &str) -> () {
     let mut chars = a_string.chars().filter(|c| !c.is_whitespace());
@@ -587,37 +512,7 @@ pub fn add_cards_from_string(cards: &mut Vec<Card>, a_string: &str) -> () {
     }
 }
 
-//52 * 51 / 2
-pub type InRangeType = BitArr!(for 1326, in usize, Lsb0);
-
-pub type CardUsedType = BitArr!(for 52, in usize, Lsb0);
-
-pub fn range_string_to_set(range_str: &str) -> Result<InRangeType, PokerError> {
-    let range: Range = range_str
-        .parse()
-        .ok()
-        .ok_or(PokerError::from_string(format!(
-            "Unable to parse range {}",
-            range_str
-        )))?;
-    let mut set = InRangeType::default();
-
-    for card1 in 0..52 {
-        //let core_card1 = card1.into();
-
-        for card2 in card1 + 1..52 {
-            //let core_card2 = card2.into();
-
-            let range_index = card_pair_to_index(card1, card2);
-
-            let in_range = range.data[range_index] > 0.0;
-
-            set.set(range_index, in_range);
-        }
-    }
-
-    Ok(set)
-}
+pub type CardUsedType = BitArr!(for NUMBER_OF_CARDS, in usize, Lsb0);
 
 //returns in range / total
 pub fn get_possible_hole_cards_count(
@@ -643,7 +538,12 @@ pub fn get_possible_hole_cards_count(
 
             total += 1;
 
-            let range_index = card_pair_to_index(card1 as u8, card2 as u8);
+            let hc = HoleCards::new(
+                Card::try_from(card1).unwrap(),
+                Card::try_from(card2).unwrap(),
+            )
+            .unwrap();
+            let range_index = hc.to_range_index();
 
             let in_range = range_set[range_index];
 
@@ -676,7 +576,12 @@ pub fn get_possible_hole_cards(
                 continue;
             }
 
-            let range_index = card_pair_to_index(card1 as u8, card2 as u8);
+            let hc = HoleCards::new(
+                Card::try_from(card1).unwrap(),
+                Card::try_from(card2).unwrap(),
+            )
+            .unwrap();
+            let range_index = hc.to_range_index();
 
             let in_range = range_set[range_index];
 
@@ -698,9 +603,13 @@ pub fn get_filtered_range_set(range_set: &InRangeType, used_card_set: CardUsedTy
 
     for card1 in 0..52 {
         for card2 in card1 + 1..52 {
-            //let core_card2 = card2.into();
+            let hc = HoleCards::new(
+                Card::try_from(card1).unwrap(),
+                Card::try_from(card2).unwrap(),
+            )
+            .unwrap();
 
-            let range_index = card_pair_to_index(card1 as u8, card2 as u8);
+            let range_index = hc.to_range_index();
 
             if !range_set[range_index] {
                 continue;
@@ -723,38 +632,17 @@ pub fn get_filtered_range_set(range_set: &InRangeType, used_card_set: CardUsedTy
 
 #[cfg(test)]
 mod tests {
-    use postflop_solver::{card_from_str, index_to_card_pair};
 
-    use crate::Board;
+    use crate::{Board, BoolRange};
 
     use super::*;
     use std::mem;
 
     #[test]
-    fn test_constructor() {
-        let c = Card {
-            value: CardValue::Three,
-            suit: Suit::Spade,
-        };
-        assert_eq!(Suit::Spade, c.suit);
-        assert_eq!(CardValue::Three, c.value);
-    }
-
-    #[test]
-    fn test_try_parse_card() {
-        let expected = Card {
-            value: CardValue::King,
-            suit: Suit::Spade,
-        };
-
-        assert_eq!(expected, Card::try_from("Ks").unwrap())
-    }
-
-    #[test]
     fn test_parse_all_cards() {
         for suit in SUITS {
             for value in VALUES {
-                let e = Card { suit, value };
+                let e = Card::new(value, suit);
                 let card_string = format!("{}{}", char::from(value), char::from(suit));
                 let card: Card = card_string.parse().unwrap();
                 assert_eq!(e, card);
@@ -764,18 +652,9 @@ mod tests {
 
     #[test]
     fn test_compare() {
-        let c1 = Card {
-            value: CardValue::Three,
-            suit: Suit::Spade,
-        };
-        let c2 = Card {
-            value: CardValue::Four,
-            suit: Suit::Spade,
-        };
-        let c3 = Card {
-            value: CardValue::Four,
-            suit: Suit::Club,
-        };
+        let c1 = Card::new(CardValue::Three, Suit::Spade);
+        let c2 = Card::new(CardValue::Four, Suit::Spade);
+        let c3 = Card::new(CardValue::Four, Suit::Club);
 
         // Make sure that the values are ordered
         assert!(c1 < c2);
@@ -799,12 +678,6 @@ mod tests {
         assert_eq!(CardValue::Ace, CardValue::try_from(12u8).unwrap());
 
         assert!(CardValue::try_from(13u8).is_err());
-    }
-
-    #[test]
-    fn test_size_card() {
-        // Card should be really small. Hopefully just two u8's
-        assert!(mem::size_of::<Card>() <= 2);
     }
 
     #[test]
@@ -837,39 +710,11 @@ mod tests {
     }
 
     #[test]
-    fn test_conversions() {
-        let ps_solver_card = card_from_str("7c").unwrap();
-
-        let card = Card::try_from("7c").unwrap();
-
-        assert_eq!(ps_solver_card, card.into());
-
-        assert_eq!(card.suit, Suit::Club);
-        assert_eq!(card.value, CardValue::Seven);
-
-        let ps_solver_card = card_from_str("Ad").unwrap();
-        let card = Card::try_from("Ad").unwrap();
-
-        assert_eq!(card.suit, Suit::Diamond);
-        assert_eq!(card.value, CardValue::Ace);
-
-        assert_eq!(ps_solver_card, card.into());
-
-        let ps_solver_card = card_from_str("2h").unwrap();
-        let card = Card::try_from("2h").unwrap();
-
-        assert_eq!(card.suit, Suit::Heart);
-        assert_eq!(card.value, CardValue::Two);
-
-        assert_eq!(ps_solver_card, card.into());
-    }
-
-    #[test]
     fn test_range_to_set() {
         let range_str = "Q4o+";
         //let range: Range = Range::from_sanitized_str(rangeStr).unwrap();
-
-        let set = range_string_to_set(range_str).unwrap();
+        let range: BoolRange = range_str.parse().unwrap();
+        let set = &range.data;
 
         let hc: HoleCards = "Qs 3h".parse().unwrap();
         assert!(!set[hc.to_range_index()]);
@@ -890,37 +735,38 @@ mod tests {
         assert!(set[hc.to_range_index()]);
 
         let range_str = "22+";
-        //let range: Range = Range::from_sanitized_str(rangeStr).unwrap();
 
-        let set = range_string_to_set(range_str).unwrap();
+        let range: BoolRange = range_str.parse().unwrap();
+
+        let set = &range.data;
 
         assert_eq!(set.count_ones(), 13 * 6);
 
         let range_str = "22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32";
 
-        let set = range_string_to_set(range_str).unwrap();
+        let range: BoolRange = range_str.parse().unwrap();
+        let set = &range.data;
 
         assert_eq!(set.count_ones(), 52 * 51 / 2);
     }
 
-    #[test]
-    fn test_card_pair_to_index() {
-        for card1 in 0..52 {
-            for card2 in card1 + 1..52 {
-                let index = card_pair_to_index(card1, card2);
-                let (c1, c2) = index_to_card_pair(index);
-                assert_eq!(card1, c1);
-                assert_eq!(card2, c2);
-            }
-        }
-    }
-
-    
+    // #[test]
+    // fn test_card_pair_to_index() {
+    //     for card1 in 0..52 {
+    //         for card2 in card1 + 1..52 {
+    //             let index = card_pair_to_index(card1, card2);
+    //             let (c1, c2) = index_to_card_pair(index);
+    //             assert_eq!(card1, c1);
+    //             assert_eq!(card2, c2);
+    //         }
+    //     }
+    // }
 
     #[test]
     fn test_get_possible_hole_cards() {
         let range_str = "22+, A2s+, K2s+, Q2s+, J6s+, 94s, A2o+, K7o+, QJo, J7o, T4o";
-        let range_set = range_string_to_set(range_str).unwrap();
+        let range: BoolRange = range_str.parse().unwrap();
+        let range_set = &range.data;
 
         let mut used_cards = CardUsedType::default();
         let cards = Board::try_from("8d 7s Qd 5c Qs Ts 7c")

@@ -9,8 +9,15 @@ license = "AGPL-3.0-or-later"
 crate-type = ["cdylib"]
 
 [dependencies]
-postflop-solver = { git = "https://github.com/b-inary/postflop-solver", default-features = false }
+# postflop-solver = { git = "https://github.com/b-inary/postflop-solver", default-features = false }
+poker_eval = { path = "../poker_eval"}
 wasm-bindgen = "0.2.89"
+# redirect logs to console
+wasm-logger = "0.2.0"
+console_error_panic_hook = "*"
+log = "*"
+# error object PokerError=>JsError
+js-sys = "0.3"
 
 [profile.release]
 codegen-units = 1

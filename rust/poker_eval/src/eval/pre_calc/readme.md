@@ -98,3 +98,9 @@ cccccccc sssssssss hhhhhhh dddddd
 # Minimal Perfect Hashing
 
 https://burtleburtle.net/bob/hash/perfect.html
+
+
+# Profiling
+~/git/poker_eval/rust/poker_eva
+cargo build --profile profiling
+samply record ../target/profiling/test_perf

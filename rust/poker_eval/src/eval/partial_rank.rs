@@ -1,5 +1,6 @@
 use std::{
     cmp::{max, min},
+    fmt::{Display, Formatter},
     ops::BitOr,
 };
 
@@ -36,6 +37,16 @@ pub enum StraightDrawType {
     OpenEnded,
 }
 
+impl Display for StraightDrawType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StraightDrawType::GutShot(card) => write!(f, "Gut shot needs {}", card),
+            StraightDrawType::DoubleGutShot => write!(f, "Double gut shot"),
+            StraightDrawType::OpenEnded => write!(f, "Open ended"),
+        }
+    }
+}
+
 //We'll parse a list of these
 // pub enum PartialRank {
 //     FlushDraw(FlushDraw),
@@ -63,6 +74,7 @@ pub struct StraightDraw {
 pub struct PairInfo {
     pub number_above: u8,
     pub number_below: u8,
+    //This could also make a fh
     pub made_set: bool,
     pub made_quads: bool,
 }
@@ -73,6 +85,8 @@ pub struct PairInfo {
 pub struct PartialRankContainer {
     pub flush_draw: Option<FlushDraw>,
     pub straight_draw: Option<StraightDraw>,
+
+    pub made_flush: Option<CardValue>,
 
     pub pocket_pair: Option<PairInfo>,
 
@@ -88,11 +102,13 @@ pub struct PartialRankContainer {
     //quads: Option<PairFamilyRank>,
     pub hi_card: Option<PairFamilyRank>,
     pub lo_card: Option<PairFamilyRank>,
+    //num over_cards
 }
 
 impl Default for PartialRankContainer {
     fn default() -> Self {
         PartialRankContainer {
+            made_flush: None,
             flush_draw: None,
             straight_draw: None,
             pocket_pair: None,
@@ -117,8 +133,97 @@ impl Default for PartialRankContainer {
 //     debug!("{} Value set: {}", desc, s);
 // }
 
+pub enum MadeWith {
+    HiCard,
+    LoCard,
+    BothCards,
+}
+
 impl PartialRankContainer {
     // Convenience methods
+
+    pub fn get_num_overcards(&self) -> u8 {
+        let mut num_overcards = 0;
+
+        if let Some(hi_card) = self.hi_card {
+            if hi_card.number_above == 0 {
+                num_overcards += 1;
+            }
+        }
+
+        if let Some(lo_card) = self.lo_card {
+            if lo_card.number_above == 0 {
+                num_overcards += 1;
+            }
+        }
+        num_overcards
+    }
+
+    pub fn made_a_set(&self) -> Option<MadeWith> {
+        if let Some(hi_pair) = self.hi_pair {
+            if hi_pair.made_set {
+                return Some(MadeWith::HiCard);
+            }
+        }
+
+        if let Some(lo_pair) = self.lo_pair {
+            if lo_pair.made_set {
+                return Some(MadeWith::LoCard);
+            }
+        }
+
+        if let Some(p) = self.pocket_pair {
+            if p.made_set {
+                return Some(MadeWith::BothCards);
+            }
+        }
+
+        return None;
+    }
+
+    pub fn made_set_with_n_above(&self, n_above: u8) -> bool {
+        if let Some(hi_pair) = self.hi_pair {
+            if hi_pair.made_set && hi_pair.number_above == n_above {
+                return true;
+            }
+        }
+
+        if let Some(lo_pair) = self.lo_pair {
+            if lo_pair.made_set && lo_pair.number_above == n_above {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    pub fn has_straight_draw(&self) -> bool {
+        if let Some(p) = self.straight_draw {
+            if p.straight_draw_type == StraightDrawType::OpenEnded
+                || p.straight_draw_type == StraightDrawType::DoubleGutShot
+            {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    pub fn has_top_pair(&self) -> bool {
+        if let Some(hi_pair) = self.hi_pair {
+            if hi_pair.number_above == 0 {
+                return true;
+            }
+        }
+
+        if let Some(lo_pair) = self.lo_pair {
+            if lo_pair.number_above == 0 {
+                return true;
+            }
+        }
+
+        false
+    }
 
     //Private methods below
     fn handle_pocket_pairs(&mut self, hole_cards: &[Card], board_metrics: &BitSetCardsMetrics) {
@@ -160,7 +265,7 @@ impl PartialRankContainer {
         board_metrics: &BitSetCardsMetrics,
         board_length: usize,
     ) {
-        if board_length == 5 || board_length < 3 {
+        if board_length < 3 {
             return;
         }
 
@@ -175,8 +280,14 @@ impl PartialRankContainer {
                 continue;
             }
 
-            //Ignore made flushes
             if hole_count + board_count >= 5 {
+                let hole_card_value = hole_metrics.suit_value_sets[suit].last_one().unwrap();
+                self.made_flush = Some(CardValue::from(hole_card_value));
+                continue;
+            }
+
+            //no flush draws if we're on the river
+            if board_length >= 5 {
                 continue;
             }
 
@@ -1142,5 +1253,17 @@ mod tests {
                 number_below: 1
             })
         );
+    }
+
+    #[test]
+    fn test_flush() {
+        let hole_cards = "Td Tc".parse().unwrap();
+        let board_cards = Board::try_from("9d 6d 5d Ac Ad")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
+        let prc = partial_rank_cards(&hole_cards, &board_cards);
+
+        assert_eq!(prc.made_flush, Some(CardValue::Ten));
     }
 }

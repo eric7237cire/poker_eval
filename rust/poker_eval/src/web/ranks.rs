@@ -3,12 +3,9 @@ use boomphf::Mphf;
 use crate::pre_calc::fast_eval::fast_hand_eval;
 use crate::pre_calc::rank::Rank;
 use crate::web::{
-    PlayerFlopResults, PlayerPreFlopState, PreflopPlayerInfo, ResultType, MAX_PLAYERS,
+    PlayerFlopResults, PlayerPreFlopState, PreflopPlayerInfo, ResultType, 
 };
-use crate::{
-    rank_cards, Card, HoleCards, OldRank, PokerError, NUM_RANK_FAMILIES, SIMPLE_RANGE_INDEX_LEN,
-};
-
+use crate::{Card, HoleCards, PokerError, NUM_RANK_FAMILIES, SIMPLE_RANGE_INDEX_LEN};
 
 pub struct RankResults {
     pub(crate) num_iterations: ResultType,
@@ -22,7 +19,9 @@ pub struct RankResults {
     pub(crate) num_it_by_range_index: Vec<ResultType>,
 
     //This is a win or lose tally of hand ranks, [0] for high card .. [8] for straight flush
-    pub(crate) rank_family_count: [ResultType; NUM_RANK_FAMILIES],
+    //float because a tie counts for a fraction of a win
+    pub(crate) win_rank_family_count: [f64; NUM_RANK_FAMILIES],
+    pub(crate) lose_rank_family_count: [ResultType; NUM_RANK_FAMILIES],
 }
 
 impl Default for RankResults {
@@ -30,7 +29,8 @@ impl Default for RankResults {
         Self {
             eq_by_range_index: vec![0.0; SIMPLE_RANGE_INDEX_LEN],
             num_it_by_range_index: vec![0; SIMPLE_RANGE_INDEX_LEN],
-            rank_family_count: [0; NUM_RANK_FAMILIES],
+            win_rank_family_count: [0.0; NUM_RANK_FAMILIES],
+            lose_rank_family_count: [0; NUM_RANK_FAMILIES],
             num_iterations: 0,
             win_eq: 0.0,
             tie_eq: 0.0,
@@ -49,7 +49,7 @@ pub fn eval_current(
     //treat first active player as the hero, all others as villians
     villian_results: &mut PlayerFlopResults,
     street_index: usize,
-    hash_func: &Mphf<u32>
+    hash_func: &Mphf<u32>,
 ) -> Result<(), PokerError> {
     if eval_cards.len() < 3 {
         return Err(PokerError::from_string(format!(
@@ -79,13 +79,13 @@ pub fn eval_current(
 
         let rank = fast_hand_eval(eval_cards.iter(), hash_func);
 
-        update_results_from_rank(
-            &mut flop_results[active_index].street_rank_results[street_index],
-            rank,
-        );
-
         flop_results[active_index].street_rank_results[street_index].num_it_by_range_index
             [player_cards[active_index].to_simple_range_index()] += 1;
+
+        if active_index > 0 {
+            villian_results.street_rank_results[street_index].num_it_by_range_index
+                [player_cards[active_index].to_simple_range_index()] += 1;
+        }
 
         hand_evals.push(rank);
 
@@ -96,58 +96,99 @@ pub fn eval_current(
     let best_villian_rank = hand_evals[1..]
         .iter()
         .fold(Rank::lowest_rank(), |acc, &x| acc.max(x));
+
+    let (max_value, num_with_max) = winning_rank(&hand_evals);
+
+    //cases
+    //hero wins, hero ties with villian, hero loses
+    let villian_rnk_amt = if num_with_max == 1 {
+        if max_value == hand_evals[0] {
+            // hero won
+            0.0
+        } else {
+            1.0
+        }
+    } else {
+        //hero tied too
+        if max_value == hand_evals[0] {
+            0.5
+        } else {
+            1.0
+        }
+    };
     update_results_from_rank(
         &mut villian_results.street_rank_results[street_index],
-        best_villian_rank,
+        &best_villian_rank,
+        villian_rnk_amt
     );
+    //Making it like hero vs villian, so a tie is just between hero & villian
+    if villian_rnk_amt == 0.5 {
+        villian_results.street_rank_results[street_index].tie_eq +=
+                        villian_rnk_amt
+    }
+    if villian_rnk_amt == 1.0 {
+        villian_results.street_rank_results[street_index].win_eq += 1.0;
+    }
 
-    let winner_indexes = indices_of_max_values(&hand_evals);
-
-    assert!(winner_indexes.len() > 0);
-
-    for winner_idx in winner_indexes.iter() {
-        let results = &mut flop_results[*winner_idx].street_rank_results[street_index];
-        if winner_indexes.len() == 1 {
-            results.win_eq += 1.0;
-            if *winner_idx > 0 {
-                villian_results.street_rank_results[street_index].win_eq += 1.0;
+    for (active_player_index, rank) in hand_evals.iter().enumerate() {
+        if *rank == max_value {
+            let results = &mut flop_results[active_player_index].street_rank_results[street_index];
+            if num_with_max == 1 {
+                results.win_eq += 1.0;
+            } else {
+                results.tie_eq += 1.0 / num_with_max as f64;
             }
+
+            //Update equity by range index
+            let range_index = player_cards[active_player_index].to_simple_range_index();
+            results.eq_by_range_index[range_index] += 1.0 / num_with_max as f64;
+
+            if active_player_index > 0 {
+                //villian; ok we add ties together, will balance out with ties with hero
+                //not sure if this needs to be among 2 like the street rank results
+                villian_results.street_rank_results[street_index].eq_by_range_index[range_index] += 1.0 / num_with_max as f64;
+            }
+
+            update_results_from_rank(
+                &mut flop_results[active_player_index].street_rank_results[street_index],
+                rank,
+                1.0 / num_with_max as f64,
+            );
         } else {
-            results.tie_eq += 1.0 / winner_indexes.len() as f64;
-
-            if *winner_idx > 0 {
-                villian_results.street_rank_results[street_index].tie_eq +=
-                    1.0 / winner_indexes.len() as f64;
-            }
+            //losing
+            update_results_from_rank(
+                &mut flop_results[active_player_index].street_rank_results[street_index],
+                rank,
+                0.0,
+            );
         }
-
-        //Update equity by range index
-        let range_index = player_cards[*winner_idx].to_simple_range_index();
-        results.eq_by_range_index[range_index] += 1.0 / winner_indexes.len() as f64;
     }
 
     Ok(())
 }
 
-pub(crate) fn update_results_from_rank(results: &mut RankResults, rank: Rank) {
+pub(crate) fn update_results_from_rank(results: &mut RankResults, rank: &Rank, amt: f64) {
     results.num_iterations += 1;
-    results.rank_family_count[rank.get_family_index()] += 1;
+    if amt == 0.0 {
+        results.lose_rank_family_count[rank.get_rank_enum() as u8 as usize] += 1;
+    } else {
+        results.win_rank_family_count[rank.get_rank_enum() as u8 as usize] += amt;
+    }
 }
 
 //returns winners and how many players were considered (non None rank)
-pub(crate) fn indices_of_max_values(arr: &[Rank]) -> Vec<usize> {
-    let mut max_indices = Vec::with_capacity(MAX_PLAYERS);
+pub(crate) fn winning_rank(arr: &[Rank]) -> (Rank, usize) {
     let mut max_value = Rank::lowest_rank();
+    let mut num_with_max = 0;
 
-    for (index, &value) in arr.iter().enumerate() {
+    for &value in arr.iter() {
         if value > max_value {
             max_value = value;
-            max_indices.clear();
-            max_indices.push(index);
+            num_with_max = 1;
         } else if value == max_value {
-            max_indices.push(index);
+            num_with_max += 1;
         }
     }
 
-    max_indices
+    (max_value, num_with_max)
 }

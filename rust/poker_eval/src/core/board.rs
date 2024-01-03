@@ -1,9 +1,9 @@
 use core::fmt;
-use std::{fmt::Display, str::FromStr};
+use std::{fmt::Display, iter::Cloned, slice::Iter, str::FromStr};
 
 use num_integer::binomial;
 
-use crate::{Card, Deck, PokerError, Round};
+use crate::{Card, Deck, HoleCards, PokerError, Round};
 
 pub struct Board {
     cards: Vec<Card>,
@@ -82,10 +82,7 @@ impl Board {
         Ok(())
     }
 
-    pub fn clear_cards_from_deck(&mut self, deck: &mut Deck) {
-        for card in self.cards.iter() {
-            deck.clear_used_card(*card);
-        }
+    pub fn clear_cards(&mut self) {
         self.cards.clear();
         self.index = None;
     }
@@ -141,6 +138,10 @@ impl Board {
             .collect()
     }
 
+    pub fn get_iter(&self) -> Cloned<Iter<Card>> {
+        self.cards.iter().cloned()
+    }
+
     pub fn get_round(&self) -> Result<Round, PokerError> {
         Ok(match self.cards.len() {
             0 => Round::Preflop,
@@ -153,6 +154,15 @@ impl Board {
 
     pub fn get_num_cards(&self) -> usize {
         self.cards.len()
+    }
+
+    pub fn intersects_holecards(&self, hole_cards: &HoleCards) -> bool {
+        for card in hole_cards.get_iter() {
+            if self.cards.contains(&card) {
+                return true;
+            }
+        }
+        false
     }
 }
 

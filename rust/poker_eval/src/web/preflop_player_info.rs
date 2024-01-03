@@ -1,17 +1,12 @@
 use std::{cmp, mem};
 
-use postflop_solver::card_pair_to_index;
-use rand::rngs::StdRng;
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use crate::{
-    get_unused_card, web::MAX_RAND_NUMBER_ATTEMPS, Card, CardUsedType, HoleCards, InRangeType,
-    PokerError,
-};
+use crate::{BoolRange, Deck, HoleCards, PokerError, ALL_HOLE_CARDS};
 
 #[derive(Eq, PartialEq, Debug)]
 #[repr(u8)]
-pub(crate) enum PlayerPreFlopState {
+pub enum PlayerPreFlopState {
     Disabled = 0,
     UseHoleCards = 1,
     UseRange = 2,
@@ -35,66 +30,47 @@ pub struct PreflopPlayerInfo {
     pub(crate) range_string: String,
     //results: Results,
     pub(crate) hole_cards: Option<HoleCards>,
-    pub(crate) range_set: InRangeType,
+    pub(crate) range: BoolRange,
     pub(crate) state: PlayerPreFlopState,
 }
 
 pub fn get_all_player_hole_cards(
+    //usize is the original player index
+    // we may have removed some players
     active_players: &[(usize, &PreflopPlayerInfo)],
-    rng: &mut StdRng,
-    cards_used: &mut CardUsedType,
+    deck: &mut Deck,
+    //usize is the index in active players
+    all_possible_hole_cards: &Vec<(usize, Vec<HoleCards>)>,
 ) -> Result<Vec<HoleCards>, PokerError> {
-    let mut player_cards: Vec<HoleCards> = Vec::with_capacity(active_players.len());
+    let mut player_cards: Vec<HoleCards> = vec![ALL_HOLE_CARDS[0]; active_players.len()];
 
-    for (p_idx, p) in active_players.iter() {
-        assert!(p.state != PlayerPreFlopState::Disabled);
+    let mut hole_cards_set = 0;
 
-        if p.state == PlayerPreFlopState::UseHoleCards {
-            let pc = p.hole_cards.ok_or(PokerError::from_string(format!(
-                "Player missing hole cards"
-            )))?;
-            player_cards.push(pc);
+    //Fill in hole cards for players that have them
+    for (active_player_index, (_player_index, p)) in active_players.iter().enumerate() {
+        if p.state != PlayerPreFlopState::UseHoleCards {
             continue;
         }
 
-        assert_eq!(p.state, PlayerPreFlopState::UseRange);
+        hole_cards_set += 1;
+        let pc = p.hole_cards.ok_or(PokerError::from_string(format!(
+            "Player missing hole cards"
+        )))?;
+        player_cards[active_player_index] = pc;
+    }
 
-        //Now deal with ranges
-        let mut attempts = 0;
-        let mut card1_index;
-        let mut card2_index;
+    assert_eq!(
+        active_players.len(),
+        all_possible_hole_cards.len() + hole_cards_set
+    );
 
-        loop {
-            attempts += 1;
+    for (active_player_index, possible_hole_cards) in all_possible_hole_cards.iter() {
+        let p = active_players[*active_player_index].1;
+        assert!(p.state == PlayerPreFlopState::UseRange);
 
-            if attempts > MAX_RAND_NUMBER_ATTEMPS {
-                return Err(PokerError::from_string(
-                    format!("Unable to find cards for player {} after {} attempts.  Cards used count {} range str {} == {:.1}%",
-                    p_idx, attempts, cards_used.count_ones(),
-                    &p.range_string, p.range_set.count_ones() as f64 / 2652.0 * 100.0)
-                ));
-            }
+        let hc = deck.choose_available_in_range(possible_hole_cards)?;
 
-            card1_index = get_unused_card(rng, cards_used).unwrap();
-            card2_index = get_unused_card(rng, cards_used).unwrap();
-
-            if card1_index == card2_index {
-                continue;
-            }
-
-            let range_index = card_pair_to_index(card1_index as u8, card2_index as u8);
-
-            if !p.range_set[range_index] {
-                continue;
-            }
-
-            break;
-        }
-
-        //we set their cards
-        let pc = HoleCards::new(Card::try_from(card1_index)?, Card::try_from(card2_index)?)?;
-        pc.set_used(cards_used)?;
-        player_cards.push(pc);
+        player_cards[*active_player_index] = hc;
     }
 
     Ok(player_cards)

@@ -1,5 +1,11 @@
 <template>
   <div class="root">
+    <div class="street-toggles">
+      <v-switch v-model="resultsStore.streetVisible[0]" label="Flop" color="success" />
+      <v-switch v-model="resultsStore.streetVisible[1]" label="Turn" color="success" />
+      <v-switch v-model="resultsStore.streetVisible[2]" label="River" color="success" />
+    </div>
+
     <div class="flex flex-col w-full border-l border-gray-500 overflow-x-auto">
       <div ref="tableDiv" class="flex-grow overflow-y-scroll will-change-scroll">
         <table class="w-full h-full text-sm text-center align-middle">
@@ -33,10 +39,16 @@
             <!--3 rows per flop result -->
             <template v-for="item in results" :key="item.player_index">
               <template v-for="street_index in 3" :key="street_index">
-                <tr class="relative" style="height: calc(1.9rem + 1px)">
+                <tr
+                  class="relative"
+                  style="height: calc(1.9rem + 1px)"
+                  v-if="resultsStore.streetVisible[street_index - 1]"
+                >
                   <td>
                     <template v-if="item.player_index >= 0">
-                      Player {{ item.player_index }}
+                      {{
+                        playerStore.players[item.player_index].name || 'Player ' + item.player_index
+                      }}
                     </template>
                     <template v-else> Player >= 1 </template>
                   </td>
@@ -45,16 +57,28 @@
                   <td>
                     <Percentage :perc="item.street_results[street_index - 1].equity" />
 
-                    <RangeEquityViewer :range_it_num="item.street_results[street_index-1].it_num_by_simple_range_idx"
-                    :range_equity="item.street_results[street_index-1].eq_by_simple_range_idx"/>
+                    <RangeEquityViewer
+                      :range_it_num="
+                        item.street_results[street_index - 1].it_num_by_simple_range_idx
+                      "
+                      :range_equity="item.street_results[street_index - 1].eq_by_simple_range_idx"
+                    />
                   </td>
                   <td v-for="index in 9" :key="index">
                     <!-- {{item.rank_family_count}}  -->
                     <!-- {{ index }} -->
                     <!-- {{item.rank_family_count[index-1].perc}} -->
                     <Percentage
+                    class="winning_perc"
                       :perc="
-                        item.street_results[street_index - 1].rank_family_count[index - 1].perc
+                        item.street_results[street_index - 1].win_rank_family_count[index - 1].perc
+                      "
+                    />
+                    ;
+                    <Percentage
+                    class="losing_perc"
+                      :perc="
+                        item.street_results[street_index - 1].lose_rank_family_count[index - 1].perc
                       "
                     />
                   </td>
@@ -81,7 +105,7 @@
     </div>
 
     <!--Draw table-->
-    <div class="flex flex-col w-full border-l border-gray-500 overflow-x-auto">
+    <div v-if="!equityOnly" class="flex flex-col w-full border-l border-gray-500 overflow-x-auto">
       <div ref="tableDiv" class="flex-grow overflow-y-scroll will-change-scroll">
         <table class="w-full h-full text-sm text-center align-middle">
           <thead class="sticky top-0 z-30 shadow">
@@ -225,9 +249,12 @@ import { RANK_FAMILY_NAMES, ResultsInterface } from '@src/worker/result_types';
 import Percentage from '@src/components/result/Percentage.vue';
 import PlayerPreflop from './result/PlayerPreflop.vue';
 import RangeEquityViewer from './result/RangeEquityViewer.vue';
+import { usePlayerStore } from '@src/stores/player';
+import { useResultsStore } from '@src/stores/results';
 
 const props = defineProps<{
   results: Array<ResultsInterface>;
+  equityOnly: boolean;
 }>();
 
 const columnNames = ['Player Id', 'Cards', 'Street', 'Equity', ...RANK_FAMILY_NAMES];
@@ -247,7 +274,11 @@ const drawColumnNames = [
   'Backdoor Flush Draw'
 ];
 
+const playerStore = usePlayerStore();
+
 const results = computed(() => props.results);
+
+const resultsStore = useResultsStore();
 
 function getStreetName(street_index: number) {
   switch (street_index) {
@@ -267,6 +298,23 @@ function getStreetName(street_index: number) {
 .root {
   background-color: rgb(20, 20, 20);
 
+  .street-toggles {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 10px;
+
+    > * {
+      max-width: 100px;
+    }
+
+    :deep(label) {
+      color: white;
+    }
+  }
+
   thead {
     color: green;
     font-weight: bold;
@@ -275,6 +323,8 @@ function getStreetName(street_index: number) {
   tbody {
     tr {
       color: white;
+
+      
     }
   }
 }
@@ -284,5 +334,13 @@ function getStreetName(street_index: number) {
 
 .row-divider::before {
   content: '';
+}
+
+
+:deep(.losing_perc) {
+  
+  span {
+        color: red;
+      }
 }
 </style>

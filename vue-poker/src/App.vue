@@ -4,21 +4,90 @@
   </div>
   <div class="results-table-container">
     <Transition>
-      <ResultTable :results="myResultsList" v-if="myResultsList.length > 0" />
+      <ResultTable
+        :results="myResultsList"
+        :equityOnly="equityOnly"
+        v-if="myResultsList.length > 0"
+      />
     </Transition>
   </div>
 
   <div class="go-row-container">
     <div class="go-row">
+      <input type="checkbox" id="checkbox" v-model="equityOnly" />
+      <label for="checkbox">Equity Only</label>
       <button @click="go" class="button-base button-blue">Go</button>
       <button @click="stop" class="button-base button-red">Stop</button>
       <div class="status">{{ num_iterations }} Iterations</div>
     </div>
   </div>
 
-  <div class="ml-10">
+  <div class="">
     <div class="board-selector-container" style="height: calc(100% - 2rem)">
-      <BoardSelector class="child" v-model="boardStore.board" :expected_length="3" />
+      <BoardSelector
+        class="child"
+        v-model="boardStore.board"
+        :max_expected_length="5"
+        :min_expected_length="3"
+      />
+      <v-btn v-if="boardStore.board.cards.length > 3" @click="handleStashCard()">
+        <!--right-->
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="w-6 h-6"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M17.25 8.25 21 12m0 0-3.75 3.75M21 12H3"
+          />
+        </svg>
+      </v-btn>
+      
+      <v-btn v-if="boardStore.reserveCards.length > 0 && boardStore.board.cards.length != 4" @click="handleUnstashCard()">
+        <!--left -->
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="w-6 h-6"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M6.75 15.75 3 12m0 0 3.75-3.75M3 12h18"
+          />
+        </svg>
+      </v-btn>
+      <BoardSelectorCard
+          v-for="card in boardStore.reserveCards"
+          :key="card"
+          class="m-1"
+          :card-id="card"
+        />
+        <v-btn v-if="boardStore.reserveCards.length > 0" @click="handleUnstashCard()">
+        <!--left -->
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="w-6 h-6"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M6.75 15.75 3 12m0 0 3.75-3.75M3 12h18"
+          />
+        </svg>
+      </v-btn>
     </div>
 
     <!-- This pops up if we are editing a range -->
@@ -27,11 +96,16 @@
     </div>
 
     <!--Show 'players'-->
-    <div class="players">
-      <div v-for="player in players" :key="player.id" :class="['player', player.class]">
-        <Player :playerId="player.id" />
+    <div class="players-container">
+      <div class="players">
+        <div v-for="player in playerStore.players" :key="player.index" class="player">
+          <Player :playerId="player.index" />
+        </div>
       </div>
     </div>
+
+    <!--Range Narrower-->
+    <RangeNarrower />
 
     <div class="footer-container">
       <Suspense>
@@ -56,7 +130,8 @@
 }
 
 .results-table-container {
-    width: 100vw;
+  width: 100vw;
+  box-sizing: border-box;
 }
 
 .fade-in {
@@ -95,13 +170,16 @@ import ResultTable from './components/ResultTable.vue';
 import { Ref, computed, defineComponent, onMounted, ref } from 'vue';
 import { useNavStore, CurrentPage } from './stores/navigation';
 import { init, handler } from './worker/global-worker';
-import { PlayerIds, PlayerState, usePlayerStore } from './stores/player';
+import { PlayerState, usePlayerStore } from './stores/player';
 import { useBoardStore } from './stores/board';
 import { useResultsStore } from './stores/results';
 import { useRangesStore } from './stores/ranges';
+import RangeNarrower from './components/RangeNarrower.vue';
 import { useCssVar } from '@vueuse/core';
 import Footer from './components/Footer.vue';
+import BoardSelectorCard from './components/BoardSelectorCard.vue';
 import { loadCardsFromUrl } from './utils';
+import * as _ from 'lodash';
 
 const navStore = useNavStore();
 const playerStore = usePlayerStore();
@@ -109,9 +187,25 @@ const boardStore = useBoardStore();
 const resultsStore = useResultsStore();
 const rangeStore = useRangesStore();
 
-const iterationsPerTick = 1_000;
-const maxIterations = 50_000;
 const pauseAfterTickMs = 500;
+
+const equityOnly = ref(true);
+
+const iterationsPerTick = computed(() => {
+  if (equityOnly.value) {
+    return 25_000;
+  } else {
+    return 1_000;
+  }
+});
+
+const maxIterations = computed(() => {
+  if (equityOnly.value) {
+    return 500_000;
+  } else {
+    return 50_000;
+  }
+});
 
 boardStore.$subscribe((board) => {
   console.log('boardStore.$subscribe', board);
@@ -145,25 +239,17 @@ onMounted(() => {
   }
 
   const heroCards = loadCardsFromUrl('hero');
-    if (heroCards) {
-        console.log('hero cards loaded from url', heroCards);
-        playerStore.playerDataForId(0).holeCards = heroCards;
-    } else {
-        console.log('no hero cards loaded from url');
-    }
+  if (heroCards) {
+    console.log('hero cards loaded from url', heroCards);
+    playerStore.playerDataForId(0).holeCards = heroCards;
+  } else {
+    console.log('no hero cards loaded from url');
+  }
 });
 
 const userMessage = ref(
   'Welcome, to get started, choose the flop, optionally the turn and river.  Then either specify the exact hole cards or a range for the players you want to simulate'
 );
-
-const players = [
-  { id: 0, class: 'player0' },
-  { id: 1, class: 'player1' },
-  { id: 2, class: 'player2' },
-  { id: 3, class: 'player3' },
-  { id: 4, class: 'player4' }
-];
 
 const num_iterations = ref(0);
 const setTimeoutReturn: Ref<NodeJS.Timeout | null> = ref(null);
@@ -230,14 +316,14 @@ async function tick(numIterations: number) {
   }
   num_iterations.value = num_iterations.value + numIterations;
 
-  if (num_iterations.value >= maxIterations) {
+  if (num_iterations.value >= maxIterations.value) {
     console.log(`max iterations reached ${maxIterations} > ${num_iterations.value}`);
     userMessage.value = ``;
     stopping = true;
     return;
   }
 
-  const ok = await handler.simulateFlop(numIterations);
+  const ok = await handler.simulateFlop(numIterations, equityOnly.value);
 
   if (!ok) {
     userMessage.value = `Error simulating flop`;
@@ -258,8 +344,8 @@ async function tick(numIterations: number) {
 
   resultsStore.results = resultList;
 
-  setTimeoutReturn.value = setTimeout(()=>{
-    tick(iterationsPerTick);
+  setTimeoutReturn.value = setTimeout(() => {
+    tick(iterationsPerTick.value);
   }, pauseAfterTickMs);
 }
 
@@ -278,5 +364,22 @@ async function stop() {
   } else {
     console.warn('Timeout is null');
   }
+
+
+  
 }
+
+function handleStashCard() {
+    const card = boardStore.board.cards.pop();
+    if (_.isInteger(card)) {
+      boardStore.reserveCards.unshift(card!);
+    }
+  }
+
+  function handleUnstashCard() {
+    const card = boardStore.reserveCards.shift();
+    if (_.isInteger(card)) {
+      boardStore.board.cards.push(card!);
+    }
+  }
 </script>
