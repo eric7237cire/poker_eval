@@ -264,6 +264,17 @@ pub fn likes_hand(
             {
                 likes_hand_comments.push(format!("Straight draw"));
                 likes_hand = max(likes_hand, LikesHandLevel::SmallBet);
+
+                //on flop with 1 overcard we up this
+                if board.get_num_cards() == 3 && prc.get_num_overcards() >= 1 {
+                    likes_hand_comments.push(format!(
+                        "Straight draw {} with 1 or more overcards",
+                        p.straight_draw_type
+                    ));
+                    likes_hand = max(likes_hand, LikesHandLevel::LargeBet);
+                }
+
+
             } else {
                 if prc.get_num_overcards() >= 1 && hc.get_hi_card().value >= CardValue::Jack {
                     likes_hand_comments.push(format!(
@@ -371,6 +382,19 @@ mod test {
             &hc,
             4,
         ).unwrap()
+    }
+
+    #[test]
+    fn test_likes_over_card_and_str8_draw() {
+        let hc: HoleCards = "Ac Td".parse().unwrap();
+
+        let board: Board = "Jd 9s 8h".parse().unwrap();
+
+        let likes_hand_response = get_response(hc, board);
+
+        debug!("Likes hand response: {:?}", likes_hand_response);
+        
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::LargeBet);
     }
 
     #[test]

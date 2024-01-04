@@ -1309,6 +1309,14 @@ mod tests {
 
         let prc = partial_rank_cards(&hc, board.as_slice_card());
 
-        assert_eq!(prc.made_two_pair(), Some(1))
+        assert_eq!(prc.made_two_pair(), Some(1));
+
+        let hc: HoleCards = "8d 9h".parse().unwrap();
+
+        let board: Board = "Qh 9d 4c 4d 8s".parse().unwrap();
+
+        let prc = partial_rank_cards(&hc, board.as_slice_card());
+
+        assert_eq!(prc.made_two_pair(), Some(1));
     }
 }
