@@ -9,6 +9,8 @@ use crate::{
     PokerError, Round, StraightDrawType,
 };
 
+use super::{board_texture, rank};
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 #[repr(u8)]
 pub enum LikesHandLevel {
@@ -67,8 +69,6 @@ pub fn likes_hand(
 
     assert!(num_in_pot >= 2 && num_in_pot <= 10);
 
-    let round = board.get_round()?;
-
     let mut likes_hand_comments: Vec<String> = Vec::new();
     let mut not_like_hand_comments: Vec<String> = Vec::new();
     let mut likes_hand = LikesHandLevel::None;
@@ -119,77 +119,31 @@ pub fn likes_hand(
         }
     }
 
-    if let Some(p) = prc.hi_pair {
-        if p.number_above == 0 {
-            if let Some(_p) = prc.lo_pair {
-                likes_hand_comments
-                    .push(format!("two pair with hi card {}", hc.get_hi_card().value));
-                likes_hand = max(likes_hand, LikesHandLevel::AllIn);
-            } else {
-                if hc.get_hi_card().value >= CardValue::Eight {
-                    likes_hand_comments.push(format!("top pair {}", hc.get_hi_card().value));
-                    likes_hand = max(likes_hand, LikesHandLevel::LargeBet);
-                } else {
-                    likes_hand_comments.push(format!("top pair, <= 8 {}", hc.get_hi_card().value));
-                    likes_hand = max(likes_hand, LikesHandLevel::SmallBet);
-                }
-            }
-        } else if p.number_above == 1 {
-            likes_hand_comments.push(format!("mid pair {}", hc.get_hi_card().value));
-            likes_hand = max(likes_hand, LikesHandLevel::CallSmallBet);
-        } else {
-            likes_hand_comments.push(format!("3rd or worse pair {}", hc.get_hi_card().value));
-            likes_hand = max(likes_hand, LikesHandLevel::CallSmallBet);
-        }
-    } else if let Some(p) = prc.lo_pair {
-        //likes_hand = max(likes_hand, LikesHandLevel::SmallBet);
-        if p.number_above == 0 {
-            if hc.get_lo_card().value <= CardValue::Eight {
-                likes_hand_comments.push(format!(
-                    "lo card is top pair {} but is small",
-                    hc.get_lo_card().value
-                ));
-                likes_hand = max(likes_hand, LikesHandLevel::SmallBet);
-            } else {
-                likes_hand_comments.push(format!("lo card is top pair {}", hc.get_lo_card().value));
-                likes_hand = max(likes_hand, LikesHandLevel::LargeBet);
-            }
-        } else {
-            not_like_hand_comments.push(format!(
-                "lo card is not top pair {}",
-                hc.get_lo_card().value
-            ));
-        }
-    }
+    handle_hi_and_lo_pair(prc, ft, hc, &mut likes_hand, &mut likes_hand_comments, &mut not_like_hand_comments);
 
-    if let Some(p) = prc.pocket_pair {
-        if p.number_above == 0 {
-            likes_hand_comments.push(format!("pocket overpair {}", hc.get_hi_card().value));
-            likes_hand = max(likes_hand, LikesHandLevel::LargeBet);
-        } else {
-            if p.number_below == 0 {
-                likes_hand_comments.push(format!("pocket underpair {}", hc.get_hi_card().value));
-                likes_hand = max(likes_hand, LikesHandLevel::CallSmallBet);
-            } else if p.number_above >= 2 {
-                likes_hand_comments.push(format!(
-                    "pocket pair; but with 2 above {}",
-                    hc.get_hi_card().value
-                ));
-                likes_hand = max(likes_hand, LikesHandLevel::CallSmallBet);
-            } else {
-                likes_hand_comments.push(format!("pocket pair {}", hc.get_hi_card().value));
-                likes_hand = max(likes_hand, LikesHandLevel::SmallBet);
-            }
-        }
+    handle_pocket_pair(prc, ft, rank, board, hc, &mut likes_hand, &mut likes_hand_comments, &mut not_like_hand_comments);
+    
+    handle_hi_card(prc, ft,  hc, &mut likes_hand, &mut likes_hand_comments, &mut not_like_hand_comments);
 
-        if !ft.has_quads && !ft.has_fh && rank.get_rank_enum() >= RankEnum::FullHouse {
-            likes_hand_comments.push(format!(
-                "Pocket Pair FH or better {}",
-                hc.get_hi_card().value
-            ));
-            likes_hand = max(likes_hand, LikesHandLevel::AllIn);
-        }
-    }
+    likes_draws(prc,  board, hc, &mut likes_hand, &mut likes_hand_comments, &mut not_like_hand_comments);
+
+    likes_flushes_and_straights(rank, ft, prc, &mut likes_hand, &mut likes_hand_comments, &mut not_like_hand_comments);
+
+    return Ok(LikesHandResponse {
+        likes_hand,
+        likes_hand_comments,
+        not_like_hand_comments,
+    });
+}
+
+fn handle_hi_card(
+    prc: &PartialRankContainer,
+    ft: &BoardTexture,
+    hc: &HoleCards,
+    likes_hand: &mut LikesHandLevel,
+    likes_hand_comments: &mut Vec<String>,
+    not_like_hand_comments: &mut Vec<String>,
+) {
     if let Some(p) = prc.hi_card {
         if prc.get_num_overcards() >= 2 && hc.get_lo_card().value >= CardValue::Ten {
             likes_hand_comments.push(format!(
@@ -197,7 +151,7 @@ pub fn likes_hand(
                 hc.get_hi_card().value,
                 hc.get_lo_card().value
             ));
-            likes_hand = max(likes_hand, LikesHandLevel::CallSmallBet);
+            *likes_hand = max(*likes_hand, LikesHandLevel::CallSmallBet);
         } else if hc.get_hi_card().value >= CardValue::Ten {
             //if the board is paired, then only stay in with an ace or king
             if p.number_above == 0 {
@@ -206,14 +160,14 @@ pub fn likes_hand(
                         "Trips on board with an Ace {}",
                         hc.get_hi_card().value
                     ));
-                    likes_hand = max(likes_hand, LikesHandLevel::SmallBet);
+                    *likes_hand = max(*likes_hand, LikesHandLevel::SmallBet);
                 } else if ft.has_pair || ft.has_trips || ft.has_two_pair {
                     if hc.get_hi_card().value >= CardValue::King {
                         likes_hand_comments.push(format!(
                             "hi card overcard is ace or king with paired board {}",
                             hc.get_hi_card().value
                         ));
-                        likes_hand = max(likes_hand, LikesHandLevel::CallSmallBet);
+                        *likes_hand = max(*likes_hand, LikesHandLevel::CallSmallBet);
                     } else {
                         not_like_hand_comments.push(format!(
                             "hi card overcard is not ace or king with paired board {}",
@@ -222,7 +176,7 @@ pub fn likes_hand(
                     }
                 } else {
                     if hc.get_hi_card().value >= CardValue::King {
-                        likes_hand = max(likes_hand, LikesHandLevel::CallSmallBet);
+                        *likes_hand = max(*likes_hand, LikesHandLevel::CallSmallBet);
                         likes_hand_comments.push(format!(
                             "overcard card A/K is overpair {}",
                             hc.get_hi_card().value
@@ -237,23 +191,123 @@ pub fn likes_hand(
             }
         }
     }
+}
+
+
+fn handle_hi_and_lo_pair(prc: &PartialRankContainer, ft: &BoardTexture,
+    hc: &HoleCards,
+    likes_hand: &mut LikesHandLevel,
+    likes_hand_comments: &mut Vec<String>,
+    not_like_hand_comments: &mut Vec<String>,) {
+        if let Some(p) = prc.hi_pair {
+        if p.number_above == 0 {
+            if let Some(_p) = prc.lo_pair {
+                likes_hand_comments
+                    .push(format!("two pair with hi card {}", hc.get_hi_card().value));
+                *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
+            } else {
+                if hc.get_hi_card().value >= CardValue::Eight {
+                    likes_hand_comments.push(format!("top pair {}", hc.get_hi_card().value));
+                    *likes_hand = max(*likes_hand, LikesHandLevel::LargeBet);
+                } else {
+                    likes_hand_comments.push(format!("top pair, <= 8 {}", hc.get_hi_card().value));
+                    *likes_hand = max(*likes_hand, LikesHandLevel::SmallBet);
+                }
+            }
+        } else if p.number_above == 1 {
+            likes_hand_comments.push(format!("mid pair {}", hc.get_hi_card().value));
+            *likes_hand = max(*likes_hand, LikesHandLevel::CallSmallBet);
+        } else {
+            likes_hand_comments.push(format!("3rd or worse pair {}", hc.get_hi_card().value));
+            *likes_hand = max(*likes_hand, LikesHandLevel::CallSmallBet);
+        }
+    } else if let Some(p) = prc.lo_pair {
+        //likes_hand = max(likes_hand, LikesHandLevel::SmallBet);
+        if p.number_above == 0 {
+            if hc.get_lo_card().value <= CardValue::Eight {
+                likes_hand_comments.push(format!(
+                    "lo card is top pair {} but is small",
+                    hc.get_lo_card().value
+                ));
+                *likes_hand = max(*likes_hand, LikesHandLevel::SmallBet);
+            } else {
+                likes_hand_comments.push(format!("lo card is top pair {}", hc.get_lo_card().value));
+                *likes_hand = max(*likes_hand, LikesHandLevel::LargeBet);
+            }
+        } else {
+            not_like_hand_comments.push(format!(
+                "lo card is not top pair {}",
+                hc.get_lo_card().value
+            ));
+        }
+    }
+}
+
+fn handle_pocket_pair(prc: &PartialRankContainer,
+    ft: &BoardTexture,
+    rank: &Rank,
+    board: &Board,
+    hc: &HoleCards,
+    likes_hand: &mut LikesHandLevel,
+    likes_hand_comments: &mut Vec<String>,
+    _not_like_hand_comments: &mut Vec<String>,) {
+    if let Some(p) = prc.pocket_pair {
+        if p.number_above == 0 {
+            likes_hand_comments.push(format!("pocket overpair {}", hc.get_hi_card().value));
+            *likes_hand = max(*likes_hand, LikesHandLevel::LargeBet);
+        } else {
+            if p.number_below == 0 {
+                likes_hand_comments.push(format!("pocket underpair {}", hc.get_hi_card().value));
+                *likes_hand = max(*likes_hand, LikesHandLevel::CallSmallBet);
+            } else if p.number_above >= 2 {
+                likes_hand_comments.push(format!(
+                    "pocket pair; but with 2 above {}",
+                    hc.get_hi_card().value
+                ));
+                *likes_hand = max(*likes_hand, LikesHandLevel::CallSmallBet);
+            } else {
+                likes_hand_comments.push(format!("pocket pair {}", hc.get_hi_card().value));
+                *likes_hand = max(*likes_hand, LikesHandLevel::SmallBet);
+            }
+        }
+
+        if !ft.has_quads && !ft.has_fh && rank.get_rank_enum() >= RankEnum::FullHouse {
+            likes_hand_comments.push(format!(
+                "Pocket Pair FH or better {}",
+                hc.get_hi_card().value
+            ));
+            *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
+        }
+    }
+}
+
+fn likes_draws(
+    prc: &PartialRankContainer,
+    
+    board: &Board,
+    hc: &HoleCards,
+    likes_hand: &mut LikesHandLevel,
+    likes_hand_comments: &mut Vec<String>,
+    _not_like_hand_comments: &mut Vec<String>,
+) {
+    let round = board.get_round().unwrap();
     if round != Round::River {
         if let Some(p) = prc.flush_draw {
             if p.flush_draw_type == FlushDrawType::FlushDraw {
                 if prc.has_straight_draw() {
                     likes_hand_comments.push(format!("Flush & str draw {}", p.hole_card_value));
-                    likes_hand = max(likes_hand, LikesHandLevel::AllIn);
+                    *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
                 } else {
                     if prc.has_top_pair() {
                         likes_hand_comments
                             .push(format!("Flush draw {} with top pair", p.hole_card_value));
-                        likes_hand = max(likes_hand, LikesHandLevel::AllIn);
+                        *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
                     } else if p.hole_card_value >= CardValue::King {
                         likes_hand_comments.push(format!("Flush draw {}", p.hole_card_value));
-                        likes_hand = max(likes_hand, LikesHandLevel::LargeBet);
+                        *likes_hand = max(*likes_hand, LikesHandLevel::LargeBet);
                     } else {
                         likes_hand_comments.push(format!("Flush draw {}", p.hole_card_value));
-                        likes_hand = max(likes_hand, LikesHandLevel::SmallBet);
+                        *likes_hand = max(*likes_hand, LikesHandLevel::SmallBet);
                     }
                 }
             }
@@ -263,7 +317,7 @@ pub fn likes_hand(
                 || p.straight_draw_type == StraightDrawType::DoubleGutShot
             {
                 likes_hand_comments.push(format!("Straight draw"));
-                likes_hand = max(likes_hand, LikesHandLevel::SmallBet);
+                *likes_hand = max(*likes_hand, LikesHandLevel::SmallBet);
 
                 //on flop with 1 overcard we up this
                 if board.get_num_cards() == 3 && prc.get_num_overcards() >= 1 {
@@ -271,7 +325,7 @@ pub fn likes_hand(
                         "Straight draw {} with 1 or more overcards",
                         p.straight_draw_type
                     ));
-                    likes_hand = max(likes_hand, LikesHandLevel::LargeBet);
+                    *likes_hand = max(*likes_hand, LikesHandLevel::LargeBet);
                 }
 
 
@@ -281,17 +335,21 @@ pub fn likes_hand(
                         "Gutshot straight draw {} with 1 or more overcards J or better",
                         p.straight_draw_type
                     ));
-                    likes_hand = max(likes_hand, LikesHandLevel::SmallBet);
+                    *likes_hand = max(*likes_hand, LikesHandLevel::SmallBet);
                 } else {
                     likes_hand_comments
                         .push(format!("Gutshot straight draw {}", p.straight_draw_type));
-                    likes_hand = max(likes_hand, LikesHandLevel::CallSmallBet);
+                    *likes_hand = max(*likes_hand, LikesHandLevel::CallSmallBet);
                 }
             }
             //
         }
     }
+}
 
+fn likes_flushes_and_straights(rank: &Rank, ft: &BoardTexture, 
+        prc: &PartialRankContainer, 
+        likes_hand: &mut LikesHandLevel, likes_hand_comments: &mut Vec<String>, not_like_hand_comments: &mut Vec<String>) {
     if RankEnum::Straight == rank.get_rank_enum() {
         let ratio_with_str8 = ft.num_with_str8 as f64 / ft.num_hole_cards as f64;
         if ratio_with_str8 > 0.5 {
@@ -303,7 +361,7 @@ pub fn likes_hand(
                 ft.num_hole_cards,
                 ratio_with_str8 * 100.0
             ));
-            likes_hand = max(likes_hand, LikesHandLevel::AllIn);
+            *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
         }
     }
 
@@ -313,11 +371,11 @@ pub fn likes_hand(
                 if made_flush == CardValue::Ace {
                     likes_hand_comments
                         .push(format!("Made nut flush with a good card {}", made_flush));
-                    likes_hand = max(likes_hand, LikesHandLevel::AllIn);
+                    *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
                 } else if made_flush <= CardValue::Ten {
                     not_like_hand_comments
                         .push(format!("Flush 4 on board, and only have {}", made_flush));
-                    likes_hand = min(likes_hand, LikesHandLevel::CallSmallBet);
+                    *likes_hand = min(*likes_hand, LikesHandLevel::CallSmallBet);
                 } else {
                     likes_hand_comments.push(format!(
                         "Made decent flush with 4 on the board {}",
@@ -327,12 +385,6 @@ pub fn likes_hand(
             }
         }
     }
-
-    return Ok(LikesHandResponse {
-        likes_hand,
-        likes_hand_comments,
-        not_like_hand_comments,
-    });
 }
 
 #[cfg(test)]
@@ -362,7 +414,7 @@ mod test {
         }
     }
 
-    fn get_response(hc: HoleCards, board: Board) -> LikesHandResponse {
+    fn get_response(hc: HoleCards, board: Board, num_in_pot: u8) -> LikesHandResponse {
         let prc = partial_rank_cards(&hc, board.as_slice_card());
 
         let board_texture = calc_board_texture(board.as_slice_card());
@@ -380,9 +432,43 @@ mod test {
             &rank,
             &board,
             &hc,
-            4,
+            num_in_pot
         ).unwrap()
     }
+
+    #[test]
+    fn test_likes_heads_up() {
+        let hc: HoleCards = "Ac 3d".parse().unwrap();
+
+        let board: Board = "9c 6d 3h".parse().unwrap();
+
+        let likes_hand_response = get_response(hc, board, 2);
+
+        debug!("Likes hand response: {:?}", likes_hand_response);
+        
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::LargeBet);
+
+        let hc: HoleCards = "5c 5d".parse().unwrap();
+
+        let board: Board = "9c 6d 3h".parse().unwrap();
+
+        let likes_hand_response = get_response(hc, board, 2);
+
+        debug!("Likes hand response: {:?}", likes_hand_response);
+        
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::SmallBet);
+
+        let hc: HoleCards = "Ac Jd".parse().unwrap();
+
+        let board: Board = "9c 6d 3h".parse().unwrap();
+
+        let likes_hand_response = get_response(hc, board, 2);
+
+        debug!("Likes hand response: {:?}", likes_hand_response);
+        
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::SmallBet);
+    }
+
 
     #[test]
     fn test_likes_over_card_and_str8_draw() {
@@ -390,7 +476,7 @@ mod test {
 
         let board: Board = "Jd 9s 8h".parse().unwrap();
 
-        let likes_hand_response = get_response(hc, board);
+        let likes_hand_response = get_response(hc, board, 4);
 
         debug!("Likes hand response: {:?}", likes_hand_response);
         
@@ -405,7 +491,7 @@ mod test {
 
         let board: Board = "Ad 5d 6h Kd".parse().unwrap();
 
-        let likes_hand_response = get_response(hc, board);
+        let likes_hand_response = get_response(hc, board, 4);
 
         debug!("Likes hand response: {:?}", likes_hand_response);
         
@@ -416,7 +502,7 @@ mod test {
 
         let board: Board = "Ad 5d 6h Kd".parse().unwrap();
 
-        let likes_hand_response = get_response(hc, board);
+        let likes_hand_response = get_response(hc, board, 4);
 
         debug!("Likes hand response: {:?}", likes_hand_response);
         
@@ -431,7 +517,7 @@ mod test {
 
         let board: Board = "Qh 9d 4c 9h".parse().unwrap();
 
-        let likes_hand_response = get_response(hc, board);
+        let likes_hand_response = get_response(hc, board, 4);
 
         debug!("Likes hand response: {:?}", likes_hand_response);
         
@@ -447,7 +533,7 @@ mod test {
 
         let board: Board = "Qh 3d 5c".parse().unwrap();
 
-        let likes_hand_response = get_response(hc, board);
+        let likes_hand_response = get_response(hc, board, 4);
 
         debug!("Likes hand response: {:?}", likes_hand_response);
         
