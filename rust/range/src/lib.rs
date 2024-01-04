@@ -1,9 +1,9 @@
 extern crate wasm_bindgen;
-use poker_eval::{BoolRange, PokerError, CardValue, pre_calc::NUMBER_OF_HOLE_CARDS};
+use poker_eval::{pre_calc::NUMBER_OF_HOLE_CARDS, BoolRange, CardValue, PokerError};
 //use postflop_solver::*;
+use log::debug;
 use std::cmp::Ordering;
 use wasm_bindgen::prelude::*;
-use log::debug;
 
 #[wasm_bindgen]
 pub struct RangeManager {
@@ -21,7 +21,7 @@ impl RangeManager {
         debug!("RangeManager::new()");
 
         Self {
-            range: BoolRange::default()
+            range: BoolRange::default(),
         }
     }
 
@@ -32,7 +32,10 @@ impl RangeManager {
     pub fn update(&mut self, row: u8, col: u8, is_enabled: bool) -> Result<(), PokerError> {
         let rank1: CardValue = (13 - row).try_into()?;
         let rank2: CardValue = (13 - col).try_into()?;
-        debug!("update: row: {}, col: {}, rank1: {}, rank2: {} ==> {}", row, col, rank1, rank2, is_enabled);
+        debug!(
+            "update: row: {}, col: {}, rank1: {}, rank2: {} ==> {}",
+            row, col, rank1, rank2, is_enabled
+        );
         match row.cmp(&col) {
             Ordering::Equal => self.range.set_enabled_pair(rank1, is_enabled),
             Ordering::Less => self.range.set_enabled_suited(rank1, rank2, is_enabled),
@@ -71,7 +74,7 @@ impl RangeManager {
         Ok(weights.into())
     }
 
-    pub fn raw_data(&self) -> Box<[u8]> {        
+    pub fn raw_data(&self) -> Box<[u8]> {
         let mut data = vec![0u8; NUMBER_OF_HOLE_CARDS];
         for i in 0..NUMBER_OF_HOLE_CARDS {
             data[i] = self.range.data[i] as u8;

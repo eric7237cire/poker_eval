@@ -5,8 +5,9 @@ use boomphf::Mphf;
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
-    ActionEnum, BoolRange, CommentedAction, GameState, HoleCards,
-    PlayerState, Round, pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash}, likes_hands::{likes_hand, LikesHandLevel},
+    likes_hands::{likes_hand, LikesHandLevel},
+    pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash},
+    ActionEnum, BoolRange, CommentedAction, GameState, HoleCards, PlayerState, Round,
 };
 
 use super::Agent;
@@ -66,35 +67,42 @@ impl PassiveCallingStation {
             game_state.board.get_iter().chain(hc.get_iter()),
             &self.hash_func,
         );
-        
+
         let likes_hand_response = likes_hand(&prc, &ft, &rank, &game_state.board, &hc, 4).unwrap();
 
         let half_pot = game_state.pot() / 2;
 
-        if game_state.current_to_call <= half_pot && likes_hand_response.likes_hand >= LikesHandLevel::CallSmallBet {
+        if game_state.current_to_call <= half_pot
+            && likes_hand_response.likes_hand >= LikesHandLevel::CallSmallBet
+        {
             return CommentedAction {
                 action: ActionEnum::Call,
-                comment: Some(format!("Calling <= half pot bet with {}.  +1 {} -1 {}",
+                comment: Some(format!(
+                    "Calling <= half pot bet with {}.  +1 {} -1 {}",
                     likes_hand_response.likes_hand,
-                    likes_hand_response.likes_hand_comments.join(", "),	
-                    likes_hand_response.not_like_hand_comments.join(", ")))
+                    likes_hand_response.likes_hand_comments.join(", "),
+                    likes_hand_response.not_like_hand_comments.join(", ")
+                )),
             };
         } else if likes_hand_response.likes_hand >= LikesHandLevel::LargeBet {
             return CommentedAction {
                 action: ActionEnum::Call,
-                comment: Some(format!("Calling any pot with {}.  +1 {} -1 {}",
+                comment: Some(format!(
+                    "Calling any pot with {}.  +1 {} -1 {}",
                     likes_hand_response.likes_hand,
-                    likes_hand_response.likes_hand_comments.join(", "),	
-                    likes_hand_response.not_like_hand_comments.join(", ")))
+                    likes_hand_response.likes_hand_comments.join(", "),
+                    likes_hand_response.not_like_hand_comments.join(", ")
+                )),
             };
-        }
-        else {
+        } else {
             return CommentedAction {
                 action: ActionEnum::Fold,
-                comment: Some(format!("Folding with {}.  +1 {} -1 {}",
+                comment: Some(format!(
+                    "Folding with {}.  +1 {} -1 {}",
                     likes_hand_response.likes_hand,
-                    likes_hand_response.likes_hand_comments.join(", "),	
-                    likes_hand_response.not_like_hand_comments.join(", ")))
+                    likes_hand_response.likes_hand_comments.join(", "),
+                    likes_hand_response.not_like_hand_comments.join(", ")
+                )),
             };
         }
     }

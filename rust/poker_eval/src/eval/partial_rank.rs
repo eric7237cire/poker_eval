@@ -660,13 +660,13 @@ pub fn partial_rank_cards(hole_cards: &HoleCards, board: &[Card]) -> PartialRank
 
         //If we have a higher pair on the board, this nullifies the lo pair
         if partial_ranks.hi_pair.is_some() && partial_ranks.lo_pair.is_some() {
-            let higher_pair_on_board = count_higher(board_metrics.count_to_value[2], lo_card_value as usize) > 0;
+            let higher_pair_on_board =
+                count_higher(board_metrics.count_to_value[2], lo_card_value as usize) > 0;
 
             if higher_pair_on_board {
                 partial_ranks.lo_pair = None;
-            }            
+            }
         }
-        
 
         //special case if we have 2 matching pairs we need to tweak the above/below
         if partial_ranks.hi_pair.is_some()

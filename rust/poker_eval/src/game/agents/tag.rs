@@ -7,8 +7,7 @@ use crate::{
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
     likes_hands::{likes_hand, LikesHandLevel},
     pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash},
-    ActionEnum, BoolRange, CommentedAction, GameState, HoleCards, PlayerState,
-    Round,
+    ActionEnum, BoolRange, CommentedAction, GameState, HoleCards, PlayerState, Round,
 };
 
 use super::Agent;

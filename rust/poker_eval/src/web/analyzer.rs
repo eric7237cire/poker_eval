@@ -517,17 +517,17 @@ impl flop_analyzer {
     pub fn narrow_range_by_pref(
         &self,
         str_range_to_narrow: &str,
-        likes_hand_level: u8,        
-        cards: &[u8],        
-        num_players: u8
+        likes_hand_level: u8,
+        cards: &[u8],
+        num_players: u8,
     ) -> Result<String, PokerError> {
-        
-
         let range_to_narrow: BoolRange = str_range_to_narrow.parse()?;
         let likes_hand: LikesHandLevel = likes_hand_level.try_into()?;
         info!(
             "Starting narrow range {} by preference with min likes hand {} vs {} opponents",
-            range_to_narrow.data.count_ones(), likes_hand, num_players
+            range_to_narrow.data.count_ones(),
+            likes_hand,
+            num_players
         );
 
         let mut board = Board::new();
