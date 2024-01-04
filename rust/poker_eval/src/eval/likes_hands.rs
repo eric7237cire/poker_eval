@@ -351,14 +351,7 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_likes_pair_in_flush() {
-        init_test_logger();
-
-        let hc: HoleCards = "8h 8d".parse().unwrap();
-
-        let board: Board = "Ad 5d 6h Kd".parse().unwrap();
-
+    fn get_response(hc: HoleCards, board: Board) -> LikesHandResponse {
         let prc = partial_rank_cards(&hc, board.as_slice_card());
 
         let board_texture = calc_board_texture(board.as_slice_card());
@@ -370,14 +363,25 @@ mod test {
             &hash_func,
         );
 
-        let likes_hand_response = likes_hand(
+        likes_hand(
             &prc,
             &board_texture,
             &rank,
             &board,
             &hc,
             4,
-        ).unwrap();
+        ).unwrap()
+    }
+
+    #[test]
+    fn test_likes_pair_in_flush() {
+        init_test_logger();
+
+        let hc: HoleCards = "8h 8d".parse().unwrap();
+
+        let board: Board = "Ad 5d 6h Kd".parse().unwrap();
+
+        let likes_hand_response = get_response(hc, board);
 
         debug!("Likes hand response: {:?}", likes_hand_response);
         
@@ -388,29 +392,27 @@ mod test {
 
         let board: Board = "Ad 5d 6h Kd".parse().unwrap();
 
-        let prc = partial_rank_cards(&hc, board.as_slice_card());
-
-        let board_texture = calc_board_texture(board.as_slice_card());
-
-        let hash_func = load_boomperfect_hash();
-
-        let rank = fast_hand_eval(
-            board.get_iter().chain(hc.get_iter()),
-            &hash_func,
-        );
-
-        let likes_hand_response = likes_hand(
-            &prc,
-            &board_texture,
-            &rank,
-            &board,
-            &hc,
-            4,
-        ).unwrap();
+        let likes_hand_response = get_response(hc, board);
 
         debug!("Likes hand response: {:?}", likes_hand_response);
         
         assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::CallSmallBet);
+    }
+
+    #[test]
+    fn test_likes_two_pair_on_paired_board() {
+        init_test_logger();
+
+        let hc: HoleCards = "Qc 4s".parse().unwrap();
+
+        let board: Board = "Qh 9d 4c 9h".parse().unwrap();
+
+        let likes_hand_response = get_response(hc, board);
+
+        debug!("Likes hand response: {:?}", likes_hand_response);
+        
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::LargeBet);
+
     }
 
     #[test]
@@ -421,25 +423,7 @@ mod test {
 
         let board: Board = "Qh 3d 5c".parse().unwrap();
 
-        let prc = partial_rank_cards(&hc, board.as_slice_card());
-
-        let board_texture = calc_board_texture(board.as_slice_card());
-
-        let hash_func = load_boomperfect_hash();
-
-        let rank = fast_hand_eval(
-            board.get_iter().chain(hc.get_iter()),
-            &hash_func,
-        );
-
-        let likes_hand_response = likes_hand(
-            &prc,
-            &board_texture,
-            &rank,
-            &board,
-            &hc,
-            4,
-        ).unwrap();
+        let likes_hand_response = get_response(hc, board);
 
         debug!("Likes hand response: {:?}", likes_hand_response);
         

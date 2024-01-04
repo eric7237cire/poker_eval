@@ -374,9 +374,16 @@ pub fn count_lower(value_set: ValueSetType, value: usize) -> u8 {
 }
 
 pub struct BitSetCardsMetrics {
+    //value_to_count[0] is how many 2s, value_to_count[1] is how many 3s, etc.
     pub value_to_count: [u8; 13],
+    //count_to_value[0] is a bitset of all the card values that have 0 cards
+    //count_to_value[1] is a bitset of all the card values that have 1 card, etc.
     pub count_to_value: [ValueSetType; 5],
+
+    //suit_value_sets[0] is a bitset of all the values that have a club
     pub suit_value_sets: [ValueSetType; 4],
+
+    //value_set is a bitset of all the values that are in the hand
     pub value_set: ValueSetType,
 }
 

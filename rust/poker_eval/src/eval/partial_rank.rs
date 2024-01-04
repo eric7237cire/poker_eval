@@ -658,6 +658,16 @@ pub fn partial_rank_cards(hole_cards: &HoleCards, board: &[Card]) -> PartialRank
         partial_ranks.lo_pair =
             partial_ranks.get_pair_info_for_single_hole_card(lo_card_value, &board_metrics);
 
+        //If we have a higher pair on the board, this nullifies the lo pair
+        if partial_ranks.hi_pair.is_some() && partial_ranks.lo_pair.is_some() {
+            let higher_pair_on_board = count_higher(board_metrics.count_to_value[2], lo_card_value as usize) > 0;
+
+            if higher_pair_on_board {
+                partial_ranks.lo_pair = None;
+            }            
+        }
+        
+
         //special case if we have 2 matching pairs we need to tweak the above/below
         if partial_ranks.hi_pair.is_some()
             && partial_ranks.lo_pair.is_some()
@@ -1272,5 +1282,33 @@ mod tests {
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.made_flush, Some(CardValue::Ten));
+    }
+
+    #[test]
+    fn test_made_two_pair() {
+        let hc: HoleCards = "Qc 4s".parse().unwrap();
+
+        let board: Board = "Qh 9d 4c 9h".parse().unwrap();
+
+        let prc = partial_rank_cards(&hc, board.as_slice_card());
+
+        assert!(prc.lo_pair.is_none());
+        assert!(prc.made_two_pair().is_none());
+
+        let hc: HoleCards = "Qc 4s".parse().unwrap();
+
+        let board: Board = "Qh 9d 4c".parse().unwrap();
+
+        let prc = partial_rank_cards(&hc, board.as_slice_card());
+
+        assert_eq!(prc.made_two_pair(), Some(0));
+
+        let hc: HoleCards = "4s 9h".parse().unwrap();
+
+        let board: Board = "Qh 9d 4c".parse().unwrap();
+
+        let prc = partial_rank_cards(&hc, board.as_slice_card());
+
+        assert_eq!(prc.made_two_pair(), Some(1))
     }
 }
