@@ -123,9 +123,10 @@ pub fn likes_hand(
         &mut likes_hand,
         &mut likes_hand_comments,
         &mut not_like_hand_comments,
+        num_in_pot
     );
 
-    likes_flushes_and_straights(
+    likes_made_flushes_and_straights(
         rank,
         ft,
         prc,
@@ -372,63 +373,73 @@ fn likes_draws(
     likes_hand: &mut LikesHandLevel,
     likes_hand_comments: &mut Vec<String>,
     _not_like_hand_comments: &mut Vec<String>,
+    num_in_pot: u8
 ) {
     let round = board.get_round().unwrap();
-    if round != Round::River {
-        if let Some(p) = prc.flush_draw {
-            if p.flush_draw_type == FlushDrawType::FlushDraw {
-                if prc.has_straight_draw() {
-                    likes_hand_comments.push(format!("Flush & str draw {}", p.hole_card_value));
-                    *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
-                } else {
-                    if prc.has_top_pair() {
-                        likes_hand_comments
-                            .push(format!("Flush draw {} with top pair", p.hole_card_value));
-                        *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
-                    } else if p.hole_card_value >= CardValue::King {
-                        likes_hand_comments.push(format!("Flush draw {}", p.hole_card_value));
-                        *likes_hand = max(*likes_hand, LikesHandLevel::LargeBet);
-                    } else {
-                        likes_hand_comments.push(format!("Flush draw {}", p.hole_card_value));
-                        *likes_hand = max(*likes_hand, LikesHandLevel::SmallBet);
-                    }
-                }
-            }
-        }
-        if let Some(p) = prc.straight_draw {
-            if p.straight_draw_type == StraightDrawType::OpenEnded
-                || p.straight_draw_type == StraightDrawType::DoubleGutShot
-            {
-                likes_hand_comments.push(format!("Straight draw"));
-                *likes_hand = max(*likes_hand, LikesHandLevel::SmallBet);
-
-                //on flop with 1 overcard we up this
-                if board.get_num_cards() == 3 && prc.get_num_overcards() >= 1 {
-                    likes_hand_comments.push(format!(
-                        "Straight draw {} with 1 or more overcards",
-                        p.straight_draw_type
-                    ));
-                    *likes_hand = max(*likes_hand, LikesHandLevel::LargeBet);
-                }
+    if round == Round::River {
+        return;
+    }
+    
+    if let Some(p) = prc.flush_draw {
+        if p.flush_draw_type == FlushDrawType::FlushDraw {
+            if prc.has_straight_draw() {
+                likes_hand_comments.push(format!("Flush & str draw {}", p.hole_card_value));
+                *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
             } else {
-                if prc.get_num_overcards() >= 1 && hc.get_hi_card().value >= CardValue::Jack {
-                    likes_hand_comments.push(format!(
-                        "Gutshot straight draw {} with 1 or more overcards J or better",
-                        p.straight_draw_type
-                    ));
-                    *likes_hand = max(*likes_hand, LikesHandLevel::SmallBet);
-                } else {
+                if prc.has_top_pair() {
                     likes_hand_comments
-                        .push(format!("Gutshot straight draw {}", p.straight_draw_type));
-                    *likes_hand = max(*likes_hand, LikesHandLevel::CallSmallBet);
+                        .push(format!("Flush draw {} with top pair", p.hole_card_value));
+                    *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
+                } else if p.hole_card_value >= CardValue::King {
+                    likes_hand_comments.push(format!("Flush draw {}", p.hole_card_value));
+                    *likes_hand = max(*likes_hand, LikesHandLevel::LargeBet);
+                } else {
+                    likes_hand_comments.push(format!("Flush draw {}", p.hole_card_value));
+                    *likes_hand = max(*likes_hand, LikesHandLevel::SmallBet);
                 }
             }
-            //
         }
     }
+    if let Some(p) = prc.straight_draw {
+        if p.straight_draw_type == StraightDrawType::OpenEnded
+            || p.straight_draw_type == StraightDrawType::DoubleGutShot
+        {
+            if num_in_pot >= 3 {
+                likes_hand_comments.push(format!("Straight draw {} in multiway pot", p.straight_draw_type));
+                *likes_hand = max(*likes_hand, LikesHandLevel::LargeBet);
+            } else  if board.get_num_cards() == 3 && prc.get_num_overcards() >= 1 {
+                //on flop with 1 overcard we up this
+                likes_hand_comments.push(format!(
+                    "Straight draw {} with 1 or more overcards",
+                    p.straight_draw_type
+                ));
+                *likes_hand = max(*likes_hand, LikesHandLevel::LargeBet);
+            }
+            else {
+                likes_hand_comments.push(format!("Straight draw {}", p.straight_draw_type));
+                *likes_hand = max(*likes_hand, LikesHandLevel::SmallBet);
+            }
+
+        } else {
+            //gutshots
+            if prc.get_num_overcards() >= 1 && hc.get_hi_card().value >= CardValue::Jack {
+                likes_hand_comments.push(format!(
+                    "Gutshot straight draw {} with 1 or more overcards J or better",
+                    p.straight_draw_type
+                ));
+                *likes_hand = max(*likes_hand, LikesHandLevel::SmallBet);
+            } else {
+                likes_hand_comments
+                    .push(format!("Gutshot straight draw {}", p.straight_draw_type));
+                *likes_hand = max(*likes_hand, LikesHandLevel::CallSmallBet);
+            }
+        }
+        //
+    }
+
 }
 
-fn likes_flushes_and_straights(
+fn likes_made_flushes_and_straights(
     rank: &Rank,
     ft: &BoardTexture,
     prc: &PartialRankContainer,
