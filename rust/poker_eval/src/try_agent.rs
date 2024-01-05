@@ -112,21 +112,22 @@ fn main() {
         //if it_num == 5 || it_num == 36
         //if it_num == 35
         //if it_num == 70
-        // if it_num == 101
-        // {
-        //     debug!(
-        //         "Losing hand #{}\n{}",
-        //         it_num,
-        //         game_runner.to_game_log_string(true, true)
-        //     );
-        //     panic!();
-        // }
+        //if it_num == 101
+        if it_num == 89
+        {
+            debug!(
+                "Losing hand #{}\n{}",
+                it_num,
+                game_runner.to_game_log_string(true, true)
+            );
+            //panic!();
+        }
     }
 
     for (i, (change, it_num, log)) in heap.into_iter().enumerate() {
         debug!(
-            "Losing hand #{} (iteration {})\nLoss: {}\n{}",
-            i, it_num, change, log
+            "Losing hand #{} (iteration {})\nLoss: {}\n{}\n#{}",
+            i, it_num, change, log, it_num
         );
     }
 

@@ -1,7 +1,6 @@
 use std::{
-    cmp::{max, min},
     fmt::{Display, Formatter},
-    ops::BitOr,
+    ops::BitOr, cmp::{max, min},
 };
 
 use serde::{Deserialize, Serialize};
@@ -483,25 +482,6 @@ impl PartialRankContainer {
             }
         }
 
-        // for (vs_it, bh_it) in
-        //     value_set_iterator(board_metrics.value_set, 4, CardValue::Two, CardValue::King).
-        //     zip(
-        //         value_set_iterator(combined_value_set, 4, CardValue::Two, CardValue::King)) {
-
-        //     assert!(vs_it.value_count <= 4);
-
-        //     //Same conditions except we also need the combined one to be 4
-        //     if vs_it.value_count >= 2 && vs_it.value_count < 4
-        //         && !vs_it.is_set_on_either_side(board_metrics.value_set)
-        //         && bh_it.value_count == 4
-        //         && !bh_it.is_set_on_either_side(combined_value_set) {
-
-        //         self.straight_draw = Some(StraightDraw {
-        //             straight_draw_type: StraightDrawType::OpenEndedDraw,
-        //             number_above: count_higher(all_draws, vs_it.window_stop.next_card().into())
-        //         });
-        //     }
-        // }
     }
 
     fn get_pair_info_for_single_hole_card(

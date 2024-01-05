@@ -450,15 +450,12 @@ fn likes_made_flushes_and_straights(
     num_in_pot: u8
 ) {
     if RankEnum::Straight == rank.get_rank_enum() {
-        let ratio_with_str8 = ft.num_with_str8 as f64 / ft.num_hole_cards as f64;
-        if ratio_with_str8 > 0.5 {
+        if ft.has_straight {
             likes_hand_comments.push(format!("Straight on board"));
         } else {
             likes_hand_comments.push(format!(
-                "Made straight with only {} / {} = {:.2}% other hole cards with a straight",
-                ft.num_with_str8,
-                ft.num_hole_cards,
-                ratio_with_str8 * 100.0
+                "Made straight with {:?} other hole cards with a straight",
+                ft.others_with_str8
             ));
             *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
 

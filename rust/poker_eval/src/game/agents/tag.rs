@@ -118,12 +118,12 @@ impl Tag {
 
         if game_state.current_to_call == 0 {
             //Special case, worry about straights
-            if non_folded_players >= 4 && ft.num_with_str8 > 150 {
+            if non_folded_players >= 4 && ft.others_with_str8.len() > 1 {
                 return CommentedAction {
                     action: ActionEnum::Check,
                     comment: Some(format!(
-                        "Worried someone ({} players) has a straight, {} / {} not betting",
-                        non_folded_players, ft.num_with_str8, ft.num_hole_cards
+                        "Worried someone ({} players) has a straight, {:?} not betting",
+                        non_folded_players, ft.others_with_str8
                     )),
                 };
             }
