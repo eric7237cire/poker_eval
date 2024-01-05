@@ -95,7 +95,7 @@ impl Tag {
             .player_states
             .iter()
             .filter(|ps| !ps.folded)
-            .count();
+            .count() as u8;
 
         let hc = self.hole_cards.as_ref().unwrap();
         let mut pdb = self.partial_rank_db.borrow_mut();
@@ -109,7 +109,8 @@ impl Tag {
             &self.hash_func,
         );
 
-        let likes_hand_response = likes_hand(&prc, &ft, &rank, &game_state.board, &hc, 4).unwrap();
+        let likes_hand_response = likes_hand(&prc, &ft, &rank, &game_state.board, &hc, 
+            non_folded_players + 1,).unwrap();
 
         let current_pot = game_state.pot();
 
@@ -117,16 +118,16 @@ impl Tag {
         let third_pot = current_pot / 3;
 
         if game_state.current_to_call == 0 {
-            //Special case, worry about straights
-            if non_folded_players >= 4 && ft.others_with_str8.len() > 1 {
-                return CommentedAction {
-                    action: ActionEnum::Check,
-                    comment: Some(format!(
-                        "Worried someone ({} players) has a straight, {:?} not betting",
-                        non_folded_players, ft.others_with_str8
-                    )),
-                };
-            }
+            // //Special case, worry about straights
+            // if non_folded_players >= 4 && ft.others_with_str8.len() > 1 {
+            //     return CommentedAction {
+            //         action: ActionEnum::Check,
+            //         comment: Some(format!(
+            //             "Worried someone ({} players) has a straight, {:?} not betting",
+            //             non_folded_players, ft.others_with_str8
+            //         )),
+            //     };
+            // }
 
             //Special case, lower set on 2 pair board
             if likes_hand_response.likes_hand >= LikesHandLevel::SmallBet
@@ -142,7 +143,7 @@ impl Tag {
                 };
             }
 
-            if likes_hand_response.likes_hand >= LikesHandLevel::SmallBet {
+            if likes_hand_response.likes_hand >= LikesHandLevel::SmallBet && game_state.board.get_round().unwrap() < Round::River {
                 return CommentedAction {
                     action: ActionEnum::Bet(third_pot),
                     comment: Some(format!(
@@ -152,7 +153,18 @@ impl Tag {
                         likes_hand_response.not_like_hand_comments.join(", ")
                     )),
                 };
-            } else {
+            } else if likes_hand_response.likes_hand >= LikesHandLevel::LargeBet {
+                return CommentedAction {
+                    action: ActionEnum::Bet(third_pot),
+                    comment: Some(format!(
+                        "Bets 1/3 pot on river because likes hand @ {}: +1 {}; -1 {}",
+                        likes_hand_response.likes_hand,
+                        likes_hand_response.likes_hand_comments.join(", "),
+                        likes_hand_response.not_like_hand_comments.join(", ")
+                    )),
+                };
+            }
+             else {
                 return CommentedAction {
                     action: ActionEnum::Check,
                     comment: Some(format!(

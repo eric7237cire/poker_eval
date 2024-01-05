@@ -411,9 +411,7 @@ mod tests {
                 (CardValue::Ace, CardValue::Three),
             ]
         );
-        assert_eq!(
-            texture.others_with_str8_draw.len(),11
-        );
+        assert_eq!(texture.others_with_str8_draw.len(), 11);
         assert_eq!(texture.others_with_gut_shot.len(), 14);
     }
 }

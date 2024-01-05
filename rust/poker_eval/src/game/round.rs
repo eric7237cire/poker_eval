@@ -1,13 +1,13 @@
 use core::fmt;
 use std::fmt::Display;
 
-#[derive(PartialEq, Eq, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug, PartialOrd, Ord)]
 #[repr(u8)]
 pub enum Round {
-    Preflop,
-    Flop,
-    Turn,
-    River,
+    Preflop = 0,
+    Flop = 1,
+    Turn = 2,
+    River = 3,
 }
 
 impl Default for Round {

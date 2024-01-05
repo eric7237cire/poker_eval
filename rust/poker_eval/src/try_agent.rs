@@ -77,7 +77,9 @@ fn main() {
     //we want to track the worst loses
     let mut heap: BinaryHeap<(i64, i32, String)> = BinaryHeap::new();
 
-    for it_num in 0..200 {
+    let num_total_iterations = 200;
+
+    for it_num in 0..num_total_iterations {
         agent_deck.reset();
 
         let mut agents = build_agents(rcref_ftdb.clone(), rcref_pdb.clone());
@@ -124,11 +126,26 @@ fn main() {
     }
 
     for (i, (change, it_num, log)) in heap.into_iter().enumerate() {
+        if it_num == 69 {
+            continue;
+        }
+        if it_num == 89 {
+            continue;
+        }
+        if it_num == 119 {
+            continue;
+        }
+        
         debug!(
             "Losing hand #{} (iteration {})\nLoss: {}\n{}\n#{}",
             i, it_num, change, log, it_num
         );
     }
 
-    debug!("Hero winnings: {}", hero_winnings);
+    debug!(
+        "Hero winnings: {}; per hand {:.1} in {} iterations",
+        hero_winnings,
+        hero_winnings as f64 / num_total_iterations as f64,
+        num_total_iterations
+    );
 }
