@@ -270,7 +270,7 @@ fn handle_hi_and_lo_pair(
     not_like_hand_comments: &mut Vec<String>,
     num_in_pot: u8,
 ) {
-    if num_in_pot == 0 && prc.hi_pair.is_some() || prc.lo_pair.is_some() {
+    if num_in_pot == 2 && (prc.hi_pair.is_some() || prc.lo_pair.is_some()) {
         likes_hand_comments.push(format!("Pair on board heads up"));
         *likes_hand = max(*likes_hand, LikesHandLevel::LargeBet);
         return;
@@ -462,12 +462,27 @@ fn likes_made_flushes_and_straights(
             ));
             *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
 
-            if ft.same_suited_max_count >= 3 && num_in_pot >= 3 && !prc.flush_draw.is_some() {
+            if ft.same_suited_max_count == 3 && !prc.flush_draw.is_some() {
                 not_like_hand_comments.push(format!(
-                    "Worried about flushes: {}",
+                    "Worried about flushes with 3 on the board: {}",
                     ft.suits_with_max_count.iter().map(|s| s.to_string()).collect::<Vec<String>>().join(", ")
                 ));
                 *likes_hand = min(*likes_hand, LikesHandLevel::LargeBet);
+            }
+
+            if ft.same_suited_max_count == 4 && !prc.flush_draw.is_some() {
+                not_like_hand_comments.push(format!(
+                    "Worried about flushes with 4 on the board: {}",
+                    ft.suits_with_max_count.iter().map(|s| s.to_string()).collect::<Vec<String>>().join(", ")
+                ));
+                if num_in_pot >= 4 {
+                    *likes_hand = min(*likes_hand, LikesHandLevel::CallSmallBet);
+                } else if num_in_pot == 3 {
+                    *likes_hand = min(*likes_hand, LikesHandLevel::SmallBet);
+                } else {
+                    *likes_hand = min(*likes_hand, LikesHandLevel::LargeBet);
+                }
+                
             }
         }
     }
@@ -554,7 +569,7 @@ mod test {
 
         let likes_hand_response = get_response(hc, &board, 2);        
 
-        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::AllIn);
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::LargeBet);
 
         let likes_hand_response = get_response(hc, &board, 4);        
 
@@ -564,7 +579,7 @@ mod test {
 
         let likes_hand_response = get_response(hc, &board, 2);        
 
-        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::SmallBet);
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::LargeBet);
 
         //let board : Board = "Jc 8c 7c Th 2c".parse().unwrap();
         let likes_hand_response = get_response(hc, &board, 4);        
@@ -574,14 +589,17 @@ mod test {
 
     #[test]
     fn test_likes_heads_up() {
+        init_test_logger();
+
         let hc: HoleCards = "Ac 3d".parse().unwrap();
 
         let board: Board = "9c 6d 3h".parse().unwrap();
 
+        {
         let likes_hand_response = get_response(hc, &board, 2);
 
         assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::LargeBet);
-
+        }
         let likes_hand_response = get_response(hc, &board, 4);
 
         assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::CallSmallBet);
