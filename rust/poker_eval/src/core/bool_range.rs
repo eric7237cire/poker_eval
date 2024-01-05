@@ -123,6 +123,45 @@ impl BoolRange {
     pub fn get_weight_offsuit(&self, rank1: CardValue, rank2: CardValue) -> f32 {
         self.get_weight(&offsuit_indices(rank1, rank2))
     }
+    pub fn get_weight_pair_comment(&self, rank: CardValue) -> String {
+        self.get_comment(&pair_indices(rank))
+    }
+    pub fn get_weight_suited_comment(&self, rank1: CardValue, rank2: CardValue) -> String {
+        self.get_comment(&suited_indices(rank1, rank2))
+    }
+    pub fn get_weight_offsuit_comment(&self, rank1: CardValue, rank2: CardValue) -> String {
+        self.get_comment(&offsuit_indices(rank1, rank2))
+    }
+
+    fn get_comment(&self, indices: &[usize]) -> String {
+        //6 ways to make a pocket pair
+        let weight = self.get_weight(indices);
+        if weight == 0.0 {
+            return "None".to_string();
+        }
+        if weight == 1.0 {
+            return "All".to_string();
+        }
+        let is_included = weight <= 0.5;
+        let mut all_strings = vec![];
+        for pair_holecard_index in indices.iter() {
+            if self.data[*pair_holecard_index] == is_included {
+                let hc = ALL_HOLE_CARDS[*pair_holecard_index];
+                all_strings.push(hc.to_string());
+            }
+        }
+
+        let prefix = if is_included {
+            "Including: "
+        } else {
+            "Excluding: "
+        };
+
+        all_strings.sort();
+        
+        prefix.to_string() + &all_strings.join(", ")
+    }
+    
 
     fn get_weight(&self, indices: &[usize]) -> f32 {
         let mut result = 0.0;

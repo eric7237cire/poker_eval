@@ -29,6 +29,7 @@ impl RangeManager {
         self.range.data.fill(false)
     }
 
+    //row/col are 1 based
     pub fn update(&mut self, row: u8, col: u8, is_enabled: bool) -> Result<(), PokerError> {
         let rank1: CardValue = (13 - row).try_into()?;
         let rank2: CardValue = (13 - col).try_into()?;
@@ -56,6 +57,8 @@ impl RangeManager {
         self.range.to_string()
     }
 
+    //This is for the 'simplified' range view, with row 0 being AA AKs ...
+    //
     pub fn get_weights(&self) -> Result<Box<[f32]>, PokerError> {
         let mut weights = vec![0.0; 13 * 13];
 
@@ -72,6 +75,26 @@ impl RangeManager {
         }
 
         Ok(weights.into())
+    }
+
+    /*
+    If a row/col has >0 but <100%, this returns what's excluded if %>50
+    and what's included if %<=50
+
+    row/col are 0 based
+    */
+    pub fn get_partial_comment(&self, row: u8, col: u8) -> Result<String, PokerError> {
+        let rank1: CardValue = (12 - row).try_into()?;
+        let rank2: CardValue = (12 - col).try_into()?;
+        
+        let st = match row.cmp(&col) {
+            
+            Ordering::Equal => self.range.get_weight_pair_comment(rank1),
+            Ordering::Less => self.range.get_weight_suited_comment(rank1, rank2),
+            Ordering::Greater => self.range.get_weight_offsuit_comment(rank1, rank2),
+            
+        };
+        Ok(st)
     }
 
     pub fn raw_data(&self) -> Box<[u8]> {

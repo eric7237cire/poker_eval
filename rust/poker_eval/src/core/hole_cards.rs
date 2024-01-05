@@ -179,7 +179,7 @@ impl FromStr for HoleCards {
 
 impl Display for HoleCards {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {}", self.card_hi_lo[0], self.card_hi_lo[1])
+        write!(f, "{}{}", self.card_hi_lo[0], self.card_hi_lo[1])
     }
 }
 

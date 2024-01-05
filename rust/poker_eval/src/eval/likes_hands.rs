@@ -486,6 +486,8 @@ fn likes_made_flushes_and_straights(
 
 #[cfg(test)]
 mod test {
+    use std::borrow::Borrow;
+
     use log::{debug, info};
 
     use crate::{
@@ -512,16 +514,48 @@ mod test {
         }
     }
 
-    fn get_response(hc: HoleCards, board: Board, num_in_pot: u8) -> LikesHandResponse {
-        let prc = partial_rank_cards(&hc, board.as_slice_card());
+    fn get_response<B>(hc: HoleCards, board: B, num_in_pot: u8) -> LikesHandResponse 
+    where B: Borrow<Board>
+    {
+        let prc = partial_rank_cards(&hc, board.borrow().as_slice_card());
 
-        let board_texture = calc_board_texture(board.as_slice_card());
+        let board_texture = calc_board_texture(board.borrow().as_slice_card());
 
         let hash_func = load_boomperfect_hash();
 
-        let rank = fast_hand_eval(board.get_iter().chain(hc.get_iter()), &hash_func);
+        let rank = fast_hand_eval(board.borrow().get_iter().chain(hc.get_iter()), &hash_func);
 
-        likes_hand(&prc, &board_texture, &rank, &board, &hc, num_in_pot).unwrap()
+        let likes_hand_response = likes_hand(&prc, &board_texture, &rank, &board.borrow(), &hc, num_in_pot).unwrap();
+
+        debug!("Likes hand response: {:?}", likes_hand_response);
+
+        likes_hand_response
+    }
+
+    #[test]
+    fn test_str8_vs_flush() {
+        let hc : HoleCards = "Qs 9d".parse().unwrap();
+
+        let board : Board = "Jc 8c 7c Th".parse().unwrap();
+
+        let likes_hand_response = get_response(hc, &board, 2);        
+
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::LargeBet);
+
+        let likes_hand_response = get_response(hc, &board, 4);        
+
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::LargeBet);
+
+        let board : Board = "Jc 8c 7c Th 2c".parse().unwrap();
+
+        let likes_hand_response = get_response(hc, &board, 2);        
+
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::SmallBet);
+
+        //let board : Board = "Jc 8c 7c Th 2c".parse().unwrap();
+        let likes_hand_response = get_response(hc, &board, 4);        
+
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::CallSmallBet);
     }
 
     #[test]
