@@ -86,13 +86,11 @@ impl RangeManager {
     pub fn get_partial_comment(&self, row: u8, col: u8) -> Result<String, PokerError> {
         let rank1: CardValue = (12 - row).try_into()?;
         let rank2: CardValue = (12 - col).try_into()?;
-        
+
         let st = match row.cmp(&col) {
-            
             Ordering::Equal => self.range.get_weight_pair_comment(rank1),
             Ordering::Less => self.range.get_weight_suited_comment(rank1, rank2),
             Ordering::Greater => self.range.get_weight_offsuit_comment(rank1, rank2),
-            
         };
         Ok(st)
     }

@@ -158,10 +158,9 @@ impl BoolRange {
         };
 
         all_strings.sort();
-        
+
         prefix.to_string() + &all_strings.join(", ")
     }
-    
 
     fn get_weight(&self, indices: &[usize]) -> f32 {
         let mut result = 0.0;

@@ -1,6 +1,7 @@
 use std::{
+    cmp::{max, min},
     fmt::{Display, Formatter},
-    ops::BitOr, cmp::{max, min},
+    ops::BitOr,
 };
 
 use serde::{Deserialize, Serialize};
@@ -481,7 +482,6 @@ impl PartialRankContainer {
                 });
             }
         }
-
     }
 
     fn get_pair_info_for_single_hole_card(

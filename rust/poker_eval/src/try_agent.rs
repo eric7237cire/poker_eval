@@ -113,8 +113,7 @@ fn main() {
         //if it_num == 35
         //if it_num == 70
         //if it_num == 101
-        if it_num == 89
-        {
+        if it_num == 89 {
             debug!(
                 "Losing hand #{}\n{}",
                 it_num,
