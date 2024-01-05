@@ -133,6 +133,7 @@ pub fn likes_hand(
         &mut likes_hand,
         &mut likes_hand_comments,
         &mut not_like_hand_comments,
+        num_in_pot
     );
 
     return Ok(LikesHandResponse {
@@ -446,6 +447,7 @@ fn likes_made_flushes_and_straights(
     likes_hand: &mut LikesHandLevel,
     likes_hand_comments: &mut Vec<String>,
     not_like_hand_comments: &mut Vec<String>,
+    num_in_pot: u8
 ) {
     if RankEnum::Straight == rank.get_rank_enum() {
         let ratio_with_str8 = ft.num_with_str8 as f64 / ft.num_hole_cards as f64;
@@ -453,12 +455,20 @@ fn likes_made_flushes_and_straights(
             likes_hand_comments.push(format!("Straight on board"));
         } else {
             likes_hand_comments.push(format!(
-                "Made straight with only {} / {} = {:.2}% other hole cards",
+                "Made straight with only {} / {} = {:.2}% other hole cards with a straight",
                 ft.num_with_str8,
                 ft.num_hole_cards,
                 ratio_with_str8 * 100.0
             ));
             *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
+
+            if ft.same_suited_max_count >= 3 && num_in_pot >= 3 && !prc.flush_draw.is_some() {
+                not_like_hand_comments.push(format!(
+                    "Worried about flushes: {}",
+                    ft.suits_with_max_count.iter().map(|s| s.to_string()).collect::<Vec<String>>().join(", ")
+                ));
+                *likes_hand = min(*likes_hand, LikesHandLevel::LargeBet);
+            }
         }
     }
 
@@ -527,20 +537,24 @@ mod test {
 
         let likes_hand_response = likes_hand(&prc, &board_texture, &rank, &board.borrow(), &hc, num_in_pot).unwrap();
 
-        debug!("Likes hand response: {:?}", likes_hand_response);
+        debug!("Likes hand response: {:?}\nhttp://127.0.0.1:5173/?board={}&hero={}", likes_hand_response,
+            board.borrow().to_string_no_spaces(), hc.to_string()
+        );
 
         likes_hand_response
     }
 
     #[test]
     fn test_str8_vs_flush() {
+        init_test_logger();
+
         let hc : HoleCards = "Qs 9d".parse().unwrap();
 
         let board : Board = "Jc 8c 7c Th".parse().unwrap();
 
         let likes_hand_response = get_response(hc, &board, 2);        
 
-        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::LargeBet);
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::AllIn);
 
         let likes_hand_response = get_response(hc, &board, 4);        
 
@@ -564,19 +578,19 @@ mod test {
 
         let board: Board = "9c 6d 3h".parse().unwrap();
 
-        let likes_hand_response = get_response(hc, board, 2);
-
-        debug!("Likes hand response: {:?}", likes_hand_response);
+        let likes_hand_response = get_response(hc, &board, 2);
 
         assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::LargeBet);
+
+        let likes_hand_response = get_response(hc, &board, 4);
+
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::CallSmallBet);
 
         let hc: HoleCards = "5c 5d".parse().unwrap();
 
         let board: Board = "9c 6d 3h".parse().unwrap();
 
         let likes_hand_response = get_response(hc, board, 2);
-
-        debug!("Likes hand response: {:?}", likes_hand_response);
 
         assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::SmallBet);
 
@@ -585,8 +599,6 @@ mod test {
         let board: Board = "9c 6d 3h".parse().unwrap();
 
         let likes_hand_response = get_response(hc, board, 2);
-
-        debug!("Likes hand response: {:?}", likes_hand_response);
 
         assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::SmallBet);
     }

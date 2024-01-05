@@ -38,13 +38,14 @@ use serde::{Deserialize, Serialize};
 // use rmps crate to serialize structs using the MessagePack format
 use crate::{
     calc_cards_metrics, partial_rank_cards, rank_cards, Board, Card, CardValue, HoleCards,
-    StraightDrawType,
+    StraightDrawType, Suit,
 };
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct BoardTexture {
     // Highest same suited count, 1 is a raindbow board
     pub same_suited_max_count: u8,
+    pub suits_with_max_count: Vec<Suit>,
 
     pub gaps: Vec<u8>, // a flop will have 2
 
@@ -74,6 +75,7 @@ pub struct BoardTexture {
 pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
     let mut texture = BoardTexture {
         same_suited_max_count: 0,
+        suits_with_max_count: Vec::new(),
         gaps: Vec::with_capacity(cards.len() - 1),
         has_trips: false,
         has_pair: false,
@@ -131,6 +133,13 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
     // Find out if there's a flush
     for svs in cards_metrics.suit_value_sets.iter() {
         texture.same_suited_max_count = max(texture.same_suited_max_count, svs.count_ones() as u8);
+    }
+    texture.suits_with_max_count = Vec::with_capacity(4);
+    for (suit_index, svs) in cards_metrics.suit_value_sets.iter().enumerate() {
+        if texture.same_suited_max_count != svs.count_ones() as u8 {
+            continue;
+        }
+        texture.suits_with_max_count.push((suit_index as u8).try_into().unwrap());
     }
 
     let pair_count = cards_metrics.count_to_value[2].count_ones();

@@ -164,6 +164,14 @@ impl Board {
         }
         false
     }
+
+    pub fn to_string_no_spaces(&self) -> String {
+        let mut s = String::new();
+        for card in self.cards.iter() {
+            s.push_str(&format!("{}", card));
+        }
+        s
+    }
 }
 
 impl Display for Board {

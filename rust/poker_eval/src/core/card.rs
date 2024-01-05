@@ -297,8 +297,8 @@ impl DoubleEndedIterator for CardValueRange {
 /// Enum for the four different suits.
 /// While this has support for ordering it's not
 /// sensical. The sorting is only there to allow sorting cards.
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(PartialEq, PartialOrd, Eq, Ord, Debug, Clone, Copy, Hash)]
+//#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(PartialEq, PartialOrd, Eq, Ord, Debug, Clone, Copy, Hash, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum Suit {
     /// Clubs

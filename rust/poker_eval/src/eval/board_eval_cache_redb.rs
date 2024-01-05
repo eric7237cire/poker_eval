@@ -3,7 +3,7 @@ use std::{env, path::PathBuf};
 use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{calc_board_texture, rank_cards, Board, BoardTexture, Card, OldRank};
+use crate::{calc_board_texture, Board, BoardTexture, Card};
 use dotenv::dotenv;
 
 //u32 is usually  enough
@@ -15,19 +15,16 @@ use dotenv::dotenv;
 
 const PARTIAL_RANK_FILENAME: &str = "partial_rank_re.db";
 const FLOP_TEXTURE_FILENAME: &str = "flop_texture_re.db";
-const HAND_RANK_FILENAME: &str = "hand_rank.db";
 
 pub enum EvalCacheEnum {
     PartialRank,
     FlopTexture,
-    HandRank,
 }
 
 pub fn get_data_path(cache_name: EvalCacheEnum) -> PathBuf {
     let file_name = match cache_name {
         EvalCacheEnum::PartialRank => PARTIAL_RANK_FILENAME,
         EvalCacheEnum::FlopTexture => FLOP_TEXTURE_FILENAME,
-        EvalCacheEnum::HandRank => HAND_RANK_FILENAME,
     };
 
     dotenv().ok();
@@ -158,18 +155,6 @@ pub struct ProduceRank {}
 impl ProduceRank {
     pub fn new() -> Self {
         ProduceRank {}
-    }
-}
-
-impl ProduceEvalResult for ProduceRank {
-    type Result = OldRank;
-
-    fn produce_eval_result(cards: &[Card]) -> OldRank {
-        rank_cards(cards.iter())
-    }
-
-    fn get_cache_name() -> EvalCacheEnum {
-        EvalCacheEnum::HandRank
     }
 }
 
