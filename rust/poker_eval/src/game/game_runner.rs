@@ -1067,6 +1067,7 @@ impl GameRunner {
 
     pub fn to_pokerstars_string(
         &self,        
+        
     ) -> String {
         let player_names = self
             .game_state
@@ -1074,7 +1075,7 @@ impl GameRunner {
             .iter()
             .map(|p| {
                 
-                    p.player_name.clone()
+                    p.player_name.clone().replace("%", "")
                 
             })
             .collect::<Vec<String>>();
@@ -1084,13 +1085,13 @@ impl GameRunner {
         let mut s = String::new();
 
         s.push_str(&format!("PokerStars Hand #1704526657997: Hold'em No Limit (2/5) - 2024/01/06 00:00:00 WET\n"));
-        s.push_str(&format!("Table 'WinningPokerHud' 9-max Seat #{} is the button\n", player_names.len() - 1));
+        s.push_str(&format!("Table 'WinningPokerHud' 9-max Seat #{} is the button\n", player_names.len()));
 
         for (pi, player_state) in self.game_state.player_states.iter().enumerate() {
             s.push_str(&format!(
                 "Seat {}: {} ({} in chips)\n",
                 pi + 1,
-                player_state.player_name,
+                player_names[pi],
                 player_state.initial_stack,
             ));
         }

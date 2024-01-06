@@ -23,13 +23,13 @@ fn build_agents(
 
     agents.push(Box::new(PassiveCallingStation::new(
         None,
-        "Call 100% A",
+        "CallAllA",
         flop_texture_db.clone(),
         partial_rank_db.clone(),
     )));
     agents.push(Box::new(PassiveCallingStation::new(
         None,
-        "Call 100% B",
+        "CallAllB",
         flop_texture_db.clone(),
         partial_rank_db.clone(),
     )));
@@ -37,7 +37,7 @@ fn build_agents(
     for i in 0..6 {
         let agent = PassiveCallingStation::new(
             Some(calling_75),
-            &format!("{} Cal Stn 75%", i + 1),
+            &format!("CalStn75_{}", i + 1),
             flop_texture_db.clone(),
             partial_rank_db.clone(),
         );
