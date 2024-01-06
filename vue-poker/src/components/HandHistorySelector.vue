@@ -10,7 +10,15 @@
 </template>
 
 <script setup lang="ts">
-    import {json_filenames} from '../assets/hand_history/overview.json';
+import { ref } from 'vue';
+
+    const json_filenames = ref([]);
 
     console.log("History", json_filenames);
+    fetch('/src/assets/hand_history/overview.json')
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);
+            json_filenames.value = data.json_filenames;
+        });
 </script>

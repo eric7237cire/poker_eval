@@ -9,8 +9,7 @@
       "paths": {
         "@src/*": ["./src/*"],
         "@pkg/*": ["./pkg/*"],
-      },
-      "resolveJsonModule": true,
+      }
     },
     "include": ["src/**/*.ts", "src/**/*.vue"]
   }
