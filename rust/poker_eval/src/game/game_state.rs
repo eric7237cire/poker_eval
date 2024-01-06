@@ -61,6 +61,17 @@ pub struct GameState {
     pub current_to_act: Position,
     pub current_round: Round,
 
+    //Note this 'resets' when there is a bet or raise as we need to go around again
+    //pub num_acted_this_round: u8,
+    //acted this round == total_active_players - num_left_to_act
+    //note that if a player folds or goes all in, they are no longer counted as active
+    //the last to act (unless they bet/raise) will have this == 0 when they decide
+    pub num_left_to_act: u8,
+    //active means not folded and not all in
+    pub total_active_players: u8,
+    pub total_players_all_in: u8,
+    //so number non folded == total_active_players + total_players_all_in
+
     pub prev_round_pot: ChipType,
 
     //Until current rounds are finished, is not added to pot

@@ -310,6 +310,9 @@ mod tests {
             sb: 2,
             bb: 5,
             actions: vec![],
+            num_left_to_act: 2,
+            total_active_players: 5,
+            total_players_all_in: 0,
         };
 
         tag.set_hole_cards("8d 7d".parse().unwrap());

@@ -1,5 +1,7 @@
 use std::io::Write;
 
+use log::debug;
+
 use crate::game::game_runner_source::GameRunnerSourceEnum;
 use crate::game_log_source::GameLogSource;
 use crate::{GameLog, GameRunner, PokerError};
@@ -39,7 +41,7 @@ pub fn init_logger() {
         .filter_level(log::LevelFilter::Trace)
         .filter_module("poker_eval::game::game_log_parser", log::LevelFilter::Debug)
         .filter_module("poker_eval::game::game_log_source", log::LevelFilter::Debug)
-        .filter_module("poker_eval::game::game_runner", log::LevelFilter::Debug)
+        .filter_module("poker_eval::game::game_runner", log::LevelFilter::Trace)
         .filter_module(
             "poker_eval::game::agents::agent_source",
             log::LevelFilter::Debug,
@@ -91,7 +93,7 @@ pub fn test_game_runner(game_runner: &mut GameRunner) -> Result<(), PokerError> 
     //let log_display = game_runner.to_game_log_string(true);
 
     let check_log = game_runner.to_game_log_string(false, false, 0);
-    //info!("log\n{}", log_display);
+    debug!("log\n{}", check_log);
 
     let parsed_game_log: GameLog = check_log.parse().unwrap();
     let game_log_source: GameLogSource = GameLogSource::new(parsed_game_log);

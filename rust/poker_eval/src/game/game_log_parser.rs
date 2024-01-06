@@ -392,8 +392,7 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
                 player_index,
                 action,
                 round,
-                system_comment: None,
-                player_comment: None,
+                ..Default::default()
             });
 
             trace!(
