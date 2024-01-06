@@ -276,6 +276,7 @@ mod tests {
             cur_round_putting_in_pot: None,
             all_in: false,
             final_eval_comment: None,
+            total_put_in_pot: 0,
         };
 
         let mut other_players: Vec<PlayerState> = Vec::with_capacity(5);
@@ -290,6 +291,7 @@ mod tests {
                 cur_round_putting_in_pot: None,
                 all_in: false,
                 final_eval_comment: None,
+                total_put_in_pot: 0,
             });
         }
 

@@ -1,7 +1,9 @@
 use core::fmt;
 use std::fmt::Display;
 
-#[derive(PartialEq, Eq, Copy, Clone, Debug, PartialOrd, Ord)]
+use serde::Serialize;
+
+#[derive(PartialEq, Eq, Copy, Clone, Debug, PartialOrd, Ord, Serialize)]
 #[repr(u8)]
 pub enum Round {
     Preflop = 0,

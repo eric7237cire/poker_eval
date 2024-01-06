@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::BinaryHeap, rc::Rc, path::PathBuf, fs};
+use std::{cell::RefCell, collections::{BinaryHeap, HashMap}, rc::Rc, path::PathBuf, fs};
 
 use log::{debug, info};
 use num_format::{ToFormattedString, Locale};
@@ -10,7 +10,7 @@ use poker_eval::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards, ProduceMonteCarloEval},
     game_runner_source::GameRunnerSourceEnum,
-    init_logger, test_game_runner, Card, Deck, GameRunner, InitialPlayerState, monte_carlo_equity,
+    init_logger, test_game_runner, Card, Deck, GameRunner, InitialPlayerState, monte_carlo_equity, GameLog,
 };
 
 fn build_agents(
@@ -97,7 +97,7 @@ fn main() {
     let mut hero_winnings: i64 = 0;
 
     //we want to track the worst loses
-    let mut heap: BinaryHeap<(i64, i32, String, String)> = BinaryHeap::new();
+    let mut heap: BinaryHeap<(i64, i32, GameLog)> = BinaryHeap::new();
 
     let num_total_iterations = 20;
     let num_worst_hands_to_keep = 5;
@@ -105,17 +105,17 @@ fn main() {
 
     let hh_path = PathBuf::from("/home/eric/git/poker_eval/rust/hand_history");
     let ps_hh_path = PathBuf::from("/home/eric/git/poker_eval/rust/ps_hand_history");
+    let json_hh_path = PathBuf::from("/home/eric/git/poker_eval/vue-poker/src/assets/hand_history");
+
 
     //delete tree hh_path
-    if hh_path.exists() {
-        std::fs::remove_dir_all(&hh_path).unwrap();
+    for path in [hh_path.clone(), ps_hh_path.clone(), json_hh_path.clone()].iter() {
+        if path.exists() {
+            std::fs::remove_dir_all(path).unwrap();
+        }
+        fs::create_dir_all(path).unwrap();
     }
-    if ps_hh_path.exists() {
-        std::fs::remove_dir_all(&ps_hh_path).unwrap();
-    }
-    fs::create_dir_all(&hh_path).unwrap();
-    fs::create_dir_all(&ps_hh_path).unwrap();
-
+    
     for it_num in 0..num_total_iterations {
         agent_deck.reset();
 
@@ -145,10 +145,15 @@ fn main() {
 
         debug!("Iteration {}, hero change {}", it_num, change.to_formatted_string(&Locale::en));
         
+        //if we have enough hands and this hand is not worse than the worst hand
+        if heap.len() == num_worst_hands_to_keep && change > heap.peek().unwrap().0 {
+            continue;            
+        }
 
         heap.push((change, it_num,
-             game_runner.to_game_log_string(true, true, hero_position),
-            game_runner.to_pokerstars_string()
+            //game_runner.to_game_log_string(true, true, hero_position),
+            game_runner.to_game_log().unwrap(),
+            //game_runner.to_pokerstars_string()
             ));
 
         if heap.len() > num_worst_hands_to_keep {
@@ -170,26 +175,27 @@ fn main() {
         // }
     }
 
-    for (i, (change, it_num, log, ps_str)) in heap.into_iter().enumerate() {
-        let file_path = hh_path.join(format!("{}.txt", it_num));
-        fs::write(file_path, &log).unwrap();
-        let file_path = ps_hh_path.join(format!("{}.txt", it_num));
-        fs::write(file_path, ps_str).unwrap();
-        // if it_num == 69 {
-        //     continue;
-        // }
-        if it_num == 38 {
-            continue;
-        }
-        // if it_num == 119 {
-        //     continue;
-        // }
+    let mut json_filenames = Vec::new();
+
+    for (i, (change, it_num, game_log)) in heap.into_iter().enumerate() {
+        // let file_path = hh_path.join(format!("{}.txt", it_num));
+        // fs::write(file_path, &log).unwrap();
+        // let file_path = ps_hh_path.join(format!("{}.txt", it_num));
+        // fs::write(file_path, ps_str).unwrap();
+
+        //let game_log: GameLog = log.parse().unwrap();
+        let json_str = serde_json::to_string_pretty(&game_log).unwrap();
+        let json_filename = format!("{}.json", it_num);
+        let file_path = json_hh_path.join(&json_filename);
+        json_filenames.push(json_filename);
+        fs::write(file_path, json_str).unwrap();
         
-        // debug!(
-        //     "Losing hand #{} (iteration {})\nLoss: {}\n{}\n#{}",
-        //     i, it_num, change, log, it_num
-        // );
     }
+
+    let mut overview: HashMap<String, serde_json::Value> = HashMap::new();
+    overview.insert("json_filenames".to_string(), serde_json::to_value(json_filenames).unwrap());
+    let overview_filename = json_hh_path.join("overview.json");
+    fs::write(overview_filename, serde_json::to_string_pretty(&overview).unwrap()).unwrap();
 
     debug!(
         "Hero winnings: {}; per hand {:.1} in {} iterations",

@@ -1,8 +1,10 @@
 use std::fmt::{Display, Formatter};
 
+use serde::Serialize;
+
 use crate::{ChipType, Round};
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize)]
 pub enum ActionEnum {
     Fold,
     //This is the difference between what they already put in the pot and what they need to put in the pot
@@ -47,7 +49,7 @@ impl Display for CommentedAction {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Default)]
+#[derive(Debug, PartialEq, Eq, Default, Serialize, Clone)]
 pub struct PlayerAction {
     pub player_index: usize,
     pub action: ActionEnum,

@@ -3,6 +3,7 @@
 use std::str::FromStr;
 
 use log::trace;
+use serde::Serialize;
 
 use crate::Card;
 use crate::HoleCards;
@@ -14,6 +15,7 @@ use crate::PokerError;
 use crate::Position;
 use crate::Round;
 
+#[derive(Serialize)]
 pub struct InitialPlayerState {
     pub stack: ChipType,
     pub player_name: String,
@@ -24,7 +26,7 @@ pub struct InitialPlayerState {
     pub cards: Option<HoleCards>,
 }
 
-#[derive(Default)]
+#[derive(Default, Serialize)]
 pub struct GameLog {
     //Sb first; then left to right
     pub players: Vec<InitialPlayerState>,
@@ -128,6 +130,25 @@ impl FromStr for GameLog {
         Ok(game_log)
     }
 }
+
+//Just so we can use this in a heap, consider everything equal
+impl Ord for GameLog {
+    fn cmp(&self, _other: &Self) -> std::cmp::Ordering {
+        std::cmp::Ordering::Equal
+    }
+}
+impl PartialOrd for GameLog {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl PartialEq for GameLog {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for GameLog {}
 
 #[allow(dead_code)]
 pub struct CurrentPlayerState {

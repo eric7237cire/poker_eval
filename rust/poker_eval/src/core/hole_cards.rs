@@ -5,12 +5,13 @@ use std::{
 };
 
 use once_cell::sync::Lazy;
+use serde::Serialize;
 
 use crate::{pre_calc::NUMBER_OF_HOLE_CARDS, set_used_card, unset_used_card, CardUsedType};
 
 use crate::{Card, PokerError};
 
-#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Serialize)]
 pub struct HoleCards {
     card_hi_lo: [Card; 2],
     //card_lo: Card

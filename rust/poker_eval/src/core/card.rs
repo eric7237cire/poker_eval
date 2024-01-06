@@ -391,8 +391,8 @@ impl Display for Suit {
 
 /// The main struct of this library.
 /// This is a carrier for Suit and Value combined.
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Hash)]
+//#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Hash, Serialize)]
 pub struct Card {
     /// The face value of this card.
     pub value: CardValue,

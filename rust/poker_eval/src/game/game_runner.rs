@@ -4,7 +4,7 @@
 
 use std::cmp::min;
 
-use crate::{rank_cards, set_used_card, Board, OldRank, PlayerAction};
+use crate::{rank_cards, set_used_card, Board, OldRank, PlayerAction, GameLog, InitialPlayerState, Card};
 use crate::{
     ActionEnum, CardUsedType, ChipType, GameState, PlayerState, PokerError, Position, Round,
 };
@@ -926,6 +926,7 @@ impl GameRunner {
         Ok(())
     }
 
+    //This should really be in game_log
     pub fn to_game_log_string(
         &self,
         with_player_comments: bool,
@@ -1078,6 +1079,7 @@ impl GameRunner {
         s
     }
 
+    //this should be in game log
     pub fn to_pokerstars_string(
         &self,        
         
@@ -1179,18 +1181,6 @@ impl GameRunner {
             ));
         }
 
-        /*
-        *** SHOW DOWN ***
-vik collected 132 from pot
-rita collected 131 from pot
-joana collected 131 from pot
-adele collected 131 from pot
-*** SUMMARY ***
-Total pot 525 | Rake 0
-Board [9d 8s 7c Jh Jc]
-
- */
-
         s.push_str("*** SHOW DOWN ***\n");
 
         for player_state in self.game_state.player_states.iter() {
@@ -1217,6 +1207,41 @@ Board [9d 8s 7c Jh Jc]
                 .map(|c| format!("{}", c)).join(" ")));
 
         s
+    }
+
+    pub fn to_game_log(
+        &self,        
+    ) -> Result<GameLog, PokerError> {
+
+        let players: Vec<InitialPlayerState> = self.game_state.player_states.iter().map(|p| {
+            let hole_cards = self
+            .game_runner_source
+            .get_hole_cards(p.player_index()).unwrap();
+
+            InitialPlayerState {
+                player_name: p.player_name.clone(),
+                stack: p.initial_stack,
+                position: p.position,
+                cards: Some(hole_cards)
+            }
+        }).collect();
+
+        let board: Vec<Card> = self.game_state.board.as_slice_card().to_vec();
+
+        let actions = self.game_state.actions.clone();
+        
+        let final_stacks: Vec<ChipType> = self.game_state.player_states.iter().map(|p| p.stack).collect();
+
+        let game_log: GameLog = GameLog {
+            players,
+            sb: self.game_state.sb,
+            bb: self.game_state.bb,
+            board,
+            actions,
+            final_stacks,
+        };
+        
+        Ok(game_log)
     }
 }
 
