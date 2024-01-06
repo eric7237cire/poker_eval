@@ -46,7 +46,7 @@ impl PassiveCallingStation {
 
     fn decide_postflop(
         &mut self,
-        _player_state: &PlayerState,
+        player_state: &PlayerState,
         game_state: &GameState,
     ) -> CommentedAction {
         if game_state.current_to_call == 0 {
@@ -72,11 +72,13 @@ impl PassiveCallingStation {
 
         let half_pot = game_state.pot() / 2;
 
+        let call_amt = game_state.current_to_call - player_state.cur_round_putting_in_pot.unwrap_or(0);
+
         if game_state.current_to_call <= half_pot
             && likes_hand_response.likes_hand >= LikesHandLevel::CallSmallBet
         {
             return CommentedAction {
-                action: ActionEnum::Call,
+                action: ActionEnum::Call(call_amt),
                 comment: Some(format!(
                     "Calling <= half pot bet with {}.  +1 {} -1 {}",
                     likes_hand_response.likes_hand,
@@ -86,7 +88,7 @@ impl PassiveCallingStation {
             };
         } else if likes_hand_response.likes_hand >= LikesHandLevel::LargeBet {
             return CommentedAction {
-                action: ActionEnum::Call,
+                action: ActionEnum::Call(call_amt),
                 comment: Some(format!(
                     "Calling any pot with {}.  +1 {} -1 {}",
                     likes_hand_response.likes_hand,
@@ -112,16 +114,17 @@ impl Agent for PassiveCallingStation {
     fn decide(&mut self, player_state: &PlayerState, game_state: &GameState) -> CommentedAction {
         let action = match game_state.current_round {
             Round::Preflop => {
+                let call_amt = game_state.current_to_call - player_state.cur_round_putting_in_pot.unwrap_or(0);
                 let ri = self.hole_cards.unwrap().to_range_index();
                 //not handling all ins
                 if let Some(calling_range) = self.calling_range.as_ref() {
                     if calling_range.data[ri] {
-                        ActionEnum::Call
+                        ActionEnum::Call(call_amt)
                     } else {
                         ActionEnum::Fold
                     }
                 } else {
-                    ActionEnum::Call
+                    ActionEnum::Call(call_amt)
                 }
             }
             _ => {

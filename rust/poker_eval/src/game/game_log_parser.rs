@@ -373,8 +373,13 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
                 "bets" => action::ActionEnum::Bet(self.parse_chip_amount(remaining_str)?),
 
                 "folds" => action::ActionEnum::Fold,
-                "calls" => action::ActionEnum::Call,
-                "raises" => action::ActionEnum::Raise(self.parse_chip_amount(remaining_str)?),
+                "calls" => action::ActionEnum::Call(self.parse_chip_amount(remaining_str)?),
+                "raises" => {
+                    let increase = self.parse_chip_amount(remaining_str)?;
+                    self.parse_word(remaining_str)?; // to
+                    let amount = self.parse_chip_amount(remaining_str)?;
+                    action::ActionEnum::Raise(increase, amount)
+                },
                 _ => {
                     return Err(PokerError::from_string(format!(
                         "Unknown action {}",

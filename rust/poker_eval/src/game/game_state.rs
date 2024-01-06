@@ -11,11 +11,14 @@ pub struct PlayerState {
     pub position: Position,
     pub player_name: String,
     pub initial_stack: ChipType,
+    
+    //what has not yet been put in the middle
     pub stack: ChipType,
     pub folded: bool,
 
-    //Not yet taken from stack
+    
     //None means not yet acted this round
+    //already deducted from stack
     pub cur_round_putting_in_pot: Option<ChipType>,
 
     //In current betting round, so == remaining stack

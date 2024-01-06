@@ -5,11 +5,12 @@ use crate::{ChipType, Round};
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum ActionEnum {
     Fold,
-    Call,
+    //This is the difference between what they already put in the pot and what they need to put in the pot
+    Call(ChipType),
     Check,
     Bet(ChipType),
-    //Value is the new total, which may include what the player already bet
-    Raise(ChipType),
+    //1st value is the increase, 2nd Value is the new total
+    Raise(ChipType, ChipType),
 }
 
 impl Default for ActionEnum {
@@ -22,10 +23,10 @@ impl Display for ActionEnum {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ActionEnum::Fold => write!(f, "folds"),
-            ActionEnum::Call => write!(f, "calls"),
+            ActionEnum::Call(amount) => write!(f, "calls {}", amount),
             ActionEnum::Check => write!(f, "checks"),
             ActionEnum::Bet(amount) => write!(f, "bets {}", amount),
-            ActionEnum::Raise(amount) => write!(f, "raises {}", amount),
+            ActionEnum::Raise(increase, amount) => write!(f, "raises {} to {}", increase, amount),
         }
     }
 }

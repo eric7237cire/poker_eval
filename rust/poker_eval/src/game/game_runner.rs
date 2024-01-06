@@ -11,6 +11,7 @@ use crate::{
 
 use crate::game::game_runner_source::GameRunnerSource;
 use crate::game::game_runner_source::GameRunnerSourceEnum;
+use itertools::Itertools;
 use log::trace;
 
 // Enforces the poker rules
@@ -495,7 +496,7 @@ impl GameRunner {
                     player_comment: decision.comment,
                 });
             }
-            ActionEnum::Call => {
+            ActionEnum::Call(check_amt) => {
                 let amt_to_call = self.game_state.current_to_call;
 
                 if amt_to_call == 0 {
@@ -506,6 +507,17 @@ impl GameRunner {
                     .into());
                 }
                 let actual_amt = self.handle_put_money_in_pot(player_index, amt_to_call)?;
+
+                if actual_amt != check_amt {
+                    return Err(format!(
+                        "Player {} named {} tried to call {} but should be {}",
+                        player_index,
+                        &self.game_state.player_states[player_index].player_name,
+                        check_amt,
+                        actual_amt
+                    )
+                    .into());
+                }
 
                 //pot has already changed
                 let pot_eq = 100.0 * actual_amt as f64 / (self.game_state.pot() as f64);
@@ -542,7 +554,7 @@ impl GameRunner {
                     player_comment: decision.comment,
                 });
             }
-            ActionEnum::Raise(raise_amt) => {
+            ActionEnum::Raise(increase_amt, raise_amt) => {
                 let amt_to_call = self.game_state.current_to_call;
 
                 self.check_able_to_raise(raise_amt)?;
@@ -550,6 +562,19 @@ impl GameRunner {
                 self.game_state.min_raise = raise_amt - amt_to_call;
                 self.game_state.current_to_call = raise_amt;
                 let actual_amt = self.handle_put_money_in_pot(player_index, raise_amt)?;
+
+                if actual_amt != increase_amt {
+                    return Err(format!(
+                        "Player {} named {} tried to raise {} to {} but should be {} to {}",
+                        player_index,
+                        &self.game_state.player_states[player_index].player_name,
+                        increase_amt,
+                        raise_amt,
+                        actual_amt,
+                        raise_amt
+                    )
+                    .into());
+                }
 
                 let pot_eq = 100.0 * actual_amt as f64 / (self.game_state.pot() as f64);
 
@@ -877,7 +902,7 @@ impl GameRunner {
             //     .into());
             // }
         }
-
+            
         if actual_increase > player_state.stack {
             return Err(format!(
                 "Player #{} {} tried to raise {} but only has {}",
@@ -893,6 +918,8 @@ impl GameRunner {
         &self,
         with_player_comments: bool,
         with_hole_cards_in_name: bool,
+        //for the url
+        hero_position: usize,
     ) -> String {
         let player_names = self
             .game_state
@@ -1011,7 +1038,7 @@ impl GameRunner {
         //Hard code hero as button
         let hero_cards = self
             .game_runner_source
-            .get_hole_cards(self.game_state.player_states.len() - 1)
+            .get_hole_cards(hero_position)
             .unwrap();
         let hero_url_param = format!("{}{}", hero_cards.get_hi_card(), hero_cards.get_lo_card());
 
@@ -1034,6 +1061,141 @@ impl GameRunner {
                 width = max_player_id_width
             ));
         }
+
+        s
+    }
+
+    pub fn to_pokerstars_string(
+        &self,        
+    ) -> String {
+        let player_names = self
+            .game_state
+            .player_states
+            .iter()
+            .map(|p| {
+                
+                    p.player_name.clone()
+                
+            })
+            .collect::<Vec<String>>();
+
+        
+
+        let mut s = String::new();
+
+        s.push_str(&format!("PokerStars Hand #1704526657997: Hold'em No Limit (2/5) - 2024/01/06 00:00:00 WET\n"));
+        s.push_str(&format!("Table 'WinningPokerHud' 9-max Seat #{} is the button\n", player_names.len() - 1));
+
+        for (pi, player_state) in self.game_state.player_states.iter().enumerate() {
+            s.push_str(&format!(
+                "Seat {}: {} ({} in chips)\n",
+                pi + 1,
+                player_state.player_name,
+                player_state.initial_stack,
+            ));
+        }
+
+        s.push_str(&format!(
+            "{}: posts small blind {}\n",
+            &player_names[0],
+            min(
+                self.game_state.sb,
+                self.game_state.player_states[0].initial_stack
+            ),
+        ));
+
+        s.push_str(&format!(
+            "{}: posts big blind {}\n",
+            &player_names[1],
+            min(
+                self.game_state.bb,
+                self.game_state.player_states[0].initial_stack
+            ),
+        ));
+
+        
+        s.push_str("*** HOLE CARDS ***\n");
+
+        for (pi, player_state) in self.game_state.player_states.iter().enumerate() {
+            let hole_cards = self
+            .game_runner_source
+            .get_hole_cards(player_state.player_index())
+            .unwrap();
+            s.push_str(&format!(
+                "Dealt to {} [{} {}]\n",
+                player_state.player_name,
+                hole_cards.get_hi_card(),
+                hole_cards.get_lo_card(),
+            ));
+        }
+        
+      
+        let mut round = Round::River;
+
+        for action in &self.game_state.actions {
+            if action.round != round {
+                round = action.round;
+                //Don't print preflop
+                if round != Round::Preflop {
+                    if round == Round::Flop {
+                        s.push_str(&format!("*** FLOP *** [{}]\n", 
+                        self.game_state.board.as_slice_card()[0..3]
+                            .iter()
+                            .map(|c| format!("{}", c)).join(" ")));
+                    } else if round == Round::Turn {
+                        s.push_str(&format!("*** TURN *** [{}] [{}]\n", 
+                        self.game_state.board.as_slice_card()[0..3]
+                            .iter()
+                            .map(|c| format!("{}", c)).join(" "), self.game_state.board.as_slice_card()[3]));
+                    } else if round == Round::River {
+                        s.push_str(&format!("*** RIVER *** [{}] [{}]\n", 
+                        self.game_state.board.as_slice_card()[0..4]
+                            .iter()
+                            .map(|c| format!("{}", c)).join(" "), self.game_state.board.as_slice_card()[4]));
+                    }
+                    
+                }
+            }
+
+            s.push_str(&format!(
+                "{}: {}\n",
+                &player_names[action.player_index],
+                action.action,
+                
+            ));
+        }
+
+        /*
+        *** SHOW DOWN ***
+vik collected 132 from pot
+rita collected 131 from pot
+joana collected 131 from pot
+adele collected 131 from pot
+*** SUMMARY ***
+Total pot 525 | Rake 0
+Board [9d 8s 7c Jh Jc]
+
+ */
+
+        s.push_str("*** SHOW DOWN ***\n");
+
+        for (pi, player_state) in self.game_state.player_states.iter().enumerate() {
+            if player_state.initial_stack < player_state.stack {
+                s.push_str(&format!(
+                    "{} collected {} from pot\n",
+                    player_state.player_name,
+                    player_state.stack - player_state.initial_stack,
+                ));
+            }
+        }
+
+
+        s.push_str("*** SUMMARY ***\n");
+        s.push_str(&format!("Total pot {} | Rake 0\n", self.game_state.pot()));
+        s.push_str(&format!("Board [{}]\n", 
+            self.game_state.board.as_slice_card()
+                .iter()
+                .map(|c| format!("{}", c)).join(" ")));
 
         s
     }

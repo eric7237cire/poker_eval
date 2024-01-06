@@ -171,7 +171,7 @@ Seat 2 - 5
 Seat 3 - 10
 *** Preflop ***
 Seat 6 folds   # UTG acts first
-Seat 2 calls  # call is difference needed, can put call amount in comments
+Seat 2 calls 10 # call is difference needed, can put call amount in comments
 Seat 3 checks # BB Acts last preflop
 *** Flop ***
 2s 7c 8s
@@ -213,7 +213,7 @@ Seat 6 - 55
             game_log.actions[1],
             PlayerAction {
                 player_index: 0,
-                action: ActionEnum::Call,
+                action: ActionEnum::Call(10),
                 round: Round::Preflop,
                 ..PlayerAction::default()
             }

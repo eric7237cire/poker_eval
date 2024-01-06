@@ -1,6 +1,6 @@
-use std::{cell::RefCell, collections::BinaryHeap, rc::Rc};
+use std::{cell::RefCell, collections::BinaryHeap, rc::Rc, path::{Path, PathBuf}, fs};
 
-use log::debug;
+use log::{debug, info};
 use poker_eval::{
     agents::{
         build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource,
@@ -15,6 +15,7 @@ use poker_eval::{
 fn build_agents(
     flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
     partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
+    hero_position: usize,
 ) -> Vec<Box<dyn Agent>> {
     let calling_75 = "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+";
 
@@ -33,7 +34,7 @@ fn build_agents(
         partial_rank_db.clone(),
     )));
 
-    for i in 0..2 {
+    for i in 0..6 {
         let agent = PassiveCallingStation::new(
             Some(calling_75),
             &format!("{} Cal Stn 75%", i + 1),
@@ -50,7 +51,12 @@ fn build_agents(
         flop_texture_db.clone(),
         partial_rank_db.clone(),
     );
-    agents.push(Box::new(tag));
+    //agents.push(Box::new(tag));
+
+    
+    agents.insert(hero_position, Box::new(tag));
+
+    //info!("Built {} agents", agents.len());
 
     agents
 }
@@ -75,14 +81,23 @@ fn main() {
     let mut hero_winnings: i64 = 0;
 
     //we want to track the worst loses
-    let mut heap: BinaryHeap<(i64, i32, String)> = BinaryHeap::new();
+    let mut heap: BinaryHeap<(i64, i32, String, String)> = BinaryHeap::new();
 
     let num_total_iterations = 200;
+    let mut hero_position = 0;
+
+    let hh_path = PathBuf::from("/home/eric/git/poker_eval/rust/hand_history");
+
+    //delete tree hh_path
+    if hh_path.exists() {
+        std::fs::remove_dir_all(&hh_path).unwrap();
+    }
+    fs::create_dir_all(&hh_path).unwrap();
 
     for it_num in 0..num_total_iterations {
         agent_deck.reset();
 
-        let mut agents = build_agents(rcref_ftdb.clone(), rcref_pdb.clone());
+        let mut agents = build_agents(rcref_ftdb.clone(), rcref_pdb.clone(), hero_position);
         set_agent_hole_cards(&mut agent_deck, &mut agents);
 
         let players: Vec<InitialPlayerState> = build_initial_players_from_agents(&agents);
@@ -100,41 +115,47 @@ fn main() {
 
         test_game_runner(&mut game_runner).unwrap();
 
-        let change = game_runner.game_state.player_states[4].stack as i64
-            - game_runner.game_state.player_states[4].initial_stack as i64;
+        let change = game_runner.game_state.player_states[hero_position].stack as i64
+            - game_runner.game_state.player_states[hero_position].initial_stack as i64;
 
         hero_winnings += change;
 
-        heap.push((change, it_num, game_runner.to_game_log_string(true, true)));
+        heap.push((change, it_num,
+             game_runner.to_game_log_string(true, true, hero_position),
+            game_runner.to_pokerstars_string()
+            ));
 
         if heap.len() > 5 {
             heap.pop();
         }
 
+        hero_position = (hero_position + 1) % game_runner.game_state.player_states.len();
         //if it_num == 5 || it_num == 36
         //if it_num == 35
         //if it_num == 70
         //if it_num == 101
-        if it_num == 89 {
-            debug!(
-                "Losing hand #{}\n{}",
-                it_num,
-                game_runner.to_game_log_string(true, true)
-            );
-            //panic!();
-        }
+        // if it_num == 89 {
+        //     debug!(
+        //         "Losing hand #{}\n{}",
+        //         it_num,
+        //         game_runner.to_game_log_string(true, true, hero_position)
+        //     );
+        //     //panic!();
+        // }
     }
 
-    for (i, (change, it_num, log)) in heap.into_iter().enumerate() {
-        if it_num == 69 {
+    for (i, (change, it_num, log, ps_str)) in heap.into_iter().enumerate() {
+        let file_path = hh_path.join(format!("{}.txt", it_num));
+        fs::write(file_path, ps_str).unwrap();
+        // if it_num == 69 {
+        //     continue;
+        // }
+        if it_num == 38 {
             continue;
         }
-        if it_num == 89 {
-            continue;
-        }
-        if it_num == 119 {
-            continue;
-        }
+        // if it_num == 119 {
+        //     continue;
+        // }
         
         debug!(
             "Losing hand #{} (iteration {})\nLoss: {}\n{}\n#{}",
