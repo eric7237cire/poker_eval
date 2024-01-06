@@ -125,6 +125,10 @@ impl GameRunner {
         let actual_amount = if player_state.stack <= max_actual_amount {
             player_state.all_in = true;
 
+            //All in is only set after we put money in the pot
+            let last_action_index = self.game_state.actions.len() - 1;
+            self.game_state.actions[last_action_index].is_all_in = player_state.all_in;
+            
             //max_pot is created when the round is done
             player_state.stack
         } else {
@@ -575,6 +579,8 @@ impl GameRunner {
                     .unwrap_or(0);
                 let actual_amt = self.handle_put_money_in_pot(player_index, raise_amt)?;
 
+
+
                 if increase_amt_check != increase_amt {
                     return Err(format!(
                         "Player {} named {} tried to raise {} to {} but should be {} to {}",
@@ -800,7 +806,7 @@ impl GameRunner {
             pot: self.game_state.pot(),
             current_amt_to_call: self.game_state.current_to_call,
             amount_put_in_pot_this_round: player_state.cur_round_putting_in_pot.unwrap_or(0),
-            total_amount_pot_in_pot: player_state.total_put_in_pot,
+            total_amount_put_in_pot: player_state.total_put_in_pot,
             players_left_to_act: self.game_state.num_left_to_act,
             is_all_in: player_state.all_in,
         }

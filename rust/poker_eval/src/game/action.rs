@@ -63,7 +63,7 @@ pub struct PlayerAction {
     //this is the amount they put in the pot this round, before this action
     pub amount_put_in_pot_this_round : ChipType,
     //this is the amount they put in the pot the entire hand, before this action
-    pub total_amount_pot_in_pot : ChipType,
+    pub total_amount_put_in_pot : ChipType,
 
     //will be 0 when this player action could have closed the action for the round
     pub players_left_to_act: u8,

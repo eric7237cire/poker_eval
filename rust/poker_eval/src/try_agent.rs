@@ -136,7 +136,20 @@ fn main() {
 
         let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(agent_source)).unwrap();
 
-        test_game_runner(&mut game_runner).unwrap();
+        for _ in 0..200 {
+            let action_count_before = game_runner.game_state.actions.len();
+            let r = game_runner.process_next_action().unwrap();
+            if r {
+                break;
+            }
+            let action_count_after = game_runner.game_state.actions.len();
+            // debug!(
+            //     "Last action: {}",
+            //     &game_runner.game_state.actions.last().as_ref().unwrap()
+            // );
+            assert_eq!(action_count_before + 1, action_count_after);
+        }
+    
 
         let change = game_runner.game_state.player_states[hero_position].stack as i64
             - game_runner.game_state.player_states[hero_position].initial_stack as i64;

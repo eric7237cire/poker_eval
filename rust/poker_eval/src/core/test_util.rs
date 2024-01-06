@@ -41,7 +41,7 @@ pub fn init_logger() {
         .filter_level(log::LevelFilter::Trace)
         .filter_module("poker_eval::game::game_log_parser", log::LevelFilter::Debug)
         .filter_module("poker_eval::game::game_log_source", log::LevelFilter::Debug)
-        .filter_module("poker_eval::game::game_runner", log::LevelFilter::Trace)
+        .filter_module("poker_eval::game::game_runner", log::LevelFilter::Debug)
         .filter_module(
             "poker_eval::game::agents::agent_source",
             log::LevelFilter::Debug,
