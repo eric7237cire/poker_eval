@@ -909,7 +909,7 @@ mod test {
 
                             let hc: HoleCards = HoleCards::new(hole_card1, hole_card2).unwrap();
 
-                            let prc = partial_rank_db.get_put(&board, &hc).unwrap();
+                            let prc = partial_rank_db.get_put(&board, &hc, 0).unwrap();
 
                             let rank =
                                 fast_hand_eval(board.get_iter().chain(hc.get_iter()), &hash_func);

@@ -554,23 +554,26 @@ impl GameRunner {
                     player_comment: decision.comment,
                 });
             }
-            ActionEnum::Raise(increase_amt, raise_amt) => {
+            ActionEnum::Raise(increase_amt_check, raise_amt) => {
                 let amt_to_call = self.game_state.current_to_call;
 
                 self.check_able_to_raise(raise_amt)?;
 
-                self.game_state.min_raise = raise_amt - amt_to_call;
+                //this is also the amount increased from the bet
+                let increase_amt = raise_amt - amt_to_call;
+                //the next raise also has to increase by at least this amount
+                self.game_state.min_raise = increase_amt;
                 self.game_state.current_to_call = raise_amt;
                 let actual_amt = self.handle_put_money_in_pot(player_index, raise_amt)?;
 
-                if actual_amt != increase_amt {
+                if increase_amt_check != increase_amt {
                     return Err(format!(
                         "Player {} named {} tried to raise {} to {} but should be {} to {}",
                         player_index,
                         &self.game_state.player_states[player_index].player_name,
-                        increase_amt,
+                        increase_amt_check,
                         raise_amt,
-                        actual_amt,
+                        increase_amt,
                         raise_amt
                     )
                     .into());
@@ -1117,7 +1120,7 @@ impl GameRunner {
         
         s.push_str("*** HOLE CARDS ***\n");
 
-        for (pi, player_state) in self.game_state.player_states.iter().enumerate() {
+        for  player_state in self.game_state.player_states.iter() {
             let hole_cards = self
             .game_runner_source
             .get_hole_cards(player_state.player_index())
@@ -1180,7 +1183,7 @@ Board [9d 8s 7c Jh Jc]
 
         s.push_str("*** SHOW DOWN ***\n");
 
-        for (pi, player_state) in self.game_state.player_states.iter().enumerate() {
+        for player_state in self.game_state.player_states.iter() {
             if player_state.initial_stack < player_state.stack {
                 s.push_str(&format!(
                     "{} collected {} from pot\n",
@@ -1224,16 +1227,16 @@ Plyr D - 55 - Ks Kd
 Plyr A - 5
 Plyr B - 10
 *** Preflop ***
-Plyr C calls    # UTG acts first
-Plyr D raises 20
-Plyr A calls
-Plyr B raises 30
+Plyr C calls 10   # UTG acts first
+Plyr D raises 10 to 20
+Plyr A calls 7 # all in
+Plyr B raises 10 to 30
 Plyr C folds
-Plyr D calls
+Plyr D calls 10
 *** Flop ***
 2s 7c 8s
 Plyr B bets 10
-Plyr D calls
+Plyr D calls 10
 *** Turn ***
 2h
 Plyr B bets 10
@@ -1241,9 +1244,9 @@ Plyr D folds
 *** River ***
 2d
 Plyr A bets 15 # This never gets used
-Plyr B raises 30 # minimum raise
-Plyr A raises 45
-Plyr B calls
+Plyr B raises 10 to 30 # minimum raise
+Plyr A raises 10 to 45
+Plyr B calls 10
 *** Summary ***
 Plyr A - 46 # 10 from plyr C, 12 from everyone else
 Plyr B - 163 # Plyr B loses 100 with 2h As Kh 2d 7c
@@ -1345,20 +1348,20 @@ Player D1 - 400 - Jd 3d
 Player C1 - 1
 Player B3 - 5
 *** Preflop ***
-Player A1 calls    # UTG acts first
-Player B2 calls
-Player A2 calls
-Player B1 calls
-Player A4 raises 103
-Player A3 calls
-Player C2 calls
-Player D1 calls
-Player C1 calls
-Player B3 calls
-Player A1 calls # all in
-Player B2 calls
-Player A2 calls
-Player B1 calls
+Player A1 calls 5   # UTG acts first
+Player B2 calls 5
+Player A2 calls 5
+Player B1 calls 5
+Player A4 raises 98 to 103
+Player A3 calls 103
+Player C2 calls 103
+Player D1 calls 103
+Player C1 calls 102
+Player B3 calls 98
+Player A1 calls 95 # all in
+Player B2 calls 98
+Player A2 calls 98
+Player B1 calls 98
 *** Flop ***
 Ts 9h 8c
 Player C1 checks
@@ -1367,23 +1370,23 @@ Player B2 checks
 Player A2 checks
 Player B1 checks
 Player A3 bets 27 # all in for 130
-Player C2 calls
-Player D1 calls
-Player C1 calls
-Player B3 calls
-Player B2 calls
-Player A2 calls # all in
-Player B1 calls
+Player C2 calls 27
+Player D1 calls 27
+Player C1 calls 27
+Player B3 calls 27
+Player B2 calls 27
+Player A2 calls 7 # all in
+Player B1 calls 27
 *** Turn ***
 6h
 Player C1 bets 100
-Player B3 raises 101 # all in
-Player B2 calls
-Player B1 calls
-Player C2 calls
-Player D1 raises 270 # all in
-Player C1 calls
-Player C2 calls
+Player B3 raises 1 to 101 # all in
+Player B2 calls 90 # all in ? 
+Player B1 calls 70 # all in ?
+Player C2 calls 101
+Player D1 raises 169 to 270 # all in
+Player C1 calls 110 # all in ? 
+Player C2 calls 89 # all in ? 
 *** River ***
 5d
 *** Summary ***
@@ -1434,19 +1437,19 @@ W3 - 100 - Ac Qd
 L1 - 1
 W1 - 5
 *** Preflop ***
-L2 raises 10
-W2 raises 15
-W3 raises 20
-L1 raises 30
-W1 raises 40
-L2 raises 50
-W2 calls
-W3 calls
+L2 raises 5 to 10
+W2 raises 5 to 15
+W3 raises 5 to 20
+L1 raises 10 to 30
+W1 raises 10 to 40
+L2 raises 10 to 50
+W2 calls 35
+W3 calls 30
 L1 folds
-W1 raises 95
+W1 raises 45 to 95
 L2 folds
-W2 calls
-W3 calls
+W2 calls 45
+W3 calls 45
 *** Flop ***
 As 3d 4c
 W1 checks
@@ -1462,8 +1465,8 @@ W3 checks
 W1 checks
 W2 checks
 W3 bets 5
-W1 calls
-W2 calls
+W1 calls 5
+W2 calls 5
 *** Summary ***
 L1 - 70 # Lost 30
 W1 - 126 # 380 / 3
@@ -1507,19 +1510,19 @@ W3 - 100 - Ac Qd
 L1 - 1
 W1 - 5
 *** Preflop ***
-L2 raises 10
-W2 raises 15
-W3 raises 20
-L1 raises 30
-W1 raises 40
-L2 raises 50
-W2 calls
-W3 calls
+L2 raises 10 to 10
+W2 raises 10 to 15
+W3 raises 10 to 20
+L1 raises 10 to 30
+W1 raises 10 to 40
+L2 raises 10 to 50
+W2 calls 10
+W3 calls 10
 L1 folds
-W1 raises 95
+W1 raises 10 to 95
 L2 folds
-W2 calls
-W3 calls
+W2 calls 10
+W3 calls 10
 *** Flop ***
 As 3d 4c
 W1 checks
@@ -1570,14 +1573,14 @@ W3 - 100 - Ks Kc
 L1 - 1
 W1 - 5
 *** Preflop ***
-L2 raises 10
-W2 raises 15
-W3 calls
-L1 raises 30
-W1 raises 110
-L2 calls
-W2 calls
-W3 calls
+L2 raises 5 to 10
+W2 raises 5 to 15
+W3 calls 15
+L1 raises 15 to 30
+W1 raises 80 to 110
+L2 calls 85
+W2 calls 85
+W3 calls 85
 L1 folds
 *** Flop ***
 As 8d 4c
@@ -1675,27 +1678,27 @@ W1 - 100 - 2s 7c
 L1 - 1
 L2 - 5
 *** Preflop ***
-L3 calls
-L4 raises 20
-W1 calls
-L1 calls
-L2 raises 35
-L3 calls
-L4 raises 50
-W1 calls
-L1 calls
-L2 calls
-L3 calls
+L3 calls 5
+L4 raises 15 to 20
+W1 calls 20
+L1 calls 19
+L2 raises 15 to 35
+L3 calls 30
+L4 raises 15 to 50
+W1 calls 30
+L1 calls 30
+L2 calls 15
+L3 calls 15
 *** Flop ***
 7d 7h 7s
 L1 checks
 L2 checks
 L3 checks
 L4 bets 45
-W1 calls
+W1 calls 45
 L1 folds
-L2 calls
-L3 calls
+L2 calls 45
+L3 calls 45
 *** Turn ***
 8d 
 L2 checks

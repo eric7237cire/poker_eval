@@ -49,6 +49,7 @@ impl PlayerState {
     pub fn player_index(&self) -> usize {
         self.position.into()
     }
+
 }
 
 pub struct GameState {

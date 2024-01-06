@@ -29,7 +29,7 @@ env_logger = "*"
 getrandom = { version = "0.2", features = ["js"] }
 rand="0.8"
 wasm-bindgen = "0.2.89"
-
+num-format = "0.4.4"
 regex="1"
 
 # redirect logs to console

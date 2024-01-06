@@ -4,7 +4,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     board_eval_cache_redb::{get_data_path, EvalCacheEnum},
-    partial_rank_cards, Board, Card, HoleCards, PartialRankContainer,
+    partial_rank_cards, Board, Card, HoleCards, PartialRankContainer, monte_carlo_equity::calc_equity, BoolRange,
 };
 
 //u32 is usually  enough
@@ -19,7 +19,7 @@ const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("eval_cache");
 pub trait ProduceEvalWithHcResult {
     type Result;
 
-    fn produce_eval_result(cards: &[Card], hole_cards: &HoleCards) -> Self::Result;
+    fn produce_eval_result(cards: &[Card], hole_cards: &HoleCards, num_players: u8) -> Self::Result;
 
     fn get_cache_name() -> EvalCacheEnum;
 }
@@ -66,10 +66,11 @@ where
         &mut self,
         cards: &Board,
         hole_cards: &HoleCards,
+        num_players: u8,
     ) -> Result<P::Result, ReDbError> {
         let index = cards.get_precalc_index().unwrap();
 
-        let mut index_bytes: [u8; 6] = [0; 6];
+        let mut index_bytes: [u8; 7] = [0; 7];
         // Packing the u32 into the first 4 bytes of the array
         index_bytes[0] = (index >> 24) as u8; // Extracts the first byte
         index_bytes[1] = (index >> 16) as u8; // Extracts the second byte
@@ -77,6 +78,7 @@ where
         index_bytes[3] = index as u8; // Extracts the fourth byte
         index_bytes[4] = hole_cards.get_hi_card().into();
         index_bytes[5] = hole_cards.get_lo_card().into();
+        index_bytes[6] = num_players;
 
         let opt = self.get(&index_bytes)?;
         if opt.is_some() {
@@ -84,7 +86,7 @@ where
             return Ok(opt.unwrap());
         }
 
-        let result = P::produce_eval_result(cards.as_slice_card(), hole_cards);
+        let result = P::produce_eval_result(cards.as_slice_card(), hole_cards, num_players);
         self.cache_misses += 1;
 
         self.put(&index_bytes, &result)?;
@@ -124,16 +126,54 @@ where
 
 pub struct ProducePartialRankCards {}
 
+//Link the generic cache db with the partial rank cards function 
 impl ProduceEvalWithHcResult for ProducePartialRankCards {
     type Result = PartialRankContainer;
 
-    fn produce_eval_result(board: &[Card], hole_cards: &HoleCards) -> PartialRankContainer {
+    fn produce_eval_result(board: &[Card], hole_cards: &HoleCards, num_players: u8) -> PartialRankContainer {
+        //Num players has no effect, to make sure we aren't bloating the cache we enforce it is 0
+        assert_eq!(num_players, 0);
         partial_rank_cards(&hole_cards, board)
     }
 
     fn get_cache_name() -> EvalCacheEnum {
         EvalCacheEnum::PartialRank
     }
+}
+
+//Link with monte carlo evaluation function
+
+pub struct ProduceMonteCarloEval {}
+
+const NUM_SIMULATIONS: usize = 10_000;
+
+impl ProduceEvalWithHcResult for ProduceMonteCarloEval {
+    type Result = f64;
+
+    fn produce_eval_result(cards: &[Card], hole_cards: &HoleCards, num_players: u8) -> f64 {
+        let mut all_ranges = Vec::with_capacity(num_players as usize);
+        //hero range
+        all_ranges.push(BoolRange::default());
+        all_ranges[0].data.set(hole_cards.to_range_index(), true);
+
+        let mut villian_range = BoolRange::default();
+        villian_range.data.fill(true);
+
+        //later we can make a version that uses range narrowing first
+        for _ in 1..num_players {
+            all_ranges.push(villian_range.clone());
+        }
+
+        let board: Board = Board::new_from_cards(cards);
+        let eq = calc_equity(&board, &all_ranges, NUM_SIMULATIONS).unwrap();
+
+        eq[0]
+    }
+
+    fn get_cache_name() -> EvalCacheEnum {
+        EvalCacheEnum::MonteCarloEval
+    }
+    
 }
 
 #[cfg(test)]
@@ -176,7 +216,7 @@ mod tests {
                 let hole1: Card = agent_deck.get_unused_card().unwrap().try_into().unwrap();
                 let hole2: Card = agent_deck.get_unused_card().unwrap().try_into().unwrap();
                 let hole_cards: HoleCards = HoleCards::new(hole1, hole2).unwrap();
-                let _texture = partial_rank_db.get_put(&mut cards, &hole_cards).unwrap();
+                let _texture = partial_rank_db.get_put(&mut cards, &hole_cards, 4).unwrap();
                 cards.clear_cards();
                 agent_deck.reset();
 

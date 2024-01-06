@@ -99,7 +99,7 @@ impl Tag {
 
         let hc = self.hole_cards.as_ref().unwrap();
         let mut pdb = self.partial_rank_db.borrow_mut();
-        let prc = pdb.get_put(&game_state.board, hc).unwrap();
+        let prc = pdb.get_put(&game_state.board, hc, 0).unwrap();
 
         let mut ft_db = self.flop_texture_db.borrow_mut();
         let ft = ft_db.get_put(&game_state.board).unwrap();

@@ -1,20 +1,21 @@
-use std::{cell::RefCell, collections::BinaryHeap, rc::Rc, path::{Path, PathBuf}, fs};
+use std::{cell::RefCell, collections::BinaryHeap, rc::Rc, path::PathBuf, fs};
 
 use log::{debug, info};
 use poker_eval::{
     agents::{
         build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource,
-        PassiveCallingStation, Tag,
+        PassiveCallingStation, Tag, EqAgent,
     },
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
-    board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
+    board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards, ProduceMonteCarloEval},
     game_runner_source::GameRunnerSourceEnum,
-    init_logger, test_game_runner, Card, Deck, GameRunner, InitialPlayerState,
+    init_logger, test_game_runner, Card, Deck, GameRunner, InitialPlayerState, monte_carlo_equity,
 };
 
 fn build_agents(
     flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
     partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
+    monte_carlo_equity_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
     hero_position: usize,
 ) -> Vec<Box<dyn Agent>> {
     let calling_75 = "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+";
@@ -27,14 +28,15 @@ fn build_agents(
         flop_texture_db.clone(),
         partial_rank_db.clone(),
     )));
-    agents.push(Box::new(PassiveCallingStation::new(
+    agents.push(Box::new(EqAgent::new(
         None,
-        "CallAllB",
+        "EqAgent1",
         flop_texture_db.clone(),
         partial_rank_db.clone(),
+        monte_carlo_equity_db.clone(),
     )));
 
-    for i in 0..6 {
+    for i in 0..5 {
         let agent = PassiveCallingStation::new(
             Some(calling_75),
             &format!("CalStn75_{}", i + 1),
@@ -44,6 +46,16 @@ fn build_agents(
         agents.push(Box::new(agent));
     }
 
+    agents.push(
+        Box::new(EqAgent::new(
+            Some("22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+"),
+            "EqAgent2",
+            flop_texture_db.clone(),
+            partial_rank_db.clone(),
+            monte_carlo_equity_db.clone(),
+        ))
+    );
+
     let tag = Tag::new(
         "JJ+,AJs+,AQo+,KQs",
         "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+",
@@ -51,8 +63,6 @@ fn build_agents(
         flop_texture_db.clone(),
         partial_rank_db.clone(),
     );
-    //agents.push(Box::new(tag));
-
     
     agents.insert(hero_position, Box::new(tag));
 
@@ -76,6 +86,11 @@ fn main() {
 
     let rcref_ftdb = Rc::new(RefCell::new(flop_texture_db));
 
+    let monte_carlo_equity_db: EvalCacheWithHcReDb<ProduceMonteCarloEval> =
+        EvalCacheWithHcReDb::new().unwrap();
+
+    let rcref_mcedb = Rc::new(RefCell::new(monte_carlo_equity_db));
+
     let mut agent_deck = Deck::new();
 
     let mut hero_winnings: i64 = 0;
@@ -83,7 +98,8 @@ fn main() {
     //we want to track the worst loses
     let mut heap: BinaryHeap<(i64, i32, String, String)> = BinaryHeap::new();
 
-    let num_total_iterations = 200;
+    let num_total_iterations = 20;
+    let num_worst_hands_to_keep = 5;
     let mut hero_position = 0;
 
     let hh_path = PathBuf::from("/home/eric/git/poker_eval/rust/hand_history");
@@ -95,9 +111,11 @@ fn main() {
     fs::create_dir_all(&hh_path).unwrap();
 
     for it_num in 0..num_total_iterations {
+        debug!("Iteration {}", it_num);
         agent_deck.reset();
 
-        let mut agents = build_agents(rcref_ftdb.clone(), rcref_pdb.clone(), hero_position);
+        let mut agents = build_agents(rcref_ftdb.clone(), rcref_pdb.clone(), rcref_mcedb.clone(), 
+        hero_position);
         set_agent_hole_cards(&mut agent_deck, &mut agents);
 
         let players: Vec<InitialPlayerState> = build_initial_players_from_agents(&agents);
@@ -125,7 +143,7 @@ fn main() {
             game_runner.to_pokerstars_string()
             ));
 
-        if heap.len() > 5 {
+        if heap.len() > num_worst_hands_to_keep {
             heap.pop();
         }
 

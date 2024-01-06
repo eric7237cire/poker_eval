@@ -92,6 +92,10 @@ function()s become actions*/
     if (!_.isArray(players.value[i].rangeStrHistory)) {
       players.value[i].rangeStrHistory = [];
     }
+    if (!_.isString(players.value[i].rangeStr)) {
+        players.value[i].rangeStr = '';
+    }
+    players.value[i].index = i;
   }
 
   const curPlayerData = computed(() => {

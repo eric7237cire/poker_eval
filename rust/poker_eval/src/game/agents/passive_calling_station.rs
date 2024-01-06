@@ -59,7 +59,7 @@ impl PassiveCallingStation {
         //We'll call with literally anything interesting
         let hc = self.hole_cards.as_ref().unwrap();
         let mut pr_db = self.partial_rank_db.borrow_mut();
-        let prc = pr_db.get_put(&game_state.board, hc).unwrap();
+        let prc = pr_db.get_put(&game_state.board, hc, 0).unwrap();
         let mut ft_db = self.flop_texture_db.borrow_mut();
         let ft = ft_db.get_put(&game_state.board).unwrap();
 
