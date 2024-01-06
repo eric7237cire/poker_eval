@@ -15,11 +15,12 @@ pub struct PlayerState {
     //what has not yet been put in the middle
     pub stack: ChipType,
     pub folded: bool,
-
     
     //None means not yet acted this round
     //already deducted from stack
     pub cur_round_putting_in_pot: Option<ChipType>,
+
+    pub total_put_in_pot: ChipType,
 
     //In current betting round, so == remaining stack
     pub all_in: bool,
@@ -38,6 +39,7 @@ impl PlayerState {
             all_in: false,
             player_name: initial_player_state.player_name.clone(),
             final_eval_comment: None,
+            total_put_in_pot: 0,
         }
     }
 

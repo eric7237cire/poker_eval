@@ -55,7 +55,7 @@ impl Tag {
         if !any_raises {
             if self.pfr_range.data[ri] {
                 CommentedAction {
-                    action: ActionEnum::Raise(game_state.bb * 3 - player_state.cur_round_putting_in_pot.unwrap_or(0), game_state.bb * 3),
+                    action: ActionEnum::Raise(game_state.bb * 3 - game_state.current_to_call, game_state.bb * 3),
                     comment: Some("Opening raise".to_string()),
                 }
             } else {

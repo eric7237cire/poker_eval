@@ -1,6 +1,7 @@
 use std::{cell::RefCell, collections::BinaryHeap, rc::Rc, path::PathBuf, fs};
 
 use log::{debug, info};
+use num_format::{ToFormattedString, Locale};
 use poker_eval::{
     agents::{
         build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource,
@@ -103,15 +104,19 @@ fn main() {
     let mut hero_position = 0;
 
     let hh_path = PathBuf::from("/home/eric/git/poker_eval/rust/hand_history");
+    let ps_hh_path = PathBuf::from("/home/eric/git/poker_eval/rust/ps_hand_history");
 
     //delete tree hh_path
     if hh_path.exists() {
         std::fs::remove_dir_all(&hh_path).unwrap();
     }
+    if ps_hh_path.exists() {
+        std::fs::remove_dir_all(&ps_hh_path).unwrap();
+    }
     fs::create_dir_all(&hh_path).unwrap();
+    fs::create_dir_all(&ps_hh_path).unwrap();
 
     for it_num in 0..num_total_iterations {
-        debug!("Iteration {}", it_num);
         agent_deck.reset();
 
         let mut agents = build_agents(rcref_ftdb.clone(), rcref_pdb.clone(), rcref_mcedb.clone(), 
@@ -137,6 +142,9 @@ fn main() {
             - game_runner.game_state.player_states[hero_position].initial_stack as i64;
 
         hero_winnings += change;
+
+        debug!("Iteration {}, hero change {}", it_num, change.to_formatted_string(&Locale::en));
+        
 
         heap.push((change, it_num,
              game_runner.to_game_log_string(true, true, hero_position),
@@ -164,6 +172,8 @@ fn main() {
 
     for (i, (change, it_num, log, ps_str)) in heap.into_iter().enumerate() {
         let file_path = hh_path.join(format!("{}.txt", it_num));
+        fs::write(file_path, &log).unwrap();
+        let file_path = ps_hh_path.join(format!("{}.txt", it_num));
         fs::write(file_path, ps_str).unwrap();
         // if it_num == 69 {
         //     continue;
@@ -175,10 +185,10 @@ fn main() {
         //     continue;
         // }
         
-        debug!(
-            "Losing hand #{} (iteration {})\nLoss: {}\n{}\n#{}",
-            i, it_num, change, log, it_num
-        );
+        // debug!(
+        //     "Losing hand #{} (iteration {})\nLoss: {}\n{}\n#{}",
+        //     i, it_num, change, log, it_num
+        // );
     }
 
     debug!(

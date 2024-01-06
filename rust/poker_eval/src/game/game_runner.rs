@@ -131,6 +131,7 @@ impl GameRunner {
         assert!(player_state.stack >= actual_amount);
 
         player_state.stack -= actual_amount;
+        player_state.total_put_in_pot += actual_amount;
         player_state.cur_round_putting_in_pot =
             Some(player_state.cur_round_putting_in_pot.unwrap_or(0) + actual_amount);
 
@@ -311,6 +312,12 @@ impl GameRunner {
         let mut eval_cards = self.game_state.board.as_slice_card().to_vec();
 
         for player_index in 0..self.game_state.player_states.len() {
+
+            let p_data = &self.game_state.player_states[player_index];
+
+            assert!(p_data.initial_stack >= p_data.stack);
+            assert_eq!(p_data.total_put_in_pot, p_data.initial_stack - p_data.stack);
+
             if self.game_state.player_states[player_index].folded {
                 // trace!(
                 //     "Player #{} named {} folded, did not win, skipping",
@@ -325,6 +332,8 @@ impl GameRunner {
             // let eval_iter = iter::once(hole_cards.get_hi_card())
             //     .chain(iter::once(hole_cards.get_lo_card()))
             //     .chain(eval_cards.iter());
+
+            //move this to new rank
             let rank = rank_cards(eval_cards.iter());
 
             self.game_state.player_states[player_index].final_eval_comment =
@@ -1055,12 +1064,13 @@ impl GameRunner {
 
         for (pi, player_state) in self.game_state.player_states.iter().enumerate() {
             s.push_str(&format!(
-                "{:width$} - {} # {} Started with {} change {}\n",
+                "{:width$} - {} # {} Started with {} change {}; put in {}\n",
                 &player_names[pi],
                 player_state.stack,
                 player_state.final_eval_comment.as_deref().unwrap_or(""),
                 player_state.initial_stack,
                 (player_state.stack as i64) - (player_state.initial_stack as i64),
+                player_state.total_put_in_pot,
                 width = max_player_id_width
             ));
         }
@@ -1185,10 +1195,15 @@ Board [9d 8s 7c Jh Jc]
 
         for player_state in self.game_state.player_states.iter() {
             if player_state.initial_stack < player_state.stack {
+                // stack = initial_stack + get from pot - put in pot
+                // 2845 = 500 + 2845 - 500 
+                // 700 = 500 + 400 - 200 
+                // stack - initial_stack + put_in_pot = get_from_pot
+                let get_from_pot = player_state.stack + player_state.total_put_in_pot - player_state.initial_stack; 
                 s.push_str(&format!(
                     "{} collected {} from pot\n",
                     player_state.player_name,
-                    player_state.stack - player_state.initial_stack,
+                    get_from_pot,
                 ));
             }
         }
