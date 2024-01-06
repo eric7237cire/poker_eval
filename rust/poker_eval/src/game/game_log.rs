@@ -278,31 +278,31 @@ Plyr D - 55 - Ks Kh
 Plyr A - 5
 Plyr B - 10
 *** Preflop ***
-Plyr C calls    # UTG acts first
-Plyr D raises 10
-Plyr A calls 
-Plyr B raises 20 # so puts in an additional 15
+Plyr C calls 10   # UTG acts first
+Plyr D calls 10
+Plyr A calls 10
+Plyr B raises 10 to 20 
 Plyr C folds
-Plyr D calls
-Plyr A calls
+Plyr D calls 20 
+Plyr A calls 20 
 *** Flop ***
 2s 7c 8s
 Plyr A checks
 Plyr B bets 5
-Plyr D calls
-Plyr A calls
+Plyr D calls 5
+Plyr A calls 5
 *** Turn ***
 2h 
 Plyr A checks
 Plyr B bets 5
 Plyr D folds
-Plyr A calls
+Plyr A calls 5
 *** River ***
 2d
 Plyr A bets 15
-Plyr B raises 30 # minimum raise
-Plyr A raises 45
-Plyr B calls
+Plyr B raises 15 to 30 # minimum raise
+Plyr A raises 15 to 45
+Plyr B calls 45
 *** Summary ***
 Plyr A - 12 # though this is not valid, the parsing just wants correct syntax
 Plyr B - 148 # Plyr B loses 100 with 2h As Kh 2d 7c
@@ -361,10 +361,10 @@ Agent 4               - 500 - Ac 8h
 Agent 0               - 2
 Agent 1               - 5
 *** Preflop ***
-1 Calling Station 75% calls # Player #2 1 Calling Station 75% calls 5 (of 5) with 41.7% pot equity with 12 in the pot
-2 Calling Station 75% calls # Player #3 2 Calling Station 75% calls 5 (of 5) with 29.4% pot equity with 17 in the pot
-Agent 4               calls # Player #4 Agent 4 calls 5 (of 5) with 22.7% pot equity with 22 in the pot
-Agent 0               calls # Player #0 Agent 0 calls 3 (of 5) with 12.0% pot equity with 25 in the pot
+1 Calling Station 75% calls 5 # Player #2 1 Calling Station 75% calls 5 (of 5) with 41.7% pot equity with 12 in the pot
+2 Calling Station 75% calls 5 # Player #3 2 Calling Station 75% calls 5 (of 5) with 29.4% pot equity with 17 in the pot
+Agent 4               calls 5 # Player #4 Agent 4 calls 5 (of 5) with 22.7% pot equity with 22 in the pot
+Agent 0               calls 5 # Player #0 Agent 0 calls 3 (of 5) with 12.0% pot equity with 25 in the pot
 *** Flop ***
 7c 3s 4s
 Agent 0               checks #

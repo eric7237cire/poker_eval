@@ -1510,19 +1510,19 @@ W3 - 100 - Ac Qd
 L1 - 1
 W1 - 5
 *** Preflop ***
-L2 raises 10 to 10
-W2 raises 10 to 15
-W3 raises 10 to 20
+L2 raises 5 to 10
+W2 raises 5 to 15
+W3 raises 5 to 20
 L1 raises 10 to 30
 W1 raises 10 to 40
 L2 raises 10 to 50
-W2 calls 10
-W3 calls 10
+W2 calls 35
+W3 calls 30
 L1 folds
-W1 raises 10 to 95
+W1 raises 45 to 95
 L2 folds
-W2 calls 10
-W3 calls 10
+W2 calls 45
+W3 calls 45
 *** Flop ***
 As 3d 4c
 W1 checks
