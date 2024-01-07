@@ -4,7 +4,8 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     board_eval_cache_redb::{get_data_path, EvalCacheEnum},
-    partial_rank_cards, Board, Card, HoleCards, PartialRankContainer, monte_carlo_equity::calc_equity, BoolRange,
+    monte_carlo_equity::calc_equity,
+    partial_rank_cards, Board, BoolRange, Card, HoleCards, PartialRankContainer,
 };
 
 //u32 is usually  enough
@@ -19,7 +20,8 @@ const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("eval_cache");
 pub trait ProduceEvalWithHcResult {
     type Result;
 
-    fn produce_eval_result(cards: &[Card], hole_cards: &HoleCards, num_players: u8) -> Self::Result;
+    fn produce_eval_result(cards: &[Card], hole_cards: &HoleCards, num_players: u8)
+        -> Self::Result;
 
     fn get_cache_name() -> EvalCacheEnum;
 }
@@ -126,11 +128,15 @@ where
 
 pub struct ProducePartialRankCards {}
 
-//Link the generic cache db with the partial rank cards function 
+//Link the generic cache db with the partial rank cards function
 impl ProduceEvalWithHcResult for ProducePartialRankCards {
     type Result = PartialRankContainer;
 
-    fn produce_eval_result(board: &[Card], hole_cards: &HoleCards, num_players: u8) -> PartialRankContainer {
+    fn produce_eval_result(
+        board: &[Card],
+        hole_cards: &HoleCards,
+        num_players: u8,
+    ) -> PartialRankContainer {
         //Num players has no effect, to make sure we aren't bloating the cache we enforce it is 0
         assert_eq!(num_players, 0);
         partial_rank_cards(&hole_cards, board)
@@ -173,7 +179,6 @@ impl ProduceEvalWithHcResult for ProduceMonteCarloEval {
     fn get_cache_name() -> EvalCacheEnum {
         EvalCacheEnum::MonteCarloEval
     }
-    
 }
 
 #[cfg(test)]

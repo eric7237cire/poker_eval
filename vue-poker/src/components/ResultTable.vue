@@ -69,14 +69,14 @@
                     <!-- {{ index }} -->
                     <!-- {{item.rank_family_count[index-1].perc}} -->
                     <Percentage
-                    class="winning_perc"
+                      class="winning_perc"
                       :perc="
                         item.street_results[street_index - 1].win_rank_family_count[index - 1].perc
                       "
                     />
                     ;
                     <Percentage
-                    class="losing_perc"
+                      class="losing_perc"
                       :perc="
                         item.street_results[street_index - 1].lose_rank_family_count[index - 1].perc
                       "
@@ -323,8 +323,6 @@ function getStreetName(street_index: number) {
   tbody {
     tr {
       color: white;
-
-      
     }
   }
 }
@@ -336,11 +334,9 @@ function getStreetName(street_index: number) {
   content: '';
 }
 
-
 :deep(.losing_perc) {
-  
   span {
-        color: red;
-      }
+    color: red;
+  }
 }
 </style>

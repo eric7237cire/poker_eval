@@ -66,27 +66,34 @@ or select a range
     ></v-select>
   </div>
 
-  <div class="undo-redo" v-if="playerData.state == PlayerState.USE_RANGE && playerData.rangeStrHistory.length > 0 && playerData.historyIndex >= 0">
+  <div
+    class="undo-redo"
+    v-if="
+      playerData.state == PlayerState.USE_RANGE &&
+      playerData.rangeStrHistory.length > 0 &&
+      playerData.historyIndex >= 0
+    "
+  >
     <button
-        @click="handleUndo()"
-        v-if="playerData.historyIndex - 1 >= 0"
-        class="button-base button-blue"
-      >
-        Undo
+      @click="handleUndo()"
+      v-if="playerData.historyIndex - 1 >= 0"
+      class="button-base button-blue"
+    >
+      Undo
     </button>
     <button
-        @click="handleRedo()"
-        v-if="playerData.historyIndex + 1 < playerData.rangeStrHistory.length"
-        class="button-base button-green"
-      >
-        Redo
+      @click="handleRedo()"
+      v-if="playerData.historyIndex + 1 < playerData.rangeStrHistory.length"
+      class="button-base button-green"
+    >
+      Redo
     </button>
     <button
-        @click="handleClearHistory()"
-        v-if="playerData.rangeStrHistory.length > 0 "
-        class="button-base button-red"
-      >
-        Clear
+      @click="handleClearHistory()"
+      v-if="playerData.rangeStrHistory.length > 0"
+      class="button-base button-red"
+    >
+      Clear
     </button>
   </div>
 </template>
@@ -231,7 +238,7 @@ function formatNumber(num: number) {
 
 function handleUndo() {
   const pData = playerStore.players[props.playerId];
-  
+
   pData.historyIndex -= 1;
 
   console.log(`handleUndo historyIndex=${pData.historyIndex} len =${pData.rangeStrHistory.length}`);
@@ -254,8 +261,6 @@ function handleRedo() {
     pData.rangeStrHistory[pData.historyIndex],
     false
   );
-
-  
 }
 
 function handleClearHistory() {
@@ -292,7 +297,7 @@ async function handleNarrowRange() {
       playerStore.players[props.playerId].rangeStr,
       narrowStore.state.likesHandMinimum,
       boardCards,
-      narrowStore.state.numOpponents+1
+      narrowStore.state.numOpponents + 1
     );
 
     playerStore.updateRangeStrForPlayer(props.playerId, response, true);

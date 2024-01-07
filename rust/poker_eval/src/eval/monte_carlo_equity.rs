@@ -16,7 +16,7 @@ use crate::{
 
 Returns equity between 0 and 1 for each range given
 
-For each simulation, a win counts as 1  
+For each simulation, a win counts as 1
 A tie with 2 players counts as 0.5 each
 A tie with 3 players counts as 0.33 each, etc.
 
@@ -27,7 +27,6 @@ pub fn calc_equity(
     ranges: &Vec<BoolRange>,
     num_simulations: usize,
 ) -> Result<Vec<f64>, PokerError> {
-    
     let hash_func = load_boomperfect_hash();
 
     let mut deck = Deck::new();

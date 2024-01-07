@@ -40,7 +40,7 @@
 </style>
 
 <script setup lang="ts">
-import { ranks } from '@src/utils';
+import { ranks } from '@src/lib/utils';
 import { ref } from 'vue';
 
 const props = defineProps<{

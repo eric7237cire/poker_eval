@@ -11,12 +11,12 @@ use crate::Card;
 use crate::HoleCards;
 
 use crate::game::game_log_parser::GameLogParser;
+use crate::rank_cards;
 use crate::ChipType;
 use crate::PlayerAction;
 use crate::PokerError;
 use crate::Position;
 use crate::Round;
-use crate::rank_cards;
 
 #[derive(Serialize)]
 pub struct InitialPlayerState {
@@ -45,7 +45,6 @@ pub struct GameLog {
 }
 
 impl GameLog {
-    
     pub fn to_game_log_string(
         &self,
         with_player_comments: bool,
@@ -58,11 +57,7 @@ impl GameLog {
             .iter()
             .map(|p| {
                 if with_hole_cards_in_name {
-                    format!(
-                        "{} ({})",
-                        p.player_name,
-                        p.cards.unwrap()
-                    )
+                    format!("{} ({})", p.player_name, p.cards.unwrap())
                 } else {
                     p.player_name.clone()
                 }
@@ -92,19 +87,13 @@ impl GameLog {
         s.push_str(&format!(
             "{:width$} - {}\n",
             &player_names[0],
-            min(
-                self.sb,
-                self.players[0].stack
-            ),
+            min(self.sb, self.players[0].stack),
             width = max_player_id_width
         ));
         s.push_str(&format!(
             "{:width$} - {}\n",
             &player_names[1],
-            min(
-                self.bb,
-                self.players[1].stack
-            ),
+            min(self.bb, self.players[1].stack),
             width = max_player_id_width
         ));
 
@@ -116,11 +105,9 @@ impl GameLog {
                 s.push_str(&format!("*** {} ***\n", round));
 
                 if round == Round::Flop {
-                    self.board[0..3]
-                        .iter()
-                        .for_each(|c| {
-                            s.push_str(&format!("{} ", c));
-                        });
+                    self.board[0..3].iter().for_each(|c| {
+                        s.push_str(&format!("{} ", c));
+                    });
                     s.push_str("\n");
                 } else if round == Round::Turn {
                     s.push_str(&format!("{}\n", self.board[3]));
@@ -138,9 +125,7 @@ impl GameLog {
                 } else {
                     ""
                 },
-                if with_player_comments
-                    && action.player_comment.is_some()
-                {
+                if with_player_comments && action.player_comment.is_some() {
                     " - "
                 } else {
                     ""
@@ -149,7 +134,7 @@ impl GameLog {
             ));
         }
 
-        //basically we assume if we have river cards, either someone is all in or 
+        //basically we assume if we have river cards, either someone is all in or
         //round is already river
         let any_all_in = self.board.len() == 5;
 
@@ -159,11 +144,9 @@ impl GameLog {
                 s.push_str(&format!("*** {} ***\n", round));
 
                 if round == Round::Flop {
-                    self.board[0..3]
-                        .iter()
-                        .for_each(|c| {
-                            s.push_str(&format!("{} ", c));
-                        });
+                    self.board[0..3].iter().for_each(|c| {
+                        s.push_str(&format!("{} ", c));
+                    });
                     s.push_str("\n");
                 } else if round == Round::Turn {
                     s.push_str(&format!("{}\n", self.board[3]));
@@ -201,7 +184,12 @@ impl GameLog {
 
         let mut last_action_for_player = Vec::with_capacity(player_names.len());
         for pi in 0..player_names.len() {
-            let last_action = self.actions.iter().rev().find(|a| a.player_index == pi).unwrap();
+            let last_action = self
+                .actions
+                .iter()
+                .rev()
+                .find(|a| a.player_index == pi)
+                .unwrap();
             last_action_for_player.push(last_action.get_fields_after_action());
         }
 
@@ -221,26 +209,22 @@ impl GameLog {
         s
     }
 
-    pub fn to_pokerstars_string(
-        &self,        
-        
-    ) -> String {
+    pub fn to_pokerstars_string(&self) -> String {
         let player_names = self
             .players
             .iter()
-            .map(|p| {
-                
-                    p.player_name.clone().replace("%", "")
-                
-            })
+            .map(|p| p.player_name.clone().replace("%", ""))
             .collect::<Vec<String>>();
-
-        
 
         let mut s = String::new();
 
-        s.push_str(&format!("PokerStars Hand #1704526657997: Hold'em No Limit (2/5) - 2024/01/06 00:00:00 WET\n"));
-        s.push_str(&format!("Table 'WinningPokerHud' 9-max Seat #{} is the button\n", player_names.len()));
+        s.push_str(&format!(
+            "PokerStars Hand #1704526657997: Hold'em No Limit (2/5) - 2024/01/06 00:00:00 WET\n"
+        ));
+        s.push_str(&format!(
+            "Table 'WinningPokerHud' 9-max Seat #{} is the button\n",
+            player_names.len()
+        ));
 
         for (pi, player_state) in self.players.iter().enumerate() {
             s.push_str(&format!(
@@ -254,25 +238,18 @@ impl GameLog {
         s.push_str(&format!(
             "{}: posts small blind {}\n",
             &player_names[0],
-            min(
-                self.sb,
-                self.players[0].stack
-            ),
+            min(self.sb, self.players[0].stack),
         ));
 
         s.push_str(&format!(
             "{}: posts big blind {}\n",
             &player_names[1],
-            min(
-                self.bb,
-                self.players[1].stack
-            ),
+            min(self.bb, self.players[1].stack),
         ));
 
-        
         s.push_str("*** HOLE CARDS ***\n");
 
-        for  player_state in self.players.iter() {
+        for player_state in self.players.iter() {
             let hole_cards = player_state.cards.unwrap();
             s.push_str(&format!(
                 "Dealt to {} [{} {}]\n",
@@ -281,8 +258,7 @@ impl GameLog {
                 hole_cards.get_lo_card(),
             ));
         }
-        
-      
+
         let mut round = Round::River;
 
         for action in &self.actions {
@@ -291,36 +267,40 @@ impl GameLog {
                 //Don't print preflop
                 if round != Round::Preflop {
                     if round == Round::Flop {
-                        s.push_str(&format!("*** FLOP *** [{}]\n", 
-                        self.board[0..3]
-                            .iter()
-                            .map(|c| format!("{}", c)).join(" ")));
+                        s.push_str(&format!(
+                            "*** FLOP *** [{}]\n",
+                            self.board[0..3].iter().map(|c| format!("{}", c)).join(" ")
+                        ));
                     } else if round == Round::Turn {
-                        s.push_str(&format!("*** TURN *** [{}] [{}]\n", 
-                        self.board[0..3]
-                            .iter()
-                            .map(|c| format!("{}", c)).join(" "), self.board[3]));
+                        s.push_str(&format!(
+                            "*** TURN *** [{}] [{}]\n",
+                            self.board[0..3].iter().map(|c| format!("{}", c)).join(" "),
+                            self.board[3]
+                        ));
                     } else if round == Round::River {
-                        s.push_str(&format!("*** RIVER *** [{}] [{}]\n", 
-                        self.board[0..4]
-                            .iter()
-                            .map(|c| format!("{}", c)).join(" "), self.board[4]));
+                        s.push_str(&format!(
+                            "*** RIVER *** [{}] [{}]\n",
+                            self.board[0..4].iter().map(|c| format!("{}", c)).join(" "),
+                            self.board[4]
+                        ));
                     }
-                    
                 }
             }
 
             s.push_str(&format!(
                 "{}: {}\n",
-                &player_names[action.player_index],
-                action.action,
-                
+                &player_names[action.player_index], action.action,
             ));
         }
 
         let mut last_action_for_player = Vec::with_capacity(player_names.len());
         for pi in 0..player_names.len() {
-            let last_action = self.actions.iter().rev().find(|a| a.player_index == pi).unwrap();
+            let last_action = self
+                .actions
+                .iter()
+                .rev()
+                .find(|a| a.player_index == pi)
+                .unwrap();
             last_action_for_player.push(last_action.get_fields_after_action());
         }
 
@@ -329,26 +309,29 @@ impl GameLog {
         for (pi, player_state) in self.players.iter().enumerate() {
             if player_state.stack < self.final_stacks[pi] {
                 // stack = initial_stack + get from pot - put in pot
-                // 2845 = 500 + 2845 - 500 
-                // 700 = 500 + 400 - 200 
+                // 2845 = 500 + 2845 - 500
+                // 700 = 500 + 400 - 200
                 // stack - initial_stack + put_in_pot = get_from_pot
-                let get_from_pot = self.final_stacks[pi] + last_action_for_player[pi].total_amount_put_in_pot - player_state.stack; 
+                let get_from_pot = self.final_stacks[pi]
+                    + last_action_for_player[pi].total_amount_put_in_pot
+                    - player_state.stack;
                 s.push_str(&format!(
                     "{} collected {} from pot\n",
-                    player_state.player_name,
-                    get_from_pot,
+                    player_state.player_name, get_from_pot,
                 ));
             }
         }
 
-
         //might need to add last call/raise ?
         s.push_str("*** SUMMARY ***\n");
-        s.push_str(&format!("Total pot {} | Rake 0\n", self.actions.last().unwrap().pot));
-        s.push_str(&format!("Board [{}]\n", 
-            self.board
-                .iter()
-                .map(|c| format!("{}", c)).join(" ")));
+        s.push_str(&format!(
+            "Total pot {} | Rake 0\n",
+            self.actions.last().unwrap().pot
+        ));
+        s.push_str(&format!(
+            "Board [{}]\n",
+            self.board.iter().map(|c| format!("{}", c)).join(" ")
+        ));
 
         s
     }

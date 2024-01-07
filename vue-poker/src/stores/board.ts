@@ -1,5 +1,4 @@
 // stores/counter.js
-import { parseCardString } from '@src/utils';
 import { useLocalStorage } from '@vueuse/core';
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
@@ -23,14 +22,15 @@ export const useBoardStore = defineStore('board', () => {
 
   const reserveCards = ref([] as number[]);
 
-  watch( () => board.value.cards.length , (val) => {
-    console.log('board changed', val);
-    if (val === 0 || val === 5) {
-      reserveCards.value = [];
+  watch(
+    () => board.value.cards.length,
+    (val) => {
+      console.log('board changed', val);
+      if (val === 0 || val === 5) {
+        reserveCards.value = [];
+      }
     }
-  });
-
-  
+  );
 
   return {
     board,

@@ -57,13 +57,13 @@ pub struct PlayerAction {
     pub player_comment: Option<String>,
 
     //this is before their raise or bet has been added
-    pub pot : ChipType,
+    pub pot: ChipType,
     //The total amount to call, so the amount they need to put in is this - amount_put_in_pot_this_round
-    pub current_amt_to_call : ChipType,
+    pub current_amt_to_call: ChipType,
     //this is the amount they put in the pot this round, before this action
-    pub amount_put_in_pot_this_round : ChipType,
+    pub amount_put_in_pot_this_round: ChipType,
     //this is the amount they put in the pot the entire hand, before this action
-    pub total_amount_put_in_pot : ChipType,
+    pub total_amount_put_in_pot: ChipType,
 
     //will be 0 when this player action could have closed the action for the round
     pub players_left_to_act: u8,
@@ -79,12 +79,12 @@ impl PlayerAction {
             ActionEnum::Call(amount) => amount,
             ActionEnum::Check => 0,
             ActionEnum::Bet(amount) => amount,
-            ActionEnum::Raise(_, amount) => amount - self.amount_put_in_pot_this_round
+            ActionEnum::Raise(_, amount) => amount - self.amount_put_in_pot_this_round,
         };
         let cur_amt_to_call = match self.action {
             ActionEnum::Bet(amount) => amount,
             ActionEnum::Raise(_, amount) => amount,
-            _ => self.current_amt_to_call 
+            _ => self.current_amt_to_call,
         };
 
         Self {
@@ -94,14 +94,14 @@ impl PlayerAction {
             player_comment: self.player_comment.clone(),
             pot: self.pot + extra_amount_put_in_pot_this_round,
             current_amt_to_call: cur_amt_to_call,
-            amount_put_in_pot_this_round: self.amount_put_in_pot_this_round + extra_amount_put_in_pot_this_round,
-            total_amount_put_in_pot: self.total_amount_put_in_pot + extra_amount_put_in_pot_this_round,            
+            amount_put_in_pot_this_round: self.amount_put_in_pot_this_round
+                + extra_amount_put_in_pot_this_round,
+            total_amount_put_in_pot: self.total_amount_put_in_pot
+                + extra_amount_put_in_pot_this_round,
             players_left_to_act: self.players_left_to_act,
             is_all_in: self.is_all_in,
         }
     }
-        
-    
 }
 
 impl Display for PlayerAction {

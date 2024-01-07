@@ -11,7 +11,11 @@
       </ol>
     </div> -->
     <div class="narrow-type">
-      <v-switch v-model="narrowStore.state.useEquity" :label="narrowStore.state.useEquity ? 'Equity' : 'Pref'" color="success" />
+      <v-switch
+        v-model="narrowStore.state.useEquity"
+        :label="narrowStore.state.useEquity ? 'Equity' : 'Pref'"
+        color="success"
+      />
     </div>
     <div class="min-equity" v-if="narrowStore.state.useEquity">
       Minimum equity

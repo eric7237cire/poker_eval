@@ -136,7 +136,13 @@ pub fn likes_hand(
         num_in_pot,
     );
 
-    worried_about_straights(ft, rank,  &mut likes_hand, &mut not_like_hand_comments, num_in_pot);
+    worried_about_straights(
+        ft,
+        rank,
+        &mut likes_hand,
+        &mut not_like_hand_comments,
+        num_in_pot,
+    );
 
     worried_about_flushes(
         ft,
@@ -513,7 +519,6 @@ fn worried_about_flushes(
     }
 }
 
-
 fn worried_about_straights(
     ft: &BoardTexture,
     rank: &Rank,
@@ -537,11 +542,9 @@ fn worried_about_straights(
             *likes_hand = min(*likes_hand, LikesHandLevel::SmallBet);
         } else {
             *likes_hand = min(*likes_hand, LikesHandLevel::LargeBet);
-        }    
+        }
     }
-
 }
-
 
 fn likes_made_flushes_and_straights(
     rank: &Rank,
@@ -561,8 +564,6 @@ fn likes_made_flushes_and_straights(
                 ft.others_with_str8
             ));
             *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
-
-            
         }
     }
 
@@ -811,7 +812,7 @@ mod test {
         let likes_hand_response = get_response(hc, board, 4);
 
         assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::LargeBet);
-        
+
         let board: Board = "Ah Th Jh 4c 6h".parse().unwrap();
         let likes_hand_response = get_response(hc, board, 4);
 
@@ -825,11 +826,10 @@ mod test {
         let likes_hand_response = get_response(hc, &board, 3);
 
         assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::SmallBet);
-        
+
         let likes_hand_response = get_response(hc, board, 4);
 
         assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::CallSmallBet);
-        
     }
 
     //#[test]
