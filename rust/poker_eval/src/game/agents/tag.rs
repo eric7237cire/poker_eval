@@ -140,7 +140,7 @@ impl Tag {
             max_can_raise,
         );
 
-        let third_pot = max(min_can_raise, min(max_can_raise, current_pot / 3));
+        //let third_pot = max(min_can_raise, min(max_can_raise, current_pot / 3));
 
         let can_raise =
             max_can_raise > call_amt + player_state.cur_round_putting_in_pot.unwrap_or(0);
@@ -172,21 +172,22 @@ impl Tag {
                         likes_hand_response.not_like_hand_comments.join(", ")
                     )),
                 };
-            } else if game_state.current_to_call < game_state.pot() / 3
-                && likes_hand_response.likes_hand >= LikesHandLevel::LargeBet
-                && can_raise
-            {
-                // debug!("hey1 min_raise: {} stack: {} already put in {} cur bet {}", game_state.min_raise,
-                // player_state.stack, player_state.cur_round_putting_in_pot.unwrap_or(0), game_state.current_to_call);
+            }
+            // } else if game_state.current_to_call < game_state.pot() / 3
+            //     && likes_hand_response.likes_hand >= LikesHandLevel::LargeBet
+            //     && can_raise
+            // {
+            //     // debug!("hey1 min_raise: {} stack: {} already put in {} cur bet {}", game_state.min_raise,
+            //     // player_state.stack, player_state.cur_round_putting_in_pot.unwrap_or(0), game_state.current_to_call);
 
-                return CommentedAction {
-                    action: ActionEnum::Raise(third_pot - game_state.current_to_call, third_pot),
-                    comment: Some(format!(
-                        "Raising because wants 1/3 pot bet and likes hand: {}",
-                        likes_hand_response.likes_hand_comments.join(", ")
-                    )),
-                };
-            } else if call_amt <= game_state.pot() / 2
+            //     return CommentedAction {
+            //         action: ActionEnum::Raise(third_pot - game_state.current_to_call, third_pot),
+            //         comment: Some(format!(
+            //             "Raising because wants 1/3 pot bet and likes hand: {}",
+            //             likes_hand_response.likes_hand_comments.join(", ")
+            //         )),
+            //     };
+            else if call_amt <= game_state.pot() / 2
                 && likes_hand_response.likes_hand >= LikesHandLevel::LargeBet
             {
                 return CommentedAction {

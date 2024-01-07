@@ -86,6 +86,7 @@ pub struct PartialRankContainer {
     pub flush_draw: Option<FlushDraw>,
     pub straight_draw: Option<StraightDraw>,
 
+    //means that we have the flush suit in our hand, there could be 5 on the board though
     pub made_flush: Option<CardValue>,
 
     pub pocket_pair: Option<PairInfo>,

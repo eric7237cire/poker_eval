@@ -148,6 +148,7 @@ pub fn likes_hand(
     worried_about_flushes(
         ft,
         prc,
+        rank,
         &mut likes_hand,
         &mut not_like_hand_comments,
         num_in_pot,
@@ -498,10 +499,16 @@ fn likes_draws(
 fn worried_about_flushes(
     ft: &BoardTexture,
     prc: &PartialRankContainer,
+    rank: &Rank,
     likes_hand: &mut LikesHandLevel,
     not_like_hand_comments: &mut Vec<String>,
     num_in_pot: u8,
 ) {
+
+    if rank.get_rank_enum() >= RankEnum::Flush {
+        return;
+    }
+
     if ft.same_suited_max_count == 3 && !prc.flush_draw.is_some() {
         not_like_hand_comments.push(format!(
             "Worried about flushes with 3 on the board: {}",
@@ -582,8 +589,9 @@ fn likes_made_flushes_and_straights(
     }
 
     if RankEnum::Flush == rank.get_rank_enum() {
-        if ft.same_suited_max_count >= 4 {
-            if let Some(made_flush) = prc.made_flush {
+        if let Some(made_flush) = prc.made_flush {
+            assert!(ft.same_suited_max_count >= 3);
+            if ft.same_suited_max_count >= 4 {            
                 if made_flush == CardValue::Ace {
                     likes_hand_comments
                         .push(format!("Made nut flush with a good card {}", made_flush));
@@ -598,8 +606,20 @@ fn likes_made_flushes_and_straights(
                         made_flush
                     ));
                 }
+            } else { //if ft.same_suited_max_count == 3 {
+                if made_flush == CardValue::Ace {
+                    likes_hand_comments
+                        .push(format!("Made nut flush {}", made_flush));
+                    *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
+                } else {
+                    likes_hand_comments
+                        .push(format!("Made flush with a {}", made_flush));
+                    *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
+                }
             }
-        }
+
+            
+        } 
     }
 }
 
@@ -684,6 +704,27 @@ mod test {
         let likes_hand_response = get_response(hc, &board, 4);
 
         assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::LargeBet);
+    }
+
+    #[test]
+    fn test_likes_made_flush() {
+        init_test_logger();
+
+        let hc: HoleCards = "Jh 2h".parse().unwrap();
+
+        let board: Board = "Kh 4s Qh 3h Qc".parse().unwrap();
+
+        let prc = partial_rank_cards(&hc, board.borrow().as_slice_card());
+
+        assert_eq!(prc.made_flush, Some(CardValue::Jack));
+
+        let board_texture = calc_board_texture(board.borrow().as_slice_card());
+
+        assert_eq!(board_texture.same_suited_max_count, 3);
+
+        let likes_hand_response = get_response(hc, &board, 5);
+
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::AllIn);
     }
 
     #[test]

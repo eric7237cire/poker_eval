@@ -191,9 +191,11 @@ fetch(`/src/assets/hand_history/${file_name}`)
     const anchor = getAnchor();
     if (anchor) {
         nextTick(() => {
-            console.log(`Scrolling to ${anchor}`);
+          const offset = getOffsetTop(document.getElementById(anchor)!)
+            console.log(`Scrolling to ${anchor} to offset ${offset}`);
             window.scrollTo({
-                top: document.getElementById(anchor)!.offsetTop - 210,
+                top: offset - 300,
+                //bottom: document.getElementById(anchor)!.offsetTop - 300,
                 left: 0,
                 behavior: "smooth",
               });
@@ -207,6 +209,12 @@ fetch(`/src/assets/hand_history/${file_name}`)
 
     return (urlParts.length > 1) ? urlParts[1] : null;
 }
+
+//https://stackoverflow.com/questions/34422189/get-item-offset-from-the-top-of-page
+function getOffsetTop(element: HTMLElement | null) : number {
+        if (!element) return 0;
+        return getOffsetTop(element.offsetParent as HTMLElement) + element.offsetTop;
+    };
 
 function getActionPlayerListForRound(
   round: string,
@@ -346,7 +354,7 @@ function handleAnalyzeRange(setExact: boolean, actionIndex: number) {
     //Hero is always 1st position here
     if (heroIndex >= 0) {        
         playerStore.players[0].state = PlayerState.USE_HOLE;
-        playerStore.players[0].holeCards = getCardList(heroIndex);
+        playerStore.players[0].holeCards = getCardList(heroIndex, nonFoldedPlayers);
         playerStore.players[0].name = 'Hero';
     }
 
@@ -373,7 +381,7 @@ function handleAnalyzeRange(setExact: boolean, actionIndex: number) {
         console.log(`Player history index: ${playerIndex} store index: ${playerStoreIndex}`, playerStore.players[playerStoreIndex]);
 
         playerStore.players[playerStoreIndex].name = nonFoldedPlayers[playerIndex].player_name;
-        playerStore.players[playerStoreIndex].holeCards = getCardList(playerIndex);
+        playerStore.players[playerStoreIndex].holeCards = getCardList(playerIndex, nonFoldedPlayers);
         playerStore.updateRangeStrForPlayer(playerStoreIndex, allRange);
 
         if (setExact) {
@@ -422,9 +430,9 @@ function handleAnalyzeRange(setExact: boolean, actionIndex: number) {
     //router.push({ path: '/' });
 }
 
-function getCardList(playerIndex: number): CardList {
-    const hiCardIndex = hand_history.value!.players[playerIndex].cards.card_hi_lo[0].index;
-    const loCardIndex = hand_history.value!.players[playerIndex].cards.card_hi_lo[1].index;
+function getCardList(nfPlayerIndex: number, nonFoldedPlayers: Array<Player> ): CardList {
+    const hiCardIndex = nonFoldedPlayers[nfPlayerIndex].cards.card_hi_lo[0].index;
+    const loCardIndex = nonFoldedPlayers[nfPlayerIndex].cards.card_hi_lo[1].index;
 
     return {
         cards: [hiCardIndex, loCardIndex],

@@ -105,7 +105,7 @@ fn main() {
     //we want to track the worst loses
     let mut heap: BinaryHeap<(i64, i32, GameLog)> = BinaryHeap::new();
 
-    let num_total_iterations = 200;
+    let num_total_iterations = 50_000;
     let num_worst_hands_to_keep = 5;
     let mut hero_position = 0;
 
@@ -159,25 +159,36 @@ fn main() {
             assert_eq!(action_count_before + 1, action_count_after);
         }
 
+        #[allow(unused_mut)]
         let mut change = game_runner.game_state.player_states[hero_position].stack as i64
             - game_runner.game_state.player_states[hero_position].initial_stack as i64;
 
         hero_winnings += change;
 
         debug!(
-            "Iteration {}, hero change {}",
+            "Iteration {}, hero change {}, heap size {}",
             it_num,
-            change.to_formatted_string(&Locale::en)
+            change.to_formatted_string(&Locale::en),
+            heap.len()
         );
+
+        // for (c, it, _log) in heap.iter() {
+        //     debug!(
+        //         "In heap at iteration {}, have {}, {}",
+        //         it_num,
+        //         c,
+        //         it,
+        //     );
+        // }
+
+        // //To add it always
+        // if it_num == 79 {
+        //     change = -1000;
+        // }
 
         //if we have enough hands and this hand is not worse than the worst hand
         if heap.len() == num_worst_hands_to_keep && change > heap.peek().unwrap().0 {
             continue;
-        }
-
-        // //To add it always
-        if it_num == 79 {
-            change = -1000;
         }
 
         heap.push((
@@ -191,6 +202,12 @@ fn main() {
         if heap.len() > num_worst_hands_to_keep {
             heap.pop();
         }
+
+        // if it_num >= 79 {
+            
+            
+        //     assert!(heap.iter().any(|(_c, it, _log)| *it==79)); 
+        // }
 
         hero_position = (hero_position + 1) % game_runner.game_state.player_states.len();
         //if it_num == 5 || it_num == 36
