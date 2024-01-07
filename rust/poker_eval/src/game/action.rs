@@ -72,6 +72,38 @@ pub struct PlayerAction {
     pub is_all_in: bool,
 }
 
+impl PlayerAction {
+    pub fn get_fields_after_action(&self) -> Self {
+        let extra_amount_put_in_pot_this_round = match self.action {
+            ActionEnum::Fold => 0,
+            ActionEnum::Call(amount) => amount,
+            ActionEnum::Check => 0,
+            ActionEnum::Bet(amount) => amount,
+            ActionEnum::Raise(_, amount) => amount - self.amount_put_in_pot_this_round
+        };
+        let cur_amt_to_call = match self.action {
+            ActionEnum::Bet(amount) => amount,
+            ActionEnum::Raise(_, amount) => amount,
+            _ => self.current_amt_to_call 
+        };
+
+        Self {
+            player_index: self.player_index,
+            action: self.action,
+            round: self.round,
+            player_comment: self.player_comment.clone(),
+            pot: self.pot + extra_amount_put_in_pot_this_round,
+            current_amt_to_call: cur_amt_to_call,
+            amount_put_in_pot_this_round: self.amount_put_in_pot_this_round + extra_amount_put_in_pot_this_round,
+            total_amount_put_in_pot: self.total_amount_put_in_pot + extra_amount_put_in_pot_this_round,            
+            players_left_to_act: self.players_left_to_act,
+            is_all_in: self.is_all_in,
+        }
+    }
+        
+    
+}
+
 impl Display for PlayerAction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(

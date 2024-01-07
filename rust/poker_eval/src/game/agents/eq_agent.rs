@@ -5,7 +5,7 @@ use boomphf::Mphf;
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards, ProduceMonteCarloEval},
-    likes_hands::{likes_hand, LikesHandLevel},
+    likes_hands::{likes_hand},
     pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash},
     ActionEnum, BoolRange, CommentedAction, GameState, HoleCards, PlayerState, Round,
 };

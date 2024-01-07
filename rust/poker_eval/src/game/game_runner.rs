@@ -7,7 +7,7 @@ use std::cmp::min;
 use crate::pre_calc::fast_eval::fast_hand_eval;
 use crate::pre_calc::perfect_hash::load_boomperfect_hash;
 use crate::pre_calc::rank::Rank;
-use crate::{rank_cards, set_used_card, Board, PlayerAction, GameLog, InitialPlayerState, Card};
+use crate::{set_used_card, Board, PlayerAction, GameLog, InitialPlayerState, Card};
 use crate::{
     ActionEnum, CardUsedType, ChipType, GameState, PlayerState, PokerError, Position, Round,
 };
@@ -15,7 +15,7 @@ use crate::{
 use crate::game::game_runner_source::GameRunnerSource;
 use crate::game::game_runner_source::GameRunnerSourceEnum;
 use boomphf::Mphf;
-use itertools::Itertools;
+
 use log::trace;
 
 // Enforces the poker rules
@@ -324,6 +324,27 @@ impl GameRunner {
         }
 
         //Add a short cut if only 1 non folded left
+        if self.game_state.total_active_players == 1 && self.game_state.total_players_all_in == 0 {
+            let player_index = self
+                .game_state
+                .player_states
+                .iter()
+                .position(|p| p.is_active())
+                .unwrap();
+            
+            self.game_state.player_states[player_index].stack += self.game_state.pot();
+            
+            for player_index in 0..self.game_state.player_states.len() {
+                self.game_runner_source.set_final_player_state(
+                    player_index,
+                    &self.game_state.player_states[player_index],
+                    None,
+                )?;
+            }
+            return Ok(());
+        }
+
+
         assert!(self.game_state.total_active_players > 1 || self.game_state.total_players_all_in > 0);
 
         let mut hand_rankings: Vec<(Rank, usize)> = Vec::new();

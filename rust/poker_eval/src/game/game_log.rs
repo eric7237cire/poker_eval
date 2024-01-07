@@ -199,16 +199,21 @@ impl GameLog {
         s.push_str(&url);
         s.push_str("\n");
 
+        let mut last_action_for_player = Vec::with_capacity(player_names.len());
+        for pi in 0..player_names.len() {
+            let last_action = self.actions.iter().rev().find(|a| a.player_index == pi).unwrap();
+            last_action_for_player.push(last_action.get_fields_after_action());
+        }
+
         for (pi, player_state) in self.players.iter().enumerate() {
             s.push_str(&format!(
-                "{:width$} - {} # {} Started with {} change {}\n",
+                "{:width$} - {} # {} Started with {} change {}; put in pot {}\n",
                 &player_names[pi],
-                player_state.stack,
+                self.final_stacks[pi],
                 self.get_final_eval_comment(pi),
                 player_state.stack,
                 self.final_stacks[pi] as i64 - (player_state.stack as i64),
-                //This info is in the last action for the player
-                //player_state.player_name.total_put_in_pot,
+                last_action_for_player[pi].total_amount_put_in_pot,
                 width = max_player_id_width
             ));
         }
@@ -316,18 +321,17 @@ impl GameLog {
         let mut last_action_for_player = Vec::with_capacity(player_names.len());
         for pi in 0..player_names.len() {
             let last_action = self.actions.iter().rev().find(|a| a.player_index == pi).unwrap();
-            last_action_for_player.push(last_action);
+            last_action_for_player.push(last_action.get_fields_after_action());
         }
 
         s.push_str("*** SHOW DOWN ***\n");
 
         for (pi, player_state) in self.players.iter().enumerate() {
-            if player_state.stack < player_state.stack {
+            if player_state.stack < self.final_stacks[pi] {
                 // stack = initial_stack + get from pot - put in pot
                 // 2845 = 500 + 2845 - 500 
                 // 700 = 500 + 400 - 200 
                 // stack - initial_stack + put_in_pot = get_from_pot
-                //Might need to add final call / raise ? 
                 let get_from_pot = self.final_stacks[pi] + last_action_for_player[pi].total_amount_put_in_pot - player_state.stack; 
                 s.push_str(&format!(
                     "{} collected {} from pot\n",

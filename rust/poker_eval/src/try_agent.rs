@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::{BinaryHeap, HashMap}, rc::Rc, path::PathBuf, fs};
 
-use log::{debug, info};
+use log::{debug};
 use num_format::{ToFormattedString, Locale};
 use poker_eval::{
     agents::{
@@ -10,7 +10,7 @@ use poker_eval::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards, ProduceMonteCarloEval},
     game_runner_source::GameRunnerSourceEnum,
-    init_logger, test_game_runner, Card, Deck, GameRunner, InitialPlayerState, monte_carlo_equity, GameLog,
+    init_logger, Card, Deck, GameRunner, InitialPlayerState, GameLog,
 };
 
 fn build_agents(
@@ -190,7 +190,7 @@ fn main() {
 
     let mut json_filenames = Vec::new();
 
-    for (i, (change, it_num, game_log)) in heap.into_iter().enumerate() {
+    for (_i, (_change, it_num, game_log)) in heap.into_iter().enumerate() {
         // let file_path = hh_path.join(format!("{}.txt", it_num));
         // fs::write(file_path, &log).unwrap();
         // let file_path = ps_hh_path.join(format!("{}.txt", it_num));

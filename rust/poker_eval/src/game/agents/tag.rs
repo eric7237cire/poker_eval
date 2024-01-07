@@ -44,7 +44,7 @@ impl Tag {
 
     fn decide_preflop(
         &self,
-        player_state: &PlayerState,
+        _player_state: &PlayerState,
         game_state: &GameState,
     ) -> CommentedAction {
         let ri = self.hole_cards.unwrap().to_range_index();
