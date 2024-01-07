@@ -158,6 +158,7 @@ import { PlayerState, usePlayerStore } from '@src/stores/player';
 import { cardTextStr } from '@src/lib/utils';
 import { CardList, useBoardStore } from '@src/stores/board';
 import { SELECTABLE_RANGES } from '@src/stores/ranges';
+import { nextTick } from 'vue';
 
 const route = useRoute();
 const router = useRouter()
@@ -186,7 +187,26 @@ fetch(`/src/assets/hand_history/${file_name}`)
   .then((data) => {
     //console.log(data);
     hand_history.value = data;
+
+    const anchor = getAnchor();
+    if (anchor) {
+        nextTick(() => {
+            console.log(`Scrolling to ${anchor}`);
+            window.scrollTo({
+                top: document.getElementById(anchor)!.offsetTop - 210,
+                left: 0,
+                behavior: "smooth",
+              });
+        });
+    }
   });
+
+  function getAnchor() : string | null {
+    const currentUrl = document.URL;
+    const urlParts   = currentUrl.split('#');
+
+    return (urlParts.length > 1) ? urlParts[1] : null;
+}
 
 function getActionPlayerListForRound(
   round: string,
