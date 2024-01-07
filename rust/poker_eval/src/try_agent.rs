@@ -37,27 +37,41 @@ fn build_agents(
         flop_texture_db.clone(),
         partial_rank_db.clone(),
     )));
-    agents.push(Box::new(EqAgent::new(
-        None,
-        "EqAgent1",
-        flop_texture_db.clone(),
-        partial_rank_db.clone(),
-        monte_carlo_equity_db.clone(),
-    )));
+    // agents.push(Box::new(EqAgent::new(
+    //     None,
+    //     "EqAgent1",
+    //     flop_texture_db.clone(),
+    //     partial_rank_db.clone(),
+    //     monte_carlo_equity_db.clone(),
+    // )));
 
     for i in 0..5 {
-        let agent = PassiveCallingStation::new(
-            Some(calling_75),
-            &format!("CalStn75_{}", i + 1),
+        // let agent = PassiveCallingStation::new(
+        //     Some(calling_75),
+        //     &format!("CalStn75_{}", i + 1),
+        //     flop_texture_db.clone(),
+        //     partial_rank_db.clone(),
+        // );
+        agents.push(Box::new(EqAgent::new(
+            Some("22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+"),
+            &format!("EqAgent{}", i+1),
             flop_texture_db.clone(),
             partial_rank_db.clone(),
-        );
-        agents.push(Box::new(agent));
+            monte_carlo_equity_db.clone(),
+        )));
+        //agents.push(Box::new(agent));
     }
+
+    agents.push(Box::new(PassiveCallingStation::new(
+        None,
+        "CallAllB",
+        flop_texture_db.clone(),
+        partial_rank_db.clone(),
+    )));
 
     agents.push(Box::new(EqAgent::new(
         Some("22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+"),
-        "EqAgent2",
+        "EqAgentB",
         flop_texture_db.clone(),
         partial_rank_db.clone(),
         monte_carlo_equity_db.clone(),
@@ -105,7 +119,7 @@ fn main() {
     //we want to track the worst loses
     let mut heap: BinaryHeap<(i64, i32, GameLog)> = BinaryHeap::new();
 
-    let num_total_iterations = 50_000;
+    let num_total_iterations = 10_000;
     let num_worst_hands_to_keep = 5;
     let mut hero_position = 0;
 

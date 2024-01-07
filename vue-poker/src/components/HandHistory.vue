@@ -87,7 +87,7 @@
     position: sticky;
     top: var(--board-height);
 
-    z-index: 10; /* Ensure it stacks above the content */
+    z-index: 9; /* Ensure it stacks above the content */
 
     text-align: center;
 
