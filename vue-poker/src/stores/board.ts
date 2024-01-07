@@ -20,7 +20,7 @@ export const useBoardStore = defineStore('board', () => {
     }
   );
 
-  const reserveCards = ref([] as number[]);
+  const reserveCards = useLocalStorage('reserveCards', [] as number[]);
 
   watch(
     () => board.value.cards.length,

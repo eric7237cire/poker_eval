@@ -400,6 +400,8 @@ function handleAnalyzeRange(setExact: boolean, actionIndex: number) {
         cards = 5;
     }
 
+    console.log(`Cards: ${cards} Board Len: ${hand_history.value.board.length}`);
+
     //Set board cards
     boardStore.board.cards = 
         hand_history.value.board.slice(0, cards).map( (bCard) => {
@@ -411,6 +413,8 @@ function handleAnalyzeRange(setExact: boolean, actionIndex: number) {
         hand_history.value.board.slice(cards).map( (bCard) => {
         return bCard.index;
     });
+
+    console.log(`Board cards: ${boardStore.board.cards} Reserve cards: ${boardStore.reserveCards}`);
     
 
     const routeData = router.resolve({path: '/'});
