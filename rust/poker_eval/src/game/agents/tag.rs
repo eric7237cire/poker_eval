@@ -275,7 +275,6 @@ mod tests {
             initial_stack: 500,
             cur_round_putting_in_pot: None,
             all_in: false,
-            final_eval_comment: None,
             total_put_in_pot: 0,
         };
 
@@ -290,7 +289,6 @@ mod tests {
                 initial_stack: 500,
                 cur_round_putting_in_pot: None,
                 all_in: false,
-                final_eval_comment: None,
                 total_put_in_pot: 0,
             });
         }
