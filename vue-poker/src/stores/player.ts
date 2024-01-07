@@ -28,7 +28,7 @@ export interface Player extends RangeInStore {
 }
 
 const PLAYER_ID_HERO = 0;
-
+const MAX_PLAYERS = 10;
 const RANGE_HISTORY_LIMIT = 5;
 
 // stores/counter.js
@@ -43,7 +43,7 @@ import * as _ from 'lodash';
 function initializePlayers(): Array<Player> {
   const players: Array<Player> = [];
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < MAX_PLAYERS; i++) {
     players.push({
       index: i,
       name: `Player ${i}`,
@@ -96,6 +96,11 @@ function()s become actions*/
       players.value[i].rangeStr = '';
     }
     players.value[i].index = i;
+  }
+
+  if (players.value.length < MAX_PLAYERS) {
+    const newPlayers = initializePlayers();
+    players.value = newPlayers;
   }
 
   const curPlayerData = computed(() => {

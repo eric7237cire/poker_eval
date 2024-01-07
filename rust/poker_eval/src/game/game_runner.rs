@@ -830,6 +830,7 @@ impl GameRunner {
             total_amount_put_in_pot: player_state.total_put_in_pot,
             players_left_to_act: self.game_state.num_left_to_act,
             is_all_in: player_state.all_in,
+            non_folded_players: self.game_state.total_active_players + self.game_state.total_players_all_in,
         }
     }
 

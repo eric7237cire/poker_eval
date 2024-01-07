@@ -67,6 +67,7 @@ pub struct PlayerAction {
 
     //will be 0 when this player action could have closed the action for the round
     pub players_left_to_act: u8,
+    pub non_folded_players: u8,
 
     //Should be if this action put the player all in, either with bet/call/raise
     pub is_all_in: bool,
@@ -99,6 +100,7 @@ impl PlayerAction {
             total_amount_put_in_pot: self.total_amount_put_in_pot
                 + extra_amount_put_in_pot_this_round,
             players_left_to_act: self.players_left_to_act,
+            non_folded_players: self.non_folded_players,
             is_all_in: self.is_all_in,
         }
     }

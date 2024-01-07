@@ -11,14 +11,18 @@ const cardRegex = new RegExp(`^(${rankPat})([cdhs])$`);
 // dark mode, use white for spades
 const suitClasses = ['suit-clubs', 'suit-diamonds', 'suit-hearts', 'suit-spades'];
 
-export const cardText = (card: number) => {
+export function cardText(card: number) {
   return {
     rank: ranks[card >>> 2],
     suit: suits[card & 3],
     suitLetter: suitLetters[card & 3],
     colorClass: suitClasses[card & 3]
   };
-};
+}
+
+export function cardTextStr(card: number) : string {
+    return  ranks[card >>> 2] + suits[card & 3];
+  }
 
 export const cardId = (rank: number, suit: number) => {
   return 4 * rank + suit;

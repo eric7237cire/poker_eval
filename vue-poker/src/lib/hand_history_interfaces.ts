@@ -35,6 +35,7 @@ export interface Board {
 }
 
 export interface Action {
+    index: number;
   player_index: number;
   action: FoldAction | RaiseAction | BetAction | CallAction | CheckAction;
   round: string;
@@ -44,6 +45,7 @@ export interface Action {
   amount_put_in_pot_this_round: number;
   total_amount_put_in_pot: number;
   players_left_to_act: number;
+  non_folded_players: number;
   is_all_in: boolean;
 }
 

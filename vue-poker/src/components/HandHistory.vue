@@ -1,6 +1,8 @@
 <template>
   <div class="root">
-    Hand History for {{ file_name }}
+    <div class="header">
+        Hand History for {{ file_name }}.  
+    </div>
 
     <template v-if="hand_history">
       <div class="board flex flex-wrap justify-center bg-black items-center sticky top-0 z-10">
@@ -10,6 +12,9 @@
       <template v-for="cur_round in rounds">
         <div class="round-container" :id="cur_round">
           <div class="round-title flex items-center justify-center bg-black">
+            <router-link :to="{ path: '/hh' }">
+                Back
+            </router-link>
             <span class="big-text">{{ cur_round }}</span>
             <span>Jump To:</span>
             <a :href= "'#' + j_round" v-for="j_round in rounds">{{j_round}}</a> 
@@ -18,8 +23,12 @@
             <template
               v-for="[action, player] in getActionPlayerListForRound(cur_round, hand_history)"
             >
-              <div class="player-name grid" :class="getActionType(action)">
-                <span class="m-auto">{{ player.player_name }}</span>
+              <div class="player-name" :class="getActionType(action)">
+                <span class="">{{ player.player_name }}</span>
+                
+                <button class="button-base button-green" @click="handleAnalyzeRange(true, action.index)">Exact</button>
+                <button class="button-base button-blue" @click="handleAnalyzeRange(false, action.index)">Range</button>
+                  
               </div>
               <div class="player-cards grid" :class="getActionType(action)">
                 <div class="w-full m-auto">
@@ -119,6 +128,17 @@
     color: white;
   }
 
+  .player-name {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    * {
+      margin: 2px;
+    }
+  }
+
   .player-comment,
   .action-long {
     border-top: 1px solid rgba(255, 255, 255, 0.4);
@@ -129,15 +149,23 @@
 
 <script setup lang="ts">
 import { Action, HandHistory, Player } from '@src/lib/hand_history_interfaces';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import BoardSelectorCard from './BoardSelectorCard.vue';
 import { computed, ref } from 'vue';
+import { PlayerState, usePlayerStore } from '@src/stores/player';
+import { cardTextStr } from '@src/lib/utils';
+import { CardList, useBoardStore } from '@src/stores/board';
+import { SELECTABLE_RANGES } from '@src/stores/ranges';
 
 const route = useRoute();
+const router = useRouter()
 const file_name = route.params.file_name; // read parameter id (it is reactive)
 
 const hand_history = ref<HandHistory | null>(null);
 console.log(`File name [${file_name}]`);
+
+const playerStore = usePlayerStore();
+const boardStore = useBoardStore();
 
 const rounds = computed(() => {
   const r: Array<string> = [];
@@ -163,7 +191,8 @@ function getActionPlayerListForRound(
   handHistory: HandHistory
 ): Array<[Action, Player]> {
   const r: Array<[Action, Player]> = [];
-  for (const action of handHistory.actions) {
+  for (const [actionIndex, action] of handHistory.actions.entries()) {
+    action.index = actionIndex;
     if (action.round == round) {
       r.push([action, handHistory.players[action.player_index]]);
     }
@@ -215,14 +244,13 @@ function formatShortActionText(action: Action, player: Player): string {
 }
 
 function formatActionText(action: Action, player: Player): string {
-  const callEquity = action.current_amt_to_call / (action.current_amt_to_call + action.pot);
-
+  //
   if (action.action == 'Fold') {
     const neededToPutIn = action.current_amt_to_call - action.amount_put_in_pot_this_round;
+    const callEquity = action.current_amt_to_call / (action.current_amt_to_call + action.pot);
     return (
       `Folds to   : ${formatEquity(neededToPutIn / action.pot)} of pot\n` +
-      `Pot        : ${formatChips(action.pot)}\n` +
-      `Pot equity : ${formatEquity(callEquity)}`
+      formatActionTextCommon(callEquity, action)
     );
   } else if (action.action == 'Check') {
     return `Left to act: ${action.players_left_to_act}`;
@@ -231,16 +259,14 @@ function formatActionText(action: Action, player: Player): string {
     const callEquity = callAmount / (callAmount + action.pot);
     return (
       `Calling    : ${formatEquity(callAmount / action.pot)} of pot\n` +
-      `Pot        : ${formatChips(action.pot)}\n` +
-      `Pot Equity : ${formatEquity(callEquity)}`
+      formatActionTextCommon(callEquity, action)
     );
   } else if ('Bet' in action.action) {
     const betAmount = action.action.Bet;
     const betEquity = betAmount / (betAmount + action.pot);
     return (
       `Bet        : ${formatEquity(betAmount / action.pot)} of pot\n` +
-      `Pot        : ${formatChips(action.pot)}\n` +
-      `Pot Equity : ${formatEquity(betEquity)}`
+      formatActionTextCommon(betEquity, action)
     );
   } else if ('Raise' in action.action) {
     const increase = action.action.Raise[0];
@@ -249,13 +275,22 @@ function formatActionText(action: Action, player: Player): string {
     const raiseEquity = amountPutIn / (amountPutIn + action.pot);
     return (
       `Raise      : ${formatEquity(amountPutIn / action.pot)} of pot\n` +
-      `Pot        : ${formatChips(action.pot)}\n` +
-      `Pot Equity : ${formatEquity(raiseEquity)}`
+      formatActionTextCommon(raiseEquity, action)
     );
   } else {
     return `Unknown action ${action.action}`;
   }
 }
+
+function formatActionTextCommon(equity: number, action: Action) {
+    return (
+     `Pot        : ${formatChips(action.pot)}\n` +
+     `Pot equity : ${formatEquity(equity)}\n` +
+     `# to act   : ${action.players_left_to_act}\n` +
+     `Non folded : ${action.non_folded_players}`    
+    )
+}
+
 
 function formatChips(chips: number): string {
   const bb = hand_history.value!.bb;
@@ -264,5 +299,110 @@ function formatChips(chips: number): string {
 
 function formatEquity(equity: number): string {
   return `${(equity * 100).toFixed(2)}%`;
+}
+
+function handleAnalyzeRange(setExact: boolean, actionIndex: number) {
+
+    if (!hand_history.value) {
+        return;
+    }
+
+
+    const folded = hand_history.value!.players.map((_) => false);
+
+    for(let i = 0; i < actionIndex; i++) {
+        const action = hand_history.value!.actions[i];
+        if (action.action == 'Fold') {
+            folded[action.player_index] = true;
+        }
+    }
+
+    const nonFoldedPlayers = hand_history.value!.players.filter((_, index) => !folded[index]);
+
+    const heroIndex = nonFoldedPlayers.findIndex((player) => player.player_name == 'Hero');
+
+    //Hero is always 1st position here
+    if (heroIndex >= 0) {        
+        playerStore.players[0].state = PlayerState.USE_HOLE;
+        playerStore.players[0].holeCards = getCardList(heroIndex);
+        playerStore.players[0].name = 'Hero';
+    }
+
+    let playerStoreIndex = 0;
+    let playerIndex = heroIndex >= 0 ? heroIndex : 0;
+
+    const numPlayers = nonFoldedPlayers.length;
+
+    const allRange = SELECTABLE_RANGES.find((range) => range.title == 'All')!.value;
+
+    const otherPlayers = heroIndex >= 0 ? numPlayers - 1 : numPlayers;
+
+    //keep relatively the same order
+    for(let i = 0; i < otherPlayers; i++) {
+        playerStoreIndex++;
+        playerIndex++;
+        if (playerIndex >= numPlayers) {
+            playerIndex = 0;
+        }
+        if (playerStoreIndex >= numPlayers) {
+            playerStoreIndex = 0;
+        }
+
+        console.log(`Player history index: ${playerIndex} store index: ${playerStoreIndex}`, playerStore.players[playerStoreIndex]);
+
+        playerStore.players[playerStoreIndex].name = nonFoldedPlayers[playerIndex].player_name;
+        playerStore.players[playerStoreIndex].holeCards = getCardList(playerIndex);
+        playerStore.updateRangeStrForPlayer(playerStoreIndex, allRange);
+
+        if (setExact) {
+            playerStore.players[playerStoreIndex].state = PlayerState.USE_HOLE;            
+        } else {
+            playerStore.players[playerStoreIndex].state = PlayerState.USE_RANGE;
+        }
+    }
+
+    //everyone else disable
+    for(let psIndex = numPlayers; psIndex < playerStore.players.length; psIndex++) {
+        playerStore.players[psIndex].state = PlayerState.DISABLED;
+    }
+
+    let cards = 0;
+    let reserveCards = 0;
+
+    const action = hand_history.value!.actions[actionIndex];
+    if (action.round == 'Flop') {
+        cards = 3;
+    } else if (action.round == 'Turn') {
+        cards = 4;
+    } else if (action.round == 'River') {
+        cards = 5;
+    }
+
+    //Set board cards
+    boardStore.board.cards = 
+        hand_history.value.board.slice(0, cards).map( (bCard) => {
+        return bCard.index;
+    });
+    
+    //Set reserve cards
+    boardStore.reserveCards = 
+        hand_history.value.board.slice(cards).map( (bCard) => {
+        return bCard.index;
+    });
+    
+
+    const routeData = router.resolve({path: '/'});
+    window.open(routeData.href, '_blank');
+    //router.push({ path: '/' });
+}
+
+function getCardList(playerIndex: number): CardList {
+    const hiCardIndex = hand_history.value!.players[playerIndex].cards.card_hi_lo[0].index;
+    const loCardIndex = hand_history.value!.players[playerIndex].cards.card_hi_lo[1].index;
+
+    return {
+        cards: [hiCardIndex, loCardIndex],
+        cardText: cardTextStr(hiCardIndex) + cardTextStr(loCardIndex)
+    }
 }
 </script>

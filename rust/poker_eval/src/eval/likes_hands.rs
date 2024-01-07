@@ -832,6 +832,18 @@ mod test {
         assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::CallSmallBet);
     }
 
+    #[test]
+    fn test_straight_draw() {
+        let hc: HoleCards = "9c 8s".parse().unwrap();
+
+        let board: Board = "4h th 7h Kh".parse().unwrap();
+
+        let likes_hand_response = get_response(hc, &board, 5);
+
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::SmallBet);
+
+    }
+
     //#[test]
     #[cfg(not(target_arch = "wasm32"))]
     #[allow(dead_code)]
