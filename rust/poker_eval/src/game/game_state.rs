@@ -77,6 +77,7 @@ pub struct GameState {
     pub current_to_call: ChipType,
 
     //Initial bet is also considered a raise for this value
+    //This is the smallest increase of the bet value allowed, unless going all in
     pub min_raise: ChipType,
 
     pub board: Board,

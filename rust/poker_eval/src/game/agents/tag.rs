@@ -1,11 +1,16 @@
-use std::{cell::RefCell, cmp::min, rc::Rc};
+use std::{
+    cell::RefCell,
+    cmp::{max, min},
+    rc::Rc,
+};
 
 use boomphf::Mphf;
+use log::debug;
 
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
-    likes_hands::{likes_hand, LikesHandLevel},
+    likes_hands::{likes_hand, LikesHandLevel, LikesHandResponse},
     pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash},
     ActionEnum, BoolRange, CommentedAction, GameState, HoleCards, PlayerState, Round,
 };
@@ -120,59 +125,28 @@ impl Tag {
 
         let current_pot = game_state.pot();
 
-        let max_can_raise = player_state.stack + player_state.cur_round_putting_in_pot.unwrap_or(0);
+        //How much extra we need to put in to call the current bet, can be less than the total call required
+        //if we are calling a raise to our bet
+        let call_amt = min(
+            game_state.current_to_call - player_state.cur_round_putting_in_pot.unwrap_or(0),
+            player_state.stack,
+        );
 
-        let half_pot = min(max_can_raise, current_pot / 2);
-        let third_pot = min(max_can_raise, current_pot / 3);
+        //we can raise to a stack more that what we've already put in
+        //Both these values are the total amount, not the increase
+        let max_can_raise = player_state.stack + player_state.cur_round_putting_in_pot.unwrap_or(0);
+        let min_can_raise = min(
+            game_state.min_raise + game_state.current_to_call,
+            max_can_raise,
+        );
+
+        let third_pot = max(min_can_raise, min(max_can_raise, current_pot / 3));
+
+        let can_raise =
+            max_can_raise > call_amt + player_state.cur_round_putting_in_pot.unwrap_or(0);
 
         if game_state.current_to_call == 0 {
-            //Special case, lower set on 2 pair board
-            // if likes_hand_response.likes_hand >= LikesHandLevel::SmallBet
-            //     && ft.has_two_pair
-            //     && prc.made_set_with_n_above(1)
-            // {
-            //     return CommentedAction {
-            //         action: ActionEnum::Check,
-            //         comment: Some(format!(
-            //             "Worried someone has a higher set when has lower set; not betting.  {}",
-            //             likes_hand_response.likes_hand_comments.join(", ")
-            //         )),
-            //     };
-            // }
-
-            if likes_hand_response.likes_hand >= LikesHandLevel::SmallBet
-                && game_state.board.get_round().unwrap() < Round::River
-            {
-                return CommentedAction {
-                    action: ActionEnum::Bet(third_pot),
-                    comment: Some(format!(
-                        "Bets 1/3 pot because likes hand @ {}: +1 {}; -1 {}",
-                        likes_hand_response.likes_hand,
-                        likes_hand_response.likes_hand_comments.join(", "),
-                        likes_hand_response.not_like_hand_comments.join(", ")
-                    )),
-                };
-            } else if likes_hand_response.likes_hand >= LikesHandLevel::LargeBet {
-                return CommentedAction {
-                    action: ActionEnum::Bet(third_pot),
-                    comment: Some(format!(
-                        "Bets 1/3 pot on river because likes hand @ {}: +1 {}; -1 {}",
-                        likes_hand_response.likes_hand,
-                        likes_hand_response.likes_hand_comments.join(", "),
-                        likes_hand_response.not_like_hand_comments.join(", ")
-                    )),
-                };
-            } else {
-                return CommentedAction {
-                    action: ActionEnum::Check,
-                    comment: Some(format!(
-                        "Checking because does not like hand enough @ {} comments -- {}; {}",
-                        likes_hand_response.likes_hand,
-                        likes_hand_response.likes_hand_comments.join(", "),
-                        likes_hand_response.not_like_hand_comments.join(", ")
-                    )),
-                };
-            }
+            return self.decide_should_bet(&likes_hand_response, player_state, game_state);
         } else {
             let pot_eq = (100. * game_state.current_to_call as f64)
                 / ((current_pot + game_state.pot()) as f64);
@@ -185,7 +159,7 @@ impl Tag {
                     ),
                 };
             }
-            if likes_hand_response.likes_hand >= LikesHandLevel::AllIn {
+            if likes_hand_response.likes_hand >= LikesHandLevel::AllIn && can_raise {
                 return CommentedAction {
                     action: ActionEnum::Raise(
                         max_can_raise - game_state.current_to_call,
@@ -198,11 +172,13 @@ impl Tag {
                         likes_hand_response.not_like_hand_comments.join(", ")
                     )),
                 };
-            }
-
-            if game_state.current_to_call < third_pot
+            } else if game_state.current_to_call < game_state.pot() / 3
                 && likes_hand_response.likes_hand >= LikesHandLevel::LargeBet
+                && can_raise
             {
+                // debug!("hey1 min_raise: {} stack: {} already put in {} cur bet {}", game_state.min_raise,
+                // player_state.stack, player_state.cur_round_putting_in_pot.unwrap_or(0), game_state.current_to_call);
+
                 return CommentedAction {
                     action: ActionEnum::Raise(third_pot - game_state.current_to_call, third_pot),
                     comment: Some(format!(
@@ -210,14 +186,11 @@ impl Tag {
                         likes_hand_response.likes_hand_comments.join(", ")
                     )),
                 };
-            }
-
-            if game_state.current_to_call <= half_pot && likes_hand_response.likes_hand >= LikesHandLevel::LargeBet {
+            } else if call_amt <= game_state.pot() / 2
+                && likes_hand_response.likes_hand >= LikesHandLevel::LargeBet
+            {
                 return CommentedAction {
-                    action: ActionEnum::Call(
-                        game_state.current_to_call
-                            - player_state.cur_round_putting_in_pot.unwrap_or(0),
-                    ),
+                    action: ActionEnum::Call(call_amt),
                     comment: Some(format!(
                         "Calling because likes hand: {};Willing to call a 1/2 pot bet;Positive: {};Negative: {}",
                         likes_hand_response.likes_hand,
@@ -225,13 +198,72 @@ impl Tag {
                         likes_hand_response.not_like_hand_comments.join(", ")
                     )),
                 };
+            } else if likes_hand_response.likes_hand >= LikesHandLevel::AllIn {
+                return CommentedAction {
+                    action: ActionEnum::Call(call_amt),
+                    comment: Some(format!(
+                        "Calling because can't raise any more;likes hand: {};Positive: {};Negative: {}",
+                        likes_hand_response.likes_hand,
+                        likes_hand_response.likes_hand_comments.join(", "),
+                        likes_hand_response.not_like_hand_comments.join(", ")
+                    )),
+                };
             }
+
             return CommentedAction {
                 action: ActionEnum::Fold,
                 comment: Some(format!(
                     "Folding because likes hand: {};Pot Equity: {:.2};Positive: {};Negative: {}",
                     likes_hand_response.likes_hand,
                     pot_eq,
+                    likes_hand_response.likes_hand_comments.join(", "),
+                    likes_hand_response.not_like_hand_comments.join(", ")
+                )),
+            };
+        }
+    }
+
+    fn decide_should_bet(
+        &self,
+        likes_hand_response: &LikesHandResponse,
+        player_state: &PlayerState,
+        game_state: &GameState,
+    ) -> CommentedAction {
+        let max_can_raise = player_state.stack + player_state.cur_round_putting_in_pot.unwrap_or(0);
+        //let min_can_raise = min(game_state.min_raise, player_state.stack);
+
+        let current_pot = game_state.pot();
+        //let half_pot = min(max_can_raise, current_pot / 2);
+        let third_pot = min(max_can_raise, current_pot / 3);
+
+        if likes_hand_response.likes_hand >= LikesHandLevel::SmallBet
+            && game_state.board.get_round().unwrap() < Round::River
+        {
+            return CommentedAction {
+                action: ActionEnum::Bet(third_pot),
+                comment: Some(format!(
+                    "Bets 1/3 pot because likes hand @ {}: +1 {}; -1 {}",
+                    likes_hand_response.likes_hand,
+                    likes_hand_response.likes_hand_comments.join(", "),
+                    likes_hand_response.not_like_hand_comments.join(", ")
+                )),
+            };
+        } else if likes_hand_response.likes_hand >= LikesHandLevel::LargeBet {
+            return CommentedAction {
+                action: ActionEnum::Bet(third_pot),
+                comment: Some(format!(
+                    "Bets 1/3 pot on river because likes hand @ {}: +1 {}; -1 {}",
+                    likes_hand_response.likes_hand,
+                    likes_hand_response.likes_hand_comments.join(", "),
+                    likes_hand_response.not_like_hand_comments.join(", ")
+                )),
+            };
+        } else {
+            return CommentedAction {
+                action: ActionEnum::Check,
+                comment: Some(format!(
+                    "Checking because does not like hand enough @ {} comments -- {}; {}",
+                    likes_hand_response.likes_hand,
                     likes_hand_response.likes_hand_comments.join(", "),
                     likes_hand_response.not_like_hand_comments.join(", ")
                 )),

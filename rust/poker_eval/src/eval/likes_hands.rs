@@ -446,7 +446,6 @@ fn likes_draws(
     }
 
     if let Some(p) = prc.straight_draw {
-
         if ft.same_suited_max_count >= 4 && num_in_pot >= 4 {
             not_like_hand_comments.push(format!(
                 "4 of same suit on board: {}, not considering straight draws",
@@ -882,7 +881,6 @@ mod test {
 
         //This would be a good semi bluff
         assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::LargeBet);
-
     }
 
     //#[test]

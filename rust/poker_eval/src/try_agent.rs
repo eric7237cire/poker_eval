@@ -105,7 +105,7 @@ fn main() {
     //we want to track the worst loses
     let mut heap: BinaryHeap<(i64, i32, GameLog)> = BinaryHeap::new();
 
-    let num_total_iterations = 20;
+    let num_total_iterations = 200;
     let num_worst_hands_to_keep = 5;
     let mut hero_position = 0;
 
@@ -175,8 +175,8 @@ fn main() {
             continue;
         }
 
-        //To add it always
-        if it_num==0 {
+        // //To add it always
+        if it_num == 79 {
             change = -1000;
         }
 

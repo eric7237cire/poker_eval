@@ -627,14 +627,17 @@ impl GameRunner {
                     .into());
                 }
 
+                
+                //we go around again
+                assert!(self.game_state.total_active_players > 0);
+                self.game_state.num_left_to_act = self.game_state.total_active_players - 1;
+
+                // discount all_in after we set num left to act
                 if self.game_state.player_states[player_index].all_in {
                     self.game_state.total_players_all_in += 1;
-                    assert!(self.game_state.total_active_players > 0);
                     self.game_state.total_active_players -= 1;
                 };
 
-                //we go around again
-                self.game_state.num_left_to_act = self.game_state.total_active_players;
             }
             ActionEnum::Check => {
                 if self.game_state.current_to_call > 0 {
@@ -681,14 +684,18 @@ impl GameRunner {
                     .into());
                 }
 
+                //we go around again, but not including us
+                assert!(self.game_state.total_active_players > 0);
+                self.game_state.num_left_to_act = self.game_state.total_active_players - 1;
+
+
+                //Discount after setting num left to act
                 if self.game_state.player_states[player_index].all_in {
                     self.game_state.total_players_all_in += 1;
-                    assert!(self.game_state.total_active_players > 0);
                     self.game_state.total_active_players -= 1;
                 };
 
-                //we go around again
-                self.game_state.num_left_to_act = self.game_state.total_active_players;
+                
             }
         }
 
@@ -697,12 +704,6 @@ impl GameRunner {
             &self.game_state.actions.last().as_ref().unwrap()
         );
 
-        // let non_folded_count = self
-        //     .game_state
-        //     .player_states
-        //     .iter()
-        //     .filter(|p| !p.folded)
-        //     .count();
         let not_folded_count =
             self.game_state.total_active_players + self.game_state.total_players_all_in;
         if not_folded_count == 1 {
@@ -711,47 +712,12 @@ impl GameRunner {
             self.finish()?;
             return Ok(true);
         }
-
-        // let cur_active_player_count = self.active_player_count();
-        // assert_eq!(cur_active_player_count as u8, self.game_state.total_active_players);
-
-        //let any_all_in = self.game_state.player_states.iter().any(|p| p.all_in);
-
-        //assert_eq!(any_all_in, self.game_state.total_players_all_in > 0);
+       
         let any_all_in = self.game_state.total_players_all_in > 0;
 
-        //If last action was a fold, and there is 1 active player, that player is good with the pot?
-        //P1 checks
-        //P2 all in
-        //P3 fold
-        //P1 is not good
-        //So we need to make sure last active player doesn't still need to act
-
-        //Example of them not needing to act
-        //P1 bets 100
-        //P2 calls and is all in
-        //P1 is still active but doesn't need to act
-
-        //Example of them needing to act
-        //P1 bets 100
-        //P2 raises to 101 and is all in
-        //P1 needs to call/fold
-        let finish_with_1_active_plyr = if self.game_state.total_active_players == 1 {
-            assert_eq!(1, self.game_state.num_left_to_act);
-            assert_eq!(1, self.game_state.total_active_players);
-            let active_player_pos = self.find_next_to_act().unwrap();
-            let active_player_index: usize = active_player_pos.into();
-            let active_player_state = &self.game_state.player_states[active_player_index];
-            let ret = active_player_state.cur_round_putting_in_pot.unwrap_or(0)
-                == self.game_state.current_to_call;
-            trace!("Finish with 1 active player? {} ", ret);
-            ret
-        } else {
-            false
-        };
-
         //either only all in left or only 1 active left that is ok with the pot
-        if finish_with_1_active_plyr || self.game_state.total_active_players == 0 {
+        //if finish_with_1_active_plyr || self.game_state.total_active_players == 0 {
+        if self.game_state.total_active_players == 0 {
             trace!("Only all in player left, and we have at least 1 all in, advancing to river");
 
             assert!(any_all_in);
@@ -775,38 +741,30 @@ impl GameRunner {
             any_all_in
         );
 
+        //Do we need to move to the next round?
+        if self.game_state.num_left_to_act == 0 
+        {
+            //note moving to next round has checks to make sure everyone has called
+            //or is all in
+            
+            if self.game_state.current_round == Round::River {
+                trace!("River is done, game is done");
+                self.finish()?;
+                return Ok(true);
+            }
+            let cur_round = self.game_state.current_round;
+            self.move_to_next_round()?;
+            assert_eq!(cur_round.next().unwrap(), self.game_state.current_round);
+            
+            return Ok(false);
+        }
+
+        //Same round, next player
         self.game_state.current_to_act = self
             .game_state
             .current_to_act
             .next(self.game_state.player_states.len() as _);
         self.game_state.current_to_act = self.find_next_to_act()?;
-
-        let player_index: usize = self.game_state.current_to_act.into();
-
-        //Do we need to move to the next round?
-        //Either checks all around or everyone called
-        let amt_to_call = self.game_state.current_to_call;
-        if let Some(cur_round_putting_in_pot) =
-            self.game_state.player_states[player_index].cur_round_putting_in_pot
-        {
-            //If current player has called the amount needed we move to the next round
-            if amt_to_call == cur_round_putting_in_pot {
-                trace!(
-                    "Player #{} named {} has called {} and we are moving to next round",
-                    player_index,
-                    &self.game_state.player_states[player_index].player_name,
-                    amt_to_call
-                );
-                if self.game_state.current_round == Round::River {
-                    trace!("River is done, game is done");
-                    self.finish()?;
-                    return Ok(true);
-                }
-                let cur_round = self.game_state.current_round;
-                self.move_to_next_round()?;
-                assert_eq!(cur_round.next().unwrap(), self.game_state.current_round);
-            }
-        }
 
         Ok(false)
     }
@@ -830,7 +788,8 @@ impl GameRunner {
             total_amount_put_in_pot: player_state.total_put_in_pot,
             players_left_to_act: self.game_state.num_left_to_act,
             is_all_in: player_state.all_in,
-            non_folded_players: self.game_state.total_active_players + self.game_state.total_players_all_in,
+            non_folded_players: self.game_state.total_active_players
+                + self.game_state.total_players_all_in,
         }
     }
 
