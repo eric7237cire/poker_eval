@@ -7,9 +7,13 @@
         <BoardSelectorCard v-for="card in hand_history.board" :cardId="card.index" />
       </div>
 
-      <div class="round-container">
-        <template v-for="cur_round in rounds">
-          <div class="round-title flex items-center justify-center bg-black">{{ cur_round }}</div>
+      <template v-for="cur_round in rounds">
+        <div class="round-container" :id="cur_round">
+          <div class="round-title flex items-center justify-center bg-black">
+            <span class="big-text">{{ cur_round }}</span>
+            <span>Jump To:</span>
+            <a :href= "'#' + j_round" v-for="j_round in rounds">{{j_round}}</a> 
+          </div>
           <div class="actions w-full box-border grid items-stretch">
             <template
               v-for="[action, player] in getActionPlayerListForRound(cur_round, hand_history)"
@@ -45,8 +49,8 @@
               </div>
             </template>
           </div>
-        </template>
-      </div>
+        </div>
+      </template>
     </template>
   </div>
 </template>
@@ -69,11 +73,23 @@
   }
 
   .round-title {
-    font-size: 3rem;
     position: sticky;
     top: var(--board-height);
 
     z-index: 10; /* Ensure it stacks above the content */
+
+    text-align: center;
+
+    .big-text {
+      font-size: 3rem;
+      margin-right: 10px;
+    }
+
+    a {
+      font-size: 1rem;
+      margin: 5px;
+      color: lightblue;
+    }
   }
 }
 
