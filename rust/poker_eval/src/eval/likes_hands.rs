@@ -118,6 +118,7 @@ pub fn likes_hand(
 
     likes_draws(
         prc,
+        ft,
         board,
         hc,
         &mut likes_hand,
@@ -410,12 +411,12 @@ fn handle_pocket_pair(
 
 fn likes_draws(
     prc: &PartialRankContainer,
-
+    ft: &BoardTexture,
     board: &Board,
     hc: &HoleCards,
     likes_hand: &mut LikesHandLevel,
     likes_hand_comments: &mut Vec<String>,
-    _not_like_hand_comments: &mut Vec<String>,
+    not_like_hand_comments: &mut Vec<String>,
     num_in_pot: u8,
 ) {
     let round = board.get_round().unwrap();
@@ -443,7 +444,21 @@ fn likes_draws(
             }
         }
     }
+
     if let Some(p) = prc.straight_draw {
+
+        if ft.same_suited_max_count >= 4 && num_in_pot >= 4 {
+            not_like_hand_comments.push(format!(
+                "4 of same suit on board: {}, not considering straight draws",
+                ft.suits_with_max_count
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ));
+            return;
+        }
+
         if p.straight_draw_type == StraightDrawType::OpenEnded
             || p.straight_draw_type == StraightDrawType::DoubleGutShot
         {
@@ -834,13 +849,39 @@ mod test {
 
     #[test]
     fn test_straight_draw() {
+        init_test_logger();
+
         let hc: HoleCards = "9c 8s".parse().unwrap();
 
-        let board: Board = "4h th 7h Kh".parse().unwrap();
+        //4 to a flush
+        let board: Board = "4h Th 7h Kh".parse().unwrap();
 
         let likes_hand_response = get_response(hc, &board, 5);
 
-        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::SmallBet);
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::None);
+
+        //3 to a flush
+        let board: Board = "4h Th 7h Ks".parse().unwrap();
+
+        let likes_hand_response = get_response(hc, &board, 5);
+
+        //Maybe too risky, but keeping for now
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::LargeBet);
+
+        //2 to a flush
+        let board: Board = "4h Tc 7h Ks".parse().unwrap();
+
+        let likes_hand_response = get_response(hc, &board, 5);
+
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::LargeBet);
+
+        //No flush possibilites
+        let board: Board = "4d Tc 7h Ks".parse().unwrap();
+
+        let likes_hand_response = get_response(hc, &board, 5);
+
+        //This would be a good semi bluff
+        assert_eq!(likes_hand_response.likes_hand, LikesHandLevel::LargeBet);
 
     }
 

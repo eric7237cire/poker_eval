@@ -185,6 +185,21 @@ impl Tag {
                     ),
                 };
             }
+            if likes_hand_response.likes_hand >= LikesHandLevel::AllIn {
+                return CommentedAction {
+                    action: ActionEnum::Raise(
+                        max_can_raise - game_state.current_to_call,
+                        max_can_raise,
+                    ),
+                    comment: Some(format!(
+                        "Going all in because likes hand @ {};Positive {};Negative: {}",
+                        likes_hand_response.likes_hand,
+                        likes_hand_response.likes_hand_comments.join(", "),
+                        likes_hand_response.not_like_hand_comments.join(", ")
+                    )),
+                };
+            }
+
             if game_state.current_to_call < third_pot
                 && likes_hand_response.likes_hand >= LikesHandLevel::LargeBet
             {
@@ -196,23 +211,29 @@ impl Tag {
                     )),
                 };
             }
-            if game_state.current_to_call < half_pot {
+
+            if game_state.current_to_call <= half_pot && likes_hand_response.likes_hand >= LikesHandLevel::LargeBet {
                 return CommentedAction {
                     action: ActionEnum::Call(
                         game_state.current_to_call
                             - player_state.cur_round_putting_in_pot.unwrap_or(0),
                     ),
                     comment: Some(format!(
-                        "Calling because likes hand and willing to call a 1/2 pot bet: {}",
-                        likes_hand_response.likes_hand_comments.join(", ")
+                        "Calling because likes hand: {};Willing to call a 1/2 pot bet;Positive: {};Negative: {}",
+                        likes_hand_response.likes_hand,
+                        likes_hand_response.likes_hand_comments.join(", "),
+                        likes_hand_response.not_like_hand_comments.join(", ")
                     )),
                 };
             }
             return CommentedAction {
                 action: ActionEnum::Fold,
                 comment: Some(format!(
-                    "Folding because likes hand but bet is too high. {:.2}",
-                    pot_eq
+                    "Folding because likes hand: {};Pot Equity: {:.2};Positive: {};Negative: {}",
+                    likes_hand_response.likes_hand,
+                    pot_eq,
+                    likes_hand_response.likes_hand_comments.join(", "),
+                    likes_hand_response.not_like_hand_comments.join(", ")
                 )),
             };
         }

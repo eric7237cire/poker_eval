@@ -159,7 +159,7 @@ fn main() {
             assert_eq!(action_count_before + 1, action_count_after);
         }
 
-        let change = game_runner.game_state.player_states[hero_position].stack as i64
+        let mut change = game_runner.game_state.player_states[hero_position].stack as i64
             - game_runner.game_state.player_states[hero_position].initial_stack as i64;
 
         hero_winnings += change;
@@ -173,6 +173,11 @@ fn main() {
         //if we have enough hands and this hand is not worse than the worst hand
         if heap.len() == num_worst_hands_to_keep && change > heap.peek().unwrap().0 {
             continue;
+        }
+
+        //To add it always
+        if it_num==0 {
+            change = -1000;
         }
 
         heap.push((

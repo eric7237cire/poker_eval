@@ -24,7 +24,9 @@
               v-for="[action, player] in getActionPlayerListForRound(cur_round, hand_history)"
             >
               <div class="player-name" :class="getActionType(action)">
-                <span class="">{{ player.player_name }}</span>
+                <a :id="'action' + action.index" 
+                    :href="'#action' + action.index"
+                    class="">{{ player.player_name }}</a>
                 
                 <button class="button-base button-green" @click="handleAnalyzeRange(true, action.index)">Exact</button>
                 <button class="button-base button-blue" @click="handleAnalyzeRange(false, action.index)">Range</button>
