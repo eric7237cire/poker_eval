@@ -32,7 +32,7 @@
 
 <script setup lang="ts">
 import { computed, defineComponent } from 'vue';
-import { cardText } from '../utils';
+import { cardText } from '../lib/utils';
 
 const buttonClassNames = computed(() => {
   const baseClasses = 'relative rounded-lg border select-none enabled:shadow';
@@ -72,3 +72,4 @@ const props = defineProps({
 
 const { rank, suit, colorClass } = cardText(props.cardId);
 </script>
+../lib/utils

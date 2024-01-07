@@ -72,7 +72,8 @@ impl PassiveCallingStation {
 
         let half_pot = game_state.pot() / 2;
 
-        let call_amt = game_state.current_to_call - player_state.cur_round_putting_in_pot.unwrap_or(0);
+        let call_amt =
+            game_state.current_to_call - player_state.cur_round_putting_in_pot.unwrap_or(0);
 
         if game_state.current_to_call <= half_pot
             && likes_hand_response.likes_hand >= LikesHandLevel::CallSmallBet
@@ -114,7 +115,8 @@ impl Agent for PassiveCallingStation {
     fn decide(&mut self, player_state: &PlayerState, game_state: &GameState) -> CommentedAction {
         let action = match game_state.current_round {
             Round::Preflop => {
-                let call_amt = game_state.current_to_call - player_state.cur_round_putting_in_pot.unwrap_or(0);
+                let call_amt =
+                    game_state.current_to_call - player_state.cur_round_putting_in_pot.unwrap_or(0);
                 let ri = self.hole_cards.unwrap().to_range_index();
                 //not handling all ins
                 if let Some(calling_range) = self.calling_range.as_ref() {

@@ -14,7 +14,6 @@
 <script setup lang="ts">
 import { useBoardStore } from '@src/stores/board';
 import { PlayerState, usePlayerStore } from '@src/stores/player';
-import { cardText } from '@src/utils';
 import { computed } from 'vue';
 import Card from '@src/components/result/Card.vue';
 

@@ -103,15 +103,14 @@ const createHandler = (mod: Mod) => {
       cards: Uint8Array,
       num_active_players: number
     ): string {
-      
       const result = this.flop_analyzer.narrow_range_by_pref(
         range_to_narrow,
-        likes_hand_min_level,        
+        likes_hand_min_level,
         cards,
         num_active_players
       );
       return result;
-    },
+    }
   };
 };
 
@@ -142,7 +141,6 @@ function buildResultsInterface(
       it_num_by_simple_range_idx: []
     };
 
-    
     const r_eq = r.get_range_equity(active_player_index, i);
     const r_it = r.get_range_it_count(active_player_index, i);
 
@@ -160,7 +158,6 @@ function buildResultsInterface(
 
     sr.eq_by_simple_range_idx = eq_range;
     sr.it_num_by_simple_range_idx = r_it;
-    
 
     street_results.push(sr);
   }

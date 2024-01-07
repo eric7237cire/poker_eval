@@ -13,6 +13,6 @@ mod eq_agent;
 pub use agent_source::*;
 pub use agent_trait::*;
 pub use agent_util::*;
+pub use eq_agent::*;
 pub use passive_calling_station::*;
 pub use tag::*;
-pub use eq_agent::*;

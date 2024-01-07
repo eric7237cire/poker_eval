@@ -143,7 +143,7 @@
 import { computed, defineComponent, reactive, ref, watch } from 'vue';
 //import { useConfigStore } from "../store";
 import { usePlayerStore } from '../stores/player';
-import { ranks, rankPat } from '../utils';
+import { ranks, rankPat } from '@src/lib/utils';
 import { RangeManager } from '@pkg/range';
 
 import { CurrentPage, useNavStore } from '../stores/navigation';
@@ -224,11 +224,11 @@ const cellIndex = (row: number, col: number) => {
 
 function cellValue(row: number, col: number) {
   return rangeArray[cellIndex(row, col)];
-};
+}
 
 function cellComment(row: number, col: number) {
   return rangeArrayComments[cellIndex(row, col)];
-};
+}
 
 function onUpdate() {
   const range = playerStore.range;
@@ -379,3 +379,4 @@ function positionEditor(y_coord: number) {
   };
 }
 </script>
+../lib/utils

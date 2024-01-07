@@ -44,7 +44,7 @@ export const useNarrowStore = defineStore('narrow', () => {
     }
   );
 
-  function getLikesHandMinimumString() : string {
+  function getLikesHandMinimumString(): string {
     switch (state.value.likesHandMinimum) {
       case 0:
         return 'Any';

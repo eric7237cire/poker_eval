@@ -36,7 +36,7 @@ import { defineStore } from 'pinia';
 import { RangeManager } from '@pkg/range';
 import { useLocalStorage } from '@vueuse/core';
 import { CardList } from './board';
-import { parseCardString } from '@src/utils';
+import { parseCardString } from '@src/lib/utils';
 import { computed, ref, watch } from 'vue';
 import * as _ from 'lodash';
 
@@ -93,7 +93,7 @@ function()s become actions*/
       players.value[i].rangeStrHistory = [];
     }
     if (!_.isString(players.value[i].rangeStr)) {
-        players.value[i].rangeStr = '';
+      players.value[i].rangeStr = '';
     }
     players.value[i].index = i;
   }
@@ -112,7 +112,7 @@ function()s become actions*/
   function updateRangeStr(newRangeStr: string) {
     updateRangeStrForPlayer(currentPlayer.value, newRangeStr);
   }
-  function updateRangeStrForPlayer(playerId: number, newRangeStr: string, saveHistory=false) {
+  function updateRangeStrForPlayer(playerId: number, newRangeStr: string, saveHistory = false) {
     if (range.value == null) {
       console.log('Range not initialized yet');
       return;

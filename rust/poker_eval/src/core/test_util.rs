@@ -111,7 +111,10 @@ pub fn test_game_runner(game_runner: &mut GameRunner) -> Result<(), PokerError> 
         assert_eq!(action_count_before + 1, action_count_after);
     }
 
-    let log2 = game_runner2.to_game_log().unwrap().to_game_log_string(false, false, 0);
+    let log2 = game_runner2
+        .to_game_log()
+        .unwrap()
+        .to_game_log_string(false, false, 0);
 
     //info!("log2:\n{}", log2);
 

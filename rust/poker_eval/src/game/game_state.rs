@@ -11,11 +11,11 @@ pub struct PlayerState {
     pub position: Position,
     pub player_name: String,
     pub initial_stack: ChipType,
-    
+
     //what has not yet been put in the middle
     pub stack: ChipType,
     pub folded: bool,
-    
+
     //None means not yet acted this round
     //already deducted from stack
     pub cur_round_putting_in_pot: Option<ChipType>,
@@ -24,7 +24,6 @@ pub struct PlayerState {
 
     //In current betting round, so == remaining stack
     pub all_in: bool,
-
     //pub final_eval_comment: Option<String>,
 }
 
@@ -50,7 +49,6 @@ impl PlayerState {
     pub fn player_index(&self) -> usize {
         self.position.into()
     }
-
 }
 
 pub struct GameState {
@@ -70,7 +68,6 @@ pub struct GameState {
     pub total_active_players: u8,
     pub total_players_all_in: u8,
     //so number non folded == total_active_players + total_players_all_in
-
     pub prev_round_pot: ChipType,
 
     //Until current rounds are finished, is not added to pot

@@ -379,7 +379,7 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
                     self.parse_word(remaining_str)?; // to
                     let amount = self.parse_chip_amount(remaining_str)?;
                     action::ActionEnum::Raise(increase, amount)
-                },
+                }
                 _ => {
                     return Err(PokerError::from_string(format!(
                         "Unknown action {}",

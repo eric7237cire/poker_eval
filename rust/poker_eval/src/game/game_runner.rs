@@ -7,7 +7,7 @@ use std::cmp::min;
 use crate::pre_calc::fast_eval::fast_hand_eval;
 use crate::pre_calc::perfect_hash::load_boomperfect_hash;
 use crate::pre_calc::rank::Rank;
-use crate::{set_used_card, Board, PlayerAction, GameLog, InitialPlayerState, Card};
+use crate::{set_used_card, Board, Card, GameLog, InitialPlayerState, PlayerAction};
 use crate::{
     ActionEnum, CardUsedType, ChipType, GameState, PlayerState, PokerError, Position, Round,
 };
@@ -135,7 +135,7 @@ impl GameRunner {
             //All in is only set after we put money in the pot
             let last_action_index = self.game_state.actions.len() - 1;
             self.game_state.actions[last_action_index].is_all_in = player_state.all_in;
-            
+
             //max_pot is created when the round is done
             player_state.stack
         } else {
@@ -331,9 +331,9 @@ impl GameRunner {
                 .iter()
                 .position(|p| p.is_active())
                 .unwrap();
-            
+
             self.game_state.player_states[player_index].stack += self.game_state.pot();
-            
+
             for player_index in 0..self.game_state.player_states.len() {
                 self.game_runner_source.set_final_player_state(
                     player_index,
@@ -344,8 +344,9 @@ impl GameRunner {
             return Ok(());
         }
 
-
-        assert!(self.game_state.total_active_players > 1 || self.game_state.total_players_all_in > 0);
+        assert!(
+            self.game_state.total_active_players > 1 || self.game_state.total_players_all_in > 0
+        );
 
         let mut hand_rankings: Vec<(Rank, usize)> = Vec::new();
         //let mut hand_ranking_strings: Vec<Option<String>> = vec![None; self.game_state.player_states.len()];
@@ -353,7 +354,6 @@ impl GameRunner {
         //let mut eval_cards = self.game_state.board.as_slice_card().to_vec();
 
         for player_index in 0..self.game_state.player_states.len() {
-
             let p_data = &self.game_state.player_states[player_index];
 
             assert!(p_data.initial_stack >= p_data.stack);
@@ -369,8 +369,14 @@ impl GameRunner {
             }
 
             let hole_cards = self.game_runner_source.get_hole_cards(player_index)?;
-            
-            let rank = fast_hand_eval(self.game_state.board.get_iter().chain(hole_cards.get_iter()), &self.hash_func);
+
+            let rank = fast_hand_eval(
+                self.game_state
+                    .board
+                    .get_iter()
+                    .chain(hole_cards.get_iter()),
+                &self.hash_func,
+            );
 
             hand_rankings.push((rank, player_index));
         }
@@ -498,7 +504,6 @@ impl GameRunner {
         assert!(self.game_state.num_left_to_act > 0);
         self.game_state.num_left_to_act -= 1;
 
-
         let decision = self.game_runner_source.get_action(
             &self.game_state.player_states[player_index],
             &self.game_state,
@@ -515,11 +520,11 @@ impl GameRunner {
         assert!(!self.game_state.player_states[player_index].all_in);
         assert!(!self.game_state.player_states[player_index].folded);
         assert!(self.game_state.player_states[player_index].is_active());
-        
+
         match action {
             ActionEnum::Fold => {
                 self.game_state.player_states[player_index].folded = true;
-                
+
                 assert!(self.game_state.total_active_players > 0);
                 self.game_state.total_active_players -= 1;
 
@@ -534,7 +539,8 @@ impl GameRunner {
                 self.game_state.actions.push(self.build_player_action(
                     &self.game_state.player_states[player_index],
                     &action,
-                    &decision.comment.unwrap_or_default()));
+                    &decision.comment.unwrap_or_default(),
+                ));
             }
             ActionEnum::Call(check_amt) => {
                 let amt_to_call = self.game_state.current_to_call;
@@ -548,12 +554,11 @@ impl GameRunner {
                 }
 
                 //do before stack/pot are modified
-                self.game_state.actions.push(
-                    self.build_player_action(
-                        &self.game_state.player_states[player_index],
-                        &action,
-                        &decision.comment.unwrap_or_default(),
-                    ));
+                self.game_state.actions.push(self.build_player_action(
+                    &self.game_state.player_states[player_index],
+                    &action,
+                    &decision.comment.unwrap_or_default(),
+                ));
 
                 let actual_amt = self.handle_put_money_in_pot(player_index, amt_to_call)?;
 
@@ -585,20 +590,16 @@ impl GameRunner {
                 self.game_state.min_raise = increase_amt;
                 self.game_state.current_to_call = raise_amt;
 
-
-                self.game_state.actions.push(
-                    self.build_player_action(
-                        &self.game_state.player_states[player_index],
-                        &action,
-                        &decision.comment.unwrap_or_default(),
-                    ));
+                self.game_state.actions.push(self.build_player_action(
+                    &self.game_state.player_states[player_index],
+                    &action,
+                    &decision.comment.unwrap_or_default(),
+                ));
 
                 let amount_already_put = self.game_state.player_states[player_index]
                     .cur_round_putting_in_pot
                     .unwrap_or(0);
                 let actual_amt = self.handle_put_money_in_pot(player_index, raise_amt)?;
-
-
 
                 if increase_amt_check != increase_amt {
                     return Err(format!(
@@ -634,7 +635,6 @@ impl GameRunner {
 
                 //we go around again
                 self.game_state.num_left_to_act = self.game_state.total_active_players;
-
             }
             ActionEnum::Check => {
                 if self.game_state.current_to_call > 0 {
@@ -650,12 +650,11 @@ impl GameRunner {
                 self.game_state.current_to_call = 0;
                 self.game_state.player_states[player_index].cur_round_putting_in_pot = Some(0);
 
-                self.game_state.actions.push(
-                    self.build_player_action(
-                        &self.game_state.player_states[player_index],
-                        &action,
-                        &decision.comment.unwrap_or_default(),
-                    ));
+                self.game_state.actions.push(self.build_player_action(
+                    &self.game_state.player_states[player_index],
+                    &action,
+                    &decision.comment.unwrap_or_default(),
+                ));
             }
             ActionEnum::Bet(bet_amt) => {
                 self.check_able_to_bet(bet_amt)?;
@@ -663,13 +662,11 @@ impl GameRunner {
                 self.game_state.min_raise = bet_amt;
                 self.game_state.current_to_call = bet_amt;
 
-                
-                self.game_state.actions.push(
-                    self.build_player_action(
-                        &self.game_state.player_states[player_index],
-                        &action,
-                        &decision.comment.unwrap_or_default(),
-                    ));
+                self.game_state.actions.push(self.build_player_action(
+                    &self.game_state.player_states[player_index],
+                    &action,
+                    &decision.comment.unwrap_or_default(),
+                ));
 
                 let actual_amt = self.handle_put_money_in_pot(player_index, bet_amt)?;
 
@@ -695,7 +692,6 @@ impl GameRunner {
             }
         }
 
-        
         trace!(
             "Last action: {}",
             &self.game_state.actions.last().as_ref().unwrap()
@@ -707,7 +703,8 @@ impl GameRunner {
         //     .iter()
         //     .filter(|p| !p.folded)
         //     .count();
-        let not_folded_count = self.game_state.total_active_players + self.game_state.total_players_all_in;
+        let not_folded_count =
+            self.game_state.total_active_players + self.game_state.total_players_all_in;
         if not_folded_count == 1 {
             //this is when everyone folds to a player and we don't go to the end
             trace!("Only 1 player left; everyone else folded, game is done");
@@ -738,7 +735,7 @@ impl GameRunner {
         //Example of them needing to act
         //P1 bets 100
         //P2 raises to 101 and is all in
-        //P1 needs to call/fold 
+        //P1 needs to call/fold
         let finish_with_1_active_plyr = if self.game_state.total_active_players == 1 {
             assert_eq!(1, self.game_state.num_left_to_act);
             assert_eq!(1, self.game_state.total_active_players);
@@ -816,7 +813,12 @@ impl GameRunner {
 
     //For logging purposes, take current game state and action and create player action that
     //goes into the log
-    fn build_player_action(&self, player_state: &PlayerState, action: &ActionEnum, comment: &str) -> PlayerAction {
+    fn build_player_action(
+        &self,
+        player_state: &PlayerState,
+        action: &ActionEnum,
+        comment: &str,
+    ) -> PlayerAction {
         PlayerAction {
             player_index: player_state.player_index(),
             action: action.clone(),
@@ -830,7 +832,6 @@ impl GameRunner {
             is_all_in: player_state.all_in,
         }
     }
-
 
     fn check_able_to_bet(self: &Self, bet_amt: ChipType) -> Result<(), PokerError> {
         let player_index: usize = self.game_state.current_to_act.into();
@@ -934,7 +935,7 @@ impl GameRunner {
             //     .into());
             // }
         }
-            
+
         if actual_increase > player_state.stack {
             return Err(format!(
                 "Player #{} {} tried to raise {} but only has {}",
@@ -946,29 +947,36 @@ impl GameRunner {
         Ok(())
     }
 
-    
-    pub fn to_game_log(
-        &self,        
-    ) -> Result<GameLog, PokerError> {
+    pub fn to_game_log(&self) -> Result<GameLog, PokerError> {
+        let players: Vec<InitialPlayerState> = self
+            .game_state
+            .player_states
+            .iter()
+            .map(|p| {
+                let hole_cards = self
+                    .game_runner_source
+                    .get_hole_cards(p.player_index())
+                    .unwrap();
 
-        let players: Vec<InitialPlayerState> = self.game_state.player_states.iter().map(|p| {
-            let hole_cards = self
-            .game_runner_source
-            .get_hole_cards(p.player_index()).unwrap();
-
-            InitialPlayerState {
-                player_name: p.player_name.clone(),
-                stack: p.initial_stack,
-                position: p.position,
-                cards: Some(hole_cards)
-            }
-        }).collect();
+                InitialPlayerState {
+                    player_name: p.player_name.clone(),
+                    stack: p.initial_stack,
+                    position: p.position,
+                    cards: Some(hole_cards),
+                }
+            })
+            .collect();
 
         let board: Vec<Card> = self.game_state.board.as_slice_card().to_vec();
 
         let actions = self.game_state.actions.clone();
-        
-        let final_stacks: Vec<ChipType> = self.game_state.player_states.iter().map(|p| p.stack).collect();
+
+        let final_stacks: Vec<ChipType> = self
+            .game_state
+            .player_states
+            .iter()
+            .map(|p| p.stack)
+            .collect();
 
         let game_log: GameLog = GameLog {
             players,
@@ -978,7 +986,7 @@ impl GameRunner {
             actions,
             final_stacks,
         };
-        
+
         Ok(game_log)
     }
 }
@@ -987,7 +995,9 @@ impl GameRunner {
 mod tests {
     use log::debug;
 
-    use crate::{game::game_log_source::GameLogSource, init_test_logger, GameLog, test_game_runner};
+    use crate::{
+        game::game_log_source::GameLogSource, init_test_logger, test_game_runner, GameLog,
+    };
 
     use super::*;
 
@@ -1552,6 +1562,5 @@ L3 - 385 # gets his useless all in back
         let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
 
         test_game_runner(&mut game_runner).unwrap();
-        
     }
 }

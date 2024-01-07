@@ -47,8 +47,11 @@
           />
         </svg>
       </v-btn>
-      
-      <v-btn v-if="boardStore.reserveCards.length > 0 && boardStore.board.cards.length != 4" @click="handleUnstashCard()">
+
+      <v-btn
+        v-if="boardStore.reserveCards.length > 0 && boardStore.board.cards.length != 4"
+        @click="handleUnstashCard()"
+      >
         <!--left -->
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -66,12 +69,12 @@
         </svg>
       </v-btn>
       <BoardSelectorCard
-          v-for="card in boardStore.reserveCards"
-          :key="card"
-          class="m-1"
-          :card-id="card"
-        />
-        <v-btn v-if="boardStore.reserveCards.length > 0" @click="handleUnstashCard()">
+        v-for="card in boardStore.reserveCards"
+        :key="card"
+        class="m-1"
+        :card-id="card"
+      />
+      <v-btn v-if="boardStore.reserveCards.length > 0" @click="handleUnstashCard()">
         <!--left -->
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -178,7 +181,7 @@ import RangeNarrower from './components/RangeNarrower.vue';
 import { useCssVar } from '@vueuse/core';
 import Footer from './components/Footer.vue';
 import BoardSelectorCard from './components/BoardSelectorCard.vue';
-import { loadCardsFromUrl } from './utils';
+import { loadCardsFromUrl } from './lib/utils';
 import * as _ from 'lodash';
 
 const navStore = useNavStore();
@@ -364,22 +367,20 @@ async function stop() {
   } else {
     console.warn('Timeout is null');
   }
-
-
-  
 }
 
 function handleStashCard() {
-    const card = boardStore.board.cards.pop();
-    if (_.isInteger(card)) {
-      boardStore.reserveCards.unshift(card!);
-    }
+  const card = boardStore.board.cards.pop();
+  if (_.isInteger(card)) {
+    boardStore.reserveCards.unshift(card!);
   }
+}
 
-  function handleUnstashCard() {
-    const card = boardStore.reserveCards.shift();
-    if (_.isInteger(card)) {
-      boardStore.board.cards.push(card!);
-    }
+function handleUnstashCard() {
+  const card = boardStore.reserveCards.shift();
+  if (_.isInteger(card)) {
+    boardStore.board.cards.push(card!);
   }
+}
 </script>
+./lib/utils
