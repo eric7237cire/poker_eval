@@ -64,5 +64,7 @@ First step is classify hole cards:
 Then evaluate vs all flops;
 2. which are easily foldable, which have draw potential (river > flop), which are strong (flop ~~ river)
 
+Do clustering on these to divide into groups/categories
+
 3.  P(being dominated), e.g. AJ vs AT
 Measure heads up 
