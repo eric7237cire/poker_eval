@@ -68,3 +68,18 @@ Do clustering on these to divide into groups/categories
 
 3.  P(being dominated), e.g. AJ vs AT
 Measure heads up 
+
+
+Want to find best # of players + hole cards to have the 
+best hand and the closest 2nd hand (most profitable)
+
+Set a minimum for losing hand
+
+Take a hole card,
+deal randomly 3 other players
+
+If winning hand below losing hand, drop
+
+If hero hand < min, skip
+
+Only 1 other hand above threshold (so no better hand on board)

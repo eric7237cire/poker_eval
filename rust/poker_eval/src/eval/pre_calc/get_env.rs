@@ -31,3 +31,13 @@ pub fn get_boom_path() -> PathBuf {
 
     path
 }
+
+pub fn get_data_file_path(file_name: &str) -> PathBuf {
+    dotenv().ok();
+
+    let data_dir = env::var("DATA_DIR").unwrap();
+
+    let path = PathBuf::from(data_dir).join(file_name);
+
+    path
+}

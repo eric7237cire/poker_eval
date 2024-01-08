@@ -21,6 +21,10 @@ path = "src/test_perf.rs"
 name = "try_agent"
 path = "src/try_agent.rs"
 
+[[bin]]
+name = "gen_hole_card_data"
+path = "src/gen_hole_card_data.rs"
+
 [dependencies]
 bitvec = {version = "1.0.1", features=["serde"]}
 itertools = "*"

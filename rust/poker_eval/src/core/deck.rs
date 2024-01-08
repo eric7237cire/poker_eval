@@ -40,7 +40,7 @@ impl Deck {
     }
 
     pub fn choose_new_board(&mut self) -> Vec<Card> {
-        let mut board = Vec::new();
+        let mut board = Vec::with_capacity(5);
         for _ in 0..5 {
             let card = self.get_unused_card().unwrap();
             board.push(Card::try_from(card).unwrap());
