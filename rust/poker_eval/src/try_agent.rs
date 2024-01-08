@@ -26,8 +26,9 @@ fn build_agents(
     partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
     monte_carlo_equity_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
     hero_position: usize,
+    num_total_players: usize,
 ) -> Vec<Box<dyn Agent>> {
-    let calling_75 = "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+";
+    //let calling_75 = "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+";
 
     let mut agents: Vec<Box<dyn Agent>> = Vec::new();
 
@@ -45,7 +46,7 @@ fn build_agents(
     //     monte_carlo_equity_db.clone(),
     // )));
 
-    for i in 0..5 {
+    for i in 0..num_total_players - 4 {
         // let agent = PassiveCallingStation::new(
         //     Some(calling_75),
         //     &format!("CalStn75_{}", i + 1),
@@ -114,13 +115,14 @@ fn main() {
 
     let mut agent_deck = Deck::new();
 
-    let mut hero_winnings: i64 = 0;
-
     //we want to track the worst loses
     let mut heap: BinaryHeap<(i64, i32, GameLog)> = BinaryHeap::new();
 
     let num_total_iterations = 10_000;
     let num_worst_hands_to_keep = 5;
+    let num_players = 9;
+    let mut hero_winnings = 0;
+    let mut winnings: HashMap<String, i64> = HashMap::new();
     let mut hero_position = 0;
 
     let hh_path = PathBuf::from("/home/eric/git/poker_eval/rust/hand_history");
@@ -143,6 +145,7 @@ fn main() {
             rcref_pdb.clone(),
             rcref_mcedb.clone(),
             hero_position,
+            num_players
         );
         set_agent_hole_cards(&mut agent_deck, &mut agents);
 
@@ -178,6 +181,11 @@ fn main() {
             - game_runner.game_state.player_states[hero_position].initial_stack as i64;
 
         hero_winnings += change;
+
+        for p in  game_runner.game_state.player_states.iter() {
+            let winnings = winnings.entry( p.player_name.clone()).or_insert(0);
+            *winnings += p.stack as i64 - p.initial_stack as i64;
+        }
 
         debug!(
             "Iteration {}, hero change {}, heap size {}",
@@ -272,4 +280,14 @@ fn main() {
         hero_winnings as f64 / num_total_iterations as f64,
         num_total_iterations
     );
+
+    for (name, winnings) in winnings.iter() {
+        debug!(
+            "{} winnings: {}; per hand {:.1} in {} iterations",
+            name,
+            winnings.to_formatted_string(&Locale::en),
+            *winnings as f64 / num_total_iterations as f64,
+            num_total_iterations.to_formatted_string(&Locale::en)
+        );
+    }
 }
