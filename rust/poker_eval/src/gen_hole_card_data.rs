@@ -28,7 +28,7 @@ fn main_impl() -> Result<(), PokerError> {
 
     let mut wtr = File::create(p).unwrap();
 
-    let num_hands_to_simulate = 2_000;
+    let num_hands_to_simulate = 10_000;
 
     let mut last_output = Instant::now();
 

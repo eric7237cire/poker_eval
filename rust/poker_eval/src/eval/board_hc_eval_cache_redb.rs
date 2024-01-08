@@ -156,6 +156,7 @@ const NUM_SIMULATIONS: usize = 10_000;
 impl ProduceEvalWithHcResult for ProduceMonteCarloEval {
     type Result = f64;
 
+    //num_players -- This is indcluing the hero
     fn produce_eval_result(cards: &[Card], hole_cards: &HoleCards, num_players: u8) -> f64 {
         let mut all_ranges = Vec::with_capacity(num_players as usize);
         //hero range
