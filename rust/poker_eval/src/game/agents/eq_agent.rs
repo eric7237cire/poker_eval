@@ -1,6 +1,6 @@
 use std::{cell::RefCell, cmp::min, rc::Rc};
 
-use bitvec::vec;
+
 use boomphf::Mphf;
 
 use crate::{

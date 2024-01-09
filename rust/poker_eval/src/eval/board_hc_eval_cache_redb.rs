@@ -4,8 +4,8 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     board_eval_cache_redb::{get_data_path, EvalCacheEnum},
-    monte_carlo_equity::{calc_equity, calc_equity_vs_random},
-    partial_rank_cards, Board, BoolRange, Card, HoleCards, PartialRankContainer,
+    monte_carlo_equity::{calc_equity_vs_random},
+    partial_rank_cards, Board, Card, HoleCards, PartialRankContainer,
 };
 
 //u32 is usually  enough

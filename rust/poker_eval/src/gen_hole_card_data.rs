@@ -1,7 +1,7 @@
-use std::{cmp::{max, min}, rc::Rc, cell::RefCell, fs::File, io::Write, time::Instant};
+use std::{cmp::{max, min}, fs::File, io::Write, time::Instant};
 
 use log::info;
-use poker_eval::{CardValueRange, init_logger, CardValue, Suit, Card, HoleCards, board_hc_eval_cache_redb::{ProduceMonteCarloEval, EvalCacheWithHcReDb}, Deck, Board, PokerError, pre_calc::get_data_file_path, monte_carlo_equity::get_equivalent_hole_board, Round};
+use poker_eval::{init_logger, CardValue, Suit, Card, HoleCards, board_hc_eval_cache_redb::{ProduceMonteCarloEval, EvalCacheWithHcReDb}, Deck, Board, PokerError, pre_calc::get_data_file_path, monte_carlo_equity::get_equivalent_hole_board, Round};
 
 /*
 cargo run --release --bin gen_hole_card_data

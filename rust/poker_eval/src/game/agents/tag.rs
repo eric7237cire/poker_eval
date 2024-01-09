@@ -1,11 +1,11 @@
 use std::{
     cell::RefCell,
-    cmp::{max, min},
+    cmp::{min},
     rc::Rc,
 };
 
 use boomphf::Mphf;
-use log::debug;
+
 
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
@@ -135,7 +135,7 @@ impl Tag {
         //we can raise to a stack more that what we've already put in
         //Both these values are the total amount, not the increase
         let max_can_raise = player_state.stack + player_state.cur_round_putting_in_pot.unwrap_or(0);
-        let min_can_raise = min(
+        let _min_can_raise = min(
             game_state.min_raise + game_state.current_to_call,
             max_can_raise,
         );
