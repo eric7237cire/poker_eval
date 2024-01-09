@@ -12,22 +12,8 @@ https://dash.harvard.edu/bitstream/handle/1/37370951/thesis_submission.pdf?seque
 
 Goal -- Human consumable advice
 
-Nodes:
-
-Position (1st, last, middle)
-Number of players (2, 3, 4, 5+)
-Hole cards (grouping into categories)
-Flop (unbet, facing bet, facing raise)
-Turn (unbet, facing bet, facing raise)
-River (unbet, facing bet, facing raise)
-Equity (high, medium, low)
 
 
-Decisions -- Preflop
-3x, 10x, all in 
-Decisions -- Postflop
-Bet min, bet 1/3, 1/2, 1x pot , all in 
-Raise 2x, to pot, all in
 
 Vs flop 
 
@@ -43,19 +29,6 @@ Potentially winning but nothing on the board (e.g. heads up with ace high)
 Question:
 
 Are dominating & draws represented in EQ ? 
-
-
-Hand Analyzer:
-
-Detect -- not bet enough ?  
-This is when an opponent had high equity (a good 2nd best hand) that we could have bet more
-
-Detect -- Get outdrawn
-This is high flop equity and loses on river
-
-Detect -- Got dominated 
-Another player had better kicker, etc.
-
 
 First step is classify hole cards:
 
@@ -83,3 +56,37 @@ If winning hand below losing hand, drop
 If hero hand < min, skip
 
 Only 1 other hand above threshold (so no better hand on board)
+
+
+
+######################################
+
+Have classifier based on performance vs 4 players
+
+# Node Definition:
+
+3 -- Position (1st, last, middle)
+4 -- Number of players (2, 3, 4, 5+)
+20-25 -- Hole cards (grouping into categories)
+4 -- Round
+3 -- Equity (high, medium, low)
+3 -- Bet situation (unbet, facing bet, facing raise)
+4 -- Check, Bet/Raise, Fold, Call
+
+# Hand Analyzer:
+
+Detect -- not bet enough ?  
+This is when an opponent had high equity (a good 2nd best hand) that we could have bet more
+Detect: Find strong (better than top pair) 2nd best hands
+Solution: Bet more
+
+Detect -- Get outdrawn
+This is high flop equity and loses on river
+Detect by: Winners eq on flop or turn < hero equity 
+Solution: Bet higher preflop/flop/turn
+
+Detect -- Got dominated 
+Another player had better kicker, etc.
+Solution: Preflop, bet less, fold
+
+

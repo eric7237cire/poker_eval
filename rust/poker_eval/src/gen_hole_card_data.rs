@@ -1,11 +1,11 @@
 use std::{cmp::{max, min}, rc::Rc, cell::RefCell, fs::File, io::Write, time::Instant};
 
 use log::info;
-use poker_eval::{CardValueRange, init_logger, CardValue, Suit, Card, HoleCards, board_hc_eval_cache_redb::{ProduceMonteCarloEval, EvalCacheWithHcReDb}, Deck, Board, PokerError, pre_calc::get_data_file_path};
+use poker_eval::{CardValueRange, init_logger, CardValue, Suit, Card, HoleCards, board_hc_eval_cache_redb::{ProduceMonteCarloEval, EvalCacheWithHcReDb}, Deck, Board, PokerError, pre_calc::get_data_file_path, monte_carlo_equity::get_equivalent_hole_board};
 
 /*
 cargo run --release --bin gen_hole_card_data
-
+python3 /home/eric/git/poker_eval/python/try_clustering.py
 */
 
 fn main() {
@@ -67,10 +67,14 @@ fn main_impl() -> Result<(), PokerError> {
 
                 let board_cards = deck.choose_new_board();
 
-                let mut board = Board::new_from_cards(&board_cards);
-                board.get_index();
+                let board = Board::new_from_cards(&board_cards);
 
-                let eq = monte_carlo_equity_db.get_put(&board, &hole_cards, 4).unwrap();
+                let (eq_hole_cards, mut eq_board) = get_equivalent_hole_board(&hole_cards, &board);
+                eq_board.get_index();
+                //board.get_index();
+
+                //let eq = monte_carlo_equity_db.get_put(&board, &hole_cards, 4).unwrap();
+                let eq = monte_carlo_equity_db.get_put(&eq_board, &eq_hole_cards, 4).unwrap();
                 //info!("eq {}", eq);
                 line_values.push(format!("{}", eq));
             }

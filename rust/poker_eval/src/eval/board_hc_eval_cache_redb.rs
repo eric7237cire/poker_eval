@@ -4,7 +4,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     board_eval_cache_redb::{get_data_path, EvalCacheEnum},
-    monte_carlo_equity::calc_equity,
+    monte_carlo_equity::{calc_equity, calc_equity_vs_random},
     partial_rank_cards, Board, BoolRange, Card, HoleCards, PartialRankContainer,
 };
 
@@ -158,23 +158,11 @@ impl ProduceEvalWithHcResult for ProduceMonteCarloEval {
 
     //num_players -- This is indcluing the hero
     fn produce_eval_result(cards: &[Card], hole_cards: &HoleCards, num_players: u8) -> f64 {
-        let mut all_ranges = Vec::with_capacity(num_players as usize);
-        //hero range
-        all_ranges.push(BoolRange::default());
-        all_ranges[0].data.set(hole_cards.to_range_index(), true);
-
-        let mut villian_range = BoolRange::default();
-        villian_range.data.fill(true);
-
-        //later we can make a version that uses range narrowing first
-        for _ in 1..num_players {
-            all_ranges.push(villian_range.clone());
-        }
-
+        
         let board: Board = Board::new_from_cards(cards);
-        let eq = calc_equity(&board, &all_ranges, NUM_SIMULATIONS).unwrap();
+        let eq = calc_equity_vs_random(&board, &hole_cards, num_players as usize, NUM_SIMULATIONS).unwrap();
 
-        eq[0]
+        eq
     }
 
     fn get_cache_name() -> EvalCacheEnum {

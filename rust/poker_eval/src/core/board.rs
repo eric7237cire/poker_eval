@@ -95,12 +95,14 @@ impl Board {
     }
 
     //This is the u32 that uniquely identifies the board
-    //27 bits (enough for 7 cards) 2^27=134_217_728 and 52 choose 5 = 133_784_560
+    //27 bits (enough for 7 cards) 2^27=134_217_728 and 52 choose 7 = 133_784_560
     //bits 30-28 are the length
     pub fn get_index(&mut self) -> u32 {
         if let Some(index) = self.index {
             return index;
         }
+
+        assert!(self.cards.len() <= 7);
 
         let mut sorted_cards = self.cards.clone();
         sorted_cards.sort();

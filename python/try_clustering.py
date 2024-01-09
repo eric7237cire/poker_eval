@@ -127,7 +127,7 @@ def produce_histograms():
     bin_edges = []
     histograms = []
 
-    create_charts = False
+    create_charts = True
 
     for index, row in features.iterrows():
         print(f"Line {index}: {card_labels[index]}")
