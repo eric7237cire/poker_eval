@@ -26,7 +26,8 @@ fn main_impl() -> Result<(), PokerError> {
 
     //let p = get_data_file_path("hole_card_data_river_4.csv");
     let num_players = 4;
-    let round = Round::Flop;
+    //let round = Round::Flop;
+    let round = Round::River;
     let p = get_data_file_path(&format!("hole_card_data_{}_{}.csv", round, num_players));
 
     let cards_needed = match round {

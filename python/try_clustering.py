@@ -14,6 +14,7 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import cdist
+from pathlib import Path
 
 def h_cluster():
     np.random.seed(0)  # Seed for reproducibility
@@ -110,7 +111,12 @@ def produce_histograms():
     num_bins = 80
     num_clusters = 24  # Define the number of clusters
     
-    df = pd.read_csv('/home/eric/git/poker_eval/data/hole_card_data.csv', header=None)
+    #csv_path = Path('/home/eric/git/poker_eval/data/hole_card_data_Flop_4.csv')
+    csv_path = Path('/home/eric/git/poker_eval/data/hole_card_data_River_4.csv')
+    df = pd.read_csv(csv_path, header=None)
+
+    figure_directory = csv_path.parent / 'figures' / csv_path.stem
+    figure_directory.mkdir(parents=True, exist_ok=True)
 
     card_labels = df.iloc[:, 1]  # Store the card labels
     features = df.iloc[:, 2:]  # Select the columns with features
@@ -149,7 +155,7 @@ def produce_histograms():
             plt.title(f'Histogram {fixed_card_labels[index]}')
             plt.xlabel('Bins')
             plt.ylabel('Frequency')
-            plt.savefig(f"/home/eric/git/poker_eval/data/histogram_{fixed_card_labels[index]}.png")
+            plt.savefig(figure_directory / f"histogram_{fixed_card_labels[index]}.png")
             plt.close()
 
     # Calculate the Chi-Square distance matrix

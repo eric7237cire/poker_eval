@@ -9,6 +9,7 @@ https://rnikhil.com/2023/12/31/ai-cfr-solver-poker.html
 
 https://dash.harvard.edu/bitstream/handle/1/37370951/thesis_submission.pdf?sequence=1
 
+https://github.com/IanSullivan/PokerCFR
 
 Goal -- Human consumable advice
 

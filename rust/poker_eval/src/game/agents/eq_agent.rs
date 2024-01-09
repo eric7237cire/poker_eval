@@ -1,5 +1,6 @@
 use std::{cell::RefCell, cmp::min, rc::Rc};
 
+use bitvec::vec;
 use boomphf::Mphf;
 
 use crate::{
@@ -9,7 +10,7 @@ use crate::{
     },
     likes_hands::likes_hand,
     pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash},
-    ActionEnum, BoolRange, CommentedAction, GameState, HoleCards, PlayerState, Round,
+    ActionEnum, BoolRange, CommentedAction, GameState, HoleCards, PlayerState, Round, monte_carlo_equity::get_equivalent_hole_board,
 };
 
 use super::Agent;
@@ -18,6 +19,36 @@ use super::Agent;
 //For now just constants
 const EQ_TO_ALL_IN: f64 = 0.75;
 use num_format::{Locale, ToFormattedString};
+
+pub struct NumPlayers {
+    pub from_num_players: usize,
+    pub to_num_players: usize,
+}
+pub struct EqAgentConfig {
+    //round, num players, min eq to bet
+    //num players starts at 2
+    pub flop_min_eq_to_bet: Vec<f64>,
+    pub turn_min_eq_to_bet: Vec<f64>,
+    pub river_min_eq_to_bet: Vec<f64>,
+}
+
+impl EqAgentConfig {
+    pub fn get_aggressive(&self) -> Self {
+        Self {
+            flop_min_eq_to_bet: vec![0.5, 0.4, 0.4, 0.3],
+            turn_min_eq_to_bet: vec![0.5, 0.55, 0.60],
+            river_min_eq_to_bet: vec![0.55, 0.7, 0.8]
+        }
+    }
+
+    pub fn get_passive(&self) -> Self {
+        Self {
+            flop_min_eq_to_bet: vec![0.7, 0.8],
+            turn_min_eq_to_bet: vec![0.8, 0.9],
+            river_min_eq_to_bet: vec![0.8, 0.9]
+        }
+    }
+}
 
 //#[derive(Default)]
 pub struct EqAgent {
@@ -28,12 +59,14 @@ pub struct EqAgent {
     partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
     monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
     hash_func: Mphf<u32>,
+    agent_config: EqAgentConfig,
 }
 
 impl EqAgent {
     pub fn new(
         calling_range_str: Option<&str>,
         name: &str,
+        agent_config: EqAgentConfig,
         flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
         partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
         monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
@@ -51,6 +84,7 @@ impl EqAgent {
             flop_texture_db,
             monte_carlo_db,
             hash_func: load_boomperfect_hash(),
+            agent_config
         }
     }
 
@@ -65,24 +99,27 @@ impl EqAgent {
             .filter(|ps| !ps.folded)
             .count() as u8;
 
-        let hc = self.hole_cards.as_ref().unwrap();
+        let hole_cards = self.hole_cards.as_ref().unwrap();
         let mut pr_db = self.partial_rank_db.borrow_mut();
-        let prc = pr_db.get_put(&game_state.board, hc, 0).unwrap();
+        let prc = pr_db.get_put(&game_state.board, hole_cards, 0).unwrap();
         let mut ft_db = self.flop_texture_db.borrow_mut();
         let ft = ft_db.get_put(&game_state.board).unwrap();
 
         let rank = fast_hand_eval(
-            game_state.board.get_iter().chain(hc.get_iter()),
+            game_state.board.get_iter().chain(hole_cards.get_iter()),
             &self.hash_func,
         );
 
         let likes_hand_response =
-            likes_hand(&prc, &ft, &rank, &game_state.board, &hc, non_folded_players).unwrap();
+            likes_hand(&prc, &ft, &rank, &game_state.board, &hole_cards, non_folded_players).unwrap();
+
+        let (eq_hole_cards, mut eq_board) = get_equivalent_hole_board(&hole_cards, &game_state.board);
+        eq_board.get_index();
 
         let eq = self
             .monte_carlo_db
             .borrow_mut()
-            .get_put(&game_state.board, hc, non_folded_players)
+            .get_put(&eq_board, &eq_hole_cards, non_folded_players)
             .unwrap();
 
         let call_amt = min(
