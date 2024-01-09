@@ -106,6 +106,10 @@ def chi_square_distance(hist1, hist2):
 
 def produce_histograms():
 
+    create_charts = True
+    num_bins = 80
+    num_clusters = 24  # Define the number of clusters
+    
     df = pd.read_csv('/home/eric/git/poker_eval/data/hole_card_data.csv', header=None)
 
     card_labels = df.iloc[:, 1]  # Store the card labels
@@ -127,11 +131,11 @@ def produce_histograms():
     bin_edges = []
     histograms = []
 
-    create_charts = True
+    
 
     for index, row in features.iterrows():
         print(f"Line {index}: {card_labels[index]}")
-        h, be = np.histogram(row, bins=40, range=(0, 1))
+        h, be = np.histogram(row, bins=num_bins, range=(0, 1))
         
         histograms.append(h)
         bin_edges.append(be)
@@ -153,9 +157,8 @@ def produce_histograms():
 
     euclidean_distance_matrix = cdist(histograms, histograms, metric='euclidean')
 
-
-    num_clusters = 25  # Define the number of clusters
-    kmeans = KMeans(n_clusters=num_clusters, random_state=42)
+    
+    kmeans = KMeans(n_clusters=num_clusters, random_state=42, n_init='auto')
     # clusters = kmeans.fit_predict(chi_square_matrix)
     clusters = kmeans.fit_predict(euclidean_distance_matrix)
 

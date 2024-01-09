@@ -83,6 +83,21 @@ impl HoleCards {
         return row * 13 + col;
     }
 
+    pub fn to_simple_range_string(&self) -> String {
+        let mut s = String::new();
+        s.push(char::from(self.card_hi_lo[0].value));
+        s.push(char::from(self.card_hi_lo[1].value));
+        if self.card_hi_lo[0].value != self.card_hi_lo[1].value {
+            s.push(char::from(
+                if self.card_hi_lo[0].suit == self.card_hi_lo[1].suit {
+                    's'
+                } else {
+                    'o'
+                }));
+        }
+        s
+    }
+
     pub fn get_hi_card(&self) -> Card {
         assert!(self.card_hi_lo[0].value >= self.card_hi_lo[1].value);
         self.card_hi_lo[0]

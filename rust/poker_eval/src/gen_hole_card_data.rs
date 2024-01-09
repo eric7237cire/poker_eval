@@ -1,7 +1,7 @@
 use std::{cmp::{max, min}, rc::Rc, cell::RefCell, fs::File, io::Write, time::Instant};
 
 use log::info;
-use poker_eval::{CardValueRange, init_logger, CardValue, Suit, Card, HoleCards, board_hc_eval_cache_redb::{ProduceMonteCarloEval, EvalCacheWithHcReDb}, Deck, Board, PokerError, pre_calc::get_data_file_path, monte_carlo_equity::get_equivalent_hole_board};
+use poker_eval::{CardValueRange, init_logger, CardValue, Suit, Card, HoleCards, board_hc_eval_cache_redb::{ProduceMonteCarloEval, EvalCacheWithHcReDb}, Deck, Board, PokerError, pre_calc::get_data_file_path, monte_carlo_equity::get_equivalent_hole_board, Round};
 
 /*
 cargo run --release --bin gen_hole_card_data
@@ -24,7 +24,18 @@ fn main_impl() -> Result<(), PokerError> {
 
     let mut deck = Deck::new();
 
-    let p = get_data_file_path("hole_card_data.csv");
+    //let p = get_data_file_path("hole_card_data_river_4.csv");
+    let num_players = 4;
+    let round = Round::Flop;
+    let p = get_data_file_path(&format!("hole_card_data_{}_{}.csv", round, num_players));
+
+    let cards_needed = match round {
+        Round::Flop => 3,
+        Round::Turn => 4,
+        Round::River => 5,
+        _ => panic!("Invalid round")
+    };
+
 
     let mut wtr = File::create(p).unwrap();
 
@@ -52,7 +63,6 @@ fn main_impl() -> Result<(), PokerError> {
 
             check_index += 1;
 
-            //Simulate 100 hands
             for i in 0..num_hands_to_simulate {
 
                 if i % 100 == 0 && last_output.elapsed().as_secs() > 3 {
@@ -65,9 +75,11 @@ fn main_impl() -> Result<(), PokerError> {
                 deck.set_used_card(hole_cards.get_hi_card());
                 deck.set_used_card(hole_cards.get_lo_card());
 
-                let board_cards = deck.choose_new_board();
-
-                let board = Board::new_from_cards(&board_cards);
+                let mut board = Board::new();
+                for _ in 0..cards_needed {
+                    let card = deck.get_unused_card()?;
+                    board.add_card(card)?;
+                }                
 
                 let (eq_hole_cards, mut eq_board) = get_equivalent_hole_board(&hole_cards, &board);
                 eq_board.get_index();
