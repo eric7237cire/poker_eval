@@ -938,10 +938,10 @@ mod test {
 
         let mut ranges: Vec<BoolRange> = vec![
             //We'll replace this one with the hole cards
-            BoolRange::all_enabled(),
-            BoolRange::all_enabled(),
-            BoolRange::all_enabled(),
-            BoolRange::all_enabled(),
+            BoolRange::default(),
+            BoolRange::default(),
+            BoolRange::default(),
+            BoolRange::default()
         ];
 
         let mut it_count = 0;

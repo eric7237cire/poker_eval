@@ -28,7 +28,6 @@ impl Deck {
 
     pub fn reset(&mut self) {
         self.used_cards = CardUsedType::default();
-        //self.available_range.data.fill(true);
     }
 
     pub fn get_number_of_used_cards(&self) -> usize {

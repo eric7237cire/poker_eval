@@ -92,12 +92,15 @@ impl Tag {
                 }
             }
         } else {
-            if self.pfr_range.data[ri] {
+
+            let bb_amt = game_state.current_to_call as f64 / game_state.bb as f64;
+
+            if self.three_bet_range.data[ri] {
                 if can_raise {
                     let raise_to = min(game_state.current_to_call * 3, max_can_raise);
                     CommentedAction {
                         action: ActionEnum::Raise(raise_to - game_state.current_to_call, raise_to),
-                        comment: Some("3-betting".to_string()),
+                        comment: Some("3 (4/5)-betting".to_string()),
                     }
                 } else {
                     CommentedAction {
@@ -105,10 +108,15 @@ impl Tag {
                         comment: Some("Calling because can't raise any more".to_string()),
                     }
                 }
+            } else if bb_amt <= 5.0 && self.pfr_range.data[ri] {
+                CommentedAction {
+                    action: ActionEnum::Call(call_amt),
+                    comment: Some("Calling a PFR".to_string()),
+                }
             } else {
                 CommentedAction {
                     action: ActionEnum::Fold,
-                    comment: Some("Not in 3-bet range, folding to pfr".to_string()),
+                    comment: Some("Not in 3-bet range, or bet too high folding to pfr".to_string()),
                 }
             }
         }

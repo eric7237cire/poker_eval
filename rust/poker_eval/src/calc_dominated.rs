@@ -73,8 +73,8 @@ fn main_impl() -> Result<(), PokerError> {
     for row in 0..13u8 {
         for col in 0..13 {
             //heros rank was below threshold
-            let mut num_below_threshold = 0;
-            let mut too_many_above_threshold = 0;
+            //let mut num_below_threshold = 0;
+            //let mut too_many_above_threshold = 0;
 
             let mut beat_second_best = 0;
             let mut was_second_best = 0;
@@ -132,13 +132,13 @@ fn main_impl() -> Result<(), PokerError> {
 
                 //if hero doesn't have the min, skip
                 if !is_above_threshold[0] {
-                    num_below_threshold += 1;
+                    //num_below_threshold += 1;
                     continue;
                 }
 
                 //allow 3 people above
                 if is_above_threshold.iter().filter(|b| **b).count() > 3 {
-                    too_many_above_threshold += 1;
+                    //too_many_above_threshold += 1;
                     continue;
                 }
 

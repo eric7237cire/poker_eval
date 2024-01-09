@@ -11,7 +11,7 @@ use num_format::{Locale, ToFormattedString};
 use poker_eval::{
     agents::{
         build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
-        EqAgentConfig, PassiveCallingStation, Tag,
+        EqAgentConfig, Tag,
     },
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{
@@ -48,12 +48,12 @@ fn build_agents(
     //     monte_carlo_equity_db.clone(),
     // )));
 
-    agents.push(Box::new(PassiveCallingStation::new(
-        None,
-        "CallAllB",
-        flop_texture_db.clone(),
-        partial_rank_db.clone(),
-    )));
+    // agents.push(Box::new(PassiveCallingStation::new(
+    //     None,
+    //     "CallAllB",
+    //     flop_texture_db.clone(),
+    //     partial_rank_db.clone(),
+    // )));
 
     agents.push(Box::new(EqAgent::new(
         Some("22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+"),
@@ -77,7 +77,7 @@ fn build_agents(
     let tag = Tag::new(
         "JJ+,AJs+,AQo+,KQs",
         "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+",
-        "SpiderMan",
+        "HeroDeux",
         flop_texture_db.clone(),
         partial_rank_db.clone(),
     );
@@ -128,10 +128,9 @@ fn main() {
     //we want to track the worst loses
     let mut heap: BinaryHeap<(i64, i32, GameLog)> = BinaryHeap::new();
 
-    let num_total_iterations = 10_000;
+    let num_total_iterations = 2_000;
     let num_worst_hands_to_keep = 5;
     let num_players = 9;
-    let mut hero_winnings = 0;
     let mut winnings: HashMap<String, i64> = HashMap::new();
 
     let hh_path = PathBuf::from("/home/eric/git/poker_eval/rust/hand_history");
@@ -191,7 +190,6 @@ fn main() {
         let mut change = game_runner.game_state.player_states[hero_index].stack as i64
             - game_runner.game_state.player_states[hero_index].initial_stack as i64;
 
-        hero_winnings += change;
 
         for p in game_runner.game_state.player_states.iter() {
             let winnings = winnings.entry(p.player_name.clone()).or_insert(0);
@@ -282,12 +280,7 @@ fn main() {
     )
     .unwrap();
 
-    debug!(
-        "Hero winnings: {}; per hand {:.1} in {} iterations",
-        hero_winnings,
-        hero_winnings as f64 / num_total_iterations as f64,
-        num_total_iterations
-    );
+    
 
     for (name, winnings) in winnings.iter() {
         debug!(

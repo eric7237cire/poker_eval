@@ -290,14 +290,18 @@ impl EqAgent {
         let can_raise =
             max_can_raise > call_amt + player_state.cur_round_putting_in_pot.unwrap_or(0);
 
+        let common_comment = format!(
+            "Position {} Family {};Range {:.1}%", player_state.position, position_family, range_to_use.get_perc_enabled() * 100.0
+        );
+
         if !any_raises {
             if range_to_use.data[ri] {
                 if can_raise {
                     let raise_to = min(game_state.current_to_call * 3, max_can_raise);
                     CommentedAction {
                         action: ActionEnum::Raise(raise_to - game_state.current_to_call, raise_to),
-                        comment: Some(format!("Opening raise in position {} family {}",
-                            player_state.position, position_family))
+                        comment: Some(format!("Opening raise;{}",
+                            common_comment))
                     }
                 } else {
                     CommentedAction {
@@ -314,8 +318,8 @@ impl EqAgent {
                 } else {
                     CommentedAction {
                         action: ActionEnum::Fold,
-                        comment: Some(format!("Not in opening range;In position {} family {};Range {}",
-                        player_state.position, position_family, range_to_use.to_string()))
+                        comment: Some(format!("Not in opening range;{}",
+                        common_comment))
                     }
                 }
             }
@@ -326,14 +330,28 @@ impl EqAgent {
                 if self.agent_config.three_bet_range.data[ri] {
                     CommentedAction {
                         action: ActionEnum::Call(call_amt),
-                        comment: Some(format!("Calling >3-bet in position {} family {}",
-                            player_state.position, position_family))
+                        comment: Some(format!("Calling >3-bet;3bet Range: {:.1}%;{}",
+                            self.agent_config.three_bet_range.get_perc_enabled()*100.0,
+                            common_comment))
                     }
                 } else {
                     CommentedAction {
                         action: ActionEnum::Fold,
-                        comment: Some(format!("Not in 3-bet range;In position {} family {};Range {}",
-                        player_state.position, position_family, self.agent_config.three_bet_range.to_string()))
+                        comment: Some(format!("Not in >3-bet range;3bet range: {:.1}%;{}",
+                        self.agent_config.three_bet_range.get_perc_enabled()*100.0, common_comment))
+                    }
+                }
+            } else if bb_amt >= 4.5 {
+                if range_to_use.data[ri] {
+                    CommentedAction {
+                        action: ActionEnum::Call(call_amt),
+                        comment: Some(format!("Calling a 3 bet in opening range;{}", common_comment)),
+                    }
+                } else {
+                    CommentedAction {
+                        action: ActionEnum::Fold,
+                        comment: Some(format!("Not in opening range, folding to 3-bet;{}",
+                        common_comment))
                     }
                 }
             } else {
@@ -342,7 +360,8 @@ impl EqAgent {
                         let raise_to = min(game_state.current_to_call * 3, max_can_raise);
                         CommentedAction {
                             action: ActionEnum::Raise(raise_to - game_state.current_to_call, raise_to),
-                            comment: Some("3-betting".to_string()),
+                            comment: Some(format!("3-betting with range: {:.1}%;{}",
+                            &self.agent_config.three_bet_range.get_perc_enabled()*100.0, common_comment))
                         }
                     } else {
                         CommentedAction {
@@ -353,12 +372,14 @@ impl EqAgent {
                 } else if range_to_use.data[ri] {
                     CommentedAction {
                         action: ActionEnum::Call(call_amt),
-                        comment: Some("Calling a 3 bet".to_string()),
+                        comment: Some(format!("Calling a pre flop raise;{}",
+                        common_comment))
                     }
                 } else {
                     CommentedAction {
                         action: ActionEnum::Fold,
-                        comment: Some("Not in opening range, folding to 3-bet".to_string()),
+                        comment: Some(format!("Not in opening range, folding to PFR;{}",
+                        common_comment))
                     }
                 }
             

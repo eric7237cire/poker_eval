@@ -73,11 +73,13 @@ impl BoolRange {
         BoolRange { data }
     }
 
+    /*
+    Dangerous because this sets all bits, so the # of set bits > # of hole cards
     pub fn all_enabled() -> Self {
         let mut result = Self::new();
         result.data.fill(true);
         result
-    }
+    }*/
 
     #[inline]
     pub fn set_enabled(&mut self, indices: &[usize], enabled: bool) {
@@ -447,6 +449,10 @@ impl BoolRange {
             }
         }
         true
+    }
+
+    pub fn get_perc_enabled(&self) -> f64 {
+        self.data.count_ones() as f64 / NUMBER_OF_HOLE_CARDS as f64    
     }
 }
 const COMBO_PAT: &str = r"(?:(?:[AaKkQqJjTt2-9]{2}[os]?)|(?:(?:[AaKkQqJjTt2-9][cdhs]){2}))";
