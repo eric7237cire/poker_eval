@@ -627,7 +627,6 @@ impl GameRunner {
                     .into());
                 }
 
-                
                 //we go around again
                 assert!(self.game_state.total_active_players > 0);
                 self.game_state.num_left_to_act = self.game_state.total_active_players - 1;
@@ -637,7 +636,6 @@ impl GameRunner {
                     self.game_state.total_players_all_in += 1;
                     self.game_state.total_active_players -= 1;
                 };
-
             }
             ActionEnum::Check => {
                 if self.game_state.current_to_call > 0 {
@@ -688,14 +686,11 @@ impl GameRunner {
                 assert!(self.game_state.total_active_players > 0);
                 self.game_state.num_left_to_act = self.game_state.total_active_players - 1;
 
-
                 //Discount after setting num left to act
                 if self.game_state.player_states[player_index].all_in {
                     self.game_state.total_players_all_in += 1;
                     self.game_state.total_active_players -= 1;
                 };
-
-                
             }
         }
 
@@ -712,7 +707,7 @@ impl GameRunner {
             self.finish()?;
             return Ok(true);
         }
-       
+
         let any_all_in = self.game_state.total_players_all_in > 0;
 
         //either only all in left or only 1 active left that is ok with the pot
@@ -742,11 +737,10 @@ impl GameRunner {
         );
 
         //Do we need to move to the next round?
-        if self.game_state.num_left_to_act == 0 
-        {
+        if self.game_state.num_left_to_act == 0 {
             //note moving to next round has checks to make sure everyone has called
             //or is all in
-            
+
             if self.game_state.current_round == Round::River {
                 trace!("River is done, game is done");
                 self.finish()?;
@@ -755,7 +749,7 @@ impl GameRunner {
             let cur_round = self.game_state.current_round;
             self.move_to_next_round()?;
             assert_eq!(cur_round.next().unwrap(), self.game_state.current_round);
-            
+
             return Ok(false);
         }
 

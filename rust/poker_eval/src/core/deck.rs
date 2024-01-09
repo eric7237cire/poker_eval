@@ -3,7 +3,7 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 use crate::{Card, CardUsedType, HoleCards, PokerError, ALL_CARDS};
 
 pub struct Deck {
-    pub(crate) rng: StdRng,
+    pub rng: StdRng,
     pub(crate) used_cards: CardUsedType,
     //available_range: BoolRange,
 }

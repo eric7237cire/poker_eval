@@ -93,7 +93,8 @@ impl HoleCards {
                     's'
                 } else {
                     'o'
-                }));
+                },
+            ));
         }
         s
     }

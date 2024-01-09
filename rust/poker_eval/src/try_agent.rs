@@ -11,7 +11,7 @@ use num_format::{Locale, ToFormattedString};
 use poker_eval::{
     agents::{
         build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
-        PassiveCallingStation, Tag,
+        EqAgentConfig, PassiveCallingStation, Tag,
     },
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{
@@ -20,23 +20,25 @@ use poker_eval::{
     game_runner_source::GameRunnerSourceEnum,
     init_logger, Card, Deck, GameLog, GameRunner, InitialPlayerState,
 };
+use rand::seq::SliceRandom;
 
 fn build_agents(
     flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
     partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
     monte_carlo_equity_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
-    hero_position: usize,
     num_total_players: usize,
 ) -> Vec<Box<dyn Agent>> {
     //let calling_75 = "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+";
 
     let mut agents: Vec<Box<dyn Agent>> = Vec::new();
 
-    agents.push(Box::new(PassiveCallingStation::new(
-        None,
-        "CallAllA",
+    agents.push(Box::new(EqAgent::new(
+        Some("22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+"),
+        "EqAggro1",
+        EqAgentConfig::get_aggressive(),
         flop_texture_db.clone(),
         partial_rank_db.clone(),
+        monte_carlo_equity_db.clone(),
     )));
     // agents.push(Box::new(EqAgent::new(
     //     None,
@@ -45,23 +47,6 @@ fn build_agents(
     //     partial_rank_db.clone(),
     //     monte_carlo_equity_db.clone(),
     // )));
-
-    for i in 0..num_total_players - 4 {
-        // let agent = PassiveCallingStation::new(
-        //     Some(calling_75),
-        //     &format!("CalStn75_{}", i + 1),
-        //     flop_texture_db.clone(),
-        //     partial_rank_db.clone(),
-        // );
-        agents.push(Box::new(EqAgent::new(
-            Some("22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+"),
-            &format!("EqAgent{}", i+1),
-            flop_texture_db.clone(),
-            partial_rank_db.clone(),
-            monte_carlo_equity_db.clone(),
-        )));
-        //agents.push(Box::new(agent));
-    }
 
     agents.push(Box::new(PassiveCallingStation::new(
         None,
@@ -72,7 +57,8 @@ fn build_agents(
 
     agents.push(Box::new(EqAgent::new(
         Some("22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+"),
-        "EqAgentB",
+        "EqAggroB",
+        EqAgentConfig::get_aggressive(),
         flop_texture_db.clone(),
         partial_rank_db.clone(),
         monte_carlo_equity_db.clone(),
@@ -86,7 +72,31 @@ fn build_agents(
         partial_rank_db.clone(),
     );
 
-    agents.insert(hero_position, Box::new(tag));
+    agents.push(Box::new(tag));
+
+    let tag = Tag::new(
+        "JJ+,AJs+,AQo+,KQs",
+        "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+",
+        "SpiderMan",
+        flop_texture_db.clone(),
+        partial_rank_db.clone(),
+    );
+
+    agents.push(Box::new(tag));
+
+    let mut i = 0;
+    while agents.len() < num_total_players {
+        i += 1;
+        agents.push(Box::new(EqAgent::new(
+            Some("22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+"),
+            &format!("EqPsvAgent{}", i + 1),
+            EqAgentConfig::get_passive(),
+            flop_texture_db.clone(),
+            partial_rank_db.clone(),
+            monte_carlo_equity_db.clone(),
+        )));
+        //agents.push(Box::new(agent));
+    }
 
     //info!("Built {} agents", agents.len());
 
@@ -123,7 +133,6 @@ fn main() {
     let num_players = 9;
     let mut hero_winnings = 0;
     let mut winnings: HashMap<String, i64> = HashMap::new();
-    let mut hero_position = 0;
 
     let hh_path = PathBuf::from("/home/eric/git/poker_eval/rust/hand_history");
     let ps_hh_path = PathBuf::from("/home/eric/git/poker_eval/rust/ps_hand_history");
@@ -144,9 +153,11 @@ fn main() {
             rcref_ftdb.clone(),
             rcref_pdb.clone(),
             rcref_mcedb.clone(),
-            hero_position,
-            num_players
+            num_players,
         );
+        agents.shuffle(&mut agent_deck.rng);
+
+        let hero_index = agents.iter().position(|a| a.get_name() == "Hero").unwrap();
         set_agent_hole_cards(&mut agent_deck, &mut agents);
 
         let players: Vec<InitialPlayerState> = build_initial_players_from_agents(&agents);
@@ -177,21 +188,20 @@ fn main() {
         }
 
         #[allow(unused_mut)]
-        let mut change = game_runner.game_state.player_states[hero_position].stack as i64
-            - game_runner.game_state.player_states[hero_position].initial_stack as i64;
+        let mut change = game_runner.game_state.player_states[hero_index].stack as i64
+            - game_runner.game_state.player_states[hero_index].initial_stack as i64;
 
         hero_winnings += change;
 
-        for p in  game_runner.game_state.player_states.iter() {
-            let winnings = winnings.entry( p.player_name.clone()).or_insert(0);
+        for p in game_runner.game_state.player_states.iter() {
+            let winnings = winnings.entry(p.player_name.clone()).or_insert(0);
             *winnings += p.stack as i64 - p.initial_stack as i64;
         }
 
         debug!(
-            "Iteration {}, hero change {}, heap size {}",
+            "Iteration {}, hero change {}",
             it_num,
             change.to_formatted_string(&Locale::en),
-            heap.len()
         );
 
         // for (c, it, _log) in heap.iter() {
@@ -226,12 +236,10 @@ fn main() {
         }
 
         // if it_num >= 79 {
-            
-            
-        //     assert!(heap.iter().any(|(_c, it, _log)| *it==79)); 
+
+        //     assert!(heap.iter().any(|(_c, it, _log)| *it==79));
         // }
 
-        hero_position = (hero_position + 1) % game_runner.game_state.player_states.len();
         //if it_num == 5 || it_num == 36
         //if it_num == 35
         //if it_num == 70

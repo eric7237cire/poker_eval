@@ -1,11 +1,6 @@
-use std::{
-    cell::RefCell,
-    cmp::{min},
-    rc::Rc,
-};
+use std::{cell::RefCell, cmp::min, rc::Rc};
 
 use boomphf::Mphf;
-
 
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
@@ -49,7 +44,7 @@ impl Tag {
 
     fn decide_preflop(
         &self,
-        _player_state: &PlayerState,
+        player_state: &PlayerState,
         game_state: &GameState,
     ) -> CommentedAction {
         let ri = self.hole_cards.unwrap().to_range_index();
@@ -57,14 +52,31 @@ impl Tag {
         //Anyone bet so far?
         let any_raises = game_state.current_to_call > game_state.bb;
 
+        let max_can_raise = player_state.stack + player_state.cur_round_putting_in_pot.unwrap_or(0);
+
+        //How much extra we need to put in to call the current bet, can be less than the total call required
+        //if we are calling a raise to our bet
+        let call_amt = min(
+            game_state.current_to_call - player_state.cur_round_putting_in_pot.unwrap_or(0),
+            player_state.stack,
+        );
+
+        let can_raise =
+            max_can_raise > call_amt + player_state.cur_round_putting_in_pot.unwrap_or(0);
+
         if !any_raises {
             if self.pfr_range.data[ri] {
-                CommentedAction {
-                    action: ActionEnum::Raise(
-                        game_state.bb * 3 - game_state.current_to_call,
-                        game_state.bb * 3,
-                    ),
-                    comment: Some("Opening raise".to_string()),
+                if can_raise {
+                    let raise_to = min(game_state.current_to_call * 3, max_can_raise);
+                    CommentedAction {
+                        action: ActionEnum::Raise(raise_to - game_state.current_to_call, raise_to),
+                        comment: Some("Opening raise".to_string()),
+                    }
+                } else {
+                    CommentedAction {
+                        action: ActionEnum::Call(call_amt),
+                        comment: Some("Calling because can't raise any more".to_string()),
+                    }
                 }
             } else {
                 if game_state.current_to_call == 0 {
@@ -81,12 +93,17 @@ impl Tag {
             }
         } else {
             if self.pfr_range.data[ri] {
-                CommentedAction {
-                    action: ActionEnum::Raise(
-                        game_state.current_to_call * 3 - game_state.current_to_call,
-                        game_state.current_to_call * 3,
-                    ),
-                    comment: Some("3-betting".to_string()),
+                if can_raise {
+                    let raise_to = min(game_state.current_to_call * 3, max_can_raise);
+                    CommentedAction {
+                        action: ActionEnum::Raise(raise_to - game_state.current_to_call, raise_to),
+                        comment: Some("3-betting".to_string()),
+                    }
+                } else {
+                    CommentedAction {
+                        action: ActionEnum::Call(call_amt),
+                        comment: Some("Calling because can't raise any more".to_string()),
+                    }
                 }
             } else {
                 CommentedAction {

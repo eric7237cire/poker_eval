@@ -104,3 +104,4 @@ https://burtleburtle.net/bob/hash/perfect.html
 ~/git/poker_eval/rust/poker_eva
 cargo build --profile profiling
 samply record ../target/profiling/test_perf
+samply record ./target/profiling/try_agent

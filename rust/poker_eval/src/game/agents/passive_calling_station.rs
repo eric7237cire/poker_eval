@@ -76,7 +76,7 @@ impl PassiveCallingStation {
             game_state.current_to_call - player_state.cur_round_putting_in_pot.unwrap_or(0);
 
         if game_state.current_to_call <= half_pot
-            && likes_hand_response.likes_hand >= LikesHandLevel::CallSmallBet
+            && likes_hand_response.likes_hand >= LikesHandLevel::SmallBet
         {
             return CommentedAction {
                 action: ActionEnum::Call(call_amt),

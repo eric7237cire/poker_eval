@@ -2,14 +2,16 @@
 
 */
 
-use std::{iter::once, cmp::Ordering};
+use std::{cmp::Ordering, iter::once};
 
 use itertools::Itertools;
 use log::trace;
 
 use crate::{
-    pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash, rank::Rank, NUMBER_OF_SUITS},
-    Board, BoolRange, Deck, HoleCards, PokerError, ALL_CARDS, ALL_HOLE_CARDS, Suit, Card,
+    pre_calc::{
+        fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash, rank::Rank, NUMBER_OF_SUITS,
+    },
+    Board, BoolRange, Card, Deck, HoleCards, PokerError, Suit, ALL_CARDS, ALL_HOLE_CARDS,
 };
 
 /*
@@ -127,7 +129,6 @@ pub fn calc_equity(
     Ok(out)
 }
 
-
 pub fn calc_equity_vs_random(
     board: &Board,
     //The player ranges we are calculating equity for
@@ -216,19 +217,15 @@ pub fn calc_equity_vs_random(
         if player_ranks[0] == max_rank.unwrap() {
             out += 1.0 / count_at_max as f64;
         }
-        
     }
 
     out /= num_simulations as f64;
-    
 
     Ok(out)
 }
 
-
 //If we are doing hole cards + board vs pure random ranges we can reduce the search space
-pub fn get_equivalent_hole_board(hole_cards: &HoleCards, board: &Board) -> (HoleCards, Board) 
-{
+pub fn get_equivalent_hole_board(hole_cards: &HoleCards, board: &Board) -> (HoleCards, Board) {
     //Mapping
 
     /*
@@ -236,7 +233,7 @@ pub fn get_equivalent_hole_board(hole_cards: &HoleCards, board: &Board) -> (Hole
     if hi card different suit => diamond
 
     In the flop we have; for 5 cards
-    5 0 
+    5 0
     4 1
     3 2
     3 1 1
@@ -265,7 +262,6 @@ pub fn get_equivalent_hole_board(hole_cards: &HoleCards, board: &Board) -> (Hole
 
     let mut suits = Suit::suits();
     suits.sort_by(|suit1, suit2| {
-
         if suit1 == suit2 {
             return Ordering::Equal;
         }
@@ -284,34 +280,34 @@ pub fn get_equivalent_hole_board(hole_cards: &HoleCards, board: &Board) -> (Hole
     //Mapping it to clubs/diamonds/heart/spade
     //mapping[club] = Spade
 
-    //Now we need an array where 
+    //Now we need an array where
     //mapping[suit] = the index in suits, which is the new mapping
     let mut mapping = vec![Suit::Club; NUMBER_OF_SUITS];
-    
+
     for index in 0..NUMBER_OF_SUITS {
         let map_target: Suit = Suit::try_from(index as u8).unwrap();
         let map_source = suits[index];
         mapping[map_source as usize] = map_target;
     }
 
-    
-
     let mut board_cards = Vec::with_capacity(board.get_num_cards());
     for c in board.as_slice_card().iter() {
-        board_cards.push(
-            Card::new(c.value, mapping[c.suit as usize])
-        );
+        board_cards.push(Card::new(c.value, mapping[c.suit as usize]));
     }
 
-
     let new_hole_cards = HoleCards::new(
-        swap_suit(hole_cards.get_hi_card(), mapping[hole_cards.get_hi_card().suit as usize]),
-        swap_suit(hole_cards.get_lo_card(), mapping[hole_cards.get_lo_card().suit as usize])
-    ).unwrap();
-
+        swap_suit(
+            hole_cards.get_hi_card(),
+            mapping[hole_cards.get_hi_card().suit as usize],
+        ),
+        swap_suit(
+            hole_cards.get_lo_card(),
+            mapping[hole_cards.get_lo_card().suit as usize],
+        ),
+    )
+    .unwrap();
 
     (new_hole_cards, Board::new_from_cards(&board_cards))
-
 }
 
 fn swap_suit(card: Card, to_suit: Suit) -> Card {
@@ -393,8 +389,14 @@ mod tests {
     ) {
         let (actual_hole_cards, actual_board) = get_equivalent_hole_board(&hole_cards, &board);
 
-        info!("hole cards {} should be {} and are {}", hole_cards, expected_hole_cards, actual_hole_cards);
-        info!("board {} should be {} and is {}", board, expected_board, actual_board);
+        info!(
+            "hole cards {} should be {} and are {}",
+            hole_cards, expected_hole_cards, actual_hole_cards
+        );
+        info!(
+            "board {} should be {} and is {}",
+            board, expected_board, actual_board
+        );
 
         assert_eq!(*expected_hole_cards, actual_hole_cards);
         assert_eq!(expected_board.as_slice_card(), actual_board.as_slice_card());
@@ -408,7 +410,7 @@ mod tests {
         init_test_logger();
 
         let hole_cards: HoleCards = "Ac Th".parse().unwrap();
-        let board : Board = "Js Qh 2h 3c 4c".parse().unwrap();
+        let board: Board = "Js Qh 2h 3c 4c".parse().unwrap();
 
         let expected_hole_cards: HoleCards = "Ad Tc".parse().unwrap();
         let expected_board: Board = "Jh Qc 2c 3d 4d".parse().unwrap();
@@ -416,7 +418,7 @@ mod tests {
         compare_expected_actual(&hole_cards, &board, &expected_hole_cards, &expected_board);
 
         let hole_cards: HoleCards = "Ac Ad".parse().unwrap();
-        let board : Board = "Kc Qc Jc".parse().unwrap();
+        let board: Board = "Kc Qc Jc".parse().unwrap();
 
         let expected_hole_cards: HoleCards = "Ac Ad".parse().unwrap();
         let expected_board: Board = "Kc Qc Jc".parse().unwrap();
@@ -425,13 +427,13 @@ mod tests {
 
         compare_expected_actual(&hole_cards, &board, &expected_hole_cards, &expected_board);
 
-        let board : Board = "Kd Qd Jd".parse().unwrap();
+        let board: Board = "Kd Qd Jd".parse().unwrap();
         let expected_board: Board = "Kd Qd Jd".parse().unwrap();
 
         compare_expected_actual(&hole_cards, &board, &expected_hole_cards, &expected_board);
 
         let hole_cards: HoleCards = "Ac Ad".parse().unwrap();
-        let board : Board = "Ks Qs Js".parse().unwrap();
+        let board: Board = "Ks Qs Js".parse().unwrap();
 
         let expected_hole_cards: HoleCards = "Ac Ad".parse().unwrap();
         let expected_board: Board = "Kh Qh Jh".parse().unwrap();
@@ -439,7 +441,7 @@ mod tests {
         compare_expected_actual(&hole_cards, &board, &expected_hole_cards, &expected_board);
 
         let hole_cards: HoleCards = "7h 2s".parse().unwrap();
-        let board : Board = "Kc Js Qc Ts 3d".parse().unwrap();
+        let board: Board = "Kc Js Qc Ts 3d".parse().unwrap();
 
         let expected_hole_cards: HoleCards = "2c 7d".parse().unwrap();
         let expected_board: Board = "Kh Jc Qh Tc 3s".parse().unwrap();

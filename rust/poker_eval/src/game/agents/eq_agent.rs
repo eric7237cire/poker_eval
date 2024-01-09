@@ -1,6 +1,5 @@
 use std::{cell::RefCell, cmp::min, rc::Rc};
 
-
 use boomphf::Mphf;
 
 use crate::{
@@ -9,8 +8,9 @@ use crate::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
     likes_hands::likes_hand,
+    monte_carlo_equity::get_equivalent_hole_board,
     pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash},
-    ActionEnum, BoolRange, CommentedAction, GameState, HoleCards, PlayerState, Round, monte_carlo_equity::get_equivalent_hole_board,
+    ActionEnum, BoolRange, CommentedAction, GameState, HoleCards, PlayerState, Round,
 };
 
 use super::Agent;
@@ -33,19 +33,19 @@ pub struct EqAgentConfig {
 }
 
 impl EqAgentConfig {
-    pub fn get_aggressive(&self) -> Self {
+    pub fn get_aggressive() -> Self {
         Self {
             flop_min_eq_to_bet: vec![0.5, 0.4, 0.4, 0.3],
             turn_min_eq_to_bet: vec![0.5, 0.55, 0.60],
-            river_min_eq_to_bet: vec![0.55, 0.7, 0.8]
+            river_min_eq_to_bet: vec![0.55, 0.7, 0.8],
         }
     }
 
-    pub fn get_passive(&self) -> Self {
+    pub fn get_passive() -> Self {
         Self {
             flop_min_eq_to_bet: vec![0.7, 0.8],
             turn_min_eq_to_bet: vec![0.8, 0.9],
-            river_min_eq_to_bet: vec![0.8, 0.9]
+            river_min_eq_to_bet: vec![0.8, 0.9],
         }
     }
 }
@@ -84,7 +84,7 @@ impl EqAgent {
             flop_texture_db,
             monte_carlo_db,
             hash_func: load_boomperfect_hash(),
-            agent_config
+            agent_config,
         }
     }
 
@@ -110,10 +110,18 @@ impl EqAgent {
             &self.hash_func,
         );
 
-        let likes_hand_response =
-            likes_hand(&prc, &ft, &rank, &game_state.board, &hole_cards, non_folded_players).unwrap();
+        let likes_hand_response = likes_hand(
+            &prc,
+            &ft,
+            &rank,
+            &game_state.board,
+            &hole_cards,
+            non_folded_players,
+        )
+        .unwrap();
 
-        let (eq_hole_cards, mut eq_board) = get_equivalent_hole_board(&hole_cards, &game_state.board);
+        let (eq_hole_cards, mut eq_board) =
+            get_equivalent_hole_board(&hole_cards, &game_state.board);
         eq_board.get_index();
 
         let eq = self
@@ -178,15 +186,47 @@ impl EqAgent {
         }
 
         //here not facing a bet
+        let mut bet_threshold = eq + 1.1;
+
+        //1st index is 2 players
+        let threshold_index = (non_folded_players - 2) as usize;
+        if game_state.current_round == Round::Flop
+            && !self.agent_config.flop_min_eq_to_bet.is_empty()
+        {
+            if threshold_index >= self.agent_config.flop_min_eq_to_bet.len() {
+                bet_threshold = self.agent_config.flop_min_eq_to_bet
+                    [self.agent_config.flop_min_eq_to_bet.len() - 1];
+            } else {
+                bet_threshold = self.agent_config.flop_min_eq_to_bet[threshold_index];
+            }
+        } else if game_state.current_round == Round::Turn
+            && !self.agent_config.turn_min_eq_to_bet.is_empty()
+        {
+            if threshold_index >= self.agent_config.turn_min_eq_to_bet.len() {
+                bet_threshold = self.agent_config.turn_min_eq_to_bet
+                    [self.agent_config.turn_min_eq_to_bet.len() - 1];
+            } else {
+                bet_threshold = self.agent_config.turn_min_eq_to_bet[threshold_index];
+            }
+        } else if game_state.current_round == Round::River
+            && !self.agent_config.river_min_eq_to_bet.is_empty()
+        {
+            if threshold_index >= self.agent_config.river_min_eq_to_bet.len() {
+                bet_threshold = self.agent_config.river_min_eq_to_bet
+                    [self.agent_config.river_min_eq_to_bet.len() - 1];
+            } else {
+                bet_threshold = self.agent_config.river_min_eq_to_bet[threshold_index];
+            }
+        }
 
         let half_pot_bet = min(game_state.pot() / 2, player_state.stack);
 
-        if eq > 0.5 {
+        if eq > bet_threshold {
             return CommentedAction {
                 action: ActionEnum::Bet(half_pot_bet),
                 comment: Some(format!(
                     "Eq is at least {:.2}%;{}",
-                    0.5 * 100.0,
+                    bet_threshold * 100.0,
                     comment_common
                 )),
             };
@@ -195,7 +235,7 @@ impl EqAgent {
                 action: ActionEnum::Check,
                 comment: Some(format!(
                     "Eq is less than {:.2}%;{}",
-                    0.5 * 100.0,
+                    bet_threshold * 100.0,
                     comment_common
                 )),
             };

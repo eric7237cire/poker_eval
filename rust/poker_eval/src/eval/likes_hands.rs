@@ -504,7 +504,6 @@ fn worried_about_flushes(
     not_like_hand_comments: &mut Vec<String>,
     num_in_pot: u8,
 ) {
-
     if rank.get_rank_enum() >= RankEnum::Flush {
         return;
     }
@@ -591,7 +590,7 @@ fn likes_made_flushes_and_straights(
     if RankEnum::Flush == rank.get_rank_enum() {
         if let Some(made_flush) = prc.made_flush {
             assert!(ft.same_suited_max_count >= 3);
-            if ft.same_suited_max_count >= 4 {            
+            if ft.same_suited_max_count >= 4 {
                 if made_flush == CardValue::Ace {
                     likes_hand_comments
                         .push(format!("Made nut flush with a good card {}", made_flush));
@@ -606,20 +605,17 @@ fn likes_made_flushes_and_straights(
                         made_flush
                     ));
                 }
-            } else { //if ft.same_suited_max_count == 3 {
+            } else {
+                //if ft.same_suited_max_count == 3 {
                 if made_flush == CardValue::Ace {
-                    likes_hand_comments
-                        .push(format!("Made nut flush {}", made_flush));
+                    likes_hand_comments.push(format!("Made nut flush {}", made_flush));
                     *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
                 } else {
-                    likes_hand_comments
-                        .push(format!("Made flush with a {}", made_flush));
+                    likes_hand_comments.push(format!("Made flush with a {}", made_flush));
                     *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
                 }
             }
-
-            
-        } 
+        }
     }
 }
 
