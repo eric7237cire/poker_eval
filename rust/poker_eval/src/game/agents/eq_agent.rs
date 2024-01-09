@@ -30,6 +30,11 @@ pub struct EqAgentConfig {
     pub flop_min_eq_to_bet: Vec<f64>,
     pub turn_min_eq_to_bet: Vec<f64>,
     pub river_min_eq_to_bet: Vec<f64>,
+    pub early_position_range: BoolRange,
+    pub mid_position_range: BoolRange,
+    pub late_position_range: BoolRange,
+    pub button_range: BoolRange,
+    pub three_bet_range: BoolRange,
 }
 
 impl EqAgentConfig {
@@ -38,6 +43,11 @@ impl EqAgentConfig {
             flop_min_eq_to_bet: vec![0.5, 0.4, 0.4, 0.3],
             turn_min_eq_to_bet: vec![0.5, 0.55, 0.60],
             river_min_eq_to_bet: vec![0.55, 0.7, 0.8],
+            early_position_range: "77+,A4s+,AJo+,K9s+,K5s,KQo,QTs+,JTs".parse().unwrap(),
+            mid_position_range: "55+,A3s+,ATo+,K8s+,K6s-K5s,KJo+,Q9s+,J9s+,T9s,76s".parse().unwrap(),
+            late_position_range: "33+,A2s+,A9o+,K4s+,KTo+,Q6s+,QTo+,J8s+,JTo,T8s+,97s+,87s".parse().unwrap(),
+            button_range: "22+,A2+,K2s+,K7o+,Q2s+,Q8o+,J3s+,J8o+,T5s+,T8o+,96s+,98o,85s+,87o,75s+,76o,64s+,53s+".parse().unwrap(),
+            three_bet_range: "JJ+,AQs+,AKo".parse().unwrap(),
         }
     }
 
@@ -46,6 +56,11 @@ impl EqAgentConfig {
             flop_min_eq_to_bet: vec![0.7, 0.8],
             turn_min_eq_to_bet: vec![0.8, 0.9],
             river_min_eq_to_bet: vec![0.8, 0.9],
+            early_position_range: "22+,A2+,K2s+,K7o+,Q2s+,Q8o+,J3s+,J8o+,T5s+,T8o+,96s+,98o,85s+,87o,75s+,76o,64s+,53s+".parse().unwrap(),
+            mid_position_range: "22+,A2+,K2+,Q2+,J2+,T2s+,T6o+,92s+,95o+,82s+,84o+,72s+,74o+,62s+,65o,53s+".parse().unwrap(),
+            late_position_range: "22+,A2+,K2+,Q2+,J2+,T2+,92+,82s+,84o+,72s+,74o+,62s+,64o+,52s+,54o,42s+,32s".parse().unwrap(),
+            button_range: "22+,A2+,K2+,Q2+,J2+,T2+,92+,82s+,84o+,72s+,74o+,62s+,64o+,52s+,54o,42s+,32s".parse().unwrap(),
+            three_bet_range: "AA".parse().unwrap()
         }
     }
 }
@@ -241,34 +256,127 @@ impl EqAgent {
             };
         }
     }
+
+    fn decide_preflop(
+        &self,
+        player_state: &PlayerState,
+        game_state: &GameState,
+    ) -> CommentedAction {
+        let ri = self.hole_cards.unwrap().to_range_index();
+
+        //Anyone bet so far?
+        let any_raises = game_state.current_to_call > game_state.bb;
+
+        let max_can_raise = player_state.stack + player_state.cur_round_putting_in_pot.unwrap_or(0);
+
+        //How much extra we need to put in to call the current bet, can be less than the total call required
+        //if we are calling a raise to our bet
+        let call_amt = min(
+            game_state.current_to_call - player_state.cur_round_putting_in_pot.unwrap_or(0),
+            player_state.stack,
+        );
+
+        let num_players = game_state.player_states.len() as u8;
+        let position_family = player_state.position.get_position_family(num_players);
+
+        let range_to_use = match position_family {
+            crate::PositionFamily::UTG => &self.agent_config.early_position_range,
+            crate::PositionFamily::Middle => &self.agent_config.mid_position_range,
+            crate::PositionFamily::Late => &self.agent_config.late_position_range,
+            crate::PositionFamily::Button => &self.agent_config.button_range,
+            crate::PositionFamily::Blinds => &self.agent_config.button_range,
+        };
+
+        let can_raise =
+            max_can_raise > call_amt + player_state.cur_round_putting_in_pot.unwrap_or(0);
+
+        if !any_raises {
+            if range_to_use.data[ri] {
+                if can_raise {
+                    let raise_to = min(game_state.current_to_call * 3, max_can_raise);
+                    CommentedAction {
+                        action: ActionEnum::Raise(raise_to - game_state.current_to_call, raise_to),
+                        comment: Some(format!("Opening raise in position {} family {}",
+                            player_state.position, position_family))
+                    }
+                } else {
+                    CommentedAction {
+                        action: ActionEnum::Call(call_amt),
+                        comment: Some("Calling because can't raise any more".to_string()),
+                    }
+                }
+            } else {
+                if game_state.current_to_call == 0 {
+                    CommentedAction {
+                        action: ActionEnum::Check,
+                        comment: Some("Checking the big blind".to_string()),
+                    }
+                } else {
+                    CommentedAction {
+                        action: ActionEnum::Fold,
+                        comment: Some(format!("Not in opening range;In position {} family {};Range {}",
+                        player_state.position, position_family, range_to_use.to_string()))
+                    }
+                }
+            }
+        } else {
+            let bb_amt = game_state.current_to_call as f64 / game_state.bb as f64;
+
+            if bb_amt >= 10.0 {
+                if self.agent_config.three_bet_range.data[ri] {
+                    CommentedAction {
+                        action: ActionEnum::Call(call_amt),
+                        comment: Some(format!("Calling >3-bet in position {} family {}",
+                            player_state.position, position_family))
+                    }
+                } else {
+                    CommentedAction {
+                        action: ActionEnum::Fold,
+                        comment: Some(format!("Not in 3-bet range;In position {} family {};Range {}",
+                        player_state.position, position_family, self.agent_config.three_bet_range.to_string()))
+                    }
+                }
+            } else {
+                if self.agent_config.three_bet_range.data[ri] {
+                    if can_raise {
+                        let raise_to = min(game_state.current_to_call * 3, max_can_raise);
+                        CommentedAction {
+                            action: ActionEnum::Raise(raise_to - game_state.current_to_call, raise_to),
+                            comment: Some("3-betting".to_string()),
+                        }
+                    } else {
+                        CommentedAction {
+                            action: ActionEnum::Call(call_amt),
+                            comment: Some("Calling because can't raise any more".to_string()),
+                        }
+                    }
+                } else if range_to_use.data[ri] {
+                    CommentedAction {
+                        action: ActionEnum::Call(call_amt),
+                        comment: Some("Calling a 3 bet".to_string()),
+                    }
+                } else {
+                    CommentedAction {
+                        action: ActionEnum::Fold,
+                        comment: Some("Not in opening range, folding to 3-bet".to_string()),
+                    }
+                }
+            
+            }
+        }
+    }
+
 }
 
 impl Agent for EqAgent {
     fn decide(&mut self, player_state: &PlayerState, game_state: &GameState) -> CommentedAction {
-        let action = match game_state.current_round {
+        match game_state.current_round {
             Round::Preflop => {
-                let call_amt =
-                    game_state.current_to_call - player_state.cur_round_putting_in_pot.unwrap_or(0);
-                let ri = self.hole_cards.unwrap().to_range_index();
-                //not handling all ins
-                if let Some(calling_range) = self.calling_range.as_ref() {
-                    if calling_range.data[ri] {
-                        ActionEnum::Call(call_amt)
-                    } else {
-                        ActionEnum::Fold
-                    }
-                } else {
-                    ActionEnum::Call(call_amt)
-                }
+                return self.decide_preflop(player_state, game_state);
             }
             _ => {
                 return self.decide_postflop(player_state, game_state);
             }
-        };
-
-        CommentedAction {
-            action,
-            comment: None,
         }
     }
 
