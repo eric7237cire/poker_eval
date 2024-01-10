@@ -18,7 +18,7 @@ pub fn init_test_logger() {
             "poker_eval::game::agents::agent_source",
             log::LevelFilter::Debug,
         )
-        .filter_module("poker_eval::game::game_log", log::LevelFilter::Debug)
+        .filter_module("poker_eval::game::game_log", log::LevelFilter::Trace)
         .filter_module("poker_eval::eval::rank", log::LevelFilter::Debug)
         .filter_module("poker_eval::eval::board_texture", log::LevelFilter::Debug)
         .filter_module("poker_eval::core::bool_range", log::LevelFilter::Debug)

@@ -136,6 +136,7 @@ pub fn calc_equity_vs_random(
     num_players: usize,
     num_simulations: usize,
 ) -> Result<f64, PokerError> {
+    assert!(num_players >= 2 && num_players <= 10);
     let hash_func = load_boomperfect_hash();
 
     let mut deck = Deck::new();

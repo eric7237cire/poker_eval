@@ -425,6 +425,7 @@ impl GameLog {
 
         let mut cur_round = Round::Preflop;
         for action in self.actions.iter() {
+            trace!("Action {}", action.non_folded_players);
             //First action of round
             if action.round != cur_round {
                 cur_round = action.round;
@@ -448,12 +449,14 @@ impl GameLog {
                 first_hero_action = true;
             }
 
-            if first_hero_action {
+            if action.player_index == hero_index && first_hero_action {
                 let (eq_hole_cards, mut eq_board) = get_equivalent_hole_board(
                     &self.players[hero_index].cards.as_ref().unwrap(),
                     &self.board[0..cur_round.get_num_board_cards()],
                 );
                 eq_board.get_index();
+
+                trace!("First hero action {}", &action);
 
                 //First hero action of round
                 match cur_round {
@@ -513,7 +516,7 @@ impl GameLog {
 
         ret.initial_stack = self.players[hero_index].stack as f64 / self.bb as f64;
         ret.final_stack = self.final_stacks[hero_index] as f64 / self.bb as f64;
-        ret.final_pot = self.actions.last().unwrap().pot as f64 / self.bb as f64;
+        ret.final_pot = self.actions.last().unwrap().get_fields_after_action().pot as f64 / self.bb as f64;
         
         ret.in_showdown = match self.final_states[hero_index] {
             FinalPlayerState::Folded => false,
@@ -523,6 +526,18 @@ impl GameLog {
         };
         
         if ret.in_showdown {
+
+            //In the case of an all in, we may not have round data
+            if ret.pot_start_river == 0.0 {
+                ret.pot_start_river = ret.final_pot;
+            }
+            if ret.pot_start_turn == 0.0 {
+                ret.pot_start_turn = ret.final_pot;
+            }
+            if ret.pot_start_flop == 0.0 {
+                ret.pot_start_flop = ret.final_pot;
+            }
+
             let player_ranks = self.players.iter().enumerate().map(|(p_idx, p)| {
 
                 if self.final_states[p_idx] == FinalPlayerState::Folded {
@@ -570,7 +585,7 @@ fn get_action_amount(action: &PlayerAction, bb: ChipType) -> f64 {
 
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Eq, PartialEq)]
 pub enum ActionString {
     Fold,
     Call,
@@ -863,7 +878,7 @@ impl Eq for GameLog {}
 
 #[cfg(test)]
 mod tests {
-    use crate::{init_test_logger, ActionEnum};
+    use crate::{init_test_logger, ActionEnum, pre_calc::perfect_hash::load_boomperfect_hash, game_log_source::GameLogSource, game_runner_source::GameRunnerSourceEnum, GameRunner};
 
     use super::*;
 
@@ -1106,5 +1121,107 @@ Agent 1               - 495 # Started with 500 change -5
 Agent 4               - 495 # Started with 500 change -5
 ";
         let _game_log: GameLog = hh.parse().unwrap();
+    }
+
+    #[test]
+    fn test_csv_line() {
+        
+        init_test_logger();
+    
+    //Same as test_parse_with_hole_cards
+        let hh = "
+    *** Players *** 
+    Plyr A - 12 - As Kh
+    Plyr B - 147 - 2d 2c
+    Plyr C - 55 - 7d 2h
+    Plyr D - 55 - Ks Kc
+    *** Blinds *** 
+    Plyr A - 5
+    Plyr B - 10
+    *** Preflop ***
+    Plyr C calls 10   # UTG acts first
+    Plyr D calls 10
+    Plyr A calls 5
+    Plyr B raises 10 to 20 
+    Plyr C folds
+    Plyr D calls 10 
+    Plyr A calls 2 # all in 
+    *** Flop ***
+    2s 7c 8s
+    Plyr B bets 10
+    Plyr D raises 10 to 20
+    Plyr B calls 10
+    *** Turn ***
+    3h 
+    Plyr B bets 10
+    Plyr D folds
+    *** River ***
+    Js
+    *** Summary ***
+    Plyr A - 0
+    Plyr B - 209
+    Plyr C - 45 
+    Plyr D - 15
+        ";
+        let parsed_game_log: GameLog = hh.parse().unwrap();
+
+        let monte_carlo_equity_db: EvalCacheWithHcReDb<ProduceMonteCarloEval> =
+        EvalCacheWithHcReDb::new().unwrap();
+        let rcref_mcedb = Rc::new(RefCell::new(monte_carlo_equity_db));
+
+        let hash_func = load_boomperfect_hash();
+
+        //We run it through the game runner to have all fields filled in
+        let game_log_source: GameLogSource = GameLogSource::new(parsed_game_log);
+
+        let mut game_runner2 = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
+
+        for _ in 0..200 {
+            let r = game_runner2.process_next_action().unwrap();
+            if r {
+                break;
+            }
+        }
+
+        let log2 = game_runner2
+            .to_game_log()
+            .unwrap();
+
+        //Player B
+        let game_line = log2.get_csv_line(1, rcref_mcedb.clone(), &hash_func).unwrap();
+
+        assert_eq!(game_line.first_action_amount_preflop, 2.0);
+        assert_eq!(game_line.first_action_amount_flop, 1.0);
+        assert_eq!(game_line.first_action_amount_turn, 1.0);
+        assert_eq!(game_line.first_action_amount_river, 0.0);
+
+        assert_eq!(game_line.players_before_hero_pre_flop, 3);
+        assert_eq!(game_line.players_before_hero_flop, 1);
+        assert_eq!(game_line.players_before_hero_turn, 1);
+
+        assert_eq!(game_line.pot_start_flop, 62.0 / 10.0);
+        assert_eq!(game_line.pot_start_turn, 102.0 / 10.0);
+        assert_eq!(game_line.pot_start_river, 112.0 / 10.0);
+
+        assert_eq!(game_line.final_stack, 209.0 / 10.0);
+
+        //Player D
+        let game_line = log2.get_csv_line(3, rcref_mcedb, &hash_func).unwrap();
+        assert_eq!(game_line.first_action_amount_preflop, 1.0);
+        assert_eq!(game_line.first_action_amount_flop, 2.0);
+        assert_eq!(game_line.first_action_turn, ActionString::Fold);
+        assert_eq!(game_line.first_action_amount_turn, 0.0);
+        assert_eq!(game_line.first_action_river, ActionString::NA);
+        assert_eq!(game_line.first_action_amount_river, 0.0);
+
+        assert_eq!(game_line.pot_start_flop, 62.0 / 10.0);
+        assert_eq!(game_line.pot_start_turn, 102.0 / 10.0);
+        //We didn't make it
+        assert_eq!(game_line.pot_start_river, 0.0);
+
+        assert_eq!(game_line.final_stack, 15.0 / 10.0);
+
+        //All in user counts
+        assert_eq!(game_line.players_before_hero_turn, 2);
     }
 }

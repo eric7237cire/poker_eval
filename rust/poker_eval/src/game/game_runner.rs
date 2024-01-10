@@ -238,8 +238,6 @@ impl GameRunner {
     fn close_betting_round(&mut self) -> Result<(), PokerError> {
         trace!("Close betting round");
 
-        trace!("Check all players have called/folded/or are all in");
-
         self.check_pots_good()?;
         //calculate max_pot
         let _player_count = self.game_state.player_states.len();
@@ -705,8 +703,9 @@ impl GameRunner {
         }
 
         trace!(
-            "Last action: {}",
-            &self.game_state.actions.last().as_ref().unwrap()
+            "Last action: {} Num Left To Act: {}",
+            &self.game_state.actions.last().as_ref().unwrap(),
+            self.game_state.num_left_to_act
         );
 
         let not_folded_count =
@@ -721,8 +720,10 @@ impl GameRunner {
         let any_all_in = self.game_state.total_players_all_in > 0;
 
         //either only all in left or only 1 active left that is ok with the pot
-        //if finish_with_1_active_plyr || self.game_state.total_active_players == 0 {
-        if self.game_state.total_active_players == 0 {
+        if self.game_state.total_active_players <= 0 || (
+            self.game_state.num_left_to_act == 0 && 
+            self.game_state.total_active_players == 1)
+            {
             trace!("Only all in player left, and we have at least 1 all in, advancing to river");
 
             assert!(any_all_in);
