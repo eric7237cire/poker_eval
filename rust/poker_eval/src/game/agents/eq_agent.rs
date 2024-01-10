@@ -267,15 +267,6 @@ impl EqAgent {
         //Anyone bet so far?
         let any_raises = game_state.current_to_call > game_state.bb;
 
-        let max_can_raise = player_state.stack + player_state.cur_round_putting_in_pot.unwrap_or(0);
-
-        //How much extra we need to put in to call the current bet, can be less than the total call required
-        //if we are calling a raise to our bet
-        let call_amt = min(
-            game_state.current_to_call - player_state.cur_round_putting_in_pot.unwrap_or(0),
-            player_state.stack,
-        );
-
         let num_players = game_state.player_states.len() as u8;
         let position_family = player_state.position.get_position_family(num_players);
 
@@ -287,28 +278,17 @@ impl EqAgent {
             crate::PositionFamily::Blinds => &self.agent_config.button_range,
         };
 
-        let can_raise =
-            max_can_raise > call_amt + player_state.cur_round_putting_in_pot.unwrap_or(0);
-
+        let helpers = player_state.get_helpers(game_state);
+        
         let common_comment = format!(
             "Position {} Family {};Range {:.1}%", player_state.position, position_family, range_to_use.get_perc_enabled() * 100.0
         );
 
         if !any_raises {
             if range_to_use.data[ri] {
-                if can_raise {
-                    let raise_to = min(game_state.current_to_call * 3, max_can_raise);
-                    CommentedAction {
-                        action: ActionEnum::Raise(raise_to - game_state.current_to_call, raise_to),
-                        comment: Some(format!("Opening raise;{}",
+                helpers.build_raise_to(game_state, game_state.current_to_call * 3, 
+                    format!("Opening raise;{}",
                             common_comment))
-                    }
-                } else {
-                    CommentedAction {
-                        action: ActionEnum::Call(call_amt),
-                        comment: Some("Calling because can't raise any more".to_string()),
-                    }
-                }
             } else {
                 if game_state.current_to_call == 0 {
                     CommentedAction {
@@ -329,7 +309,7 @@ impl EqAgent {
             if bb_amt >= 10.0 {
                 if self.agent_config.three_bet_range.data[ri] {
                     CommentedAction {
-                        action: ActionEnum::Call(call_amt),
+                        action: ActionEnum::Call(helpers.call_amount),
                         comment: Some(format!("Calling >3-bet;3bet Range: {:.1}%;{}",
                             self.agent_config.three_bet_range.get_perc_enabled()*100.0,
                             common_comment))
@@ -344,7 +324,7 @@ impl EqAgent {
             } else if bb_amt >= 4.5 {
                 if range_to_use.data[ri] {
                     CommentedAction {
-                        action: ActionEnum::Call(call_amt),
+                        action: ActionEnum::Call(helpers.call_amount),
                         comment: Some(format!("Calling a 3 bet in opening range;{}", common_comment)),
                     }
                 } else {
@@ -356,22 +336,12 @@ impl EqAgent {
                 }
             } else {
                 if self.agent_config.three_bet_range.data[ri] {
-                    if can_raise {
-                        let raise_to = min(game_state.current_to_call * 3, max_can_raise);
-                        CommentedAction {
-                            action: ActionEnum::Raise(raise_to - game_state.current_to_call, raise_to),
-                            comment: Some(format!("3-betting with range: {:.1}%;{}",
+                    helpers.build_raise_to(game_state, game_state.current_to_call * 3,
+                        format!("3-betting with range: {:.1}%;{}",
                             &self.agent_config.three_bet_range.get_perc_enabled()*100.0, common_comment))
-                        }
-                    } else {
-                        CommentedAction {
-                            action: ActionEnum::Call(call_amt),
-                            comment: Some("Calling because can't raise any more".to_string()),
-                        }
-                    }
                 } else if range_to_use.data[ri] {
                     CommentedAction {
-                        action: ActionEnum::Call(call_amt),
+                        action: ActionEnum::Call(helpers.call_amount),
                         comment: Some(format!("Calling a pre flop raise;{}",
                         common_comment))
                     }

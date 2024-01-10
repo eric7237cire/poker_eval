@@ -76,6 +76,25 @@ Have classifier based on performance vs 4 players
 3 -- Bet situation (unbet, facing bet, facing raise)
 4 -- Check, Bet/Raise, Fold, Call
 
+# Go through each hand where lost money,  won @ showdown, won with folding
+
+Create a database, 
+
+hand 
+starting position|num players|hole cards|hole card category
+
+round
+hand_id|round|equity|bet situation|action|pot|amt_put_in|relative position -- (num acted, num left to act)
+
+action is 1st one
+equity is monte carlo est. equity
+pot is at start of round 
+amt_put_in is amount put in before start of round
+
+result
+winning_hand|losing_hand|winning_hand_category|losing_hand_category|amt_won|amt_put_in
+
+
 # Hand Analyzer:
 
 Detect -- not bet enough ?  
@@ -86,6 +105,9 @@ Solution: Bet more
 Detect -- Get outdrawn
 This is high flop equity and loses on river
 Detect by: Winners eq on flop or turn < hero equity 
+
+Also too many players preflop/flop/turn/etc.
+
 Solution: Bet higher preflop/flop/turn
 
 Detect -- Got dominated 

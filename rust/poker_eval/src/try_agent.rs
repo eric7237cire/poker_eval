@@ -128,7 +128,7 @@ fn main() {
     //we want to track the worst loses
     let mut heap: BinaryHeap<(i64, i32, GameLog)> = BinaryHeap::new();
 
-    let num_total_iterations = 100;
+    let num_total_iterations = 10_000;
     let num_worst_hands_to_keep = 5;
     let num_players = 9;
     let mut winnings: HashMap<String, i64> = HashMap::new();
@@ -172,7 +172,7 @@ fn main() {
 
         let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(agent_source)).unwrap();
 
-        for _ in 0..200 {
+        for _ in 0..2000 {
             let action_count_before = game_runner.game_state.actions.len();
             let r = game_runner.process_next_action().unwrap();
             if r {
@@ -196,11 +196,13 @@ fn main() {
             *winnings += p.stack as i64 - p.initial_stack as i64;
         }
 
-        debug!(
-            "Iteration {}, hero change {}",
-            it_num,
-            change.to_formatted_string(&Locale::en),
-        );
+        if it_num % 100 == 0 {
+            debug!(
+                "Iteration {}, hero change {}",
+                it_num,
+                change.to_formatted_string(&Locale::en),
+            );
+        }
 
         // for (c, it, _log) in heap.iter() {
         //     debug!(
