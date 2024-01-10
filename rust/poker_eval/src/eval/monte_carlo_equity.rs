@@ -225,7 +225,7 @@ pub fn calc_equity_vs_random(
 }
 
 //If we are doing hole cards + board vs pure random ranges we can reduce the search space
-pub fn get_equivalent_hole_board(hole_cards: &HoleCards, board: &Board) -> (HoleCards, Board) {
+pub fn get_equivalent_hole_board(hole_cards: &HoleCards, board: &[Card]) -> (HoleCards, Board) {
     //Mapping
 
     /*
@@ -252,7 +252,7 @@ pub fn get_equivalent_hole_board(hole_cards: &HoleCards, board: &Board) -> (Hole
 
     let mut suit_frequency = vec![0; NUMBER_OF_SUITS];
 
-    for c in board.as_slice_card() {
+    for c in board.iter() {
         suit_frequency[c.suit as usize] += 1;
     }
 
@@ -290,8 +290,8 @@ pub fn get_equivalent_hole_board(hole_cards: &HoleCards, board: &Board) -> (Hole
         mapping[map_source as usize] = map_target;
     }
 
-    let mut board_cards = Vec::with_capacity(board.get_num_cards());
-    for c in board.as_slice_card().iter() {
+    let mut board_cards = Vec::with_capacity(board.len());
+    for c in board.iter() {
         board_cards.push(Card::new(c.value, mapping[c.suit as usize]));
     }
 
@@ -387,7 +387,8 @@ mod tests {
         expected_hole_cards: &HoleCards,
         expected_board: &Board,
     ) {
-        let (actual_hole_cards, actual_board) = get_equivalent_hole_board(&hole_cards, &board);
+        let (actual_hole_cards, actual_board) =
+            get_equivalent_hole_board(&hole_cards, board.as_slice_card());
 
         info!(
             "hole cards {} should be {} and are {}",

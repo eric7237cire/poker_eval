@@ -9,8 +9,8 @@ use crate::pre_calc::perfect_hash::load_boomperfect_hash;
 use crate::pre_calc::rank::Rank;
 use crate::{set_used_card, Board, Card, GameLog, InitialPlayerState, PlayerAction};
 use crate::{
-    ActionEnum, CardUsedType, ChipType, GameState, PlayerState, PokerError, Position, Round,
-    FinalPlayerState
+    ActionEnum, CardUsedType, ChipType, FinalPlayerState, GameState, PlayerState, PokerError,
+    Position, Round,
 };
 
 use crate::game::game_runner_source::GameRunnerSource;
@@ -334,7 +334,8 @@ impl GameRunner {
                 .unwrap();
 
             self.game_state.player_states[player_index].stack += self.game_state.pot();
-            self.game_state.player_states[player_index].final_state = Some(FinalPlayerState::EveryoneElseFolded);
+            self.game_state.player_states[player_index].final_state =
+                Some(FinalPlayerState::EveryoneElseFolded);
 
             for player_index in 0..self.game_state.player_states.len() {
                 self.game_runner_source.set_final_player_state(
@@ -526,12 +527,13 @@ impl GameRunner {
             action
         );
 
-        assert!(!self.game_state.player_states[player_index].all_in);        
+        assert!(!self.game_state.player_states[player_index].all_in);
         assert!(self.game_state.player_states[player_index].is_active());
 
         match action {
             ActionEnum::Fold => {
-                self.game_state.player_states[player_index].final_state = Some(FinalPlayerState::Folded);
+                self.game_state.player_states[player_index].final_state =
+                    Some(FinalPlayerState::Folded);
 
                 assert!(self.game_state.total_active_players > 0);
                 self.game_state.total_active_players -= 1;
@@ -940,8 +942,12 @@ impl GameRunner {
             .map(|p| p.stack)
             .collect();
 
-        let final_states: Vec<FinalPlayerState> = self.game_state.player_states.iter().map(|p|
-            p.final_state.unwrap().clone()).collect();
+        let final_states: Vec<FinalPlayerState> = self
+            .game_state
+            .player_states
+            .iter()
+            .map(|p| p.final_state.unwrap().clone())
+            .collect();
 
         let game_log: GameLog = GameLog {
             players,
@@ -952,7 +958,7 @@ impl GameRunner {
             final_stacks,
             final_states,
             //Don't calculate yet as it's expensive
-            best_player_hands: vec![]
+            best_player_hands: vec![],
         };
 
         Ok(game_log)

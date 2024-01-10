@@ -302,21 +302,20 @@ impl OldRank {
     Quads: Q Q Q Q 1st Kicker
 
     */
-    pub fn  get_winning(&self, cards: &[Card]) -> [Card;5] {
+    pub fn get_winning(&self, cards: &[Card]) -> [Card; 5] {
         let low_set_mask: u32 = 0b1_1111_1111_1111;
-        let mut ret = [ALL_CARDS[0];5];
+        let mut ret = [ALL_CARDS[0]; 5];
         let mut cur_card_index = 0;
 
         match self {
             OldRank::HighCard(k) => {
-                
                 let bvs: ValueSetType = ValueSetType::new([*k]);
                 assert_eq!(5, bvs.count_ones());
 
                 for set_bit in bvs.iter_ones().rev() {
                     let value: CardValue = set_bit.try_into().unwrap();
                     let card = cards.iter().find(|c| c.value == value).unwrap();
-                    
+
                     ret[cur_card_index] = *card;
                     cur_card_index += 1;
                 }
@@ -324,14 +323,14 @@ impl OldRank {
             OldRank::OnePair(k) => {
                 let pair_value_u32 = (k >> 13).trailing_zeros();
                 let pair_value: CardValue = (pair_value_u32 as u8).try_into().unwrap();
-                
+
                 let first_card = cards.iter().find(|c| c.value == pair_value).unwrap();
                 let second_card = cards.iter().rev().find(|c| c.value == pair_value).unwrap();
 
                 ret[cur_card_index] = *first_card;
                 cur_card_index += 1;
                 ret[cur_card_index] = *second_card;
-                cur_card_index += 1;                
+                cur_card_index += 1;
 
                 let bvs = ValueSetType::new([*k & low_set_mask]);
 
@@ -365,14 +364,13 @@ impl OldRank {
             OldRank::ThreeOfAKind(k) => {
                 let trips_value_u32 = (k >> 13).trailing_zeros();
                 let trips_value: CardValue = (trips_value_u32 as u8).try_into().unwrap();
-                
-                for c in cards
-                    .iter(){
+
+                for c in cards.iter() {
                     if c.value == trips_value {
                         ret[cur_card_index] = *c;
                         cur_card_index += 1;
                     }
-                };
+                }
 
                 let bvs = ValueSetType::new([*k & low_set_mask]);
 
@@ -412,8 +410,6 @@ impl OldRank {
                         cur_card_index += 1;
                     }
                 }
-
-                
             }
             OldRank::Flush(k) => {
                 let bvs: ValueSetType = ValueSetType::new([*k]);
@@ -425,7 +421,6 @@ impl OldRank {
                     ret[cur_card_index] = *card;
                     cur_card_index += 1;
                 }
-
             }
             OldRank::FullHouse(k) => {
                 let trips_values_u32 = k >> 13;
@@ -437,25 +432,24 @@ impl OldRank {
                     (pair_value_u32.trailing_zeros() as u8).try_into().unwrap();
 
                 for c in cards {
-                    if c.value == trips_value  {
+                    if c.value == trips_value {
                         ret[cur_card_index] = *c;
                         cur_card_index += 1;
                     }
                 }
                 for c in cards {
-                    if  c.value == pair_value {
+                    if c.value == pair_value {
                         ret[cur_card_index] = *c;
                         cur_card_index += 1;
                     }
                 }
-               
             }
             OldRank::FourOfAKind(k) => {
                 let quads_value_u32 = (k >> 13).trailing_zeros();
                 let quads_value: CardValue = (quads_value_u32 as u8).try_into().unwrap();
-                
+
                 for c in cards {
-                    if c.value == quads_value  {
+                    if c.value == quads_value {
                         ret[cur_card_index] = *c;
                         cur_card_index += 1;
                     }
@@ -526,11 +520,10 @@ impl OldRank {
                         cur_card_index += 1;
                     }
                 }
-
             }
         }
-    
-        ret 
+
+        ret
     }
 }
 

@@ -136,7 +136,7 @@ impl EqAgent {
         .unwrap();
 
         let (eq_hole_cards, mut eq_board) =
-            get_equivalent_hole_board(&hole_cards, &game_state.board);
+            get_equivalent_hole_board(&hole_cards, game_state.board.as_slice_card());
         eq_board.get_index();
 
         let eq = self
@@ -279,16 +279,21 @@ impl EqAgent {
         };
 
         let helpers = player_state.get_helpers(game_state);
-        
+
         let common_comment = format!(
-            "Position {} Family {};Range {:.1}%", player_state.position, position_family, range_to_use.get_perc_enabled() * 100.0
+            "Position {} Family {};Range {:.1}%",
+            player_state.position,
+            position_family,
+            range_to_use.get_perc_enabled() * 100.0
         );
 
         if !any_raises {
             if range_to_use.data[ri] {
-                helpers.build_raise_to(game_state, game_state.current_to_call * 3, 
-                    format!("Opening raise;{}",
-                            common_comment))
+                helpers.build_raise_to(
+                    game_state,
+                    game_state.current_to_call * 3,
+                    format!("Opening raise;{}", common_comment),
+                )
             } else {
                 if game_state.current_to_call == 0 {
                     CommentedAction {
@@ -298,8 +303,7 @@ impl EqAgent {
                 } else {
                     CommentedAction {
                         action: ActionEnum::Fold,
-                        comment: Some(format!("Not in opening range;{}",
-                        common_comment))
+                        comment: Some(format!("Not in opening range;{}", common_comment)),
                     }
                 }
             }
@@ -310,53 +314,68 @@ impl EqAgent {
                 if self.agent_config.three_bet_range.data[ri] {
                     CommentedAction {
                         action: ActionEnum::Call(helpers.call_amount),
-                        comment: Some(format!("Calling >3-bet;3bet Range: {:.1}%;{}",
-                            self.agent_config.three_bet_range.get_perc_enabled()*100.0,
-                            common_comment))
+                        comment: Some(format!(
+                            "Calling >3-bet;3bet Range: {:.1}%;{}",
+                            self.agent_config.three_bet_range.get_perc_enabled() * 100.0,
+                            common_comment
+                        )),
                     }
                 } else {
                     CommentedAction {
                         action: ActionEnum::Fold,
-                        comment: Some(format!("Not in >3-bet range;3bet range: {:.1}%;{}",
-                        self.agent_config.three_bet_range.get_perc_enabled()*100.0, common_comment))
+                        comment: Some(format!(
+                            "Not in >3-bet range;3bet range: {:.1}%;{}",
+                            self.agent_config.three_bet_range.get_perc_enabled() * 100.0,
+                            common_comment
+                        )),
                     }
                 }
             } else if bb_amt >= 4.5 {
                 if range_to_use.data[ri] {
                     CommentedAction {
                         action: ActionEnum::Call(helpers.call_amount),
-                        comment: Some(format!("Calling a 3 bet in opening range;{}", common_comment)),
+                        comment: Some(format!(
+                            "Calling a 3 bet in opening range;{}",
+                            common_comment
+                        )),
                     }
                 } else {
                     CommentedAction {
                         action: ActionEnum::Fold,
-                        comment: Some(format!("Not in opening range, folding to 3-bet;{}",
-                        common_comment))
+                        comment: Some(format!(
+                            "Not in opening range, folding to 3-bet;{}",
+                            common_comment
+                        )),
                     }
                 }
             } else {
                 if self.agent_config.three_bet_range.data[ri] {
-                    helpers.build_raise_to(game_state, game_state.current_to_call * 3,
-                        format!("3-betting with range: {:.1}%;{}",
-                            &self.agent_config.three_bet_range.get_perc_enabled()*100.0, common_comment))
+                    helpers.build_raise_to(
+                        game_state,
+                        game_state.current_to_call * 3,
+                        format!(
+                            "3-betting with range: {:.1}%;{}",
+                            &self.agent_config.three_bet_range.get_perc_enabled() * 100.0,
+                            common_comment
+                        ),
+                    )
                 } else if range_to_use.data[ri] {
                     CommentedAction {
                         action: ActionEnum::Call(helpers.call_amount),
-                        comment: Some(format!("Calling a pre flop raise;{}",
-                        common_comment))
+                        comment: Some(format!("Calling a pre flop raise;{}", common_comment)),
                     }
                 } else {
                     CommentedAction {
                         action: ActionEnum::Fold,
-                        comment: Some(format!("Not in opening range, folding to PFR;{}",
-                        common_comment))
+                        comment: Some(format!(
+                            "Not in opening range, folding to PFR;{}",
+                            common_comment
+                        )),
                     }
                 }
-            
             }
         }
     }
-
 }
 
 impl Agent for EqAgent {

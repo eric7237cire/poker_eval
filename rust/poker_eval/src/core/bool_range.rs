@@ -452,7 +452,7 @@ impl BoolRange {
     }
 
     pub fn get_perc_enabled(&self) -> f64 {
-        self.data.count_ones() as f64 / NUMBER_OF_HOLE_CARDS as f64    
+        self.data.count_ones() as f64 / NUMBER_OF_HOLE_CARDS as f64
     }
 }
 const COMBO_PAT: &str = r"(?:(?:[AaKkQqJjTt2-9]{2}[os]?)|(?:(?:[AaKkQqJjTt2-9][cdhs]){2}))";

@@ -24,7 +24,7 @@ pub struct PlayerState {
 
     //what has not yet been put in the middle
     pub stack: ChipType,
-    
+
     //None means not yet acted this round
     //already deducted from stack
     pub cur_round_putting_in_pot: Option<ChipType>,
@@ -33,7 +33,7 @@ pub struct PlayerState {
 
     //In current betting round, so == remaining stack
     pub all_in: bool,
-    
+
     pub final_state: Option<FinalPlayerState>,
 }
 
@@ -43,7 +43,7 @@ pub enum FinalPlayerState {
     Folded,
     WonShowdown, //perhaps a tie
     LostShowdown,
-    EveryoneElseFolded
+    EveryoneElseFolded,
 }
 
 //Helpers for common things that agents need to know to decide
@@ -54,7 +54,7 @@ pub struct AgentDecisionHelpers {
     pub call_amount: ChipType,
     pub max_can_raise: ChipType,
     pub min_can_raise: ChipType,
-    pub can_raise: bool
+    pub can_raise: bool,
 }
 
 impl PlayerState {
@@ -99,40 +99,38 @@ impl PlayerState {
 
         //let third_pot = max(min_can_raise, min(max_can_raise, current_pot / 3));
 
-        let can_raise =
-            max_can_raise > call_amt + self.cur_round_putting_in_pot.unwrap_or(0);
+        let can_raise = max_can_raise > call_amt + self.cur_round_putting_in_pot.unwrap_or(0);
 
         AgentDecisionHelpers {
             call_amount: call_amt,
             max_can_raise,
             min_can_raise,
-            can_raise
+            can_raise,
         }
     }
 }
 
-
 impl AgentDecisionHelpers {
-    pub fn build_raise_to(&self, 
+    pub fn build_raise_to(
+        &self,
         game_state: &GameState,
-        raise_to: ChipType, 
-        comment: String) -> CommentedAction {
-
+        raise_to: ChipType,
+        comment: String,
+    ) -> CommentedAction {
         //Apply max
         let raise_to = min(raise_to, self.max_can_raise);
-    
+
         if self.can_raise {
             CommentedAction {
                 action: crate::ActionEnum::Raise(raise_to - game_state.current_to_call, raise_to),
-                comment: Some(comment)
+                comment: Some(comment),
             }
         } else {
             CommentedAction {
                 action: crate::ActionEnum::Call(self.call_amount),
-                comment: Some(comment)
+                comment: Some(comment),
             }
         }
-        
     }
 }
 
@@ -180,11 +178,9 @@ impl GameState {
     }
 
     pub fn non_folded_players(&self) -> u8 {
-        self
-            .player_states
+        self.player_states
             .iter()
             .filter(|ps| !ps.is_folded())
             .count() as u8
     }
 }
-

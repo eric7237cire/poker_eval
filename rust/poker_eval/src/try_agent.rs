@@ -18,7 +18,7 @@ use poker_eval::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
     game_runner_source::GameRunnerSourceEnum,
-    init_logger, Card, Deck, GameLog, GameRunner, InitialPlayerState
+    init_logger, Card, Deck, GameLog, GameRunner, InitialPlayerState,
 };
 use rand::seq::SliceRandom;
 
@@ -190,7 +190,6 @@ fn main() {
         let mut change = game_runner.game_state.player_states[hero_index].stack as i64
             - game_runner.game_state.player_states[hero_index].initial_stack as i64;
 
-
         for p in game_runner.game_state.player_states.iter() {
             let winnings = winnings.entry(p.player_name.clone()).or_insert(0);
             *winnings += p.stack as i64 - p.initial_stack as i64;
@@ -280,8 +279,6 @@ fn main() {
         serde_json::to_string_pretty(&overview).unwrap(),
     )
     .unwrap();
-
-    
 
     for (name, winnings) in winnings.iter() {
         debug!(

@@ -99,7 +99,7 @@ fn main_impl() -> Result<(), PokerError> {
                     board.add_card(card)?;
                 }
 
-                let (eq_hole_cards, mut eq_board) = get_equivalent_hole_board(&hole_cards, &board);
+                let (eq_hole_cards, mut eq_board) = get_equivalent_hole_board(&hole_cards, board.as_slice_card());
                 eq_board.get_index();
                 //board.get_index();
 

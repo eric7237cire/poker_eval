@@ -941,7 +941,7 @@ mod test {
             BoolRange::default(),
             BoolRange::default(),
             BoolRange::default(),
-            BoolRange::default()
+            BoolRange::default(),
         ];
 
         let mut it_count = 0;

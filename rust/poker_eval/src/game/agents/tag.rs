@@ -92,7 +92,6 @@ impl Tag {
                 }
             }
         } else {
-
             let bb_amt = game_state.current_to_call as f64 / game_state.bb as f64;
 
             if self.three_bet_range.data[ri] {
@@ -148,7 +147,6 @@ impl Tag {
 
         let helpers = player_state.get_helpers(game_state);
 
-        
         if game_state.current_to_call == 0 {
             return self.decide_should_bet(&likes_hand_response, player_state, game_state);
         } else {
@@ -164,14 +162,17 @@ impl Tag {
                 };
             }
             if likes_hand_response.likes_hand >= LikesHandLevel::AllIn {
-                return helpers.build_raise_to(game_state, helpers.max_can_raise, format!(
+                return helpers.build_raise_to(
+                    game_state,
+                    helpers.max_can_raise,
+                    format!(
                         "Going all in because likes hand @ {};Positive {};Negative: {}",
                         likes_hand_response.likes_hand,
                         likes_hand_response.likes_hand_comments.join(", "),
                         likes_hand_response.not_like_hand_comments.join(", ")
-                    ));
-            }
-            else if helpers.call_amount <= game_state.pot() / 2
+                    ),
+                );
+            } else if helpers.call_amount <= game_state.pot() / 2
                 && likes_hand_response.likes_hand >= LikesHandLevel::LargeBet
             {
                 return CommentedAction {
@@ -183,7 +184,7 @@ impl Tag {
                         likes_hand_response.not_like_hand_comments.join(", ")
                     )),
                 };
-            } 
+            }
 
             return CommentedAction {
                 action: ActionEnum::Fold,
@@ -319,7 +320,7 @@ mod tests {
                 stack: 500,
                 position: pos.try_into().unwrap(),
                 player_name: "Villian".to_string(),
-                initial_stack: 500,                
+                initial_stack: 500,
                 ..Default::default()
             });
         }

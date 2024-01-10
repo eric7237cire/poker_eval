@@ -38,6 +38,15 @@ impl Round {
             Round::River => None,
         }
     }
+
+    pub fn get_num_board_cards(&self) -> usize {
+        match self {
+            Round::Preflop => 0,
+            Round::Flop => 3,
+            Round::Turn => 4,
+            Round::River => 5,
+        }
+    }
 }
 
 impl Into<usize> for Round {

@@ -26,13 +26,11 @@ pub enum PositionFamily {
     Middle,
     Late,
     Button,
-    Blinds
+    Blinds,
 }
 
 impl Position {
-
     pub fn get_position_family(&self, num_players: u8) -> PositionFamily {
-        
         if self.pos == 0 || self.pos == 1 {
             return PositionFamily::Blinds;
         }
@@ -49,8 +47,8 @@ impl Position {
 
         if num_players == 5 {
             //sb bb utg mp button
-            assert_eq!(self.pos,3);
-            return PositionFamily::Middle;            
+            assert_eq!(self.pos, 3);
+            return PositionFamily::Middle;
         }
 
         if num_players == 6 {
@@ -58,9 +56,9 @@ impl Position {
             if self.pos == 3 {
                 return PositionFamily::Middle;
             } else {
-                assert_eq!(self.pos,4);
+                assert_eq!(self.pos, 4);
                 return PositionFamily::Late;
-            } 
+            }
         }
 
         if num_players == 7 {
@@ -70,21 +68,21 @@ impl Position {
             } else if self.pos == 4 {
                 return PositionFamily::Middle;
             } else {
-                assert_eq!(self.pos,5);
+                assert_eq!(self.pos, 5);
                 return PositionFamily::Late;
-            } 
+            }
         }
 
         if num_players == 8 {
             //sb bb utg utg mp mp2 lp button
             if self.pos == 3 {
                 return PositionFamily::UTG;
-            } else if self.pos <=5 {
+            } else if self.pos <= 5 {
                 return PositionFamily::Middle;
             } else {
-                assert_eq!(self.pos,6);
+                assert_eq!(self.pos, 6);
                 return PositionFamily::Late;
-            } 
+            }
         }
 
         //sb bb utg utg (utg) mp mp2 lp lp button
@@ -94,8 +92,7 @@ impl Position {
             return PositionFamily::Middle;
         } else {
             return PositionFamily::UTG;
-        } 
-
+        }
     }
 
     pub fn first_to_act(n_players: u8, round: Round) -> Position {

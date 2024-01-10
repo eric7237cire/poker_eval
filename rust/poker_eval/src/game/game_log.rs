@@ -1,17 +1,26 @@
 //A game log is all the information needed to reconstruct a game.
 
+use std::cell::RefCell;
 use std::cmp::min;
+use std::rc::Rc;
 use std::str::FromStr;
 
+use boomphf::Mphf;
 use itertools::Itertools;
 use log::trace;
 use serde::Serialize;
 
+use crate::ActionEnum;
 use crate::Card;
 use crate::FinalPlayerState;
 use crate::HoleCards;
 
+use crate::board_hc_eval_cache_redb::EvalCacheWithHcReDb;
+use crate::board_hc_eval_cache_redb::ProduceMonteCarloEval;
 use crate::game::game_log_parser::GameLogParser;
+use crate::monte_carlo_equity::get_equivalent_hole_board;
+use crate::pre_calc::fast_eval::fast_hand_eval;
+use crate::pre_calc::rank::Rank;
 use crate::rank_cards;
 use crate::ChipType;
 use crate::PlayerAction;
@@ -46,7 +55,7 @@ pub struct GameLog {
     pub final_states: Vec<FinalPlayerState>,
     // Show best hand for all players, all rounds
     // v [round_index][player_index] = 5 best cards
-    pub best_player_hands: Vec<Vec<[Card;5]>> 
+    pub best_player_hands: Vec<Vec<[Card; 5]>>,
 }
 
 impl GameLog {
@@ -349,8 +358,11 @@ impl GameLog {
         rank.print_winning(&eval_cards)
     }
 
+    /*
+    Fills in the field for best hands for each player in each round
+    */
     pub fn calc_best_hands(&mut self) {
-        let mut v: Vec<Vec<[Card;5]>> = Vec::new();
+        let mut v: Vec<Vec<[Card; 5]>> = Vec::new();
 
         let final_round = self.actions.last().unwrap().round;
         let mut round = Some(Round::Flop);
@@ -361,21 +373,28 @@ impl GameLog {
                 break;
             }
 
-            let best_player_hands = self.players.iter().map(|p| {
-                let mut board_cards = self.board.iter().take(
-                    match cur_round {
-                        Round::Flop => 3,
-                        Round::Turn => 4,
-                        Round::River => 5,
-                        _ => panic!("Invalid round"),
-                    }
-                ).cloned().collect_vec();
+            let best_player_hands = self
+                .players
+                .iter()
+                .map(|p| {
+                    let mut board_cards = self
+                        .board
+                        .iter()
+                        .take(match cur_round {
+                            Round::Flop => 3,
+                            Round::Turn => 4,
+                            Round::River => 5,
+                            _ => panic!("Invalid round"),
+                        })
+                        .cloned()
+                        .collect_vec();
 
-                board_cards.extend(p.cards.as_ref().unwrap().as_slice());
-                
-                let rank = rank_cards(board_cards.iter());
-                rank.get_winning(&board_cards)
-            }).collect::<Vec<[Card;5]>>();
+                    board_cards.extend(p.cards.as_ref().unwrap().as_slice());
+
+                    let rank = rank_cards(board_cards.iter());
+                    rank.get_winning(&board_cards)
+                })
+                .collect::<Vec<[Card; 5]>>();
 
             v.push(best_player_hands);
 
@@ -384,6 +403,333 @@ impl GameLog {
 
         self.best_player_hands = v;
     }
+
+    pub fn get_csv_line(
+        &self,
+        hero_index: usize,
+        monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
+        hash_func: &Mphf<u32>
+    ) -> Result<CsvLineForPokerHand, PokerError> {
+        let mut ret = CsvLineForPokerHand::default();
+
+        let mut mc_db = monte_carlo_db.borrow_mut();
+        //Position 0 sb, 1 bb, 2 UTG
+
+        ret.position = hero_index as u8;
+
+        //Number of players in hand
+
+        ret.players_in_hand = self.players.len() as u8;
+
+        let mut first_hero_action = true;
+
+        let mut cur_round = Round::Preflop;
+        for action in self.actions.iter() {
+            //First action of round
+            if action.round != cur_round {
+                cur_round = action.round;
+
+                match cur_round {
+                    Round::Flop => {
+                        ret.players_starting_flop = action.non_folded_players;
+                        ret.pot_start_flop = action.pot as f64 / self.bb as f64;
+                    }
+                    Round::Turn => {
+                        ret.players_starting_turn = action.non_folded_players;
+                        ret.pot_start_turn = action.pot as f64 / self.bb as f64;
+                    }
+                    Round::River => {
+                        ret.players_starting_river = action.non_folded_players;
+                        ret.pot_start_river = action.pot as f64 / self.bb as f64;
+                    }
+                    _ => panic!("Invalid round"),
+                }
+
+                first_hero_action = true;
+            }
+
+            if first_hero_action {
+                let (eq_hole_cards, mut eq_board) = get_equivalent_hole_board(
+                    &self.players[hero_index].cards.as_ref().unwrap(),
+                    &self.board[0..cur_round.get_num_board_cards()],
+                );
+                eq_board.get_index();
+
+                //First hero action of round
+                match cur_round {
+                    Round::Preflop => {
+                        ret.players_before_hero_pre_flop =
+                            self.players.len() as u8 - action.players_left_to_act - 1;
+                        ret.hero_eq_start_pre_flop = mc_db
+                            .get_put(&eq_board, &eq_hole_cards, action.non_folded_players)
+                            .unwrap();
+                        ret.amt_to_call_start_preflop =
+                            action.current_amt_to_call as f64 / self.bb as f64;
+                        ret.first_action_preflop = action.action.into();
+                        ret.first_action_amount_preflop =
+                            get_action_amount(&action, self.bb);
+                    }
+                    Round::Flop => {
+                        ret.players_before_hero_flop =
+                            ret.players_starting_flop as u8 - action.players_left_to_act - 1;
+                        ret.hero_eq_start_flop = mc_db
+                            .get_put(&eq_board, &eq_hole_cards, action.non_folded_players)
+                            .unwrap();
+                        ret.amt_to_call_start_flop =
+                            action.current_amt_to_call as f64 / self.bb as f64;
+                        ret.first_action_flop = action.action.into();
+                        ret.first_action_amount_flop =
+                            get_action_amount(&action, self.bb);
+                    }
+                    Round::Turn => {
+                        ret.players_before_hero_turn =
+                            ret.players_starting_turn as u8 - action.players_left_to_act - 1;
+                        ret.hero_eq_start_turn = mc_db
+                            .get_put(&eq_board, &eq_hole_cards, action.non_folded_players)
+                            .unwrap();
+                        ret.amt_to_call_start_turn =
+                            action.current_amt_to_call as f64 / self.bb as f64;
+                        ret.first_action_turn = action.action.into();
+                        ret.first_action_amount_turn =
+                            get_action_amount(&action, self.bb);
+                    }
+                    Round::River => {
+                        ret.players_before_hero_river =
+                            ret.players_starting_river as u8 - action.players_left_to_act - 1;
+                        ret.hero_eq_start_river = mc_db
+                            .get_put(&eq_board, &eq_hole_cards, action.non_folded_players)
+                            .unwrap();
+                        ret.amt_to_call_start_river =
+                            action.current_amt_to_call as f64 / self.bb as f64;
+                        ret.first_action_river = action.action.into();
+                        ret.first_action_amount_river =
+                            get_action_amount(&action, self.bb);
+                    }
+                }
+
+                first_hero_action = false;
+            }
+        }
+
+        ret.initial_stack = self.players[hero_index].stack as f64 / self.bb as f64;
+        ret.final_stack = self.final_stacks[hero_index] as f64 / self.bb as f64;
+        ret.final_pot = self.actions.last().unwrap().pot as f64 / self.bb as f64;
+        
+        ret.in_showdown = match self.final_states[hero_index] {
+            FinalPlayerState::Folded => false,
+            FinalPlayerState::LostShowdown => true,
+            FinalPlayerState::WonShowdown => true,
+            FinalPlayerState::EveryoneElseFolded => false,
+        };
+        
+        if ret.in_showdown {
+            let player_ranks = self.players.iter().enumerate().map(|(p_idx, p)| {
+
+                if self.final_states[p_idx] == FinalPlayerState::Folded {
+                    Rank::lowest_rank()
+                } else {
+
+                    let mut board_cards = self.board.clone();
+                    board_cards.extend(p.cards.as_ref().unwrap().as_slice());
+
+                    fast_hand_eval(self.board.iter().chain(p.cards.as_ref().unwrap().as_slice()), hash_func)
+                }
+            }).collect_vec();
+
+            let hero_rank = player_ranks[hero_index];
+            let max_rank = player_ranks.iter().enumerate().map(|(p_idx, rank)|{
+                if p_idx == hero_index {
+                    Rank::lowest_rank()
+                } else {
+                    *rank
+                }
+            }).max().unwrap();
+            ret.hero_hand_showdown = hero_rank.get_rank_enum() as u8;
+            ret.non_hero_hand_showdown = max_rank.get_rank_enum() as u8;
+        }
+
+
+        //Hero Hand strength at showdown
+        //Best non hero  at showdown
+        //Initial stack
+        //Final stack
+
+        Ok(ret)
+    }
+}
+
+fn get_action_amount(action: &PlayerAction, bb: ChipType) -> f64 {
+    match action.action {
+        ActionEnum::Fold => 0.0,
+        //As this is the 1st action, this would not be calling a raise so should be == to call amount
+        ActionEnum::Call(amount) => amount as f64 / bb as f64,
+        ActionEnum::Check => 0.0,
+        ActionEnum::Bet(amount) => amount as f64 / bb as f64,
+        ActionEnum::Raise(_, amount) => amount as f64 / bb as f64,
+    }
+
+}
+
+#[derive(Serialize, Debug)]
+pub enum ActionString {
+    Fold,
+    Call,
+    Check,
+    Bet,
+    Raise,
+    CheckRaise,
+    NA,
+}
+
+impl From<ActionEnum> for ActionString {
+    fn from(value: ActionEnum) -> Self {
+        match value {
+            ActionEnum::Fold => ActionString::Fold,
+            ActionEnum::Call(_) => ActionString::Call,
+            ActionEnum::Check => ActionString::Check,
+            ActionEnum::Bet(_) => ActionString::Bet,
+            ActionEnum::Raise(_, _) => ActionString::Raise,
+        }
+    }
+}
+
+impl Default for ActionString {
+    fn default() -> Self {
+        ActionString::NA
+    }
+}
+
+
+
+#[derive(Serialize, Debug, Default)]
+pub struct CsvLineForPokerHand {
+    #[serde(rename = "POSITION")]
+    pub position: u8,
+
+    //Number of players in hand
+    #[serde(rename = "PLR_IN_HAND")]
+    pub players_in_hand: u8,
+
+    //Number of players starting flop
+    //Number of players starting turn
+    //Number of players starting river
+    #[serde(rename = "PLR_START_FLOP")]
+    pub players_starting_flop: u8,
+
+    #[serde(rename = "PLR_START_TURN")]
+    pub players_starting_turn: u8,
+
+    #[serde(rename = "PLR_START_RIVER")]
+    pub players_starting_river: u8,
+
+    //Number of players acting before hero on flop (so 3rd, this == 2)
+    //Number of players acting before hero on turn
+    //Number of players acting before hero on river
+    #[serde(rename = "PLR_BEFORE_HERO_PREFLOP")]
+    pub players_before_hero_pre_flop: u8,
+
+    #[serde(rename = "PLR_BEFORE_HERO_FLOP")]
+    pub players_before_hero_flop: u8,
+
+    #[serde(rename = "PLR_BEFORE_HERO_TURN")]
+    pub players_before_hero_turn: u8,
+
+    #[serde(rename = "PLR_BEFORE_HERO_RIVER")]
+    pub players_before_hero_river: u8,
+
+    //Pot at start of flop
+    //Pot at start of turn
+    //Pot at start of river
+    //Final pot
+    #[serde(rename = "POT_START_FLOP")]
+    pub pot_start_flop: f64,
+
+    #[serde(rename = "POT_START_TURN")]
+    pub pot_start_turn: f64,
+
+    #[serde(rename = "POT_START_RIVER")]
+    pub pot_start_river: f64,
+
+    #[serde(rename = "FINAL_POT")]
+    pub final_pot: f64,
+
+    //Hero eq at start of flop
+    //Hero eq at start of turn
+    //Hero eq at start of river
+    #[serde(rename = "HERO_EQ_PREFLOP")]
+    pub hero_eq_start_pre_flop: f64,
+
+    #[serde(rename = "HERO_EQ_FLOP")]
+    pub hero_eq_start_flop: f64,
+
+    #[serde(rename = "HERO_EQ_TURN")]
+    pub hero_eq_start_turn: f64,
+
+    #[serde(rename = "HERO_EQ_RIVER")]
+    pub hero_eq_start_river: f64,
+
+    //Amt to call at start of flop
+    //Amt to call at start of turn
+    //Amt to call at start of river
+    #[serde(rename = "CALL_AMT_PREFLOP")]
+    pub amt_to_call_start_preflop: f64,
+
+    #[serde(rename = "CALL_AMT_FLOP")]
+    pub amt_to_call_start_flop: f64,
+
+    #[serde(rename = "CALL_AMT_TURN")]
+    pub amt_to_call_start_turn: f64,
+
+    #[serde(rename = "CALL_AMT_RIVER")]
+    pub amt_to_call_start_river: f64,
+
+    //First Action pre-flop (raise, fold, call, check (for bb))
+    //first action flop (check, bet, raise, fold, call, check-raise?)
+    //Action turn
+    //Action river
+    #[serde(rename = "ACT_PREFLOP")]
+    pub first_action_preflop: ActionString,
+
+    #[serde(rename = "ACT_FLOP")]
+    pub first_action_flop: ActionString,
+
+    #[serde(rename = "ACT_TURN")]
+    pub first_action_turn: ActionString,
+
+    #[serde(rename = "ACT_RIVER")]
+    pub first_action_river: ActionString,
+
+    //First action amount pre-flop (check raise will be this amount)
+    //First action amount flop
+    //First action amount turn
+    //First action amount river
+    #[serde(rename = "ACT_AMT_PREFLOP")]
+    pub first_action_amount_preflop: f64,
+
+    #[serde(rename = "ACT_AMT_FLOP")]
+    pub first_action_amount_flop: f64,
+
+    #[serde(rename = "ACT_AMT_TURN")]
+    pub first_action_amount_turn: f64,
+
+    #[serde(rename = "ACT_AMT_RIVER")]
+    pub first_action_amount_river: f64,
+
+    #[serde(rename = "IN_SHOWDOWN")]
+    pub in_showdown: bool,
+
+    //0 high card, 1 pair
+    #[serde(rename = "HERO_HAND")]
+    pub hero_hand_showdown: u8,
+
+    #[serde(rename = "BEST_NON_HERO_HAND")]
+    pub non_hero_hand_showdown: u8,
+
+    #[serde(rename = "INIT_STACK")]
+    pub initial_stack: f64,
+
+    #[serde(rename = "FINAL_STACK")]
+    pub final_stack: f64,
 }
 
 impl FromStr for GameLog {
