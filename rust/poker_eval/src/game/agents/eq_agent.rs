@@ -111,7 +111,7 @@ impl EqAgent {
         let non_folded_players = game_state
             .player_states
             .iter()
-            .filter(|ps| !ps.folded)
+            .filter(|ps| !ps.is_folded())
             .count() as u8;
 
         let hole_cards = self.hole_cards.as_ref().unwrap();

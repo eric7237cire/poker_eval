@@ -1,5 +1,10 @@
+use std::cmp::min;
+
+use serde::Serialize;
+
 use crate::Board;
 
+use crate::CommentedAction;
 use crate::InitialPlayerState;
 use crate::PlayerAction;
 use crate::Position;
@@ -7,6 +12,11 @@ use crate::Position;
 use crate::ChipType;
 use crate::Round;
 
+/*
+Everything that is known to all players,
+which is why hole cards are not here
+*/
+#[derive(Default)]
 pub struct PlayerState {
     pub position: Position,
     pub player_name: String,
@@ -14,8 +24,7 @@ pub struct PlayerState {
 
     //what has not yet been put in the middle
     pub stack: ChipType,
-    pub folded: bool,
-
+    
     //None means not yet acted this round
     //already deducted from stack
     pub cur_round_putting_in_pot: Option<ChipType>,
@@ -24,7 +33,28 @@ pub struct PlayerState {
 
     //In current betting round, so == remaining stack
     pub all_in: bool,
-    //pub final_eval_comment: Option<String>,
+    
+    pub final_state: Option<FinalPlayerState>,
+}
+
+#[repr(u8)]
+#[derive(Serialize, Copy, Clone, Eq, PartialEq)]
+pub enum FinalPlayerState {
+    Folded,
+    WonShowdown, //perhaps a tie
+    LostShowdown,
+    EveryoneElseFolded
+}
+
+//Helpers for common things that agents need to know to decide
+pub struct AgentDecisionHelpers {
+    //How much extra we need to put in to call the current bet, can be less than the total call required
+    //if we are calling a raise to our bet
+    //Bounded by our stack
+    pub call_amount: ChipType,
+    pub max_can_raise: ChipType,
+    pub min_can_raise: ChipType,
+    pub can_raise: bool
 }
 
 impl PlayerState {
@@ -33,7 +63,7 @@ impl PlayerState {
             position: initial_player_state.position,
             stack: initial_player_state.stack,
             initial_stack: initial_player_state.stack,
-            folded: false,
+            final_state: None,
             cur_round_putting_in_pot: None,
             all_in: false,
             player_name: initial_player_state.player_name.clone(),
@@ -43,11 +73,66 @@ impl PlayerState {
 
     //Still in the hand, able to act
     pub fn is_active(&self) -> bool {
-        !self.folded && !self.all_in
+        !self.is_folded() && !self.all_in
+    }
+
+    pub fn is_folded(&self) -> bool {
+        self.final_state == Some(FinalPlayerState::Folded)
     }
 
     pub fn player_index(&self) -> usize {
         self.position.into()
+    }
+
+    pub fn get_helpers(&self, game_state: &GameState) -> AgentDecisionHelpers {
+        let call_amt = min(
+            game_state.current_to_call - self.cur_round_putting_in_pot.unwrap_or(0),
+            self.stack,
+        );
+        //we can raise to a stack more that what we've already put in
+        //Both these values are the total amount, not the increase
+        let max_can_raise = self.stack + self.cur_round_putting_in_pot.unwrap_or(0);
+        let min_can_raise = min(
+            game_state.min_raise + game_state.current_to_call,
+            max_can_raise,
+        );
+
+        //let third_pot = max(min_can_raise, min(max_can_raise, current_pot / 3));
+
+        let can_raise =
+            max_can_raise > call_amt + self.cur_round_putting_in_pot.unwrap_or(0);
+
+        AgentDecisionHelpers {
+            call_amount: call_amt,
+            max_can_raise,
+            min_can_raise,
+            can_raise
+        }
+    }
+}
+
+
+impl AgentDecisionHelpers {
+    pub fn build_raise_to(&self, 
+        game_state: &GameState,
+        raise_to: ChipType, 
+        comment: String) -> CommentedAction {
+
+        //Apply max
+        let raise_to = min(raise_to, self.max_can_raise);
+    
+        if self.can_raise {
+            CommentedAction {
+                action: crate::ActionEnum::Raise(raise_to - game_state.current_to_call, raise_to),
+                comment: Some(comment)
+            }
+        } else {
+            CommentedAction {
+                action: crate::ActionEnum::Call(self.call_amount),
+                comment: Some(comment)
+            }
+        }
+        
     }
 }
 
@@ -93,21 +178,13 @@ impl GameState {
     pub fn pot(&self) -> ChipType {
         self.prev_round_pot + self.round_pot
     }
-}
 
-pub struct OldGameState {
-    //pot from prev. betting rounds
-    pub current_pot: ChipType,
-}
-
-impl Default for OldGameState {
-    fn default() -> Self {
-        OldGameState { current_pot: 0 }
+    pub fn non_folded_players(&self) -> u8 {
+        self
+            .player_states
+            .iter()
+            .filter(|ps| !ps.is_folded())
+            .count() as u8
     }
 }
 
-impl OldGameState {
-    pub fn new(_num_players: u8) -> Self {
-        OldGameState { current_pot: 0 }
-    }
-}

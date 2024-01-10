@@ -18,7 +18,7 @@ use poker_eval::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
     game_runner_source::GameRunnerSourceEnum,
-    init_logger, Card, Deck, GameLog, GameRunner, InitialPlayerState,
+    init_logger, Card, Deck, GameLog, GameRunner, InitialPlayerState
 };
 use rand::seq::SliceRandom;
 
@@ -128,7 +128,7 @@ fn main() {
     //we want to track the worst loses
     let mut heap: BinaryHeap<(i64, i32, GameLog)> = BinaryHeap::new();
 
-    let num_total_iterations = 2_000;
+    let num_total_iterations = 100;
     let num_worst_hands_to_keep = 5;
     let num_players = 9;
     let mut winnings: HashMap<String, i64> = HashMap::new();
@@ -254,13 +254,12 @@ fn main() {
 
     let mut json_filenames = Vec::new();
 
-    for (_i, (_change, it_num, game_log)) in heap.into_iter().enumerate() {
+    for (_i, (_change, it_num, mut game_log)) in heap.into_iter().enumerate() {
         // let file_path = hh_path.join(format!("{}.txt", it_num));
         // fs::write(file_path, &log).unwrap();
         // let file_path = ps_hh_path.join(format!("{}.txt", it_num));
         // fs::write(file_path, ps_str).unwrap();
-
-        //let game_log: GameLog = log.parse().unwrap();
+        game_log.calc_best_hands();
         let json_str = serde_json::to_string_pretty(&game_log).unwrap();
         let json_filename = format!("{}.json", it_num);
         let file_path = json_hh_path.join(&json_filename);

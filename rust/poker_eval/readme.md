@@ -3,6 +3,8 @@ Future dev ideas
 
 MCCFR -- https://github.com/fedden/poker_ai
 
+https://xyzml.medium.com/learn-ai-game-playing-algorithm-part-iii-counterfactual-regret-minimization-b182a7ec85fb
+
 https://github.com/ArmanMielke/simple-poker-cfr?tab=readme-ov-file
 
 https://rnikhil.com/2023/12/31/ai-cfr-solver-poker.html

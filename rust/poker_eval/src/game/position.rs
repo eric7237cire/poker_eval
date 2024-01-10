@@ -4,7 +4,7 @@ use serde::Serialize;
 
 use crate::{PokerError, Round};
 
-#[derive(PartialEq, Eq, Copy, Clone, Debug, Serialize)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug, Serialize, Default)]
 pub struct Position {
     pos: u8,
     //n_players: u8,

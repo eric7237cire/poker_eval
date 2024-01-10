@@ -8,6 +8,7 @@ use log::trace;
 use serde::Serialize;
 
 use crate::Card;
+use crate::FinalPlayerState;
 use crate::HoleCards;
 
 use crate::game::game_log_parser::GameLogParser;
@@ -42,6 +43,10 @@ pub struct GameLog {
     pub actions: Vec<PlayerAction>,
 
     pub final_stacks: Vec<ChipType>,
+    pub final_states: Vec<FinalPlayerState>,
+    // Show best hand for all players, all rounds
+    // v [round_index][player_index] = 5 best cards
+    pub best_player_hands: Vec<Vec<[Card;5]>> 
 }
 
 impl GameLog {
@@ -342,6 +347,32 @@ impl GameLog {
 
         let rank = rank_cards(eval_cards.iter());
         rank.print_winning(&eval_cards)
+    }
+
+    pub fn calc_best_hands(&mut self) {
+        let mut v: Vec<Vec<[Card;5]>> = Vec::new();
+
+        let final_round = self.actions.last().unwrap().round;
+        let mut round = Some(Round::Flop);
+
+        while round.is_some() {
+            let cur_round = round.unwrap();
+            if final_round < cur_round {
+                break;
+            }
+
+            let best_player_hands = self.players.iter().map(|p| {
+                let all_cards = self.board.iter().chain(p.cards.as_ref().unwrap().as_slice()).cloned().collect_vec();
+                let rank = rank_cards(self.board.iter().chain(p.cards.as_ref().unwrap().as_slice()));
+                rank.get_winning(&all_cards)
+            }).collect::<Vec<[Card;5]>>();
+
+            v.push(best_player_hands);
+
+            round = cur_round.next();
+        }
+
+        self.best_player_hands = v;
     }
 }
 
