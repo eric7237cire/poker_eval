@@ -20,9 +20,9 @@ export function cardText(card: number) {
   };
 }
 
-export function cardTextStr(card: number) : string {
-    return  ranks[card >>> 2] + suits[card & 3];
-  }
+export function cardTextStr(card: number): string {
+  return ranks[card >>> 2] + suits[card & 3];
+}
 
 export const cardId = (rank: number, suit: number) => {
   return 4 * rank + suit;

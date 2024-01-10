@@ -5,7 +5,14 @@ export interface HandHistory {
   board: Board[];
   actions: Action[];
   final_stacks: number[];
+  final_states: Array<FinalState>;
+  //index 0 -- round flop turn river
+  //index 1 -- player
+  //index 2 -- hand
+  best_player_hands: Array<Array<Array<Card>>>;
 }
+
+export type FinalState = 'Folded' | 'WonShowdown' | 'LostShowdown';
 
 export interface Player {
   stack: number;
@@ -19,10 +26,10 @@ export interface Position {
 }
 
 export interface Cards {
-  card_hi_lo: CardHiLo[];
+  card_hi_lo: Card[];
 }
 
-export interface CardHiLo {
+export interface Card {
   value: string;
   suit: string;
   index: number;
@@ -34,11 +41,13 @@ export interface Board {
   index: number;
 }
 
+export type Round = 'Preflop' | 'Flop' | 'Turn' | 'River';
+
 export interface Action {
-    index: number;
+  index: number;
   player_index: number;
   action: FoldAction | RaiseAction | BetAction | CallAction | CheckAction;
-  round: string;
+  round: Round;
   player_comment: string;
   pot: number;
   current_amt_to_call: number;

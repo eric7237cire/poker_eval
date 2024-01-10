@@ -1,36 +1,89 @@
 <template>
   <div class="root">
-    <div class="header">
-        Hand History for {{ file_name }}.  
-    </div>
+    <div class="header">Hand History for {{ file_name }}.</div>
 
     <template v-if="hand_history">
       <div class="board flex flex-wrap justify-center bg-black items-center sticky top-0 z-10">
         <BoardSelectorCard v-for="card in hand_history.board" :cardId="card.index" />
       </div>
 
-      <template v-for="cur_round in rounds">
+      <template v-for="(cur_round, idx_round) in rounds">
         <div class="round-container" :id="cur_round">
           <div class="round-title flex items-center justify-center bg-black">
-            <router-link :to="{ path: '/hh' }">
-                Back
-            </router-link>
+            <router-link :to="{ path: '/hh' }"> Back </router-link>
             <span class="big-text">{{ cur_round }}</span>
             <span>Jump To:</span>
-            <a :href= "'#' + j_round" v-for="j_round in rounds">{{j_round}}</a> 
+            <a :href="'#' + j_round" v-for="j_round in rounds">{{ j_round }}</a>
           </div>
+
+          <div class="cards-round-start flex flex-col" 
+
+          v-if="idx_round > 0 && nonFoldedPlayersAtRoundStart[idx_round]">
+            <!--At each round start, display all non folded players-->
+            <div class="player-entry grid grid-cols-[minmax(90px,200px)_1fr] my-[3px]"
+              v-for="(foldedAtRound, playerIndex) in nonFoldedPlayersAtRoundStart[idx_round]"
+            >
+              
+                <div class="player-name text-center text-[white] self-center">
+                  {{ hand_history.players[playerIndex].player_name }}
+                </div>
+
+                <div v-if="foldedAtRound == null" class="flex flex-row">
+                  <div class="flex flex-row gap-[5px] inline-block">
+                    <BoardSelectorCard
+                      :cardId="hand_history.players[playerIndex].cards.card_hi_lo[0].index"
+                    />
+                    <BoardSelectorCard
+                      :cardId="hand_history.players[playerIndex].cards.card_hi_lo[1].index"
+                    />
+                  </div>
+
+                  <div class="player-cards-inner ml-[15px] flex flex-row gap-[5px]">
+                    <BoardSelectorCard
+                      :cardId="hand_history.best_player_hands[idx_round - 1][playerIndex][0].index"
+                    />
+                    <BoardSelectorCard
+                      :cardId="hand_history.best_player_hands[idx_round - 1][playerIndex][1].index"
+                    />
+                    <BoardSelectorCard
+                      :cardId="hand_history.best_player_hands[idx_round - 1][playerIndex][2].index"
+                    />
+                    <BoardSelectorCard
+                      :cardId="hand_history.best_player_hands[idx_round - 1][playerIndex][3].index"
+                    />
+                    <BoardSelectorCard
+                      :cardId="hand_history.best_player_hands[idx_round - 1][playerIndex][4].index"
+                    />
+                  </div>
+                </div>
+                <div v-if="foldedAtRound != null">
+                  Folded @ {{ foldedAtRound }}
+                </div>
+              
+              </div>
+          </div>
+
           <div class="actions w-full box-border grid items-stretch">
             <template
               v-for="[action, player] in getActionPlayerListForRound(cur_round, hand_history)"
             >
               <div class="player-name" :class="getActionType(action)">
-                <a :id="'action' + action.index" 
-                    :href="'#action' + action.index"
-                    class="">{{ player.player_name }}</a>
-                
-                <button class="button-base button-green" @click="handleAnalyzeRange(true, action.index)">Exact</button>
-                <button class="button-base button-blue" @click="handleAnalyzeRange(false, action.index)">Range</button>
-                  
+                <a :id="'action' + action.index" :href="'#action' + action.index" class="">{{
+                  player.player_name
+                }}</a>
+
+                <button
+                  class="button-base button-green"
+                  @click="handleAnalyzeRange(true, action.index)"
+                >
+                  Exact
+                </button>
+                <button
+                  class="button-base button-blue"
+                  @click="handleAnalyzeRange(false, action.index)"
+                >
+                  Range
+                </button>
               </div>
               <div class="player-cards grid" :class="getActionType(action)">
                 <div class="w-full m-auto">
@@ -150,7 +203,7 @@
 </style>
 
 <script setup lang="ts">
-import { Action, HandHistory, Player } from '@src/lib/hand_history_interfaces';
+import { Action, HandHistory, Player, Round } from '@src/lib/hand_history_interfaces';
 import { useRoute, useRouter } from 'vue-router';
 import BoardSelectorCard from './BoardSelectorCard.vue';
 import { computed, ref } from 'vue';
@@ -159,9 +212,10 @@ import { cardTextStr } from '@src/lib/utils';
 import { CardList, useBoardStore } from '@src/stores/board';
 import { SELECTABLE_RANGES } from '@src/stores/ranges';
 import { nextTick } from 'vue';
+import * as _ from 'lodash';
 
 const route = useRoute();
-const router = useRouter()
+const router = useRouter();
 const file_name = route.params.file_name; // read parameter id (it is reactive)
 
 const hand_history = ref<HandHistory | null>(null);
@@ -170,6 +224,7 @@ console.log(`File name [${file_name}]`);
 const playerStore = usePlayerStore();
 const boardStore = useBoardStore();
 
+//Find out what rounds we have by looking at the actions
 const rounds = computed(() => {
   const r: Array<string> = [];
   if (hand_history.value) {
@@ -177,6 +232,34 @@ const rounds = computed(() => {
       if (r.length == 0 || r[r.length - 1] != action.round) {
         r.push(action.round);
       }
+    }
+  }
+  return r;
+});
+
+const nonFoldedPlayersAtRoundStart = computed(() => {
+  //1st index flop, turn, river
+  //stores round in which they folded
+  const r: Array<Array<Round | null>> = [];
+  if (!hand_history.value) {
+    return r;
+  }
+  let round = 'Preflop';
+  const isFolded: Array<Round | null> = hand_history.value.players.map((_) => null);
+  //preflop no one has folded
+  r.push(_.cloneDeep(isFolded));
+
+  for (const action of hand_history.value.actions) {
+    if (action.round != round) {
+      round = action.round;
+      r.push(_.cloneDeep(isFolded));
+    }
+    if (action.round == 'River') {
+      break;
+    }
+
+    if (action.action == 'Fold') {
+      isFolded[action.player_index] = action.round;
     }
   }
   return r;
@@ -190,31 +273,31 @@ fetch(`/src/assets/hand_history/${file_name}`)
 
     const anchor = getAnchor();
     if (anchor) {
-        nextTick(() => {
-          const offset = getOffsetTop(document.getElementById(anchor)!)
-            console.log(`Scrolling to ${anchor} to offset ${offset}`);
-            window.scrollTo({
-                top: offset - 300,
-                //bottom: document.getElementById(anchor)!.offsetTop - 300,
-                left: 0,
-                behavior: "smooth",
-              });
+      nextTick(() => {
+        const offset = getOffsetTop(document.getElementById(anchor)!);
+        console.log(`Scrolling to ${anchor} to offset ${offset}`);
+        window.scrollTo({
+          top: offset - 300,
+          //bottom: document.getElementById(anchor)!.offsetTop - 300,
+          left: 0,
+          behavior: 'smooth'
         });
+      });
     }
   });
 
-  function getAnchor() : string | null {
-    const currentUrl = document.URL;
-    const urlParts   = currentUrl.split('#');
+function getAnchor(): string | null {
+  const currentUrl = document.URL;
+  const urlParts = currentUrl.split('#');
 
-    return (urlParts.length > 1) ? urlParts[1] : null;
+  return urlParts.length > 1 ? urlParts[1] : null;
 }
 
 //https://stackoverflow.com/questions/34422189/get-item-offset-from-the-top-of-page
-function getOffsetTop(element: HTMLElement | null) : number {
-        if (!element) return 0;
-        return getOffsetTop(element.offsetParent as HTMLElement) + element.offsetTop;
-    };
+function getOffsetTop(element: HTMLElement | null): number {
+  if (!element) return 0;
+  return getOffsetTop(element.offsetParent as HTMLElement) + element.offsetTop;
+}
 
 function getActionPlayerListForRound(
   round: string,
@@ -313,14 +396,13 @@ function formatActionText(action: Action, player: Player): string {
 }
 
 function formatActionTextCommon(equity: number, action: Action) {
-    return (
-     `Pot        : ${formatChips(action.pot)}\n` +
-     `Pot equity : ${formatEquity(equity)}\n` +
-     `# to act   : ${action.players_left_to_act}\n` +
-     `Non folded : ${action.non_folded_players}`    
-    )
+  return (
+    `Pot        : ${formatChips(action.pot)}\n` +
+    `Pot equity : ${formatEquity(equity)}\n` +
+    `# to act   : ${action.players_left_to_act}\n` +
+    `Non folded : ${action.non_folded_players}`
+  );
 }
-
 
 function formatChips(chips: number): string {
   const bb = hand_history.value!.bb;
@@ -332,111 +414,109 @@ function formatEquity(equity: number): string {
 }
 
 function handleAnalyzeRange(setExact: boolean, actionIndex: number) {
+  if (!hand_history.value) {
+    return;
+  }
 
-    if (!hand_history.value) {
-        return;
+  const folded = hand_history.value!.players.map((_) => false);
+
+  for (let i = 0; i < actionIndex; i++) {
+    const action = hand_history.value!.actions[i];
+    if (action.action == 'Fold') {
+      folded[action.player_index] = true;
+    }
+  }
+
+  const nonFoldedPlayers = hand_history.value!.players.filter((_, index) => !folded[index]);
+
+  const heroIndex = nonFoldedPlayers.findIndex((player) => player.player_name == 'Hero');
+
+  //Hero is always 1st position here
+  if (heroIndex >= 0) {
+    playerStore.players[0].state = PlayerState.USE_HOLE;
+    playerStore.players[0].holeCards = getCardList(heroIndex, nonFoldedPlayers);
+    playerStore.players[0].name = 'Hero';
+  }
+
+  let playerStoreIndex = 0;
+  let playerIndex = heroIndex >= 0 ? heroIndex : 0;
+
+  const numPlayers = nonFoldedPlayers.length;
+
+  const allRange = SELECTABLE_RANGES.find((range) => range.title == 'All')!.value;
+
+  const otherPlayers = heroIndex >= 0 ? numPlayers - 1 : numPlayers;
+
+  //keep relatively the same order
+  for (let i = 0; i < otherPlayers; i++) {
+    playerStoreIndex++;
+    playerIndex++;
+    if (playerIndex >= numPlayers) {
+      playerIndex = 0;
+    }
+    if (playerStoreIndex >= numPlayers) {
+      playerStoreIndex = 0;
     }
 
+    console.log(
+      `Player history index: ${playerIndex} store index: ${playerStoreIndex}`,
+      playerStore.players[playerStoreIndex]
+    );
 
-    const folded = hand_history.value!.players.map((_) => false);
+    playerStore.players[playerStoreIndex].name = nonFoldedPlayers[playerIndex].player_name;
+    playerStore.players[playerStoreIndex].holeCards = getCardList(playerIndex, nonFoldedPlayers);
+    playerStore.updateRangeStrForPlayer(playerStoreIndex, allRange);
 
-    for(let i = 0; i < actionIndex; i++) {
-        const action = hand_history.value!.actions[i];
-        if (action.action == 'Fold') {
-            folded[action.player_index] = true;
-        }
+    if (setExact) {
+      playerStore.players[playerStoreIndex].state = PlayerState.USE_HOLE;
+    } else {
+      playerStore.players[playerStoreIndex].state = PlayerState.USE_RANGE;
     }
+  }
 
-    const nonFoldedPlayers = hand_history.value!.players.filter((_, index) => !folded[index]);
+  //everyone else disable
+  for (let psIndex = numPlayers; psIndex < playerStore.players.length; psIndex++) {
+    playerStore.players[psIndex].state = PlayerState.DISABLED;
+  }
 
-    const heroIndex = nonFoldedPlayers.findIndex((player) => player.player_name == 'Hero');
+  let cards = 0;
+  let reserveCards = 0;
 
-    //Hero is always 1st position here
-    if (heroIndex >= 0) {        
-        playerStore.players[0].state = PlayerState.USE_HOLE;
-        playerStore.players[0].holeCards = getCardList(heroIndex, nonFoldedPlayers);
-        playerStore.players[0].name = 'Hero';
-    }
+  const action = hand_history.value!.actions[actionIndex];
+  if (action.round == 'Flop') {
+    cards = 3;
+  } else if (action.round == 'Turn') {
+    cards = 4;
+  } else if (action.round == 'River') {
+    cards = 5;
+  }
 
-    let playerStoreIndex = 0;
-    let playerIndex = heroIndex >= 0 ? heroIndex : 0;
+  console.log(`Cards: ${cards} Board Len: ${hand_history.value.board.length}`);
 
-    const numPlayers = nonFoldedPlayers.length;
+  //Set board cards
+  boardStore.board.cards = hand_history.value.board.slice(0, cards).map((bCard) => {
+    return bCard.index;
+  });
 
-    const allRange = SELECTABLE_RANGES.find((range) => range.title == 'All')!.value;
+  //Set reserve cards
+  boardStore.reserveCards = hand_history.value.board.slice(cards).map((bCard) => {
+    return bCard.index;
+  });
 
-    const otherPlayers = heroIndex >= 0 ? numPlayers - 1 : numPlayers;
+  console.log(`Board cards: ${boardStore.board.cards} Reserve cards: ${boardStore.reserveCards}`);
 
-    //keep relatively the same order
-    for(let i = 0; i < otherPlayers; i++) {
-        playerStoreIndex++;
-        playerIndex++;
-        if (playerIndex >= numPlayers) {
-            playerIndex = 0;
-        }
-        if (playerStoreIndex >= numPlayers) {
-            playerStoreIndex = 0;
-        }
-
-        console.log(`Player history index: ${playerIndex} store index: ${playerStoreIndex}`, playerStore.players[playerStoreIndex]);
-
-        playerStore.players[playerStoreIndex].name = nonFoldedPlayers[playerIndex].player_name;
-        playerStore.players[playerStoreIndex].holeCards = getCardList(playerIndex, nonFoldedPlayers);
-        playerStore.updateRangeStrForPlayer(playerStoreIndex, allRange);
-
-        if (setExact) {
-            playerStore.players[playerStoreIndex].state = PlayerState.USE_HOLE;            
-        } else {
-            playerStore.players[playerStoreIndex].state = PlayerState.USE_RANGE;
-        }
-    }
-
-    //everyone else disable
-    for(let psIndex = numPlayers; psIndex < playerStore.players.length; psIndex++) {
-        playerStore.players[psIndex].state = PlayerState.DISABLED;
-    }
-
-    let cards = 0;
-    let reserveCards = 0;
-
-    const action = hand_history.value!.actions[actionIndex];
-    if (action.round == 'Flop') {
-        cards = 3;
-    } else if (action.round == 'Turn') {
-        cards = 4;
-    } else if (action.round == 'River') {
-        cards = 5;
-    }
-
-    console.log(`Cards: ${cards} Board Len: ${hand_history.value.board.length}`);
-
-    //Set board cards
-    boardStore.board.cards = 
-        hand_history.value.board.slice(0, cards).map( (bCard) => {
-        return bCard.index;
-    });
-    
-    //Set reserve cards
-    boardStore.reserveCards = 
-        hand_history.value.board.slice(cards).map( (bCard) => {
-        return bCard.index;
-    });
-
-    console.log(`Board cards: ${boardStore.board.cards} Reserve cards: ${boardStore.reserveCards}`);
-    
-
-    const routeData = router.resolve({path: '/'});
-    window.open(routeData.href, '_blank');
-    //router.push({ path: '/' });
+  const routeData = router.resolve({ path: '/' });
+  window.open(routeData.href, '_blank');
+  //router.push({ path: '/' });
 }
 
-function getCardList(nfPlayerIndex: number, nonFoldedPlayers: Array<Player> ): CardList {
-    const hiCardIndex = nonFoldedPlayers[nfPlayerIndex].cards.card_hi_lo[0].index;
-    const loCardIndex = nonFoldedPlayers[nfPlayerIndex].cards.card_hi_lo[1].index;
+function getCardList(nfPlayerIndex: number, nonFoldedPlayers: Array<Player>): CardList {
+  const hiCardIndex = nonFoldedPlayers[nfPlayerIndex].cards.card_hi_lo[0].index;
+  const loCardIndex = nonFoldedPlayers[nfPlayerIndex].cards.card_hi_lo[1].index;
 
-    return {
-        cards: [hiCardIndex, loCardIndex],
-        cardText: cardTextStr(hiCardIndex) + cardTextStr(loCardIndex)
-    }
+  return {
+    cards: [hiCardIndex, loCardIndex],
+    cardText: cardTextStr(hiCardIndex) + cardTextStr(loCardIndex)
+  };
 }
 </script>

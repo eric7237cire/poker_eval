@@ -128,7 +128,7 @@ fn main() {
     //we want to track the worst loses
     let mut heap: BinaryHeap<(i64, i32, GameLog)> = BinaryHeap::new();
 
-    let num_total_iterations = 10_000;
+    let num_total_iterations = 2_000;
     let num_worst_hands_to_keep = 5;
     let num_players = 9;
     let mut winnings: HashMap<String, i64> = HashMap::new();

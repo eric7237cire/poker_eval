@@ -362,9 +362,19 @@ impl GameLog {
             }
 
             let best_player_hands = self.players.iter().map(|p| {
-                let all_cards = self.board.iter().chain(p.cards.as_ref().unwrap().as_slice()).cloned().collect_vec();
-                let rank = rank_cards(self.board.iter().chain(p.cards.as_ref().unwrap().as_slice()));
-                rank.get_winning(&all_cards)
+                let mut board_cards = self.board.iter().take(
+                    match cur_round {
+                        Round::Flop => 3,
+                        Round::Turn => 4,
+                        Round::River => 5,
+                        _ => panic!("Invalid round"),
+                    }
+                ).cloned().collect_vec();
+
+                board_cards.extend(p.cards.as_ref().unwrap().as_slice());
+                
+                let rank = rank_cards(board_cards.iter());
+                rank.get_winning(&board_cards)
             }).collect::<Vec<[Card;5]>>();
 
             v.push(best_player_hands);
@@ -485,25 +495,25 @@ impl PartialEq for GameLog {
 
 impl Eq for GameLog {}
 
-#[allow(dead_code)]
-pub struct CurrentPlayerState {
-    stack: ChipType,
-    //Player id?
-    folded: bool,
-    all_in: bool,
-}
+// #[allow(dead_code)]
+// pub struct CurrentPlayerState {
+//     stack: ChipType,
+//     //Player id?
+//     folded: bool,
+//     all_in: bool,
+// }
 
-//Now when we play back a game, we can pass the current state to the UI
-#[allow(dead_code)]
-struct GameState {
-    player_states: Vec<CurrentPlayerState>,
+// //Now when we play back a game, we can pass the current state to the UI
+// #[allow(dead_code)]
+// struct GameState {
+//     player_states: Vec<CurrentPlayerState>,
 
-    current_to_act: usize,
+//     current_to_act: usize,
 
-    pot: ChipType,
+//     pot: ChipType,
 
-    current_to_call: ChipType,
-}
+//     current_to_call: ChipType,
+// }
 
 #[cfg(test)]
 mod tests {
