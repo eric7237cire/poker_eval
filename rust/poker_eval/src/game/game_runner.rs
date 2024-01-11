@@ -530,6 +530,13 @@ impl GameRunner {
 
         match action {
             ActionEnum::Fold => {
+                // Do before anything is modified
+                self.game_state.actions.push(self.build_player_action(
+                    &self.game_state.player_states[player_index],
+                    &action,
+                    &decision.comment.unwrap_or_default(),
+                ));
+                
                 self.game_state.player_states[player_index].final_state =
                     Some(FinalPlayerState::Folded);
 
@@ -544,11 +551,7 @@ impl GameRunner {
                         .unwrap_or(0),
                 );
 
-                self.game_state.actions.push(self.build_player_action(
-                    &self.game_state.player_states[player_index],
-                    &action,
-                    &decision.comment.unwrap_or_default(),
-                ));
+                
             }
             ActionEnum::Call(check_amt) => {
                 let amt_to_call = self.game_state.current_to_call;
@@ -592,17 +595,20 @@ impl GameRunner {
 
                 self.check_able_to_raise(raise_amt)?;
 
+                //do before anything else is modified
+                self.game_state.actions.push(self.build_player_action(
+                    &self.game_state.player_states[player_index],
+                    &action,
+                    &decision.comment.unwrap_or_default(),
+                ));
+
                 //this is also the amount increased from the bet
                 let increase_amt = raise_amt - amt_to_call;
                 //the next raise also has to increase by at least this amount
                 self.game_state.min_raise = increase_amt;
                 self.game_state.current_to_call = raise_amt;
 
-                self.game_state.actions.push(self.build_player_action(
-                    &self.game_state.player_states[player_index],
-                    &action,
-                    &decision.comment.unwrap_or_default(),
-                ));
+                
 
                 let amount_already_put = self.game_state.player_states[player_index]
                     .cur_round_putting_in_pot
@@ -656,26 +662,30 @@ impl GameRunner {
                     .into());
                 }
 
-                self.game_state.current_to_call = 0;
-                self.game_state.player_states[player_index].cur_round_putting_in_pot = Some(0);
-
+                // Do before anything is modified
                 self.game_state.actions.push(self.build_player_action(
                     &self.game_state.player_states[player_index],
                     &action,
                     &decision.comment.unwrap_or_default(),
                 ));
+
+                assert_eq!(0, self.game_state.current_to_call);
+                self.game_state.player_states[player_index].cur_round_putting_in_pot = Some(0);
+
+                
             }
             ActionEnum::Bet(bet_amt) => {
                 self.check_able_to_bet(bet_amt)?;
 
-                self.game_state.min_raise = bet_amt;
-                self.game_state.current_to_call = bet_amt;
-
+                // Do before anything is modified
                 self.game_state.actions.push(self.build_player_action(
                     &self.game_state.player_states[player_index],
                     &action,
                     &decision.comment.unwrap_or_default(),
                 ));
+
+                self.game_state.min_raise = bet_amt;
+                self.game_state.current_to_call = bet_amt;
 
                 let actual_amt = self.handle_put_money_in_pot(player_index, bet_amt)?;
 

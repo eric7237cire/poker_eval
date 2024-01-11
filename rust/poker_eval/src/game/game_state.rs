@@ -180,6 +180,7 @@ pub struct GameState {
     pub bb: ChipType,
 
     //All actions in the game, posting blinds not considered an action
+    //The state is as it was when the player acted
     pub actions: Vec<PlayerAction>,
 }
 

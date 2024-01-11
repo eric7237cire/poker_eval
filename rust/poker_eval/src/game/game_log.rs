@@ -9,6 +9,7 @@ use boomphf::Mphf;
 use itertools::Itertools;
 use log::trace;
 use serde::Serialize;
+use serde::Serializer;
 
 use crate::ActionEnum;
 use crate::Card;
@@ -458,6 +459,8 @@ impl GameLog {
 
                 trace!("First hero action {}", &action);
 
+                assert!(action.non_folded_players >= 2);
+
                 //First hero action of round
                 match cur_round {
                     Round::Preflop => {
@@ -649,7 +652,7 @@ fn get_action_amount(action: &PlayerAction, bb: ChipType) -> f64 {
 
 }
 
-#[derive(Serialize, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Serialize)]
 pub enum ActionString {
     Fold,
     Call,
@@ -678,6 +681,22 @@ impl Default for ActionString {
     }
 }
 
+// impl Serialize for ActionString {
+//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+//     where
+//         S: Serializer,
+//     {
+//         serializer.serialize_str(match self {
+//             ActionString::Fold => "fold",
+//             ActionString::Call => "call",
+//             ActionString::Check => "check",
+//             ActionString::Bet => "bet",
+//             ActionString::Raise => "raise",
+//             ActionString::CheckRaise => "check-raise",
+//             ActionString::NA => "NA",
+//         })
+//     }
+// }
 
 
 #[derive(Serialize, Debug, Default)]
@@ -1204,7 +1223,9 @@ Agent 4               - 495 # Started with 500 change -5
         let _game_log: GameLog = hh.parse().unwrap();
     }
 
-    #[test]
+    //Needs db
+    //#[test]
+    #[allow(dead_code)]
     fn test_csv_line() {
         
         init_test_logger();
