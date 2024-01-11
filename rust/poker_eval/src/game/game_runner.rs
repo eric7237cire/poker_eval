@@ -536,7 +536,7 @@ impl GameRunner {
                     &action,
                     &decision.comment.unwrap_or_default(),
                 ));
-                
+
                 self.game_state.player_states[player_index].final_state =
                     Some(FinalPlayerState::Folded);
 
@@ -970,6 +970,7 @@ impl GameRunner {
             final_states,
             //Don't calculate yet as it's expensive
             best_player_hands: vec![],
+            player_ranks_per_round: vec![],
         };
 
         Ok(game_log)

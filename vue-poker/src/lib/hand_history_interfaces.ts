@@ -10,6 +10,9 @@ export interface HandHistory {
   //index 1 -- player
   //index 2 -- hand
   best_player_hands: Array<Array<Array<Card>>>;
+
+  //1 for best hand, 2 for second best hand, etc can have rpeats for ties
+  player_ranks_per_round: Array<Array<number>>;
 }
 
 export type FinalState = 'Folded' | 'WonShowdown' | 'LostShowdown';

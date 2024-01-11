@@ -17,6 +17,7 @@ use crate::FinalPlayerState;
 use crate::HoleCards;
 
 use crate::InitialPlayerState;
+use crate::OldRank;
 use crate::board_hc_eval_cache_redb::EvalCacheWithHcReDb;
 use crate::board_hc_eval_cache_redb::ProduceMonteCarloEval;
 use crate::game::game_log_parser::GameLogParser;
@@ -49,6 +50,9 @@ pub struct GameLog {
     // Show best hand for all players, all rounds
     // v [round_index][player_index] = 5 best cards
     pub best_player_hands: Vec<Vec<[Card; 5]>>,
+
+    //1 for best, etc.  can have repeated ranks for ties
+    pub player_ranks_per_round: Vec<Vec<u8>>,
 }
 
 impl GameLog {
@@ -356,6 +360,7 @@ impl GameLog {
     */
     pub fn calc_best_hands(&mut self) {
         let mut v: Vec<Vec<[Card; 5]>> = Vec::new();
+        let mut player_rank_order: Vec<Vec<u8>> = Vec::new();
 
         let final_round = self.actions.last().unwrap().round;
         let mut round = Some(Round::Flop);
@@ -366,34 +371,58 @@ impl GameLog {
                 break;
             }
 
-            let best_player_hands = self
+            let mut player_hand_ranks = self
                 .players
                 .iter()
-                .map(|p| {
+                .enumerate()
+                .map(|(p_idx, p)| {
                     let mut board_cards = self
                         .board
                         .iter()
-                        .take(match cur_round {
-                            Round::Flop => 3,
-                            Round::Turn => 4,
-                            Round::River => 5,
-                            _ => panic!("Invalid round"),
-                        })
+                        .take(cur_round.get_num_board_cards())
                         .cloned()
                         .collect_vec();
 
                     board_cards.extend(p.cards.as_ref().unwrap().as_slice());
 
                     let rank = rank_cards(board_cards.iter());
-                    rank.get_winning(&board_cards)
+                    let winning_cards = rank.get_winning(&board_cards);
+                    (rank, p_idx, winning_cards)
+                })
+                .collect_vec();
+
+            let best_player_hands = player_hand_ranks
+                .iter()
+                .map(|(_, _, wc)| {
+                    *wc
                 })
                 .collect::<Vec<[Card; 5]>>();
 
             v.push(best_player_hands);
 
+            player_hand_ranks.sort_by(|a, b| b.0.cmp(&a.0));
+
+            //1 is best hand
+            let mut cur_round_rank_order = vec![0; self.players.len()];
+            let mut rank_order = 0;
+
+            let mut last_rank_value = OldRank::StraightFlush(1 << 31);
+
+            for (rank, p_idx, _) in player_hand_ranks.iter() {
+                if rank != &last_rank_value {
+                    rank_order += 1;
+                    last_rank_value = *rank;
+                }
+                
+                cur_round_rank_order[*p_idx] = rank_order;
+            }
+
+            player_rank_order.push(cur_round_rank_order);
+
             round = cur_round.next();
         }
 
+        self.player_ranks_per_round = player_rank_order;
         self.best_player_hands = v;
     }
 

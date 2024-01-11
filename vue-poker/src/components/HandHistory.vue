@@ -25,7 +25,8 @@
             >
               
                 <div class="player-name text-center text-[white] self-center">
-                  {{ hand_history.players[playerIndex].player_name }}
+                  # {{ hand_history.player_ranks_per_round[idx_round - 1][playerIndex] }}
+                  {{ hand_history.players[playerIndex].player_name }} 
                 </div>
 
                 <div v-if="foldedAtRound == null" class="flex flex-row">
