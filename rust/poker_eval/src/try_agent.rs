@@ -2,7 +2,7 @@ use std::{
     cell::RefCell,
     collections::{BinaryHeap, HashMap},
     fs,
-    path::{PathBuf, Path},
+    path::PathBuf,
     rc::Rc,
 };
 
@@ -32,8 +32,7 @@ fn build_agents(
 
     let mut agents: Vec<Box<dyn Agent>> = Vec::new();
 
-    agents.push(Box::new(EqAgent::new(
-        Some("22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+"),
+    agents.push(Box::new(EqAgent::new(        
         "EqAggro1",
         EqAgentConfig::get_aggressive(),
         flop_texture_db.clone(),
@@ -56,7 +55,6 @@ fn build_agents(
     // )));
 
     agents.push(Box::new(EqAgent::new(
-        Some("22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+"),
         "EqAggroB",
         EqAgentConfig::get_aggressive(),
         flop_texture_db.clone(),
@@ -88,7 +86,6 @@ fn build_agents(
     while agents.len() < num_total_players {
         i += 1;
         agents.push(Box::new(EqAgent::new(
-            Some("22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+"),
             &format!("EqPsvAgent{}", i + 1),
             EqAgentConfig::get_passive(),
             flop_texture_db.clone(),
@@ -133,6 +130,7 @@ fn main() {
     let num_total_iterations = 2_000;
     let num_worst_hands_to_keep = 5;
     let num_players = 9;
+    let hero_name = "EqAggro1";
     let mut winnings: HashMap<String, i64> = HashMap::new();
 
     let repo_root = PathBuf::from("/home/eric/git/poker_eval");
@@ -163,7 +161,7 @@ fn main() {
         );
         agents.shuffle(&mut agent_deck.rng);
 
-        let hero_index = agents.iter().position(|a| a.get_name() == "Hero").unwrap();
+        let hero_index = agents.iter().position(|a| a.get_name() == hero_name).unwrap();
         set_agent_hole_cards(&mut agent_deck, &mut agents);
 
         let players: Vec<InitialPlayerState> = build_initial_players_from_agents(&agents);

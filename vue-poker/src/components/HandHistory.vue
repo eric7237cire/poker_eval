@@ -16,52 +16,50 @@
             <a :href="'#' + j_round" v-for="j_round in rounds">{{ j_round }}</a>
           </div>
 
-          <div class="cards-round-start flex flex-col" 
-
-          v-if="idx_round > 0 && nonFoldedPlayersAtRoundStart[idx_round]">
+          <div
+            class="cards-round-start flex flex-col"
+            v-if="idx_round > 0 && nonFoldedPlayersAtRoundStart[idx_round]"
+          >
             <!--At each round start, display all non folded players-->
-            <div class="player-entry grid grid-cols-[minmax(90px,200px)_1fr] my-[3px]"
+            <div
+              class="player-entry grid grid-cols-[minmax(90px,200px)_1fr] my-[3px]"
               v-for="(foldedAtRound, playerIndex) in nonFoldedPlayersAtRoundStart[idx_round]"
             >
-              
-                <div class="player-name text-center text-[white] self-center">
-                  # {{ hand_history.player_ranks_per_round[idx_round - 1][playerIndex] }}
-                  {{ hand_history.players[playerIndex].player_name }} 
-                </div>
-
-                <div v-if="foldedAtRound == null" class="flex flex-row">
-                  <div class="flex flex-row gap-[5px] inline-block">
-                    <BoardSelectorCard
-                      :cardId="hand_history.players[playerIndex].cards.card_hi_lo[0].index"
-                    />
-                    <BoardSelectorCard
-                      :cardId="hand_history.players[playerIndex].cards.card_hi_lo[1].index"
-                    />
-                  </div>
-
-                  <div class="player-cards-inner ml-[15px] flex flex-row gap-[5px]">
-                    <BoardSelectorCard
-                      :cardId="hand_history.best_player_hands[idx_round - 1][playerIndex][0].index"
-                    />
-                    <BoardSelectorCard
-                      :cardId="hand_history.best_player_hands[idx_round - 1][playerIndex][1].index"
-                    />
-                    <BoardSelectorCard
-                      :cardId="hand_history.best_player_hands[idx_round - 1][playerIndex][2].index"
-                    />
-                    <BoardSelectorCard
-                      :cardId="hand_history.best_player_hands[idx_round - 1][playerIndex][3].index"
-                    />
-                    <BoardSelectorCard
-                      :cardId="hand_history.best_player_hands[idx_round - 1][playerIndex][4].index"
-                    />
-                  </div>
-                </div>
-                <div v-if="foldedAtRound != null">
-                  Folded @ {{ foldedAtRound }}
-                </div>
-              
+              <div class="player-name text-center text-[white] self-center">
+                # {{ hand_history.player_ranks_per_round[idx_round - 1][playerIndex] }}
+                {{ hand_history.players[playerIndex].player_name }}
               </div>
+
+              <div v-if="foldedAtRound == null" class="flex flex-row">
+                <div class="flex flex-row gap-[5px] inline-block">
+                  <BoardSelectorCard
+                    :cardId="hand_history.players[playerIndex].cards.card_hi_lo[0].index"
+                  />
+                  <BoardSelectorCard
+                    :cardId="hand_history.players[playerIndex].cards.card_hi_lo[1].index"
+                  />
+                </div>
+
+                <div class="player-cards-inner ml-[15px] flex flex-row gap-[5px]">
+                  <BoardSelectorCard
+                    :cardId="hand_history.best_player_hands[idx_round - 1][playerIndex][0].index"
+                  />
+                  <BoardSelectorCard
+                    :cardId="hand_history.best_player_hands[idx_round - 1][playerIndex][1].index"
+                  />
+                  <BoardSelectorCard
+                    :cardId="hand_history.best_player_hands[idx_round - 1][playerIndex][2].index"
+                  />
+                  <BoardSelectorCard
+                    :cardId="hand_history.best_player_hands[idx_round - 1][playerIndex][3].index"
+                  />
+                  <BoardSelectorCard
+                    :cardId="hand_history.best_player_hands[idx_round - 1][playerIndex][4].index"
+                  />
+                </div>
+              </div>
+              <div v-if="foldedAtRound != null">Folded @ {{ foldedAtRound }}</div>
+            </div>
           </div>
 
           <div class="actions w-full box-border grid items-stretch">
@@ -116,6 +114,24 @@
           </div>
         </div>
       </template>
+
+      <!--Show stacks-->
+      <div class="stack-changes flex items-center justify-center">
+        <table>
+          <tr>
+            <th>Player</th>
+            <th>Stack</th>
+            <th>Change</th>
+          </tr>
+          <tr v-for="(player, index) in hand_history.players">
+            <td class="mr-[10px]" style="width: 100px">{{ player.player_name }}</td>
+            <td>{{ player.stack / hand_history.bb }}</td>
+            <td style="text-align: right">
+              {{ (hand_history.final_stacks[index] - player.stack) / hand_history.bb }}
+            </td>
+          </tr>
+        </table>
+      </div>
     </template>
   </div>
 </template>
@@ -428,25 +444,27 @@ function handleAnalyzeRange(setExact: boolean, actionIndex: number) {
     }
   }
 
-  const nonFoldedPlayers = hand_history.value!.players.filter((_, index) => !folded[index]);
+  const oHeroIndex = hand_history.value!.actions[actionIndex].player_index;
+  const heroName = hand_history.value!.players[oHeroIndex].player_name;
 
-  const heroIndex = nonFoldedPlayers.findIndex((player) => player.player_name == 'Hero');
+  const nonFoldedPlayers = hand_history.value!.players.filter((_, index) => !folded[index]);
+  const nonFoldedHeroIndex = nonFoldedPlayers.findIndex((player) => player.player_name == heroName);
 
   //Hero is always 1st position here
-  if (heroIndex >= 0) {
+  if (nonFoldedHeroIndex >= 0) {
     playerStore.players[0].state = PlayerState.USE_HOLE;
-    playerStore.players[0].holeCards = getCardList(heroIndex, nonFoldedPlayers);
-    playerStore.players[0].name = 'Hero';
+    playerStore.players[0].holeCards = getCardList(nonFoldedHeroIndex, nonFoldedPlayers);
+    playerStore.players[0].name = hand_history.value!.players[nonFoldedHeroIndex].player_name;
   }
 
   let playerStoreIndex = 0;
-  let playerIndex = heroIndex >= 0 ? heroIndex : 0;
+  let playerIndex = nonFoldedHeroIndex >= 0 ? nonFoldedHeroIndex : 0;
 
   const numPlayers = nonFoldedPlayers.length;
 
   const allRange = SELECTABLE_RANGES.find((range) => range.title == 'All')!.value;
 
-  const otherPlayers = heroIndex >= 0 ? numPlayers - 1 : numPlayers;
+  const otherPlayers = nonFoldedHeroIndex >= 0 ? numPlayers - 1 : numPlayers;
 
   //keep relatively the same order
   for (let i = 0; i < otherPlayers; i++) {

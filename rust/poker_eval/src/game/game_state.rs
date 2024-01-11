@@ -51,10 +51,20 @@ pub struct InitialPlayerState {
 #[repr(u8)]
 #[derive(Serialize, Copy, Clone, Eq, PartialEq)]
 pub enum FinalPlayerState {
-    Folded,
+    //The round in which they folded
+    Folded(Round),
     WonShowdown, //perhaps a tie
     LostShowdown,
     EveryoneElseFolded,
+}
+
+impl FinalPlayerState {
+    pub fn is_folded(&self) -> bool {
+        match self {
+            FinalPlayerState::Folded(_) => true,
+            _ => false,
+        }
+    }
 }
 
 //Helpers for common things that agents need to know to decide
@@ -88,7 +98,7 @@ impl PlayerState {
     }
 
     pub fn is_folded(&self) -> bool {
-        self.final_state == Some(FinalPlayerState::Folded)
+        self.final_state.is_some() && self.final_state.as_ref().unwrap().is_folded()
     }
 
     pub fn player_index(&self) -> usize {

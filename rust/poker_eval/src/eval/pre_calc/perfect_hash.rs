@@ -5,12 +5,12 @@ use boomphf::Mphf;
 use std::cmp::max;
 #[cfg(not(target_arch = "wasm32"))]
 use std::{
-    fs::{remove_file, File},
+    fs::File,
     io::Write,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::eval::pre_calc::{get_boom_path, get_perfect_hash_path};
+use crate::eval::pre_calc::get_boom_path;
 
 use super::{
     boom::BOOM_PHF_BYTES,

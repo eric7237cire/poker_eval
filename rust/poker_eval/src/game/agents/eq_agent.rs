@@ -67,7 +67,6 @@ impl EqAgentConfig {
 
 //#[derive(Default)]
 pub struct EqAgent {
-    pub calling_range: Option<BoolRange>,
     pub hole_cards: Option<HoleCards>,
     pub name: String,
     flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
@@ -79,20 +78,16 @@ pub struct EqAgent {
 
 impl EqAgent {
     pub fn new(
-        calling_range_str: Option<&str>,
         name: &str,
         agent_config: EqAgentConfig,
         flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
         partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
         monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
     ) -> Self {
-        let calling_range = match calling_range_str {
-            Some(s) => Some(s.parse().unwrap()),
-            None => None,
-        };
+        
 
         EqAgent {
-            calling_range,
+           // calling_range,
             hole_cards: None,
             name: name.to_string(),
             partial_rank_db,
@@ -139,6 +134,9 @@ impl EqAgent {
             get_equivalent_hole_board(&hole_cards, game_state.board.as_slice_card());
         eq_board.get_index();
 
+        //Issue is we have Raise, fold, fold, Us to act
+        //If we calculate eq with vs 2, it will be quite high
+
         let eq = self
             .monte_carlo_db
             .borrow_mut()
@@ -153,7 +151,7 @@ impl EqAgent {
         //max is always just the remaining stack
 
         let mut comment_common = format!(
-            "Eq {:.2}% with {} other players;Likes Hand Level {};Positive {};Negative {}",
+            "Eq {:.2}% with {} players;Likes Hand Level {};Positive {};Negative {}",
             eq * 100.0,
             non_folded_players,
             likes_hand_response.likes_hand,

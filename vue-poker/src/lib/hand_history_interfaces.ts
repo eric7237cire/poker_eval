@@ -15,7 +15,11 @@ export interface HandHistory {
   player_ranks_per_round: Array<Array<number>>;
 }
 
-export type FinalState = 'Folded' | 'WonShowdown' | 'LostShowdown';
+export type FinalState = 'WonShowdown' | 'LostShowdown' | FoldedState | 'EveryoneElseFolded';
+
+export type FoldedState = {
+  Folded: Round;
+};
 
 export interface Player {
   stack: number;

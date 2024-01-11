@@ -538,7 +538,7 @@ impl GameRunner {
                 ));
 
                 self.game_state.player_states[player_index].final_state =
-                    Some(FinalPlayerState::Folded);
+                    Some(FinalPlayerState::Folded(self.game_state.current_round));
 
                 assert!(self.game_state.total_active_players > 0);
                 self.game_state.total_active_players -= 1;

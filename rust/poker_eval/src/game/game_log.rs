@@ -9,12 +9,10 @@ use boomphf::Mphf;
 use itertools::Itertools;
 use log::trace;
 use serde::Serialize;
-use serde::Serializer;
 
 use crate::ActionEnum;
 use crate::Card;
 use crate::FinalPlayerState;
-use crate::HoleCards;
 
 use crate::InitialPlayerState;
 use crate::OldRank;
@@ -28,7 +26,6 @@ use crate::rank_cards;
 use crate::ChipType;
 use crate::PlayerAction;
 use crate::PokerError;
-use crate::Position;
 use crate::Round;
 
 
@@ -621,7 +618,7 @@ impl GameLog {
         ret.final_pot = self.actions.last().unwrap().get_fields_after_action().pot as f64 / self.bb as f64;
         
         ret.in_showdown = match self.final_states[hero_index] {
-            FinalPlayerState::Folded => false,
+            FinalPlayerState::Folded(_) => false,
             FinalPlayerState::LostShowdown => true,
             FinalPlayerState::WonShowdown => true,
             FinalPlayerState::EveryoneElseFolded => false,
@@ -642,7 +639,7 @@ impl GameLog {
 
             let player_ranks = self.players.iter().enumerate().map(|(p_idx, p)| {
 
-                if self.final_states[p_idx] == FinalPlayerState::Folded {
+                if self.final_states[p_idx].is_folded() {
                     Rank::lowest_rank()
                 } else {
 
@@ -1009,7 +1006,7 @@ impl Eq for GameLog {}
 
 #[cfg(test)]
 mod tests {
-    use crate::{init_test_logger, ActionEnum, pre_calc::perfect_hash::load_boomperfect_hash, game_log_source::GameLogSource, game_runner_source::GameRunnerSourceEnum, GameRunner};
+    use crate::{init_test_logger, ActionEnum, pre_calc::perfect_hash::load_boomperfect_hash, game_log_source::GameLogSource, game_runner_source::GameRunnerSourceEnum, GameRunner, HoleCards};
 
     use super::*;
 
