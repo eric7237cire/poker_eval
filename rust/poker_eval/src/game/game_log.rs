@@ -519,6 +519,12 @@ impl GameLog {
 
         //calculate hand strength in each round
         for round_index in (Round::Flop as u8)..=(Round::River as u8) {
+
+            //If everyone folded, we are done
+            if self.board.is_empty() {
+                break;
+            }
+
             let round = round_index.try_into()?;
 
             let players_in_hand = (0..self.players.len())
