@@ -637,10 +637,6 @@ impl GameLog {
         }
 
 
-        //Hero Hand strength at showdown
-        //Best non hero  at showdown
-        //Initial stack
-        //Final stack
 
         Ok(ret)
     }

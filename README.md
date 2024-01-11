@@ -89,3 +89,14 @@ serve -s dist
 ```
 
 http://localhost:3000
+
+# Jupyter
+
+(Used WSL non root user)
+```
+python3 -m pip install scipy
+python3 -m pip install matplotlib --force-reinstall
+python3 -m pip install jupyterlab
+
+jupyter lab
+```
