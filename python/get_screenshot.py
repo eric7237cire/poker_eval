@@ -33,8 +33,9 @@ def get_screenshot():
     
     # Free filename
     for i in range(0, 1000):
-        file_path = base_path / f"zynga_{i}.png"
-        if not file_path.exists():
+        file_path = base_path / f"zynga_{i}.bmp"
+        png_path = base_path / f"zynga_{i}.png"
+        if not png_path.exists():
             break
 
     print(f"Fetching window title [{zynga_title}]")
@@ -56,10 +57,6 @@ def get_screenshot():
     print(f"Left: {left}, Top: {top}, Right: {right}, Bot: {bot}")
 
     hwin = win32gui.GetDesktopWindow()
-    # v_width = win32api.GetSystemMetrics(win32con.SM_CXVIRTUALSCREEN)
-    # v_height = win32api.GetSystemMetrics(win32con.SM_CYVIRTUALSCREEN)
-    # v_left = win32api.GetSystemMetrics(win32con.SM_XVIRTUALSCREEN)
-    # v_top = win32api.GetSystemMetrics(win32con.SM_YVIRTUALSCREEN)
 
     desktop_dc = win32gui.GetWindowDC(hwin)
 
@@ -69,26 +66,21 @@ def get_screenshot():
     bmp.CreateCompatibleBitmap(srcdc, w, h)
     memdc.SelectObject(bmp)
     memdc.BitBlt((0, 0), (w, h), srcdc, (left, top), win32con.SRCCOPY)
+    print(f"Saving to file [{file_path}]")
     bmp.SaveBitmapFile(memdc, str(file_path))
 
-    
+    win32gui.DeleteObject(bmp.GetHandle())
+    memdc.DeleteDC()
+    srcdc.DeleteDC()
+    win32gui.ReleaseDC(hwin, desktop_dc)
 
-    # im = Image.frombuffer(
-    #     'RGB',
-    #     (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
-    #     bmpstr, 'raw', 'BGRX', 0, 1)
-    
-    
-    # if result == 1:
-    #     #PrintWindow Succeeded
-    #     im.save(file_path)
-    # else:
-    #     #PrintWindow Failed
-    #     raise Exception("Failed to get screenshot of window")
+    img = Image.open(file_path)
+    png_file_path = file_path.with_suffix('.png')  # Change file extension to .png
+    print(f"Saving PNG to file [{png_file_path}]")
+    img.save(png_file_path, 'PNG')
 
-    
-    win32gui.ReleaseDC(hwnd, desktop_dc)
 
+    file_path.unlink()
     
     
 
