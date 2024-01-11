@@ -199,10 +199,22 @@ impl GameState {
         self.prev_round_pot + self.round_pot
     }
 
-    pub fn non_folded_players(&self) -> u8 {
+    pub fn num_non_folded_players(&self) -> u8 {
         self.player_states
             .iter()
             .filter(|ps| !ps.is_folded())
             .count() as u8
+    }
+
+    pub fn num_players_at_round_start(&self) -> u8 {
+        self.player_states.iter().filter(|ps| {
+            if let Some(FinalPlayerState::Folded(round)) = ps.final_state {
+                //If they folded in this round then they count
+                round >= self.current_round
+            } else {
+                //not folded
+                true
+            }
+        }).count() as u8
     }
 }

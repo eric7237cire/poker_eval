@@ -126,7 +126,7 @@ impl Tag {
         player_state: &PlayerState,
         game_state: &GameState,
     ) -> CommentedAction {
-        let non_folded_players = game_state.non_folded_players();
+        let non_folded_players = game_state.num_non_folded_players();
 
         let hc = self.hole_cards.as_ref().unwrap();
         let mut pdb = self.partial_rank_db.borrow_mut();

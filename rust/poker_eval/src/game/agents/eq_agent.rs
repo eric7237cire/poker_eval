@@ -103,11 +103,8 @@ impl EqAgent {
         player_state: &PlayerState,
         game_state: &GameState,
     ) -> CommentedAction {
-        let non_folded_players = game_state
-            .player_states
-            .iter()
-            .filter(|ps| !ps.is_folded())
-            .count() as u8;
+        let non_folded_players = game_state.num_non_folded_players();
+        let players_at_round_start = game_state.num_players_at_round_start();
 
         let hole_cards = self.hole_cards.as_ref().unwrap();
         let mut pr_db = self.partial_rank_db.borrow_mut();
@@ -126,7 +123,7 @@ impl EqAgent {
             &rank,
             &game_state.board,
             &hole_cards,
-            non_folded_players,
+            players_at_round_start,
         )
         .unwrap();
 
@@ -140,7 +137,7 @@ impl EqAgent {
         let eq = self
             .monte_carlo_db
             .borrow_mut()
-            .get_put(&eq_board, &eq_hole_cards, non_folded_players)
+            .get_put(&eq_board, &eq_hole_cards, players_at_round_start)
             .unwrap();
 
         let call_amt = min(
@@ -151,9 +148,10 @@ impl EqAgent {
         //max is always just the remaining stack
 
         let mut comment_common = format!(
-            "Eq {:.2}% with {} players;Likes Hand Level {};Positive {};Negative {}",
+            "Eq {:.2}% with {} players in round;Non Folded Player Count: {};Likes Hand Level: {};Positive {};Negative {}",
             eq * 100.0,
-            non_folded_players,
+            players_at_round_start,
+            non_folded_players,            
             likes_hand_response.likes_hand,
             likes_hand_response.likes_hand_comments.join(", "),
             likes_hand_response.not_like_hand_comments.join(", ")
