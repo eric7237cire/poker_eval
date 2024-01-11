@@ -119,3 +119,5 @@ The EQ vs random for 2-10 players
 
 https://github.com/MemExplorer/poker-vision
 https://github.com/sagor999/poker_ml
+
+https://learnopencv.com/train-yolov8-on-custom-dataset/

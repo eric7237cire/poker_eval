@@ -1,1 +1,5 @@
 *.csv
+pothole_dataset_v8
+datasets
+runs
+.ipynb_checkpoints
