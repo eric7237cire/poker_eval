@@ -2,7 +2,7 @@ use std::{
     cell::RefCell,
     collections::{BinaryHeap, HashMap},
     fs,
-    path::PathBuf,
+    path::{PathBuf, Path},
     rc::Rc,
 };
 
@@ -133,9 +133,11 @@ fn main() {
     let num_players = 9;
     let mut winnings: HashMap<String, i64> = HashMap::new();
 
-    let hh_path = PathBuf::from("/home/eric/git/poker_eval/rust/hand_history");
-    let ps_hh_path = PathBuf::from("/home/eric/git/poker_eval/rust/ps_hand_history");
-    let json_hh_path = PathBuf::from("/home/eric/git/poker_eval/vue-poker/src/assets/hand_history");
+    let repo_root = PathBuf::from("/home/eric/git/poker_eval");
+    let hh_path = repo_root.join("rust/hand_history");
+    let ps_hh_path = repo_root.join("rust/ps_hand_history");
+    let json_hh_path = repo_root.join("vue-poker/src/assets/hand_history");
+    let csv_path = repo_root.join("python/hand_history.csv");
 
     //delete tree hh_path
     for path in [hh_path.clone(), ps_hh_path.clone(), json_hh_path.clone()].iter() {
@@ -144,6 +146,8 @@ fn main() {
         }
         fs::create_dir_all(path).unwrap();
     }
+
+    let mut wtr = csv::Writer::from_path(csv_path).unwrap();
 
     for it_num in 0..num_total_iterations {
         agent_deck.reset();
@@ -186,8 +190,7 @@ fn main() {
             assert_eq!(action_count_before + 1, action_count_after);
         }
 
-        #[allow(unused_mut)]
-        let mut change = game_runner.game_state.player_states[hero_index].stack as i64
+        let change = game_runner.game_state.player_states[hero_index].stack as i64
             - game_runner.game_state.player_states[hero_index].initial_stack as i64;
 
         for p in game_runner.game_state.player_states.iter() {
@@ -197,12 +200,12 @@ fn main() {
 
         if it_num % 100 == 0 {
             debug!(
-                "Iteration {}, hero change {}",
+                "Iteration {}",
                 it_num,
-                change.to_formatted_string(&Locale::en),
             );
         }
 
+        wtr.serialize(game_runner.to_game_log().unwrap()).unwrap();
         // for (c, it, _log) in heap.iter() {
         //     debug!(
         //         "In heap at iteration {}, have {}, {}",
@@ -212,10 +215,6 @@ fn main() {
         //     );
         // }
 
-        // //To add it always
-        // if it_num == 79 {
-        //     change = -1000;
-        // }
 
         //if we have enough hands and this hand is not worse than the worst hand
         if heap.len() == num_worst_hands_to_keep && change > heap.peek().unwrap().0 {

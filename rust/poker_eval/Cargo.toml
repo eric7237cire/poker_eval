@@ -29,6 +29,7 @@ path = "src/gen_hole_card_data.rs"
 name = "calc_dominated"
 path = "src/calc_dominated.rs"
 
+
 [dependencies]
 bitvec = {version = "1.0.1", features=["serde"]}
 itertools = "*"
@@ -66,12 +67,14 @@ bincode = "1.3.3"
 fastrand = "2.0.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-jammdb = "0.11"
-redb = "1.4"
-rmp-serde = "1.1.2"
+# jammdb = "0.11"
+redb = "1.4.0"
 
+# rmp-serde = "1.1.2"
 
 dotenv = "0.15"
 
 # doesn't compile in 32 bits
-ph = "0.8.2"
+# ph = "0.8.2"
+
+csv = "1.1"

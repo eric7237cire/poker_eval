@@ -1,10 +1,17 @@
 use std::io::Write;
 
+#[cfg(not(target_arch = "wasm32"))]
 use log::debug;
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::game::game_runner_source::GameRunnerSourceEnum;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::game_log_source::GameLogSource;
-use crate::{GameLog, GameRunner, PokerError};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::{GameLog, GameRunner};
+
+#[cfg(not(target_arch = "wasm32"))]
+use crate::PokerError;
 
 pub fn init_test_logger() {
     let _ = env_logger::builder()
@@ -76,6 +83,7 @@ fn take_after_last_slash(s: &str) -> &str {
     &s[last_slash + 1..]
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn test_game_runner(game_runner: &mut GameRunner) -> Result<(), PokerError> {
     for _ in 0..200 {
         let action_count_before = game_runner.game_state.actions.len();

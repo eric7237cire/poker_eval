@@ -5,7 +5,7 @@ use serde::Serialize;
 use crate::Board;
 
 use crate::CommentedAction;
-use crate::InitialPlayerState;
+use crate::HoleCards;
 use crate::PlayerAction;
 use crate::Position;
 
@@ -35,6 +35,17 @@ pub struct PlayerState {
     pub all_in: bool,
 
     pub final_state: Option<FinalPlayerState>,
+}
+
+#[derive(Serialize)]
+pub struct InitialPlayerState {
+    pub stack: ChipType,
+    pub player_name: String,
+
+    //0 -- sb, 1 bb, 2 utg, 3 hj, 4 btn
+    pub position: Position,
+
+    pub cards: Option<HoleCards>,
 }
 
 #[repr(u8)]

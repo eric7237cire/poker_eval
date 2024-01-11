@@ -15,6 +15,7 @@ use crate::Card;
 use crate::FinalPlayerState;
 use crate::HoleCards;
 
+use crate::InitialPlayerState;
 use crate::board_hc_eval_cache_redb::EvalCacheWithHcReDb;
 use crate::board_hc_eval_cache_redb::ProduceMonteCarloEval;
 use crate::game::game_log_parser::GameLogParser;
@@ -28,16 +29,7 @@ use crate::PokerError;
 use crate::Position;
 use crate::Round;
 
-#[derive(Serialize)]
-pub struct InitialPlayerState {
-    pub stack: ChipType,
-    pub player_name: String,
 
-    //0 -- sb, 1 bb, 2 utg, 3 hj, 4 btn
-    pub position: Position,
-
-    pub cards: Option<HoleCards>,
-}
 
 #[derive(Default, Serialize)]
 pub struct GameLog {
