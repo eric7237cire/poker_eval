@@ -419,28 +419,36 @@ impl GameLog {
 
         //Number of players in hand
 
-        ret.players_in_hand = self.players.len() as u8;
+        ret.players_starting_preflop = self.players.len() as u8;
+        
+
+        let mut when_players_folded: Vec<Option<Round>> = vec![None; self.players.len()];
 
         let mut first_hero_action = true;
 
         let mut cur_round = Round::Preflop;
         for action in self.actions.iter() {
             trace!("Action {}", action.non_folded_players);
+
+            if action.action == ActionEnum::Fold {
+                when_players_folded[action.player_index] = Some(action.round);
+            }
+
             //First action of round
             if action.round != cur_round {
                 cur_round = action.round;
 
                 match cur_round {
                     Round::Flop => {
-                        ret.players_starting_flop = action.non_folded_players;
+                        ret.players_starting_flop = action.non_folded_players as u8;
                         ret.pot_start_flop = action.pot as f64 / self.bb as f64;
                     }
                     Round::Turn => {
-                        ret.players_starting_turn = action.non_folded_players;
+                        ret.players_starting_turn = action.non_folded_players as u8;
                         ret.pot_start_turn = action.pot as f64 / self.bb as f64;
                     }
                     Round::River => {
-                        ret.players_starting_river = action.non_folded_players;
+                        ret.players_starting_river = action.non_folded_players as u8;
                         ret.pot_start_river = action.pot as f64 / self.bb as f64;
                     }
                     _ => panic!("Invalid round"),
@@ -511,6 +519,70 @@ impl GameLog {
                 }
 
                 first_hero_action = false;
+            }
+        }
+
+        //calculate hand strength in each round
+        for round_index in (Round::Flop as u8)..=(Round::River as u8) {
+            let round = round_index.try_into()?;
+
+            let players_in_hand = (0..self.players.len())
+                .filter(|p_idx| {
+                    //either never folded or folded on or after this round
+                    //So a player that folded in the flop is still there at start of flop
+                    when_players_folded[*p_idx].is_none()
+                        || when_players_folded[*p_idx].unwrap() >= round
+                })
+                .collect_vec();
+
+            let round_var = 
+            match round {
+                Round::Flop => &mut ret.players_starting_flop,
+                Round::Turn => &mut ret.players_starting_turn,
+                Round::River => &mut ret.players_starting_river,
+                _ => panic!("Invalid round"),
+                
+            };
+
+            //In case of all ins, we might not have the rounds with no actions
+            if *round_var == 0 {
+                *round_var = players_in_hand.len() as u8;
+            } else {
+                //if it is set, it should be consistent
+                assert_eq!(*round_var, players_in_hand.len() as u8);
+            }
+
+            if players_in_hand.len() <= 0 {
+                continue;
+            }
+            
+            trace!("Round {} Players in hand {}", 
+                round,
+                players_in_hand.len());
+            // for p_idx in players_in_hand.iter() {
+            //     trace!("Player {} has not folded", &self.players[*p_idx].player_name);
+            // }
+            //assert_eq!(players_in_hand.len(), num_players_in_round as usize);
+
+            let hero_strength = fast_hand_eval(
+                self.board.iter().take(round.get_num_board_cards()).chain(
+                    self.players[hero_index].cards.as_ref().unwrap().as_slice()), hash_func);
+
+            let all_strength = players_in_hand
+                .iter()
+                .map(|p_idx| {
+                    fast_hand_eval(self.board.iter().take(round.get_num_board_cards()).chain(
+                        self.players[*p_idx].cards.as_ref().unwrap().as_slice()), hash_func)
+                })
+                .collect_vec();
+
+            let num_above = all_strength.iter().filter(|s| **s > hero_strength).count();
+
+            match round {
+                Round::Preflop => panic!("Hand rank not on preflop"),
+                Round::Flop => ret.hero_hand_rank_flop = (num_above + 1) as u8,
+                Round::Turn => ret.hero_hand_rank_turn = (num_above + 1) as u8,
+                Round::River => ret.hero_hand_rank_river = (num_above + 1) as u8,
             }
         }
 
@@ -622,8 +694,8 @@ pub struct CsvLineForPokerHand {
     pub position: u8,
 
     //Number of players in hand
-    #[serde(rename = "PLR_IN_HAND")]
-    pub players_in_hand: u8,
+    #[serde(rename = "PLR_START_PREFLOP")]
+    pub players_starting_preflop: u8,
 
     //Number of players starting flop
     //Number of players starting turn
@@ -636,6 +708,23 @@ pub struct CsvLineForPokerHand {
 
     #[serde(rename = "PLR_START_RIVER")]
     pub players_starting_river: u8,
+
+    //Among all non folded players, before action starts
+    //best hand is 1, ties also 1
+    //calculated even if hero folded
+    //Useful to calculate when folded too much
+    #[serde(rename = "HND_RNK_PREFLOP")]
+    pub hero_hand_rank_preflop: u8,
+
+    #[serde(rename = "HND_RNK_FLOP")]
+    pub hero_hand_rank_flop: u8,
+
+    #[serde(rename = "HND_RNK_TURN")]
+    pub hero_hand_rank_turn: u8,
+
+    #[serde(rename = "HND_RNK_RIVER")]
+    pub hero_hand_rank_river: u8,
+
 
     //Number of players acting before hero on flop (so 3rd, this == 2)
     //Number of players acting before hero on turn
@@ -1156,7 +1245,7 @@ Agent 4               - 495 # Started with 500 change -5
     Plyr B bets 10
     Plyr D folds
     *** River ***
-    Js
+    Kd
     *** Summary ***
     Plyr A - 0
     Plyr B - 209
@@ -1199,6 +1288,11 @@ Agent 4               - 495 # Started with 500 change -5
         assert_eq!(game_line.players_before_hero_flop, 1);
         assert_eq!(game_line.players_before_hero_turn, 1);
 
+        assert_eq!(game_line.players_starting_flop, 3);
+        assert_eq!(game_line.players_starting_turn, 3);
+        //1 is all in
+        assert_eq!(game_line.players_starting_river, 2);
+
         assert_eq!(game_line.pot_start_flop, 62.0 / 10.0);
         assert_eq!(game_line.pot_start_turn, 102.0 / 10.0);
         assert_eq!(game_line.pot_start_river, 112.0 / 10.0);
@@ -1221,7 +1315,11 @@ Agent 4               - 495 # Started with 500 change -5
 
         assert_eq!(game_line.final_stack, 15.0 / 10.0);
 
-        //All in user counts
+        //All in user counts, that's why it's 2 not 1
         assert_eq!(game_line.players_before_hero_turn, 2);
+
+        assert_eq!(game_line.hero_hand_rank_flop, 2);
+        assert_eq!(game_line.hero_hand_rank_turn, 2);
+        assert_eq!(game_line.hero_hand_rank_river, 1);
     }
 }

@@ -54,3 +54,17 @@ impl Into<usize> for Round {
         self as usize
     }
 }
+
+impl TryFrom<u8> for Round {
+    type Error = String;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Round::Preflop),
+            1 => Ok(Round::Flop),
+            2 => Ok(Round::Turn),
+            3 => Ok(Round::River),
+            _ => Err(format!("Invalid round {}", value)),
+        }
+    }
+}

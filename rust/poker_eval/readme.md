@@ -76,23 +76,16 @@ Have classifier based on performance vs 4 players
 3 -- Bet situation (unbet, facing bet, facing raise)
 4 -- Check, Bet/Raise, Fold, Call
 
+# Tester
+
+Be able to initialize the game runner up until a given point (via game log),
+then try different actions,
+and continue the game as normal
+
+But....how to vary the opponents hole cards?  Knowing they might not have taken the same actions.
+
 # Go through each hand where lost money,  won @ showdown, won with folding
 
-Create a database, 
-
-hand 
-starting position|num players|hole cards|hole card category
-
-round
-hand_id|round|equity|bet situation|action|pot|amt_put_in|relative position -- (num acted, num left to act)
-
-action is 1st one
-equity is monte carlo est. equity
-pot is at start of round 
-amt_put_in is amount put in before start of round
-
-result
-winning_hand|losing_hand|winning_hand_category|losing_hand_category|amt_won|amt_put_in
 
 
 # Hand Analyzer:
@@ -115,3 +108,9 @@ Another player had better kicker, etc.
 Solution: Preflop, bet less, fold
 
 
+Going to do ipython to analyze this data
+
+# Preflop precached data
+
+Store in code for all hole card types (169)
+The EQ vs random for 2-10 players
