@@ -114,3 +114,8 @@ Going to do ipython to analyze this data
 
 Store in code for all hole card types (169)
 The EQ vs random for 2-10 players
+
+# Vision
+
+https://github.com/MemExplorer/poker-vision
+https://github.com/sagor999/poker_ml

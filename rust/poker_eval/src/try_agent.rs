@@ -33,19 +33,13 @@ fn build_agents(
     let mut agents: Vec<Box<dyn Agent>> = Vec::new();
 
     agents.push(Box::new(EqAgent::new(        
-        "EqAggro1",
+        "EqAggroA",
         EqAgentConfig::get_aggressive(),
         flop_texture_db.clone(),
         partial_rank_db.clone(),
         monte_carlo_equity_db.clone(),
     )));
-    // agents.push(Box::new(EqAgent::new(
-    //     None,
-    //     "EqAgent1",
-    //     flop_texture_db.clone(),
-    //     partial_rank_db.clone(),
-    //     monte_carlo_equity_db.clone(),
-    // )));
+    
 
     // agents.push(Box::new(PassiveCallingStation::new(
     //     None,
@@ -92,10 +86,7 @@ fn build_agents(
             partial_rank_db.clone(),
             monte_carlo_equity_db.clone(),
         )));
-        //agents.push(Box::new(agent));
     }
-
-    //info!("Built {} agents", agents.len());
 
     agents
 }
@@ -127,10 +118,10 @@ fn main() {
     //we want to track the worst loses
     let mut heap: BinaryHeap<(i64, i32, GameLog)> = BinaryHeap::new();
 
-    let num_total_iterations = 2_000;
+    let num_total_iterations = 20_000;
     let num_worst_hands_to_keep = 5;
     let num_players = 9;
-    let hero_name = "EqAggro1";
+    let hero_name = "EqAggroA";
     let mut winnings: HashMap<String, i64> = HashMap::new();
 
     let repo_root = PathBuf::from("/home/eric/git/poker_eval");
