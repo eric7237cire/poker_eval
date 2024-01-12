@@ -5,7 +5,6 @@ from ultralytics import YOLO
 
 def train():
     
-
     
     # Load the model.
     model = YOLO('yolov8n.pt')
@@ -14,7 +13,7 @@ def train():
     results = model.train(
         data='zynga_1.yml',
         imgsz=640,
-        epochs=10,
+        epochs=100,
         batch=4,
         name='yolo1')
 
@@ -24,7 +23,7 @@ def predict():
 
     predict_dir = Path("/eric/python/predictions")
 
-    image_dir = Path("/usr/src/datasets/zynga/train/images/")
+    image_dir = Path("/usr/src/datasets/zynga/valid/images/")
 
     if predict_dir.exists():
         shutil.rmtree(predict_dir)
@@ -44,5 +43,5 @@ def predict():
 
 
 if __name__ == "__main__":
-    # train()    
+    train()    
     predict()
