@@ -41,8 +41,14 @@ yolo detect predict model=runs/detect/yolov8n_v8_50e/weights/best.pt source='/ho
 
 i:\python\Scripts\label-studio.exe start 
 
+docker pull heartexlabs/label-studio:latest
+docker run -it -p 9142:8080 -v /home/eric/git/poker_eval/data/label-studio:/label-studio/data heartexlabs/label-studio:latest
+
+docker run -it --user root -v /home/eric/git/poker_eval/data/label-studio:/label-studio/data heartexlabs/label-studio:latest chown -R 1001:root /label-studio/data/
+
 # Start jupyter
 
 juyter lab
 
 tensorboard --logdir runs  # replace with 'runs' directory
+
