@@ -2,7 +2,12 @@ from pathlib import Path
 import random
 import shutil
 
-# BASE_DIR = Path("/home/eric/git/poker_eval/python")
+##############################################################
+# This runs from within the ultralytics container
+# It takes the raw yolo dataset exported from label studio
+# and splits it into train and validate sets
+# it can also collapse all the classes into one class
+##############################################################
 
 BASE_DIR = Path("/usr/src")
 

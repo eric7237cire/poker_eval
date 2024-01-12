@@ -1,3 +1,7 @@
+######################################################
+# Takes the historgrams and clusters them into sets based on preflop perf
+# data is from rust gen_hole_card_data
+# 
 import numpy as np
 # python3 -m pip install scipy
 # python3 -m pip install matplotlib --force-reinstall

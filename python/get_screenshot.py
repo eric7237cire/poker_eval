@@ -11,7 +11,9 @@ import win32api
 from PIL import Image
 
 
-base_path = Path(r"I:\ZyngaData")
+#base_path = Path(r"I:\ZyngaData")
+base_path = Path(r"D:\ZyngaData")
+
 def get_screenshot():
     titles = gw.getAllTitles()
 

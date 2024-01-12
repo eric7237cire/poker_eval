@@ -2,6 +2,10 @@
 
 Used Anaconda installation on windows
 
+```
+d:\Miniconda3\python.exe --version
+```
+
 # ML setup
 
 https://learnopencv.com/train-yolov8-on-custom-dataset/
