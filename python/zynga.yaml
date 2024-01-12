@@ -57,3 +57,9 @@ names:
   50: Th
   51: Ts
   
+# Augmentations
+
+degrees: 45
+scale: 0.4
+fliplr: 0.5 # flip left to right
+translate: 0.1 # translate by 10%

@@ -37,6 +37,28 @@ yolo detect predict model=runs/detect/yolov8n_v8_50e6/weights/best.pt source='/h
 
 yolo detect predict model=runs/detect/yolov8n_v8_50e/weights/best.pt source='/home/eric/git/poker_eval/python/datasets/zynga/train/images/0b057b90-zynga_0.png'
 
+Running in docker
+
+docker run -it --rm --ipc=host --gpus all -p 6006:6006 -v /home/eric/git/poker_eval/python:/eric/python -v /home/eric/git/poker_eval/python/datasets:/usr/src/datasets -v /home/eric/git/poker_eval/python/runs:/usr/src/ultralytics/runs ultralytics/ultralytics:latest
+
+cd /eric/python
+
+tensorboard --logdir /usr/src/ultralytics/runs --bind_all & 
+
+yolo task=detect mode=train model=yolov8n.pt imgsz=640 data=zynga.yaml epochs=100 name=yolo1
+
+python train.py
+
+All params in /usr/src/ultralytics/ultralytics/cfg/default.yaml (open in vscode to running container)
+
+yolo detect predict model=/usr/src/ultralytics/runs/detect/yolo16/weights/best.pt source='/usr/src/datasets/zynga/valid/images/e70cd165-zynga_1.png'
+
+yolo detect predict model=/usr/src/ultralytics/runs/detect/yolo16/weights/best.pt source='/usr/src/datasets/zynga/valid/images/94164c06-zynga_2.png'
+ 
+ yolo detect predict model=/usr/src/ultralytics/runs/detect/yolo16/weights/best.pt source='/usr/src/datasets/zynga/train/images/8cc33bd4-zynga_1.png'
+
+0b057b90-zynga_0
+
 # Starting label studio
 
 i:\python\Scripts\label-studio.exe start 

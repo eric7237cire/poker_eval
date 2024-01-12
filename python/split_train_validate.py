@@ -2,7 +2,9 @@ from pathlib import Path
 import random
 import shutil
 
-BASE_DIR = Path("/home/eric/git/poker_eval/python")
+# BASE_DIR = Path("/home/eric/git/poker_eval/python")
+
+BASE_DIR = Path("/usr/src")
 
 # this is where the yolo export from label studio was unzipped, it should contain an images and labels folder
 YOLO_EXPORT_DIR = BASE_DIR / "datasets" / "all"
@@ -15,7 +17,7 @@ LABELS_DIR_NAME = "labels"
 TARGET_TRAIN_DIR = TARGET_DIR / "train"
 TARGET_VALIDATE_DIR = TARGET_DIR / "valid"
 
-def do_split(validation_split = 0.2) :
+def do_split(validation_split = 0.2, collapse_to_one_class = False) :
 
     shutil.rmtree(TARGET_DIR)
 
@@ -53,12 +55,30 @@ def do_split(validation_split = 0.2) :
     for f in validate_files :
         shutil.copy(f, TARGET_VALIDATE_DIR / IMAGES_DIR_NAME)
         label_file = (YOLO_EXPORT_DIR / LABELS_DIR_NAME / f.stem).with_suffix(".txt")
-        shutil.copy(label_file, TARGET_VALIDATE_DIR / LABELS_DIR_NAME)
+        target_label_path = TARGET_VALIDATE_DIR / LABELS_DIR_NAME
+        shutil.copy(label_file, target_label_path)
+
+        if collapse_to_one_class :
+            replace_with_one_class(target_label_path / label_file.name)
 
     for f in train_files :
         shutil.copy(f, TARGET_TRAIN_DIR / IMAGES_DIR_NAME)
         label_file = (YOLO_EXPORT_DIR / LABELS_DIR_NAME / f.stem).with_suffix(".txt")
-        shutil.copy(label_file, TARGET_TRAIN_DIR / LABELS_DIR_NAME)
+        target_label_path = TARGET_TRAIN_DIR / LABELS_DIR_NAME
+        shutil.copy(label_file, target_label_path)
+
+        if collapse_to_one_class :
+            replace_with_one_class(target_label_path / label_file.name)
+
+def replace_with_one_class(txt_file: Path):
+    with open(txt_file, "r") as f:
+        lines = f.readlines()
+    
+    with open(txt_file, "w") as f:
+        for line in lines:
+            fields = line.split(" ")
+            fields[0] = "0"
+            f.write(" ".join(fields))
 
 if __name__ == '__main__' :
-    do_split(0.20)
+    do_split(0.20, True)

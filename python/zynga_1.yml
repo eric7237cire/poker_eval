@@ -1,0 +1,10 @@
+path: zynga/
+train: 'train/images'
+val: 'valid/images'
+ 
+# class names
+names: 
+  0: Card
+
+
+mosaic: 0
