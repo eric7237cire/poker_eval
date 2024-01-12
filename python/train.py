@@ -4,6 +4,9 @@ import shutil
 from pathlib import Path
 from ultralytics import YOLO
 
+# Runs in the ultralytics container
+# switch function in main
+
 RUNS_DIR = Path("/usr/src/ultralytics/runs")
 PYTHON_SRC_DIR = Path("/eric/python")
 
