@@ -5,4 +5,4 @@ datasets
 runs
 predictions
 .ipynb_checkpoints
-yolov8n.pt
+*.pt
