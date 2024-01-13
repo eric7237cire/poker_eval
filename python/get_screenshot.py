@@ -9,6 +9,7 @@ from ctypes import windll
 import win32api
 from PIL import Image
 from datetime import datetime
+import os
 
 import pytz  # Import the pytz library for timezone handling
 
@@ -22,7 +23,7 @@ base_path = Path(r"\\wsl.localhost\Ubuntu-22.04\home\eric\git\poker_eval\python\
 # Admin prompt
 # i:\python\Scripts\pip install pyautogui
 # i:\python\scripts\pip install pygetwindow
-# i:\python\python.exe "\\wsl.localhost\Ubuntu-22.04\home\eric\git\poker_eval\python\get_screenshot.py"
+# \\wsl.localhost\Ubuntu-22.04\home\eric\git\poker_eval\dev\get_ss.bat
 
 
 title_to_find = os.environ["WINDOW_TITLE_TO_FIND"]

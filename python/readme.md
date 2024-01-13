@@ -70,13 +70,22 @@ heartexlabs/label-studio:latest
 
 ## Converting from yolo
 
+Improvement loop, use get/process screenshot to get more data
+which creates yolo dataset in live
+
 label studio exports bbox format, so
 run convert_to_yolo.py
 
 mkdir ${REPO_ROOT}/python/label_studio_import
-chmod 777 ${REPO_ROOT}/python/label_studio_import
+chmod 777 -R ${REPO_ROOT}/python/label_studio_import
 
-export DATASET_NAME=all
+cp ${REPO_ROOT}/python/datasets/all/classes.txt ${REPO_ROOT}/python/datasets/live/classes.txt 
+cp ${REPO_ROOT}/python/datasets/all/notes.json ${REPO_ROOT}/python/datasets/live/notes.json
+
+
+export DATASET_NAME=live
+
+Use all images link in the url, because that's where they will stay
 
 docker run -it --rm \
 -v ${REPO_ROOT}/python:/poker/data \
@@ -86,7 +95,18 @@ label-studio-converter import yolo \
 -i /poker/data/datasets/${DATASET_NAME} \
 -o /poker/data/label_studio_import/${DATASET_NAME}.json \
 --image-ext .png --out-type annotations \
---image-root-url /data/local-files/?d=/home/user/python-data/datasets/${DATASET_NAME}/images/
+--image-root-url /data/local-files/?d=/home/user/python-data/datasets/all/images/
+
+Import live.json from 
+\\wsl.localhost\Ubuntu-22.04\home\eric\git\poker_eval\python\label_studio_import
+
+Fix stuff
+
+(keep old all directory because the image links use that)
+
+Reexport to all / unzip
+
+Retrain
 
 ## To fix dir permissions
 

@@ -111,7 +111,13 @@ def prepare_data(valid_percent: float=0.0, test_percent: float =0.35):
         valid_dir.mkdir(parents=True, exist_ok=True)
 
         train_files = [f for f in class_dir.iterdir()]
+        
         num_test = int(len(train_files) * test_percent)
+
+        # we need at least 1
+        if num_test == 0 and len(train_files) > 0 and test_percent > 0:
+            num_test = 1
+
         test_files = train_files[:num_test]
         num_valid = int(len(train_files) * valid_percent)
         valid_files = train_files[num_test:num_test + num_valid]
@@ -161,7 +167,7 @@ def train():
 
     # Train the model
     model.train(
-        data=cfg.CLASSIFY_DATA_PATH, epochs=30, imgsz=128, degrees=45,
+        data=cfg.CLASSIFY_DATA_PATH, epochs=50, imgsz=128, degrees=45,
         project=cfg.CLASSIFY_PROJECT_PATH,
         name=cfg.CLASSIFY_MODEL_NAME
     )
@@ -206,6 +212,9 @@ def predict():
     shutil.rmtree(predict_dir)
 
 def clean_run_dir():
+
+    cfg.CLASSIFY_PROJECT_PATH.mkdir(parents=True, exist_ok=True)
+
     for sub_dir in cfg.CLASSIFY_PROJECT_PATH.iterdir():
         if sub_dir.is_dir():
             rmtree(sub_dir)
@@ -213,12 +222,12 @@ def clean_run_dir():
             sub_dir.unlink()
 
 if __name__ == "__main__":
-    prepare_data()
+    # Use all the data, making at least 1 in test though because
+    # ultralytics complains otherwise
+    prepare_data(0, 0.01)
     count_instances_per_class()
     
     clean_run_dir()
     train()
-    
-    # clean_run_dir()
-    # train()    
-    predict()
+        
+    # predict()

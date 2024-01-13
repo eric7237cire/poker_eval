@@ -10,7 +10,7 @@ from matplotlib.pyplot import box
 from PIL import Image
 from ultralytics import YOLO
 from env_cfg import EnvCfg
-from python.classify import read_classes
+from classify import read_classes
 
 cfg = EnvCfg()
 
@@ -42,7 +42,8 @@ def process_screenshots():
             )
             result = results[0]
 
-            print(f"Predicted {image_file} to {result}")
+            # print(f"Predicted {image_file} to {result}")
+            print(f"Predicted {image_file}")
 
             save_dir = result.save_dir
 
@@ -62,6 +63,7 @@ def process_screenshots():
             
             # We also want to visualize the results
             annotated_image_path = cfg.LIVE_CARD_IMAGES_PATH / f"{image_file.stem}_annotated.png"
+            print(f"Producing annotated image [{annotated_image_path}]")
             draw_box_on_image(image_file, classes, colors, annotated_image_path)
 
 
@@ -120,7 +122,10 @@ def run_classification(image_file, box_coords, box_coords_normalized, classify_m
     save_label_path = (cfg.LIVE_PATH / cfg.LABEL_FOLDER_NAME / image_file.name).with_suffix(".txt")
     save_label_path.parent.mkdir(parents=True, exist_ok=True)
     with open(save_label_path, "w") as f:
-        f.write("\n".join(label_lines))
+        if len(label_lines) > 0:
+            f.write("\n".join(label_lines))
+        else:
+            f.write("")
 
 
 def clean_detect():
@@ -158,7 +163,7 @@ def draw_box_on_image(image_path: Path, classes: List[str], colors, output_path:
     with open(label_path, 'r') as f:
         lines = f.readlines()
    
-    image = cv2.imread(image_path)
+    image = cv2.imread(str(image_path))
     try:
         height, width, channels = image.shape
     except:
@@ -179,7 +184,7 @@ def draw_box_on_image(image_path: Path, classes: List[str], colors, output_path:
         plot_one_box([x1, y1, x2, y2], image, color=colors[class_idx],
                      label=classes[class_idx], line_thickness=None)
 
-        cv2.imwrite(output_path, image)
+        cv2.imwrite(str(output_path), image)
 
         
 
