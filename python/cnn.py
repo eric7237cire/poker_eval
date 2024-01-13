@@ -28,8 +28,7 @@ def prepare_data():
 
     image_num = 0
 
-    with open(CARD_YOLO_PATH / "classes.txt") as f:
-        classes = f.read().split("\n")
+    classes = read_classes()
 
     for label_file in labels_dir.iterdir():
         if label_file.suffix != ".txt":
@@ -83,7 +82,23 @@ def prepare_data():
         # Close the original and cropped images
         img.close()
 
-    count_class = []
+    count_instances_per_class()
+
+def read_classes():
+    with open(CARD_YOLO_PATH / "classes.txt") as f:
+        classes = f.read().strip().split("\n")
+
+    if len(classes) != 52:
+        raise Exception(f"Expected 52 classes, was {len(classes)}")
+    
+    return classes
+    
+def count_instances_per_class():
+    
+    classes = read_classes()
+    count_class = {
+        classes[k]: 0 for k in range(0, len(classes))
+    }
     # now count how many of each class we have
     for class_dir in CNN_DATA_PATH.iterdir():
         if not class_dir.is_dir():
@@ -91,12 +106,13 @@ def prepare_data():
 
         num_files = len(list(class_dir.iterdir()))
         print(f"{class_dir.name}: num_files: {num_files}")
-        count_class.append((num_files, class_dir.name))
+        count_class[class_dir.name] = num_files
 
-    lowest_count = min( [c[0] for c in count_class] )
-    lowest_cards = [c[1] for c in count_class if c[0] == lowest_count]
+    lowest_count = min( [count_class[c] for c in count_class] )
+    lowest_cards = [c for c in count_class if count_class[c] == lowest_count]
     lowest_cards.sort()
     print(f"Lowest count: {lowest_count} for {lowest_cards}")
+
 
 def load_dataset(data_path):
     
@@ -199,6 +215,7 @@ def train(model, device, train_loader, optimizer, epoch, loss_criteria):
     model.train()
     train_loss = 0
     print("Epoch:", epoch)
+    batch_idx =  0
     # Process the images in batches
     for batch_idx, (data, target) in enumerate(train_loader):
         # Use the CPU or GPU as appropriate
@@ -276,8 +293,7 @@ def train_cnn():
     else:
         raise Exception("No GPU found")
     
-    with open(CARD_YOLO_PATH / "classes.txt") as f:
-        classes = f.read().split("\n")
+    classes = read_classes()
 
     # Create an instance of the model class and allocate it to the device
     model = Net(num_classes=len(classes)).to(device)
@@ -308,6 +324,6 @@ def train_cnn():
 if __name__ == "__main__":
     # prepare_data()
 
-    # load_dataset(CNN_DATA_PATH)
+    count_instances_per_class()
 
-    train_cnn()
+    # train_cnn()

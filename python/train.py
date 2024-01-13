@@ -58,6 +58,6 @@ def clean_run_dir():
             sub_dir.unlink()
 
 if __name__ == "__main__":
-    # clean_run_dir()
-    # train()    
+    clean_run_dir()
+    train()    
     predict()
