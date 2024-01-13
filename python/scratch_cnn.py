@@ -19,8 +19,11 @@ CNN_DATA_PATH = BASE_DIR / "datasets/card_cnn"
 
 
 def prepare_data():
+    
+    print(f"Converting yolo dataset in [{CARD_YOLO_PATH}] to classification format in [{CNN_DATA_PATH}]")
 
     if CNN_DATA_PATH.exists():
+        print(f"Removing {CNN_DATA_PATH}")
         shutil.rmtree(CNN_DATA_PATH)
 
     images_dir = CARD_YOLO_PATH / "images"

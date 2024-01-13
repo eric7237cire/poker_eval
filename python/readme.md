@@ -59,7 +59,7 @@ yolo detect predict model=/usr/src/ultralytics/runs/detect/yolo16/weights/best.p
 
 # Running ultralytics in docker
 
-docker run -it --rm --ipc=host --gpus all -p 6006:6006 -v /home/eric/git/poker_eval/python:/eric/python -v /home/eric/git/poker_eval/python/datasets:/usr/src/datasets -v /home/eric/git/poker_eval/python/runs:/usr/src/ultralytics/runs ultralytics/ultralytics:latest
+docker run -it --rm --ipc=host --gpus all -p 6006:6006 -v /home/eric/git/poker_eval/python:/usr/src/python -v /home/eric/git/poker_eval/python/datasets:/usr/src/datasets -v /home/eric/git/poker_eval/python/runs:/usr/src/ultralytics/runs ultralytics/ultralytics:latest
 
 cd /eric/python
 
@@ -70,7 +70,7 @@ tensorboard --logdir /usr/src/ultralytics/runs --bind_all &
 
 ## Training card detector using yolo
 
-python train.py
+python /usr/src/python/detect.py
 
 check bottom for which functions are being called
 
@@ -94,3 +94,9 @@ juyter lab
 docker run --rm -p 8888:8888  -v /home/eric/git/poker_eval/python:/home/jovyan/work quay.io/jupyter/pytorch-notebook:latest
 
 
+# Card classfier 
+
+## Links
+
+https://pytorch.org/tutorials/beginner/transfer_learning_tutorial.html
+https://github.com/dickreuter/Poker/blob/master/poker/scraper/table_scraper_nn.py

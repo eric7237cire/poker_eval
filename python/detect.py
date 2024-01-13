@@ -8,8 +8,10 @@ from ultralytics import YOLO
 # switch function in main
 # Runs 'detect' finding the cards in the screenshot
 
+# Run split_train_validate 1st, which also collapses the classes into one class, a card
+
 RUNS_DIR = Path("/usr/src/ultralytics/runs")
-PYTHON_SRC_DIR = Path("/eric/python")
+PYTHON_SRC_DIR = Path("/usr/src/python")
 
 # we can use whatever name
 MODEL_NAME="yolo"
