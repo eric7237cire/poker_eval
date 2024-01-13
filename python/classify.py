@@ -89,7 +89,7 @@ def prepare_data(valid_percent: float=0.0, test_percent: float =0.35):
 
             # Resize the image to 128x128
 
-            cropped_img = cropped_img.resize((128, 128))
+            cropped_img = cropped_img.resize((cfg.CLASSIFY_IMG_SZ, cfg.CLASSIFY_IMG_SZ))
 
             # Save the cropped image
             target_path = cfg.CLASSIFY_DATA_PATH / cfg.TRAIN_FOLDER_NAME / card_class / f"{image_num}.png"

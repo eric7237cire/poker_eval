@@ -1,7 +1,6 @@
 from pathlib import Path
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings
-from sympy import comp
 
 class EnvCfg(BaseSettings):
     RUNS_DIR: Path = Field(default=Path("/usr/src/ultralytics/runs"),
@@ -35,6 +34,13 @@ class EnvCfg(BaseSettings):
         # contains label studio YOLO export 
         # this is where the yolo export from label studio was unzipped, it should contain an images and labels folder
         return self.PYTHON_SRC_DIR / "datasets/all"
+    
+    @computed_field
+    @property
+    def YOLO_CORRECTED_PATH(self) -> Path:
+        # label studio exports labels in x1,y1,x2,y2 format, but yolo expects x,y,w,h
+        # class x_center y_center width height
+        return self.PYTHON_SRC_DIR / "datasets/all_yolo"
     
     @computed_field
     @property

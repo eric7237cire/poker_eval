@@ -86,6 +86,11 @@ All params in /usr/src/ultralytics/ultralytics/cfg/default.yaml (open in vscode 
 docker pull heartexlabs/label-studio:latest
 docker run -it -p 9142:8080 -v /home/eric/git/poker_eval/data/label-studio:/label-studio/data heartexlabs/label-studio:latest
 
+## bash prompt
+docker run -it -v /home/eric/git/poker_eval/python:/poker/data heartexlabs/label-studio:latest bash
+
+label-studio-converter import yolo -i /poker/data/datasets/all -o /poker/data/label_studio_import/test.json --image-ext .png --out-type annotations
+
 ## To fix dir permissions
 docker run -it --user root -v /home/eric/git/poker_eval/data/label-studio:/label-studio/data heartexlabs/label-studio:latest chown -R 1001:root /label-studio/data/
 
