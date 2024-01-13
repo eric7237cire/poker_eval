@@ -15,8 +15,6 @@ import pytz  # Import the pytz library for timezone handling
 # Create a timezone object for GMT/UTC
 gmt_timezone = pytz.timezone('UTC')
 
-#base_path = Path(r"I:\ZyngaData")
-# base_path = Path(r"D:\ZyngaData")
 #base_path = Path(r"\\wsl.localhost\Ubuntu-20.04\home\eric\git\poker_eval\python\datasets\incoming")
 base_path = Path(r"\\wsl.localhost\Ubuntu-22.04\home\eric\git\poker_eval\python\datasets\incoming")
 
@@ -27,26 +25,24 @@ base_path = Path(r"\\wsl.localhost\Ubuntu-22.04\home\eric\git\poker_eval\python\
 # i:\python\python.exe "\\wsl.localhost\Ubuntu-22.04\home\eric\git\poker_eval\python\get_screenshot.py"
 
 
-
+title_to_find = os.environ["WINDOW_TITLE_TO_FIND"]
 
 
 def find_title()->str:
 
-    zynga_title = None 
+    full_title = None 
     titles = gw.getAllTitles()
     for t in titles:
         print(f"Lookign at title [{t}]")
-        if "Zynga Poker" in t:
-            zynga_title = t
+        if title_to_find in t:
+            full_title = t
             break
-        if "redb rust - Brave Search - Brave" in t:
-            zynga_title = t
-            break
+        
 
-    if zynga_title is None:
-        raise Exception("Zynga Poker window not found")
+    if full_title is None:
+        raise Exception("window not found")
     
-    return zynga_title
+    return full_title
 
 
 def get_file_path()->Path:
@@ -66,18 +62,18 @@ def get_file_path()->Path:
 def get_screenshot():
     
 
-    zynga_title = find_title() 
+    window_title = find_title() 
 
     # Free filename
     file_path  = get_file_path()
 
-    print(f"Fetching window title [{zynga_title}]")
+    print(f"Fetching window title [{window_title}]")
     
     
     # Find the window by its title
-    hwnd = win32gui.FindWindow(None, zynga_title)
+    hwnd = win32gui.FindWindow(None, window_title)
     if hwnd == 0:
-        raise Exception('Window not found: ' + zynga_title)
+        raise Exception('Window not found: ' + window_title)
 
     left, top, right, bot = win32gui.GetWindowRect(hwnd)
     w = right - left
