@@ -25,6 +25,11 @@ class EnvCfg(BaseSettings):
 
     @computed_field
     @property
+    def INCOMING_PATH(self) -> Path:
+        return self.PYTHON_SRC_DIR / "datasets/incoming"
+
+    @computed_field
+    @property
     def PYTORCH_CNN_MODEL_PATH(self) -> Path:
         return self.PYTHON_SRC_DIR / "card_cnn.pt"
 
@@ -37,10 +42,15 @@ class EnvCfg(BaseSettings):
     
     @computed_field
     @property
-    def YOLO_CORRECTED_PATH(self) -> Path:
-        # label studio exports labels in x1,y1,x2,y2 format, but yolo expects x,y,w,h
-        # class x_center y_center width height
-        return self.PYTHON_SRC_DIR / "datasets/all_yolo"
+    def LIVE_PATH(self) -> Path:
+        # Live screenshots & guessed predictions
+        # In Yolo format
+        return self.PYTHON_SRC_DIR / "datasets/live"
+    
+    @computed_field
+    @property
+    def LIVE_CARD_IMAGES_PATH(self) -> Path:
+        return self.PYTHON_SRC_DIR / "datasets/live_images"
     
     @computed_field
     @property

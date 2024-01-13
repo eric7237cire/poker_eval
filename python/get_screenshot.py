@@ -11,7 +11,8 @@ from PIL import Image
 
 
 #base_path = Path(r"I:\ZyngaData")
-base_path = Path(r"D:\ZyngaData")
+# base_path = Path(r"D:\ZyngaData")
+base_path = Path(r"\\wsl.localhost\Ubuntu-20.04\home\eric\git\poker_eval\python\datasets\incoming")
 
 def find_title()->str:
 
