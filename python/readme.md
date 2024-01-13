@@ -33,7 +33,13 @@ Easier likely is using ultralytics docker container with nvidia docker driver
 
 # Running ultralytics in docker
 
-docker run -it --rm --ipc=host --gpus all -p 6006:6006 -v /home/eric/git/poker_eval/python:/usr/src/python -v /home/eric/git/poker_eval/python/datasets:/usr/src/datasets -v /home/eric/git/poker_eval/python/runs:/usr/src/ultralytics/runs ultralytics/ultralytics:latest
+docker run -it --rm -d \
+--ipc=host --gpus all \
+-p 6006:6006 \
+-v ${REPO_ROOT}/python:/usr/src/python \
+-v ${REPO_ROOT}/python/datasets:/usr/src/datasets \
+-v ${REPO_ROOT}/python/runs:/usr/src/ultralytics/runs \
+ultralytics/ultralytics:latest
 
 pip install pydantic.settings
 pip install torchsummary
@@ -58,10 +64,10 @@ All params in /usr/src/ultralytics/ultralytics/cfg/default.yaml (open in vscode 
 # Starting label studio
 
 docker pull heartexlabs/label-studio:latest
-docker run -it -p 9142:8080 \
+docker run -d -it -p 9142:8080 \
 -e LOCAL_FILES_SERVING_ENABLED=true \
--v /home/eric/git/poker_eval/data/label-studio:/label-studio/data \
--v /home/eric/git/poker_eval/python:/home/user/python-data \
+-v ${REPO_ROOT}/data/label-studio:/label-studio/data \
+-v ${REPO_ROOT}/python:/home/user/python-data \
 heartexlabs/label-studio:latest
 
 ## Converting from yolo
@@ -69,25 +75,36 @@ heartexlabs/label-studio:latest
 label studio exports bbox format, so
 run convert_to_yolo.py
 
-docker run -it \
--v /home/eric/git/poker_eval/python:/poker/data \
--v /home/eric/git/poker_eval/python:/python-data \
-heartexlabs/label-studio:latest bash
+mkdir ${REPO_ROOT}/python/label_studio_import
+chmod 777 ${REPO_ROOT}/python/label_studio_import
 
+export DATASET_NAME=all
+
+docker run -it --rm \
+-v ${REPO_ROOT}/python:/poker/data \
+-v ${REPO_ROOT}/python:/python-data \
+heartexlabs/label-studio:latest \
 label-studio-converter import yolo \
--i /poker/data/datasets/all3 \
--o /poker/data/label_studio_import/all3.json \
+-i /poker/data/datasets/${DATASET_NAME} \
+-o /poker/data/label_studio_import/${DATASET_NAME}.json \
 --image-ext .png --out-type annotations \
---image-root-url /data/local-files/?d=/home/user/python-data/datasets/all3/images/
+--image-root-url /data/local-files/?d=/home/user/python-data/datasets/${DATASET_NAME}/images/
 
 ## To fix dir permissions
-docker run -it --user root -v /home/eric/git/poker_eval/data/label-studio:/label-studio/data heartexlabs/label-studio:latest chown -R 1001:root /label-studio/data/
+
+source ./dev/local.env
+docker run -it --rm --user root -v ${REPO_ROOT}/data/label-studio:/label-studio/data heartexlabs/label-studio:latest chown -R 1001:root /label-studio/data/
+
+## Adding local storage
+
+Storage Type: Local Files
+Absolute Local path: /home/user/python-data  (in /home/user)
 
 # Start jupyter
 
 juyter lab
 
-docker run --rm -p 8888:8888  -v /home/eric/git/poker_eval/python:/home/jovyan/work quay.io/jupyter/pytorch-notebook:latest
+docker run --rm -p 8888:8888  -v ${REPO_ROOT}/python:/home/jovyan/work quay.io/jupyter/pytorch-notebook:latest
 
 
 # Card classfier 

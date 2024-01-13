@@ -8,11 +8,27 @@ import win32con
 from ctypes import windll
 import win32api
 from PIL import Image
+from datetime import datetime
 
+import pytz  # Import the pytz library for timezone handling
+
+# Create a timezone object for GMT/UTC
+gmt_timezone = pytz.timezone('UTC')
 
 #base_path = Path(r"I:\ZyngaData")
 # base_path = Path(r"D:\ZyngaData")
-base_path = Path(r"\\wsl.localhost\Ubuntu-20.04\home\eric\git\poker_eval\python\datasets\incoming")
+#base_path = Path(r"\\wsl.localhost\Ubuntu-20.04\home\eric\git\poker_eval\python\datasets\incoming")
+base_path = Path(r"\\wsl.localhost\Ubuntu-22.04\home\eric\git\poker_eval\python\datasets\incoming")
+
+# Anaconda installation
+# Admin prompt
+# i:\python\Scripts\pip install pyautogui
+# i:\python\scripts\pip install pygetwindow
+# i:\python\python.exe "\\wsl.localhost\Ubuntu-22.04\home\eric\git\poker_eval\python\get_screenshot.py"
+
+
+
+
 
 def find_title()->str:
 
@@ -35,14 +51,15 @@ def find_title()->str:
 
 def get_file_path()->Path:
     file_path  = None
-    for i in range(0, 1000):
-        file_path = base_path / f"zynga_{i}.bmp"
-        png_path = base_path / f"zynga_{i}.png"
-        if not png_path.exists():
-            break
 
-    if file_path is None:
-        raise Exception("Could not find free filename")
+    # get GMT time yyyyMMDD_HHmmss_mmm
+
+    now = datetime.now(gmt_timezone)
+
+    formatted_string = now.strftime("%Y%m%d_%H%M%S_%f")[:-3]
+
+    file_path = base_path / f"{formatted_string}.bmp"    
+    
     return file_path
 
 
@@ -68,7 +85,7 @@ def get_screenshot():
     print(f"Window dims: Width: {w}, Height: {h}")
     print(f"Left: {left}, Top: {top}, Right: {right}, Bot: {bot}")
 
-    if True:
+    if False:
         win32gui.SetForegroundWindow(hwnd)
         x, y, x1, y1 = win32gui.GetClientRect(hwnd)
         x, y = win32gui.ClientToScreen(hwnd, (x, y))
@@ -99,15 +116,11 @@ def get_screenshot():
     print(f"Saving PNG to file [{png_file_path}]")
     img.save(png_file_path, 'PNG')
 
-
+    # delete the bmp
     if file_path.exists():
         file_path.unlink()
     
     
-
-# i:\python\scripts\pip install pygetwindow
-
-# i:\python\python.exe "\\wsl.localhost\Ubuntu-22.04\home\eric\git\poker_eval\python\get_screenshot.py"
 
 if __name__ == "__main__":
     get_screenshot()

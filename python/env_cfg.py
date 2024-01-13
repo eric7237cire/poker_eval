@@ -38,7 +38,7 @@ class EnvCfg(BaseSettings):
     def CARD_YOLO_PATH(self) -> Path:
         # contains label studio YOLO export 
         # this is where the yolo export from label studio was unzipped, it should contain an images and labels folder
-        return self.PYTHON_SRC_DIR / "datasets/all3"
+        return self.PYTHON_SRC_DIR / "datasets/all"
     
     @computed_field
     @property

@@ -18,10 +18,11 @@ def process_screenshots():
         images = cfg.INCOMING_PATH.glob("*.png")
 
         for image_file in images:
+            # Run detection on the screenshot
             results = detect_model.predict(
                 image_file, conf=0.25, 
                 imgsz=cfg.DETECT_IMG_SZ,
-                save=True
+                save=False
             )
             result = results[0]
 
