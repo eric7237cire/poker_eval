@@ -11,11 +11,6 @@ import random
 
 # Run split_train_validate 1st, which also collapses the classes into one class, a card
 
-RUNS_DIR = Path("/usr/src/ultralytics/runs")
-PYTHON_SRC_DIR = Path("/usr/src/python")
-
-# we can use whatever name
-MODEL_NAME="yolo"
 
 
 # python /eric/python/train.py
@@ -95,21 +90,22 @@ def train():
     
     
     # Load the model.
-    model = YOLO(PYTHON_SRC_DIR / 'yolov8n.pt')
+    model = YOLO(cfg.PYTHON_SRC_DIR / 'yolov8n.pt')
     
     # Training.
     results = model.train(
-        data=PYTHON_SRC_DIR / 'zynga_1.yml',
-        imgsz=640,
+        data=cfg.PYTHON_SRC_DIR / 'zynga_1.yml',
+        imgsz=cfg.DETECT_IMG_SZ,
         epochs=100,
         batch=4,
-        name=MODEL_NAME)
+        degrees=45,
+        name=cfg.DETECT_MODEL_NAME)
 
 def predict():
 
-    model = YOLO(RUNS_DIR / 'detect' / MODEL_NAME / 'weights/best.pt')
+    model = YOLO(cfg.RUNS_DIR / 'detect' / cfg.DETECT_MODEL_NAME / 'weights/best.pt')
 
-    predict_dir = PYTHON_SRC_DIR / "predictions"
+    predict_dir = cfg.PYTHON_SRC_DIR / "predictions"
 
     image_dir = Path("/usr/src/datasets/zynga/valid/images/")
 
@@ -127,12 +123,12 @@ def predict():
         shutil.copy(image_file, target_path)
 
         print(f"Predicting {image_file} to {target_path}")
-        model.predict(target_path, conf=0.15, save=True, imgsz=640)
+        model.predict(target_path, conf=0.15, save=True, imgsz=cfg.DETECT_IMG_SZ)
 
     shutil.rmtree(predict_dir)
 
 def clean_run_dir():
-    for sub_dir in RUNS_DIR.iterdir():
+    for sub_dir in (cfg.RUNS_DIR / "detect").iterdir():
         if sub_dir.is_dir():
             rmtree(sub_dir)
         else:

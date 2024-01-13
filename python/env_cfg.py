@@ -13,11 +13,16 @@ class EnvCfg(BaseSettings):
     DETECT_MODEL_NAME: str = Field(default="yolo"
                                       , description="Name of the model used for detection, used to name model in runs dir")
     
+    CLASSIFY_MODEL_NAME: str = Field(default="classifier")
+
     TRAIN_FOLDER_NAME: str = "train"
     VALID_FOLDER_NAME: str = "valid"
     TEST_FOLDER_NAME: str = "test"
     LABEL_FOLDER_NAME: str = "labels"
     IMAGE_FOLDER_NAME: str = "images"
+
+    DETECT_IMG_SZ: int = 640
+    CLASSIFY_IMG_SZ: int = 128
 
     @computed_field
     @property
@@ -38,5 +43,8 @@ class EnvCfg(BaseSettings):
     def CLASSIFY_DATA_PATH(self) -> Path:
         return self.PYTHON_SRC_DIR / "datasets/card_cnn"  
     
-    
+    @computed_field
+    @property
+    def CLASSIFY_PROJECT_PATH(self) -> Path:
+        return self.RUNS_DIR / 'classify'
 

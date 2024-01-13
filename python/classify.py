@@ -138,37 +138,53 @@ def train():
     model = YOLO('yolov8n-cls.pt')  # load a pretrained model (recommended for training)
 
     # Train the model
-    results = model.train(data=cfg.CLASSIFY_DATA_PATH, epochs=100, imgsz=128)
+    model.train(
+        data=cfg.CLASSIFY_DATA_PATH, epochs=30, imgsz=128, degrees=45,
+        project=cfg.CLASSIFY_PROJECT_PATH,
+        name=cfg.CLASSIFY_MODEL_NAME
+    )
     
 
 def predict():
 
-    model = YOLO(RUNS_DIR / 'detect' / MODEL_NAME / 'weights/best.pt')
+    model = YOLO(cfg.CLASSIFY_PROJECT_PATH / cfg.CLASSIFY_MODEL_NAME / 'weights/best.pt')
 
-    predict_dir = PYTHON_SRC_DIR / "predictions"
+    predict_dir = cfg.PYTHON_SRC_DIR / "predictions"
 
-    image_dir = Path("/usr/src/datasets/zynga/valid/images/")
+    image_dir = cfg.CLASSIFY_DATA_PATH / cfg.TEST_FOLDER_NAME 
 
     if predict_dir.exists():
         shutil.rmtree(predict_dir)
 
     predict_dir.mkdir(parents=True, exist_ok=True)
 
-    for image_file in image_dir.iterdir():
+    for image_file in image_dir.rglob("*.png"):
         if image_file.suffix != ".png":
             continue
+
+        correct_class=image_file.parent.name
 
         # not really needed, predictions are already put in the RUNS_DIR/prediction
         target_path = predict_dir / image_file.name
         shutil.copy(image_file, target_path)
 
         print(f"Predicting {image_file} to {target_path}")
-        model.predict(target_path, conf=0.15, save=True, imgsz=640)
+        results = model.predict(
+            target_path, conf=0.15, 
+            project=cfg.CLASSIFY_PROJECT_PATH,
+            # save=True, 
+            imgsz=cfg.CLASSIFY_IMG_SZ)
+        
+        result = results[0]
+        names = result.names
+        top_5 = [names[c] for c in result.probs.top5]
+        top_5_conf = [100 * c for c in result.probs.top5conf.tolist()]
+        print(f"Result [Correct: {correct_class}]:\n{top_5}\n{top_5_conf}")
 
     shutil.rmtree(predict_dir)
 
 def clean_run_dir():
-    for sub_dir in cfg.RUNS_DIR.iterdir():
+    for sub_dir in cfg.CLASSIFY_PROJECT_PATH.iterdir():
         if sub_dir.is_dir():
             rmtree(sub_dir)
         else:
@@ -176,10 +192,11 @@ def clean_run_dir():
 
 if __name__ == "__main__":
     # prepare_data()
-    count_instances_per_class()
-
-    train()
+    # count_instances_per_class()
+    
+    #clean_run_dir()
+    # train()
     
     # clean_run_dir()
     # train()    
-    # predict()
+    predict()
