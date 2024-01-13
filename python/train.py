@@ -27,7 +27,7 @@ def train():
 
 def predict():
 
-    model = YOLO(RUNS_DIR / 'detect/yolo1/weights/best.pt')
+    model = YOLO(RUNS_DIR / 'detect/yolo/weights/best.pt')
 
     predict_dir = PYTHON_SRC_DIR / "predictions"
 
@@ -47,8 +47,9 @@ def predict():
         shutil.copy(image_file, target_path)
 
         print(f"Predicting {image_file} to {target_path}")
-        model.predict(target_path, conf=0.05, save=True, imgsz=640)
+        model.predict(target_path, conf=0.15, save=True, imgsz=640)
 
+    shutil.rmtree(predict_dir)
 
 def clean_run_dir():
     for sub_dir in RUNS_DIR.iterdir():
@@ -58,6 +59,6 @@ def clean_run_dir():
             sub_dir.unlink()
 
 if __name__ == "__main__":
-    clean_run_dir()
-    train()    
+    # clean_run_dir()
+    # train()    
     predict()
