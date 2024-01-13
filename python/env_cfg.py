@@ -26,6 +26,11 @@ class EnvCfg(BaseSettings):
 
     @computed_field
     @property
+    def PYTORCH_CNN_MODEL_PATH(self) -> Path:
+        return self.PYTHON_SRC_DIR / "card_cnn.pt"
+
+    @computed_field
+    @property
     def CARD_YOLO_PATH(self) -> Path:
         # contains label studio YOLO export 
         # this is where the yolo export from label studio was unzipped, it should contain an images and labels folder

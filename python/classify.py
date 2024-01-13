@@ -2,6 +2,7 @@ from re import sub
 from shutil import rmtree
 import shutil
 from pathlib import Path
+from typing import List
 
 from py import test
 from ultralytics import YOLO
@@ -13,12 +14,21 @@ from PIL import Image
 
 # Run split_train_validate 1st, which also collapses the classes into one class, a card
 
-from scratch_cnn import read_classes, count_instances_per_class
 
 cfg = EnvCfg()
 
 
-def prepare_data(test_percent=0.35):
+def read_classes() -> List[str]:
+    with open(cfg.CARD_YOLO_PATH / "classes.txt") as f:
+        classes = f.read().strip().split("\n")
+
+    if len(classes) != 52:
+        raise Exception(f"Expected 52 classes, was {len(classes)}")
+    
+    return classes
+    
+
+def prepare_data(valid_percent: float=0.0, test_percent: float =0.35):
     """
     https://docs.ultralytics.com/datasets/classify/#dataset-format
     We need a train/test split
@@ -93,7 +103,7 @@ def prepare_data(test_percent=0.35):
         # Close the original and cropped images
         img.close()
 
-    # now move some to test
+    # now move some to test & valid from the training folder
     for class_dir in (cfg.CLASSIFY_DATA_PATH / cfg.TRAIN_FOLDER_NAME).iterdir():
         if not class_dir.is_dir():
             continue
@@ -101,13 +111,29 @@ def prepare_data(test_percent=0.35):
         test_dir = cfg.CLASSIFY_DATA_PATH / cfg.TEST_FOLDER_NAME / class_dir.name
         test_dir.mkdir(parents=True, exist_ok=True)
 
+        valid_dir = cfg.CLASSIFY_DATA_PATH / cfg.VALID_FOLDER_NAME / class_dir.name
+        valid_dir.mkdir(parents=True, exist_ok=True)
+
         train_files = [f for f in class_dir.iterdir()]
         num_test = int(len(train_files) * test_percent)
         test_files = train_files[:num_test]
-        train_files = train_files[num_test:]
+        num_valid = int(len(train_files) * valid_percent)
+        valid_files = train_files[num_test:num_test + num_valid]
+
+        train_files = train_files[num_valid+num_test:]
+
+        if test_percent > 0 and len(test_files) == 0:
+            raise Exception(f"Not enough files for test in {class_dir}")
+        if valid_percent > 0 and len(valid_files) == 0:
+            raise Exception(f"Not enough files for valid in {class_dir}")
+        if len(train_files) == 0:
+            raise Exception(f"Not enough files for train in {class_dir}")
 
         for f in test_files:
             shutil.move(f, test_dir)
+
+        for f in valid_files:
+            shutil.move(f, valid_dir)
 
 
 def count_instances_per_class():
