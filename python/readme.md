@@ -61,7 +61,7 @@ yolo detect predict model=/usr/src/ultralytics/runs/detect/yolo16/weights/best.p
 
 docker run -it --rm --ipc=host --gpus all -p 6006:6006 -v /home/eric/git/poker_eval/python:/usr/src/python -v /home/eric/git/poker_eval/python/datasets:/usr/src/datasets -v /home/eric/git/poker_eval/python/runs:/usr/src/ultralytics/runs ultralytics/ultralytics:latest
 
-cd /eric/python
+pip install pydantic.settings
 
 ## Tensorboard 
 

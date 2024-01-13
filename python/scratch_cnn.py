@@ -9,25 +9,21 @@ import torchvision.transforms as transforms
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+from env_cfg import EnvCfg
 
-# BASE_DIR = Path(r"/home/eric/git/poker_eval/python")
-BASE_DIR = Path(r"/eric/python")
-CARD_YOLO_PATH = BASE_DIR / "datasets/all"
-
-# structure is /[class]/[image_num].png
-CNN_DATA_PATH = BASE_DIR / "datasets/card_cnn"
+cfg = EnvCfg()
 
 
 def prepare_data():
     
-    print(f"Converting yolo dataset in [{CARD_YOLO_PATH}] to classification format in [{CNN_DATA_PATH}]")
+    print(f"Converting yolo dataset in [{cfg.CARD_YOLO_PATH}] to classification format in [{cfg.CNN_DATA_PATH}]")
 
-    if CNN_DATA_PATH.exists():
-        print(f"Removing {CNN_DATA_PATH}")
-        shutil.rmtree(CNN_DATA_PATH)
+    if cfg.CNN_DATA_PATH.exists():
+        print(f"Removing {cfg.CNN_DATA_PATH}")
+        shutil.rmtree(cfg.CNN_DATA_PATH)
 
-    images_dir = CARD_YOLO_PATH / "images"
-    labels_dir = CARD_YOLO_PATH / "labels"
+    images_dir = cfg.CARD_YOLO_PATH / "images"
+    labels_dir = cfg.CARD_YOLO_PATH / "labels"
 
     image_num = 0
 
@@ -74,7 +70,7 @@ def prepare_data():
             cropped_img = cropped_img.resize((128, 128))
 
             # Save the cropped image
-            target_path = CNN_DATA_PATH / card_class / f"{image_num}.png"
+            target_path = cfg.CNN_DATA_PATH / card_class / f"{image_num}.png"
             image_num += 1
             target_path.parent.mkdir(parents=True, exist_ok=True)
             cropped_img.save(target_path)
@@ -88,7 +84,7 @@ def prepare_data():
     count_instances_per_class()
 
 def read_classes():
-    with open(CARD_YOLO_PATH / "classes.txt") as f:
+    with open(cfg.CARD_YOLO_PATH / "classes.txt") as f:
         classes = f.read().strip().split("\n")
 
     if len(classes) != 52:
@@ -103,7 +99,7 @@ def count_instances_per_class():
         classes[k]: 0 for k in range(0, len(classes))
     }
     # now count how many of each class we have
-    for class_dir in CNN_DATA_PATH.iterdir():
+    for class_dir in cfg.CNN_DATA_PATH.iterdir():
         if not class_dir.is_dir():
             continue
 
@@ -282,9 +278,9 @@ def test(model, device, test_loader, loss_criteria):
 
 
 def train_cnn():
-    train_loader, test_loader = load_dataset(CNN_DATA_PATH)
+    train_loader, test_loader = load_dataset(cfg.CNN_DATA_PATH)
     batch_size = train_loader.batch_size
-    print("Data loaders ready to read", CNN_DATA_PATH)
+    print("Data loaders ready to read", cfg.CNN_DATA_PATH)
     print("Train:", len(train_loader.dataset))
     print("Batch size:", batch_size)
 

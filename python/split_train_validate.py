@@ -2,6 +2,9 @@ from pathlib import Path
 import random
 import shutil
 
+from env_cfg import EnvCfg
+
+cfg = EnvCfg()
 ##############################################################
 # This runs from within the ultralytics container
 # It takes the raw yolo dataset exported from label studio
@@ -11,16 +14,15 @@ import shutil
 
 BASE_DIR = Path("/usr/src")
 
-# this is where the yolo export from label studio was unzipped, it should contain an images and labels folder
-YOLO_EXPORT_DIR = BASE_DIR / "datasets" / "all"
+YOLO_EXPORT_DIR = cfg.CARD_YOLO_PATH
 
-TARGET_DIR = BASE_DIR / "datasets" / "zynga"
+TARGET_DIR = cfg.DETECT_DATA_PATH
 
-IMAGES_DIR_NAME = "images"
-LABELS_DIR_NAME = "labels"
+IMAGES_DIR_NAME = cfg.IMAGE_FOLDER_NAME
+LABELS_DIR_NAME = cfg.LABEL_FOLDER_NAME
 
-TARGET_TRAIN_DIR = TARGET_DIR / "train"
-TARGET_VALIDATE_DIR = TARGET_DIR / "valid"
+TARGET_TRAIN_DIR = TARGET_DIR / cfg.TRAIN_FOLDER_NAME
+TARGET_VALIDATE_DIR = TARGET_DIR / cfg.VALID_FOLDER_NAME
 
 def do_split(validation_split = 0.2, collapse_to_one_class = False) :
 
