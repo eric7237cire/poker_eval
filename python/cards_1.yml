@@ -1,7 +1,6 @@
-path: zynga/
 train: 'train/images'
 val: 'valid/images'
- 
+path: detect/
 # class names
 names: 
   0: Card

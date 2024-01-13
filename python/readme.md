@@ -33,7 +33,7 @@ Easier likely is using ultralytics docker container with nvidia docker driver
 
 # Running ultralytics in docker
 
-docker run -it --rm -d \
+docker run -it --rm  \
 --ipc=host --gpus all \
 -p 6006:6006 \
 -v ${REPO_ROOT}/python:/usr/src/python \
@@ -55,8 +55,6 @@ tensorboard --logdir /usr/src/ultralytics/runs --bind_all &
 python /usr/src/python/detect.py
 
 check bottom for which functions are being called
-
-Using zynga_1.yml
 
 All params in /usr/src/ultralytics/ultralytics/cfg/default.yaml (open in vscode to running container)
 

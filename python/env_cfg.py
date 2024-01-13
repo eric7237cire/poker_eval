@@ -56,7 +56,7 @@ class EnvCfg(BaseSettings):
     @property
     def DETECT_DATA_PATH(self) -> Path:
         # collapsed into single card class and split into train and validate
-        return self.PYTHON_SRC_DIR / "datasets" / "zynga"
+        return self.PYTHON_SRC_DIR / "datasets" / "detect"
 
     # Base dataset directory for classification, based on CARD_YOLO_PATH
     @computed_field
@@ -69,3 +69,7 @@ class EnvCfg(BaseSettings):
     def CLASSIFY_PROJECT_PATH(self) -> Path:
         return self.RUNS_DIR / 'classify'
 
+    @computed_field
+    @property
+    def DETECT_PROJECT_PATH(self) -> Path:
+        return self.RUNS_DIR / 'detect'

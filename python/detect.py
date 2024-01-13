@@ -9,10 +9,6 @@ import random
 # switch function in main
 # Runs 'detect' finding the cards in the screenshot
 
-# Run split_train_validate 1st, which also collapses the classes into one class, a card
-
-
-
 # python /usr/src/python/detect.py
 
 cfg = EnvCfg()
@@ -20,7 +16,11 @@ cfg = EnvCfg()
 def do_split(validation_split = 0.2, collapse_to_one_class = False) :
 
     print(f"Cleaning {cfg.DETECT_DATA_PATH}")
-    shutil.rmtree(cfg.DETECT_DATA_PATH)
+    if cfg.DETECT_DATA_PATH.exists():
+        shutil.rmtree(cfg.DETECT_DATA_PATH)
+
+    print(f"Creating {cfg.DETECT_DATA_PATH}")
+    cfg.DETECT_DATA_PATH.mkdir(parents=True, exist_ok=True)
 
     image_files = [f for f in (cfg.CARD_YOLO_PATH / cfg.IMAGE_FOLDER_NAME).iterdir()]
     label_files = [f for f in (cfg.CARD_YOLO_PATH / cfg.LABEL_FOLDER_NAME).iterdir()]
@@ -94,7 +94,7 @@ def train():
     
     # Training.
     results = model.train(
-        data=cfg.PYTHON_SRC_DIR / 'zynga_1.yml',
+        data=cfg.PYTHON_SRC_DIR / 'cards_1.yml',
         imgsz=cfg.DETECT_IMG_SZ,
         epochs=100,
         batch=4,
@@ -107,7 +107,7 @@ def predict():
 
     predict_dir = cfg.PYTHON_SRC_DIR / "predictions"
 
-    image_dir = Path("/usr/src/datasets/zynga/valid/images/")
+    image_dir = cfg.DETECT_DATA_PATH / cfg.VALID_FOLDER_NAME / cfg.IMAGE_FOLDER_NAME
 
     if predict_dir.exists():
         shutil.rmtree(predict_dir)
@@ -128,14 +128,20 @@ def predict():
     shutil.rmtree(predict_dir)
 
 def clean_run_dir():
-    for sub_dir in (cfg.RUNS_DIR / "detect").iterdir():
+    cfg.DETECT_PROJECT_PATH.mkdir(parents=True, exist_ok=True)
+
+    print(f"Cleaning {cfg.DETECT_PROJECT_PATH}")
+
+    for sub_dir in cfg.DETECT_PROJECT_PATH.iterdir():
         if sub_dir.is_dir():
             rmtree(sub_dir)
         else:
             sub_dir.unlink()
 
 if __name__ == "__main__":
+    
     do_split(0.2, True)
     clean_run_dir()
+
     train()    
     predict()
