@@ -6,3 +6,4 @@ runs
 predictions
 .ipynb_checkpoints
 *.pt
+label_studio_import

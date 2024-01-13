@@ -30,32 +30,6 @@ https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&D
 
 Easier likely is using ultralytics docker container with nvidia docker driver
 
-# Example command lines
-
-From within ultralytics container
-	
-yolo task=detect mode=train model=yolov8n.pt imgsz=1280 data=pothole_v8.yaml epochs=50 batch=8 name=yolov8n_v8_50e
-
-
-yolo task=detect mode=train model=yolov8n.pt imgsz=1280 data=zynga.yaml ep
-ochs=50 batch=8 name=yolov8n_v8_50e
-
-https://github.com/ultralytics/ultralytics/issues/2546
-
-will downscale to the size
-
-yolo task=detect mode=train model=yolov8n.pt imgsz=640 data=zynga.yaml epochs=100 name=yolov8n_v8_50e
-
-yolo detect predict model=runs/detect/yolov8n_v8_50e6/weights/best.pt source='/home/eric/git/poker_eval/python/zynga_0.png'
-
-yolo detect predict model=runs/detect/yolov8n_v8_50e/weights/best.pt source='/home/eric/git/poker_eval/python/datasets/zynga/train/images/0b057b90-zynga_0.png'
-
-yolo detect predict model=/usr/src/ultralytics/runs/detect/yolo16/weights/best.pt source='/usr/src/datasets/zynga/valid/images/e70cd165-zynga_1.png'
-
-yolo detect predict model=/usr/src/ultralytics/runs/detect/yolo16/weights/best.pt source='/usr/src/datasets/zynga/valid/images/94164c06-zynga_2.png'
- 
- yolo detect predict model=/usr/src/ultralytics/runs/detect/yolo16/weights/best.pt source='/usr/src/datasets/zynga/train/images/8cc33bd4-zynga_1.png'
-
 
 # Running ultralytics in docker
 
@@ -84,12 +58,27 @@ All params in /usr/src/ultralytics/ultralytics/cfg/default.yaml (open in vscode 
 # Starting label studio
 
 docker pull heartexlabs/label-studio:latest
-docker run -it -p 9142:8080 -v /home/eric/git/poker_eval/data/label-studio:/label-studio/data heartexlabs/label-studio:latest
+docker run -it -p 9142:8080 \
+-e LOCAL_FILES_SERVING_ENABLED=true \
+-v /home/eric/git/poker_eval/data/label-studio:/label-studio/data \
+-v /home/eric/git/poker_eval/python:/home/user/python-data \
+heartexlabs/label-studio:latest
 
-## bash prompt
-docker run -it -v /home/eric/git/poker_eval/python:/poker/data heartexlabs/label-studio:latest bash
+## Converting from yolo
 
-label-studio-converter import yolo -i /poker/data/datasets/all -o /poker/data/label_studio_import/test.json --image-ext .png --out-type annotations
+label studio exports bbox format, so
+run convert_to_yolo.py
+
+docker run -it \
+-v /home/eric/git/poker_eval/python:/poker/data \
+-v /home/eric/git/poker_eval/python:/python-data \
+heartexlabs/label-studio:latest bash
+
+label-studio-converter import yolo \
+-i /poker/data/datasets/all3 \
+-o /poker/data/label_studio_import/all3.json \
+--image-ext .png --out-type annotations \
+--image-root-url /data/local-files/?d=/home/user/python-data/datasets/all3/images/
 
 ## To fix dir permissions
 docker run -it --user root -v /home/eric/git/poker_eval/data/label-studio:/label-studio/data heartexlabs/label-studio:latest chown -R 1001:root /label-studio/data/

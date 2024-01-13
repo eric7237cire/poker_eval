@@ -62,28 +62,24 @@ def prepare_data(valid_percent: float=0.0, test_percent: float =0.35):
         for line in label_file.open("r").readlines():
             fields = line.split(" ")
             card_class = classes[int(fields[0])]
-            xs = []
-            ys = []
-            for i in range(0, 4):
-                xs.append(float(fields[1 + i * 2]))
-                ys.append(float(fields[2 + i * 2]))
+            center_x = float(fields[1])
+            center_y = float(fields[2])
+            width = float(fields[3])
+            height = float(fields[4])
 
-            x_min = min(xs) 
-            x_max = max(xs)
-            y_min = min(ys)
-            y_max = max(ys)
+            # convert to x_min, y_min, x_max, y_max
+            center_x = center_x * img.width
+            center_y = center_y * img.height
+            width = width * img.width
+            height = height * img.height
 
-            width = x_max - x_min
-            height = y_max - y_min
-
-            x_min = x_min * img.width
-            x_max = x_max * img.width
-            y_min = y_min * img.height
-            y_max = y_max * img.height
+            x_min = center_x - width / 2
+            x_max = center_x + width / 2
+            y_min = center_y - height / 2
+            y_max = center_y + height / 2
 
             # open the png image and crop this box out
             # Crop the image to the specified rectangle
-
 
             cropped_img = img.crop((x_min, y_min, x_max, y_max))
 
@@ -217,11 +213,11 @@ def clean_run_dir():
             sub_dir.unlink()
 
 if __name__ == "__main__":
-    # prepare_data()
-    # count_instances_per_class()
+    prepare_data()
+    count_instances_per_class()
     
-    #clean_run_dir()
-    # train()
+    clean_run_dir()
+    train()
     
     # clean_run_dir()
     # train()    

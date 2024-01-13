@@ -13,7 +13,7 @@ import random
 
 
 
-# python /eric/python/train.py
+# python /usr/src/python/detect.py
 
 cfg = EnvCfg()
 
