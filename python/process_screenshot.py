@@ -18,6 +18,12 @@ def process_screenshots():
         images = cfg.INCOMING_PATH.glob("*.png")
 
         for image_file in images:
+            save_image_path = cfg.LIVE_PATH / cfg.IMAGE_FOLDER_NAME / image_file.name
+
+            if save_image_path.exists():
+                print(f"Skipping {image_file}, already processed")
+                continue
+
             results = detect_model.predict(
                 image_file, conf=0.25, 
                 imgsz=cfg.DETECT_IMG_SZ,
@@ -38,7 +44,7 @@ def process_screenshots():
             print(F"Box coords: {box_coords}\nSave dir: {save_dir}\nConfidence: {box_confidence_values}\nClasses: {box_classes}")   
 
             # Save the original image
-            save_image_path = cfg.LIVE_PATH / cfg.IMAGE_FOLDER_NAME / image_file.name
+            
             save_image_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(image_file, save_image_path)
 
@@ -89,9 +95,9 @@ def process_screenshots():
                 f.write("\n".join(label_lines))
 
         # Sleep 500 ms
-        time.sleep(0.5)
+        time.sleep(2.5)
 
-        break
+        # break
 
 def clean_detect():
     for sub_dir in (cfg.RUNS_DIR / "detect" ).iterdir():
