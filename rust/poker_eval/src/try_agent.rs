@@ -190,7 +190,7 @@ fn main() {
             *winnings += p.stack as i64 - p.initial_stack as i64;
         }
 
-        if it_num % 1 == 0 {
+        if it_num % 100 == 0 {
             debug!(
                 "Iteration {}",
                 it_num,

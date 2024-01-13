@@ -24,6 +24,7 @@ TARGET_VALIDATE_DIR = TARGET_DIR / "valid"
 
 def do_split(validation_split = 0.2, collapse_to_one_class = False) :
 
+    print(f"Cleaning {TARGET_DIR}")
     shutil.rmtree(TARGET_DIR)
 
     image_files = [f for f in (YOLO_EXPORT_DIR / IMAGES_DIR_NAME).iterdir()]

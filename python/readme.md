@@ -91,5 +91,6 @@ docker run -it --user root -v /home/eric/git/poker_eval/data/label-studio:/label
 
 juyter lab
 
+docker run --rm -p 8888:8888  -v /home/eric/git/poker_eval/python:/home/jovyan/work quay.io/jupyter/pytorch-notebook:latest
 
 

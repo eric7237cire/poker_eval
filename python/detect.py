@@ -6,6 +6,7 @@ from ultralytics import YOLO
 
 # Runs in the ultralytics container
 # switch function in main
+# Runs 'detect' finding the cards in the screenshot
 
 RUNS_DIR = Path("/usr/src/ultralytics/runs")
 PYTHON_SRC_DIR = Path("/eric/python")
