@@ -10,6 +10,9 @@ from ultralytics import YOLO
 RUNS_DIR = Path("/usr/src/ultralytics/runs")
 PYTHON_SRC_DIR = Path("/eric/python")
 
+# we can use whatever name
+MODEL_NAME="yolo"
+
 # python /eric/python/train.py
 def train():
     
@@ -23,11 +26,11 @@ def train():
         imgsz=640,
         epochs=100,
         batch=4,
-        name='yolo')
+        name=MODEL_NAME)
 
 def predict():
 
-    model = YOLO(RUNS_DIR / 'detect/yolo/weights/best.pt')
+    model = YOLO(RUNS_DIR / 'detect' / MODEL_NAME / 'weights/best.pt')
 
     predict_dir = PYTHON_SRC_DIR / "predictions"
 
@@ -59,6 +62,6 @@ def clean_run_dir():
             sub_dir.unlink()
 
 if __name__ == "__main__":
-    # clean_run_dir()
-    # train()    
+    clean_run_dir()
+    train()    
     predict()
