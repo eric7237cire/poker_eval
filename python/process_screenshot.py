@@ -1,7 +1,8 @@
+import json
 from pathlib import Path
 import shutil
 import time
-from typing import List
+from typing import List, Tuple
 # coding:utf-8
 import cv2
 import os
@@ -15,6 +16,9 @@ from classify import read_classes
 cfg = EnvCfg()
 
 def process_screenshots():
+    """
+    This processes the screenshots with QA in mind, saving the annotated screenshots
+    """
     
     detect_model = YOLO(cfg.RUNS_DIR / 'detect' / cfg.DETECT_MODEL_NAME / 'weights/best.pt')
     classify_model = YOLO(cfg.CLASSIFY_PROJECT_PATH / cfg.CLASSIFY_MODEL_NAME / 'weights/best.pt')
@@ -59,10 +63,10 @@ def process_screenshots():
             save_image_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(image_file, save_image_path)
 
-            run_classification(image_file, box_coords, box_coords_normalized, classify_model)
+            run_classification(image_file, box_coords, box_coords_normalized, classify_model, True)
             
             # We also want to visualize the results
-            annotated_image_path = cfg.LIVE_CARD_IMAGES_PATH / f"{image_file.stem}_annotated.png"
+            annotated_image_path = cfg.LIVE_CARD_IMAGES_PATH / image_file.name
             print(f"Producing annotated image [{annotated_image_path}]")
             draw_box_on_image(image_file, classes, colors, annotated_image_path)
 
@@ -73,7 +77,7 @@ def process_screenshots():
         # break
 
 
-def run_classification(image_file, box_coords, box_coords_normalized, classify_model):
+def run_classification(image_file: Path, box_coords: List[List[float]], box_coords_normalized, classify_model, save: bool) -> List[int]:
     """
     Saves each card image to a folder, and runs classification on each card image
     Also writes entries in yolo format to the LIVE dataset; meant to enhance training data
@@ -82,6 +86,8 @@ def run_classification(image_file, box_coords, box_coords_normalized, classify_m
     img = Image.open(image_file)
 
     label_lines = []
+
+    ret = []
 
     for box_index in range(0, len(box_coords)):
         center_x, center_y, width, height = box_coords[box_index]
@@ -112,21 +118,27 @@ def run_classification(image_file, box_coords, box_coords_normalized, classify_m
 
         names = classify_result.names
         top_1_index = classify_result.probs.top1
+
+        ret.append(top_1_index)
+
         top_1 = names[top_1_index]
         
-        txt_path = card_image_path.with_suffix(".txt").with_stem(f"{box_index}_{top_1}")
-        txt_path.touch()
+        if save:
+            txt_path = card_image_path.with_suffix(".txt").with_stem(f"{box_index}_{top_1}")
+            txt_path.touch()
 
-        label_lines.append(f"{top_1_index} {box_coords_normalized[box_index][0]} {box_coords_normalized[box_index][1]} {box_coords_normalized[box_index][2]} {box_coords_normalized[box_index][3]}")
+            label_lines.append(f"{top_1_index} {box_coords_normalized[box_index][0]} {box_coords_normalized[box_index][1]} {box_coords_normalized[box_index][2]} {box_coords_normalized[box_index][3]}")
 
-    save_label_path = (cfg.LIVE_PATH / cfg.LABEL_FOLDER_NAME / image_file.name).with_suffix(".txt")
-    save_label_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(save_label_path, "w") as f:
-        if len(label_lines) > 0:
-            f.write("\n".join(label_lines))
-        else:
-            f.write("")
+    if save:
+        save_label_path = (cfg.LIVE_PATH / cfg.LABEL_FOLDER_NAME / image_file.name).with_suffix(".txt")
+        save_label_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(save_label_path, "w") as f:
+            if len(label_lines) > 0:
+                f.write("\n".join(label_lines))
+            else:
+                f.write("")
 
+    return ret
 
 def clean_detect():
     for sub_dir in (cfg.RUNS_DIR / "detect" ).iterdir():
@@ -186,25 +198,92 @@ def draw_box_on_image(image_path: Path, classes: List[str], colors, output_path:
 
         cv2.imwrite(str(output_path), image)
 
+
+def process_screenshots_for_json():
+    """
+    This processes the screenshots only to get the cards, and write it to a json 
+    """
+    
+    detect_model = YOLO(cfg.RUNS_DIR / 'detect' / cfg.DETECT_MODEL_NAME / 'weights/best.pt')
+    classify_model = YOLO(cfg.CLASSIFY_PROJECT_PATH / cfg.CLASSIFY_MODEL_NAME / 'weights/best.pt')
+
+    classes = read_classes()
+    
+    
+    for i in range(0, 10_000):
+        try:    
+            images = cfg.INCOMING_PATH.glob("*.png")
+            most_recent = max(images, key=lambda p: p.stat().st_ctime)
+
+            print(f"Processing {most_recent}")
+
+            image_file = most_recent
+
+            results = detect_model.predict(
+                image_file, conf=0.55, 
+                imgsz=cfg.DETECT_IMG_SZ,
+                save=False
+            )
+            result = results[0]
+
+            # print(f"Predicted {image_file} to {result}")
+            print(f"Predicted {image_file}")
+
+            save_dir = result.save_dir
+
+            # center x, center y, width, height
+            box_coords = result.boxes.xywh.tolist()
+            box_coords_normalized = result.boxes.xywhn.tolist()
+            box_confidence_values = result.boxes.conf.tolist()
+            box_classes = result.boxes.cls.tolist()
+
+            print(F"Box coords: {box_coords}\nSave dir: {save_dir}\nConfidence: {box_confidence_values}\nClasses: {box_classes}")   
+
+            results = run_classification(image_file, box_coords, box_coords_normalized, classify_model, False)
+            
+            result_classes = [classes[result] for result in results]
+
+            # we want lowest ones first, then left to right, anything within pixel_chunk pixels
+            pixel_chunk = 50
+            int_box_coords: List[Tuple[int, int]] = [ (int(bc[0]/pixel_chunk), int(bc[1]/pixel_chunk)) for bc in box_coords]
+            box_y_index = [ (-coords[1], coords[0], box_index) for (box_index, coords) in enumerate(int_box_coords) ]            
+            box_y_index.sort()
+
+            if not len(box_y_index) in [2, 5, 6, 7]:
+                print(f"Skipping {image_file}, strange number of cards: {len(box_y_index)}")
+                continue
+
+            hole_card_index1 = box_y_index[0][2]
+            hole_card_class1 = result_classes[hole_card_index1]
+            hole_card_index2 = box_y_index[1][2]
+            hole_card_class2 = result_classes[hole_card_index2]
+
+            
+            board_card_indexes = [box_y_index[i][2] for i in range(2, len(box_y_index))]
+            
+            board_classes = [result_classes[i] for i in board_card_indexes]
+            print(f"Result classes: {result_classes}")
+            print(f"Board classes: {board_classes}")
+            print(f"Hole cards: {hole_card_class1}, {hole_card_class2}")
+
+            with open(cfg.LIVE_JSON_PATH, "w") as f:
+                json.dump({
+                    "hole_cards": f"{hole_card_class1} {hole_card_class2}",
+                    "board_cards": " ".join(board_classes)
+                }, f)
+
+            # Sleep 500 ms
+            time.sleep(2.5)
+        except Exception as e:
+            print("Exception!")
+            print(e)
+
+
+
+
         
-
-
-def make_name_list(RAW_IMAGE_FOLDER, IMAGE_NAME_LIST_PATH):
-    """
-    This function will collect the image names without extension and save them in the name_list.txt. 
-    """
-    image_file_list = os.listdir(RAW_IMAGE_FOLDER)  # 得到该路径下所有文件名称带后缀
-
-    text_image_name_list_file = open(
-        IMAGE_NAME_LIST_PATH, 'w')  # 以写入的方式打开txt ，方便更新 不要用追加写
-
-    for image_file_name in image_file_list:  # 例遍写入
-        image_name, file_extend = os.path.splitext(image_file_name)  # 去掉扩展名
-        text_image_name_list_file.write(image_name+'\n')  # 写入
-
-    text_image_name_list_file.close()
-
-
 if __name__ == '__main__':
-    clean_detect()
-    process_screenshots()
+    # clean_detect()
+    # process_screenshots()
+
+    process_screenshots_for_json()

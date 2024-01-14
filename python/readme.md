@@ -39,6 +39,7 @@ docker run -it --rm  \
 -v ${REPO_ROOT}/python:/usr/src/python \
 -v ${REPO_ROOT}/python/datasets:/usr/src/datasets \
 -v ${REPO_ROOT}/python/runs:/usr/src/ultralytics/runs \
+-v ${REPO_ROOT}/vue-poker/src/assets:/usr/src/assets \
 ultralytics/ultralytics:latest
 
 pip install pydantic.settings

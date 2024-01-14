@@ -73,3 +73,9 @@ class EnvCfg(BaseSettings):
     @property
     def DETECT_PROJECT_PATH(self) -> Path:
         return self.RUNS_DIR / 'detect'
+
+
+    @computed_field
+    @property
+    def LIVE_JSON_PATH(self) -> Path:
+        return Path("/usr/src/assets/live.json")
