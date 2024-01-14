@@ -35,7 +35,7 @@ use std::cmp::max;
 
 use serde::{Deserialize, Serialize};
 // use rmps crate to serialize structs using the MessagePack format
-use crate::{calc_cards_metrics, pre_calc::NUMBER_OF_RANKS, rank_straight, Card, CardValue, Suit};
+use crate::{calc_cards_metrics, pre_calc::{NUMBER_OF_RANKS, NUMBER_OF_HOLE_CARDS}, rank_straight, Card, CardValue, Suit, CardUsedType};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct BoardTexture {
@@ -66,6 +66,12 @@ pub struct BoardTexture {
     pub high_value_count: u8,
     pub med_value_count: u8,
     pub low_value_count: u8,
+
+    //AA, AKs, etc
+    //rank 1 means the nuts
+    //For suited, it's assumed the best choice is the suited version
+    //Capped at rank 256, length is 169
+    pub simple_rank_index: Vec<u8>
 }
 
 pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
@@ -87,6 +93,8 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
         others_with_str8: Vec::new(),
         others_with_str8_draw: Vec::new(),
         others_with_gut_shot: Vec::new(),
+
+        simple_rank_index: vec![0; 169]
     };
 
     let cards_metrics = calc_cards_metrics(cards.iter());
@@ -161,7 +169,37 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
     //Calculate straight related fields
     calc_straight_texture(&mut texture, cards_metrics.value_set, cards);
 
+    //Calculate simple rank index
+    calc_simple_rank_index(&mut texture, cards);
+
     texture
+}
+
+fn calc_simple_rank_index(texture: &mut BoardTexture, cards: &[Card]) {
+
+    let mut used_cards: CardUsedType = CardUsedType::default();
+    for c in cards.iter() {
+        used_cards.set(c.index as usize, true);
+    }
+    //suits don't matter
+    if texture.same_suited_max_count <= 0 {
+        for hi_val1 in 0..NUMBER_OF_RANKS {
+            let hi_card1_value: CardValue = hi_val1.try_into().unwrap();
+            let hi_card1_suit: Option<Suit> = Suit::suits() {
+
+            }
+            //for hi_suit in Suits::suits()
+            for lo_val1 in hi_val1..NUMBER_OF_RANKS {
+                let lo_card1_value: CardValue = lo_val1.try_into().unwrap();
+                let hole_cards = HoleCards::new(
+                    Card::new(hi_card1_value, Suit::Club),
+                    Card::new(lo_card1_value, Suit::Diamond),
+                )
+                .unwrap();
+                texture.simple_rank_index[hole_cards.to_simple_range_index() as usize] = 1;
+            }
+        }
+    }
 }
 
 fn calc_straight_texture(texture: &mut BoardTexture, value_set: u32, cards: &[Card]) {
@@ -237,7 +275,7 @@ mod tests {
 
     use log::{debug, info, trace};
 
-    use crate::{init_test_logger, Board};
+    use crate::{init_test_logger, Board, HoleCards};
 
     use super::*;
 
@@ -413,5 +451,57 @@ mod tests {
         );
         assert_eq!(texture.others_with_str8_draw.len(), 11);
         assert_eq!(texture.others_with_gut_shot.len(), 14);
+    }
+
+    #[test]
+    fn test_simple_rank() {
+        init_test_logger();
+        
+        trace!("test_board_texture");
+        let cards = Board::try_from("3c 2s As")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
+        let texture = calc_board_texture(&cards);
+
+        let nuts1 : HoleCards = "4c 5h".parse().unwrap();
+        let nuts2 : HoleCards = "Ac Ad".parse().unwrap();
+        let nuts3 : HoleCards = "3d 3s".parse().unwrap();
+        let nuts4 : HoleCards = "2d 2h".parse().unwrap();
+        let nuts5 : HoleCards = "Ac 3d".parse().unwrap();
+
+        assert_eq!(texture.simple_rank_index[nuts1.to_simple_range_index() as usize], 1);
+        assert_eq!(texture.simple_rank_index[nuts2.to_simple_range_index() as usize], 2);
+        assert_eq!(texture.simple_rank_index[nuts3.to_simple_range_index() as usize], 3);
+        assert_eq!(texture.simple_rank_index[nuts4.to_simple_range_index() as usize], 4);
+        assert_eq!(texture.simple_rank_index[nuts5.to_simple_range_index() as usize], 5);
+
+        //suited should not matter
+        let nuts1s : HoleCards = "4s 5s".parse().unwrap();
+        let nuts5s : HoleCards = "Ad 3d".parse().unwrap();
+
+        assert_eq!(texture.simple_rank_index[nuts1.to_simple_range_index() as usize], 1);
+        assert_eq!(texture.simple_rank_index[nuts5.to_simple_range_index() as usize], 5);
+
+        assert_ne!(nuts1.to_simple_range_index(), nuts1s.to_simple_range_index());
+        assert_ne!(nuts5.to_simple_range_index(), nuts5s.to_simple_range_index());
+
+
+        let cards = Board::try_from("3d 5d Ad Ac Ks")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
+        let texture = calc_board_texture(&cards);
+
+        let nuts1 : HoleCards = "2d 4d".parse().unwrap();
+        let nuts2 : HoleCards = "As Ah".parse().unwrap();
+        let nuts3 : HoleCards = "As Kc".parse().unwrap();
+        let nuts4 : HoleCards = "Kd 2d".parse().unwrap();
+
+        assert_eq!(texture.simple_rank_index[nuts1.to_simple_range_index() as usize], 1);
+        assert_eq!(texture.simple_rank_index[nuts2.to_simple_range_index() as usize], 2);
+        assert_eq!(texture.simple_rank_index[nuts3.to_simple_range_index() as usize], 3);
+        // behind all the full houses
+        assert_eq!(texture.simple_rank_index[nuts4.to_simple_range_index() as usize], 12);
     }
 }
