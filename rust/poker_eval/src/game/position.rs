@@ -1,6 +1,10 @@
+use std::fmt::{Display, Formatter};
+
+use serde::Serialize;
+
 use crate::{PokerError, Round};
 
-#[derive(PartialEq, Eq, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug, Serialize, Default)]
 pub struct Position {
     pos: u8,
     //n_players: u8,
@@ -17,7 +21,80 @@ const UTG: Position = Position { pos: 2 };
 
 const MAX_POSITION: u8 = 15;
 
+pub enum PositionFamily {
+    UTG,
+    Middle,
+    Late,
+    Button,
+    Blinds,
+}
+
 impl Position {
+    pub fn get_position_family(&self, num_players: u8) -> PositionFamily {
+        if self.pos == 0 || self.pos == 1 {
+            return PositionFamily::Blinds;
+        }
+
+        if self.pos == num_players - 1 {
+            return PositionFamily::Button;
+        }
+
+        if self.pos == 2 {
+            return PositionFamily::UTG;
+        }
+
+        assert!(num_players >= 5);
+
+        if num_players == 5 {
+            //sb bb utg mp button
+            assert_eq!(self.pos, 3);
+            return PositionFamily::Middle;
+        }
+
+        if num_players == 6 {
+            //sb bb utg mp lp button
+            if self.pos == 3 {
+                return PositionFamily::Middle;
+            } else {
+                assert_eq!(self.pos, 4);
+                return PositionFamily::Late;
+            }
+        }
+
+        if num_players == 7 {
+            //sb bb utg mp mp2 lp button
+            if self.pos == 3 {
+                return PositionFamily::Middle;
+            } else if self.pos == 4 {
+                return PositionFamily::Middle;
+            } else {
+                assert_eq!(self.pos, 5);
+                return PositionFamily::Late;
+            }
+        }
+
+        if num_players == 8 {
+            //sb bb utg utg mp mp2 lp button
+            if self.pos == 3 {
+                return PositionFamily::UTG;
+            } else if self.pos <= 5 {
+                return PositionFamily::Middle;
+            } else {
+                assert_eq!(self.pos, 6);
+                return PositionFamily::Late;
+            }
+        }
+
+        //sb bb utg utg (utg) mp mp2 lp lp button
+        if self.pos >= num_players - 3 {
+            return PositionFamily::Late;
+        } else if self.pos >= num_players - 5 {
+            return PositionFamily::Middle;
+        } else {
+            return PositionFamily::UTG;
+        }
+    }
+
     pub fn first_to_act(n_players: u8, round: Round) -> Position {
         assert!(n_players >= 2);
 
@@ -78,5 +155,28 @@ impl Into<usize> for Position {
 impl From<Position> for usize {
     fn from(value: Position) -> Self {
         value.pos as usize
+    }
+}
+
+impl Display for Position {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self.pos {
+            0 => write!(f, "SB (1st)"),
+            1 => write!(f, "BB (2nd)"),
+            2 => write!(f, "UTG (3rd)"),
+            _ => write!(f, "{}th", self.pos),
+        }
+    }
+}
+
+impl Display for PositionFamily {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PositionFamily::UTG => write!(f, "UTG"),
+            PositionFamily::Middle => write!(f, "Middle"),
+            PositionFamily::Late => write!(f, "Late"),
+            PositionFamily::Button => write!(f, "Button"),
+            PositionFamily::Blinds => write!(f, "Blinds"),
+        }
     }
 }

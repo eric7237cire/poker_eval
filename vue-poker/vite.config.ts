@@ -26,7 +26,10 @@ export default defineConfig({
     alias: {
       //'@': fileURLToPath(new URL('./src', import.meta.url)),
       '@src': fileURLToPath(new URL('./src', import.meta.url)),
-      '@pkg': fileURLToPath(new URL('./pkg', import.meta.url))
+      '@pkg': fileURLToPath(new URL('./pkg', import.meta.url)),
+
+      //Needed after routing added, see https://github.com/parcel-bundler/parcel/issues/2222
+      vue: 'vue/dist/vue.esm-bundler.js',
     }
   }
 })

@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - agents2
+      - agents3
 
 jobs:
   

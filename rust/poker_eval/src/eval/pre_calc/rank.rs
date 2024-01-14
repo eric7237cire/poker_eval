@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter};
+
 use super::RANK_FAMILY_OFFEST;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -23,6 +25,7 @@ impl Rank {
         }
     }
 
+    //The rest of the bits     
     pub fn get_kicker(&self) -> u16 {
         let kicker_mask = (1 << RANK_FAMILY_OFFEST) - 1;
 
@@ -34,7 +37,7 @@ impl Rank {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 #[repr(u8)]
 pub enum RankEnum {
     //0
@@ -52,5 +55,23 @@ pub enum RankEnum {
 impl From<u16> for Rank {
     fn from(raw_rank: u16) -> Self {
         Self { raw_rank }
+    }
+}
+
+impl Display for RankEnum {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            RankEnum::HighCard => "High Card",
+            RankEnum::OnePair => "One Pair",
+            RankEnum::TwoPair => "Two Pair",
+            RankEnum::ThreeOfAKind => "Trips",
+            RankEnum::Straight => "Straight",
+            RankEnum::Flush => "Flush",
+            RankEnum::FullHouse => "Full House",
+            RankEnum::FourOfAKind => "Quads",
+            RankEnum::StraightFlush => "Straight Flush",
+        };
+
+        write!(f, "{}", s)
     }
 }

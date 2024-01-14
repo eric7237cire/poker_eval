@@ -431,7 +431,7 @@
 
 <script lang="ts">
 import { computed, defineComponent, nextTick, ref } from 'vue';
-import * as Db from '../db';
+import * as Db from '@src/lib/db';
 
 import { XMarkIcon } from '@heroicons/vue/20/solid';
 
@@ -1346,3 +1346,4 @@ input.input-error {
   @apply px-0;
 }
 </style>
+../lib/db

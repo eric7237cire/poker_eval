@@ -10,13 +10,30 @@
         <li>5. See result</li>
       </ol>
     </div> -->
-    <div class="min-equity">
+    <div class="narrow-type">
+      <v-switch
+        v-model="narrowStore.state.useEquity"
+        :label="narrowStore.state.useEquity ? 'Equity' : 'Pref'"
+        color="success"
+      />
+    </div>
+    <div class="min-equity" v-if="narrowStore.state.useEquity">
       Minimum equity
       <v-slider
         v-model="narrowStore.state.minEquity"
         :min="0"
         :max="1"
         :step="0.01"
+        thumb-label="always"
+      ></v-slider>
+    </div>
+    <div class="min-equity" v-if="!narrowStore.state.useEquity">
+      Minimum Preference (Currently {{ narrowStore.getLikesHandMinimumString() }})
+      <v-slider
+        v-model="narrowStore.state.likesHandMinimum"
+        :min="0"
+        :max="4"
+        :step="1"
         thumb-label="always"
       ></v-slider>
     </div>

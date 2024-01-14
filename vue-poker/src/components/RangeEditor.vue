@@ -14,6 +14,7 @@
                 @mousedown="dragStart(row, col)"
                 @mouseup="dragEnd"
                 @mouseenter="mouseEnter(row, col)"
+                :title="cellComment(row, col)"
               >
                 <div
                   :class="
@@ -142,7 +143,7 @@
 import { computed, defineComponent, reactive, ref, watch } from 'vue';
 //import { useConfigStore } from "../store";
 import { usePlayerStore } from '../stores/player';
-import { ranks, rankPat } from '../utils';
+import { ranks, rankPat } from '@src/lib/utils';
 import { RangeManager } from '@pkg/range';
 
 import { CurrentPage, useNavStore } from '../stores/navigation';
@@ -167,6 +168,7 @@ const navStore = useNavStore();
 const rangeText = ref('');
 const rangeTextError = ref('');
 const rangeArray = reactive(new Array(13 * 13).fill(0));
+const rangeArrayComments = reactive(new Array(13 * 13).fill(''));
 
 const percRange = ref(100);
 const numCombos = ref(0);
@@ -175,23 +177,8 @@ const rootStyle = ref({});
 
 const rangeStore = useRangesStore();
 
-//Player store now does range string => weights; may not need these anymore
-
-//If current player changes, update the range text & reparse
-watch(
-  () => playerStore.currentPlayer,
-  (newValue, oldValue) => {
-    console.log(`The re cp changed from ${oldValue} to ${newValue}`);
-    //const playerIndex = currentPlayer.value.valueOf();
-    const p = playerStore.curPlayerData;
-    // console.log(`p is ${JSON.stringify(p)}`);
-    // console.log(`range text is set to [ ${p.rangeStr} ]`);
-    rangeText.value = p.rangeStr;
-    onRangeTextChange();
-  }
-);
-
-//If range editor activated, reparse range text
+//This is needed because there is 1 range editor for all players
+//If range editor activated, reparse range text to get full weights
 watch(
   () => navStore.currentPage,
   (newValue, oldValue) => {
@@ -225,19 +212,23 @@ let draggingMode: DraggingMode = 'none';
 
 //below are functions only
 
-const cellText = (row: number, col: number) => {
+function cellText(row: number, col: number) {
   const r1 = 13 - Math.min(row, col);
   const r2 = 13 - Math.max(row, col);
   return ranks[r1] + ranks[r2] + ['s', '', 'o'][Math.sign(row - col) + 1];
-};
+}
 
 const cellIndex = (row: number, col: number) => {
   return 13 * (row - 1) + col - 1;
 };
 
-const cellValue = (row: number, col: number) => {
+function cellValue(row: number, col: number) {
   return rangeArray[cellIndex(row, col)];
-};
+}
+
+function cellComment(row: number, col: number) {
+  return rangeArrayComments[cellIndex(row, col)];
+}
 
 function onUpdate() {
   const range = playerStore.range;
@@ -294,6 +285,9 @@ function onRangeTextChange() {
   const weights = range.get_weights();
   for (let i = 0; i < 13 * 13; ++i) {
     rangeArray[i] = weights[i] * 100;
+    const col = i % 13;
+    const row = i / 13;
+    rangeArrayComments[i] = range.get_partial_comment(row, col);
   }
   onUpdate();
 }
@@ -385,3 +379,4 @@ function positionEditor(y_coord: number) {
   };
 }
 </script>
+../lib/utils

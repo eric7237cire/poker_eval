@@ -35,6 +35,14 @@ https://github.com/GoogleChromeLabs/comlink
 
 ### Prereqs
 
+Install node
+
+```  
+sudo npm install n -g
+sudo n stable
+sudo npm install -g npm@10.2.5
+```
+
 Install rust & wasm pack.
 
 For example:
@@ -58,4 +66,37 @@ npm run r-dev
 ```
 cd rust
 cargo test
+```
+
+## Formatting
+
+```
+cd rust
+cargo fmt
+cargo fix
+```
+
+```
+cd vue-poker
+npm run format
+```
+
+# Running prod static server
+
+```
+sudo npm install -g serve
+serve -s dist
+```
+
+http://localhost:3000
+
+# Jupyter
+
+(Used WSL non root user)
+```
+python3 -m pip install scipy
+python3 -m pip install matplotlib --force-reinstall
+python3 -m pip install jupyterlab
+
+jupyter lab
 ```

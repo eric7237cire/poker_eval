@@ -58,12 +58,15 @@ where
 {
     let mut lookup_key_sum = INITIAL_SUIT_COUNT << GLOBAL_SUIT_SHIFT;
     let mut card_mask = 0;
+    let mut count_check = 0;
     for card in cards {
         let card_index: usize = (*card.borrow()).into();
         let (lookup_key, card_bit) = CARDS[card_index];
         lookup_key_sum += lookup_key;
         card_mask |= card_bit;
+        count_check += 1;
     }
+    assert!(count_check >= 5 && count_check <= 7);
     (lookup_key_sum, card_mask)
 }
 

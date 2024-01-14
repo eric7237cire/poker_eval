@@ -91,7 +91,7 @@
 <script setup lang="ts">
 import { computed, defineComponent, ref } from 'vue';
 import { CardList, useBoardStore } from '../stores/board';
-import { cardText, parseCardString } from '../utils';
+import { cardText, parseCardString } from '@src/lib/utils';
 
 import BoardSelectorCard from './BoardSelectorCard.vue';
 import { PlayerState, usePlayerStore } from '@src/stores/player';
@@ -288,3 +288,4 @@ function generateRandomBoard() {
   setBoardTextFromButtons();
 }
 </script>
+../lib/utils

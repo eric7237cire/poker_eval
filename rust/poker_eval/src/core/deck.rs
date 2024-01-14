@@ -3,7 +3,7 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 use crate::{Card, CardUsedType, HoleCards, PokerError, ALL_CARDS};
 
 pub struct Deck {
-    pub(crate) rng: StdRng,
+    pub rng: StdRng,
     pub(crate) used_cards: CardUsedType,
     //available_range: BoolRange,
 }
@@ -28,7 +28,6 @@ impl Deck {
 
     pub fn reset(&mut self) {
         self.used_cards = CardUsedType::default();
-        //self.available_range.data.fill(true);
     }
 
     pub fn get_number_of_used_cards(&self) -> usize {
@@ -40,7 +39,7 @@ impl Deck {
     }
 
     pub fn choose_new_board(&mut self) -> Vec<Card> {
-        let mut board = Vec::new();
+        let mut board = Vec::with_capacity(5);
         for _ in 0..5 {
             let card = self.get_unused_card().unwrap();
             board.push(Card::try_from(card).unwrap());

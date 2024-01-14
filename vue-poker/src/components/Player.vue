@@ -61,8 +61,40 @@ or select a range
       v-if="playerData.state == PlayerState.USE_RANGE"
       label="Common Ranges"
       v-model="selectedRange"
+      @update:model-value="handleSelectedRangeUpdate"
       :items="selectableRanges"
     ></v-select>
+  </div>
+
+  <div
+    class="undo-redo"
+    v-if="
+      playerData.state == PlayerState.USE_RANGE &&
+      playerData.rangeStrHistory.length > 0 &&
+      playerData.historyIndex >= 0
+    "
+  >
+    <button
+      @click="handleUndo()"
+      v-if="playerData.historyIndex - 1 >= 0"
+      class="button-base button-blue"
+    >
+      Undo
+    </button>
+    <button
+      @click="handleRedo()"
+      v-if="playerData.historyIndex + 1 < playerData.rangeStrHistory.length"
+      class="button-base button-green"
+    >
+      Redo
+    </button>
+    <button
+      @click="handleClearHistory()"
+      v-if="playerData.rangeStrHistory.length > 0"
+      class="button-base button-red"
+    >
+      Clear
+    </button>
   </div>
 </template>
 
@@ -108,6 +140,12 @@ div.title {
   width: 100%;
   box-sizing: border-box;
   color: white;
+}
+
+.undo-redo {
+  button {
+    margin-left: 5px;
+  }
 }
 </style>
 
@@ -160,13 +198,23 @@ watch(
 );
 
 //When not a reactive property, can watch directly
-watch(selectedRange, (wSelRange) => {
-  console.log(`Player ${props.playerId} selected range ${wSelRange}`);
-  if (!_.isString(wSelRange) || wSelRange.length <= 0) {
+// watch(selectedRange, (wSelRange) => {
+//   console.log(`Player ${props.playerId} selected range ${wSelRange}`);
+//   if (!_.isString(wSelRange) || wSelRange.length <= 0) {
+//     return;
+//   }
+//   playerStore.updateRangeStrForPlayer(props.playerId, wSelRange, true);
+// });
+
+//We use @update specifically because we don't want this being called when
+//for example undo/redo is changing the player range
+function handleSelectedRangeUpdate(newRange: string) {
+  console.log(`handleSelectedRangeUpdate ${newRange}`);
+  if (!_.isString(newRange) || newRange.length <= 0) {
     return;
   }
-  playerStore.updateRangeStrForPlayer(props.playerId, wSelRange);
-});
+  playerStore.updateRangeStrForPlayer(props.playerId, newRange, true);
+}
 
 function handleRangeClick(event: MouseEvent) {
   console.log(`range clicked y ${event.clientY}`);
@@ -188,20 +236,71 @@ function formatNumber(num: number) {
   });
 }
 
+function handleUndo() {
+  const pData = playerStore.players[props.playerId];
+
+  pData.historyIndex -= 1;
+
+  console.log(`handleUndo historyIndex=${pData.historyIndex} len =${pData.rangeStrHistory.length}`);
+
+  playerStore.updateRangeStrForPlayer(
+    props.playerId,
+    pData.rangeStrHistory[pData.historyIndex],
+    false
+  );
+}
+
+function handleRedo() {
+  const pData = playerStore.players[props.playerId];
+  pData.historyIndex += 1;
+
+  console.log(`handleRedo historyIndex=${pData.historyIndex} len =${pData.rangeStrHistory.length}`);
+
+  playerStore.updateRangeStrForPlayer(
+    props.playerId,
+    pData.rangeStrHistory[pData.historyIndex],
+    false
+  );
+}
+
+function handleClearHistory() {
+  const pData = playerStore.players[props.playerId];
+  pData.historyIndex = -1;
+  pData.rangeStrHistory = [];
+}
+
 async function handleNarrowRange() {
   if (!handler) {
     console.log('handler not initialized');
     return;
   }
   const boardCards = Uint8Array.from(boardStore.board.cards);
-  const response = await handler.narrowRange(
-    playerStore.players[props.playerId].rangeStr,
-    narrowStore.state.opponentRanges.map((r) => r.rangeStr),
-    narrowStore.state.minEquity,
-    boardCards,
-    narrowStore.state.numSimulations
-  );
 
-  playerStore.updateRangeStrForPlayer(props.playerId, response);
+  console.log('handleNarrowRange', narrowStore.state);
+
+  if (narrowStore.state.useEquity) {
+    console.log('handleNarrowRange by equity', narrowStore.state.minEquity);
+
+    const response = await handler.narrowRange(
+      playerStore.players[props.playerId].rangeStr,
+      narrowStore.state.opponentRanges.map((r) => r.rangeStr),
+      narrowStore.state.minEquity,
+      boardCards,
+      narrowStore.state.numSimulations
+    );
+
+    playerStore.updateRangeStrForPlayer(props.playerId, response, true);
+  } else {
+    console.log('handleNarrowRange by pref', narrowStore.state.likesHandMinimum);
+
+    const response = await handler.narrowRangeByPref(
+      playerStore.players[props.playerId].rangeStr,
+      narrowStore.state.likesHandMinimum,
+      boardCards,
+      narrowStore.state.numOpponents + 1
+    );
+
+    playerStore.updateRangeStrForPlayer(props.playerId, response, true);
+  }
 }
 </script>

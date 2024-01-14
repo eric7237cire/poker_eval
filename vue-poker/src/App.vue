@@ -16,8 +16,9 @@
     <div class="go-row">
       <input type="checkbox" id="checkbox" v-model="equityOnly" />
       <label for="checkbox">Equity Only</label>
-      <button @click="go" class="button-base button-blue">Go</button>
+      <button @click="go" class="button-base button-green">Go</button>
       <button @click="stop" class="button-base button-red">Stop</button>
+      <button @click="load" class="button-base button-blue">Load</button>
       <div class="status">{{ num_iterations }} Iterations</div>
     </div>
   </div>
@@ -47,8 +48,11 @@
           />
         </svg>
       </v-btn>
-      
-      <v-btn v-if="boardStore.reserveCards.length > 0 && boardStore.board.cards.length != 4" @click="handleUnstashCard()">
+
+      <v-btn
+        v-if="boardStore.reserveCards.length > 0 && boardStore.board.cards.length != 4"
+        @click="handleUnstashCard()"
+      >
         <!--left -->
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -66,12 +70,12 @@
         </svg>
       </v-btn>
       <BoardSelectorCard
-          v-for="card in boardStore.reserveCards"
-          :key="card"
-          class="m-1"
-          :card-id="card"
-        />
-        <v-btn v-if="boardStore.reserveCards.length > 0" @click="handleUnstashCard()">
+        v-for="card in boardStore.reserveCards"
+        :key="card"
+        class="m-1"
+        :card-id="card"
+      />
+      <v-btn v-if="boardStore.reserveCards.length > 0" @click="handleUnstashCard()">
         <!--left -->
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -178,7 +182,7 @@ import RangeNarrower from './components/RangeNarrower.vue';
 import { useCssVar } from '@vueuse/core';
 import Footer from './components/Footer.vue';
 import BoardSelectorCard from './components/BoardSelectorCard.vue';
-import { loadCardsFromUrl } from './utils';
+import { loadCardsFromUrl, parseCardString } from './lib/utils';
 import * as _ from 'lodash';
 
 const navStore = useNavStore();
@@ -296,7 +300,7 @@ async function go() {
   }
 
   num_iterations.value = 0;
-  userMessage.value = `Simulating until ${maxIterations} or Stop is clicked...`;
+  userMessage.value = `Simulating until ${maxIterations.value} or Stop is clicked...`;
 
   const resultsOk = await handler.initResults();
 
@@ -352,10 +356,10 @@ async function tick(numIterations: number) {
 async function stop() {
   stopping = true;
 
-  num_iterations.value = 0;
+  //num_iterations.value = 0;
   userMessage.value = ``;
 
-  resultsStore.results = [];
+  //resultsStore.results = [];
 
   if (setTimeoutReturn.value) {
     console.info('clearTimeout');
@@ -364,22 +368,43 @@ async function stop() {
   } else {
     console.warn('Timeout is null');
   }
+}
 
+function load() {
+  fetch(`/src/assets/live.json`)
+  .then((response) => response.json())
+  .then((data) => {
+    console.log(data);
+    const holeCardsStrings = data.hole_cards.split(" ") as Array<string>;
+    const holeCards = holeCardsStrings.map(s => parseCardString(s)!)
+    const boardCardStrings = data.board_cards.split(" ") as Array<string>;
+    const boardCards = boardCardStrings.map(s => parseCardString(s)!)
 
-  
+    playerStore.playerDataForId(0).holeCards = {
+      cardText: data.hole_cards,
+      cards: holeCards
+    };
+      
+    boardStore.board = {
+      cardText: data.board_cards,
+      cards: boardCards
+    };
+  }); 
+
 }
 
 function handleStashCard() {
-    const card = boardStore.board.cards.pop();
-    if (_.isInteger(card)) {
-      boardStore.reserveCards.unshift(card!);
-    }
+  const card = boardStore.board.cards.pop();
+  if (_.isInteger(card)) {
+    boardStore.reserveCards.unshift(card!);
   }
+}
 
-  function handleUnstashCard() {
-    const card = boardStore.reserveCards.shift();
-    if (_.isInteger(card)) {
-      boardStore.board.cards.push(card!);
-    }
+function handleUnstashCard() {
+  const card = boardStore.reserveCards.shift();
+  if (_.isInteger(card)) {
+    boardStore.board.cards.push(card!);
   }
+}
 </script>
+./lib/utils

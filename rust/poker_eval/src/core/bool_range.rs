@@ -73,11 +73,13 @@ impl BoolRange {
         BoolRange { data }
     }
 
+    /*
+    Dangerous because this sets all bits, so the # of set bits > # of hole cards
     pub fn all_enabled() -> Self {
         let mut result = Self::new();
         result.data.fill(true);
         result
-    }
+    }*/
 
     #[inline]
     pub fn set_enabled(&mut self, indices: &[usize], enabled: bool) {
@@ -122,6 +124,44 @@ impl BoolRange {
     }
     pub fn get_weight_offsuit(&self, rank1: CardValue, rank2: CardValue) -> f32 {
         self.get_weight(&offsuit_indices(rank1, rank2))
+    }
+    pub fn get_weight_pair_comment(&self, rank: CardValue) -> String {
+        self.get_comment(&pair_indices(rank))
+    }
+    pub fn get_weight_suited_comment(&self, rank1: CardValue, rank2: CardValue) -> String {
+        self.get_comment(&suited_indices(rank1, rank2))
+    }
+    pub fn get_weight_offsuit_comment(&self, rank1: CardValue, rank2: CardValue) -> String {
+        self.get_comment(&offsuit_indices(rank1, rank2))
+    }
+
+    fn get_comment(&self, indices: &[usize]) -> String {
+        //6 ways to make a pocket pair
+        let weight = self.get_weight(indices);
+        if weight == 0.0 {
+            return "None".to_string();
+        }
+        if weight == 1.0 {
+            return "All".to_string();
+        }
+        let is_included = weight <= 0.5;
+        let mut all_strings = vec![];
+        for pair_holecard_index in indices.iter() {
+            if self.data[*pair_holecard_index] == is_included {
+                let hc = ALL_HOLE_CARDS[*pair_holecard_index];
+                all_strings.push(hc.to_string());
+            }
+        }
+
+        let prefix = if is_included {
+            "Including: "
+        } else {
+            "Excluding: "
+        };
+
+        all_strings.sort();
+
+        prefix.to_string() + &all_strings.join(", ")
     }
 
     fn get_weight(&self, indices: &[usize]) -> f32 {
@@ -409,6 +449,10 @@ impl BoolRange {
             }
         }
         true
+    }
+
+    pub fn get_perc_enabled(&self) -> f64 {
+        self.data.count_ones() as f64 / NUMBER_OF_HOLE_CARDS as f64
     }
 }
 const COMBO_PAT: &str = r"(?:(?:[AaKkQqJjTt2-9]{2}[os]?)|(?:(?:[AaKkQqJjTt2-9][cdhs]){2}))";

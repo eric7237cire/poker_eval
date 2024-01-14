@@ -1,8 +1,17 @@
 use std::io::Write;
 
+#[cfg(not(target_arch = "wasm32"))]
+use log::debug;
+
+#[cfg(not(target_arch = "wasm32"))]
 use crate::game::game_runner_source::GameRunnerSourceEnum;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::game_log_source::GameLogSource;
-use crate::{GameLog, GameRunner, PokerError};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::{GameLog, GameRunner};
+
+#[cfg(not(target_arch = "wasm32"))]
+use crate::PokerError;
 
 pub fn init_test_logger() {
     let _ = env_logger::builder()
@@ -10,12 +19,13 @@ pub fn init_test_logger() {
         .filter_level(log::LevelFilter::Trace)
         .filter_module("poker_eval::game::game_log_parser", log::LevelFilter::Debug)
         .filter_module("poker_eval::game::game_log_source", log::LevelFilter::Debug)
-        .filter_module("poker_eval::game::game_runner", log::LevelFilter::Debug)
+        //.filter_module("poker_eval::game::game_runner", log::LevelFilter::Debug)
+        .filter_module("poker_eval::game::game_runner", log::LevelFilter::Trace)
         .filter_module(
             "poker_eval::game::agents::agent_source",
             log::LevelFilter::Debug,
         )
-        .filter_module("poker_eval::game::game_log", log::LevelFilter::Debug)
+        .filter_module("poker_eval::game::game_log", log::LevelFilter::Trace)
         .filter_module("poker_eval::eval::rank", log::LevelFilter::Debug)
         .filter_module("poker_eval::eval::board_texture", log::LevelFilter::Debug)
         .filter_module("poker_eval::core::bool_range", log::LevelFilter::Debug)
@@ -73,6 +83,7 @@ fn take_after_last_slash(s: &str) -> &str {
     &s[last_slash + 1..]
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn test_game_runner(game_runner: &mut GameRunner) -> Result<(), PokerError> {
     for _ in 0..200 {
         let action_count_before = game_runner.game_state.actions.len();
@@ -89,9 +100,9 @@ pub fn test_game_runner(game_runner: &mut GameRunner) -> Result<(), PokerError> 
     }
 
     //let log_display = game_runner.to_game_log_string(true);
-
-    let check_log = game_runner.to_game_log_string(false, false);
-    //info!("log\n{}", log_display);
+    let game_log = game_runner.to_game_log().unwrap();
+    let check_log = game_log.to_game_log_string(false, false, 0);
+    debug!("log\n{}", check_log);
 
     let parsed_game_log: GameLog = check_log.parse().unwrap();
     let game_log_source: GameLogSource = GameLogSource::new(parsed_game_log);
@@ -109,7 +120,10 @@ pub fn test_game_runner(game_runner: &mut GameRunner) -> Result<(), PokerError> 
         assert_eq!(action_count_before + 1, action_count_after);
     }
 
-    let log2 = game_runner2.to_game_log_string(false, false);
+    let log2 = game_runner2
+        .to_game_log()
+        .unwrap()
+        .to_game_log_string(false, false, 0);
 
     //info!("log2:\n{}", log2);
 

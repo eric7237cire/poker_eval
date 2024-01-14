@@ -5,12 +5,13 @@ use std::{
 };
 
 use once_cell::sync::Lazy;
+use serde::Serialize;
 
 use crate::{pre_calc::NUMBER_OF_HOLE_CARDS, set_used_card, unset_used_card, CardUsedType};
 
 use crate::{Card, PokerError};
 
-#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Serialize)]
 pub struct HoleCards {
     card_hi_lo: [Card; 2],
     //card_lo: Card
@@ -80,6 +81,22 @@ impl HoleCards {
         let row = 12 - self.card_hi_lo[1].value as usize;
 
         return row * 13 + col;
+    }
+
+    pub fn to_simple_range_string(&self) -> String {
+        let mut s = String::new();
+        s.push(char::from(self.card_hi_lo[0].value));
+        s.push(char::from(self.card_hi_lo[1].value));
+        if self.card_hi_lo[0].value != self.card_hi_lo[1].value {
+            s.push(char::from(
+                if self.card_hi_lo[0].suit == self.card_hi_lo[1].suit {
+                    's'
+                } else {
+                    'o'
+                },
+            ));
+        }
+        s
     }
 
     pub fn get_hi_card(&self) -> Card {
@@ -179,7 +196,7 @@ impl FromStr for HoleCards {
 
 impl Display for HoleCards {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {}", self.card_hi_lo[0], self.card_hi_lo[1])
+        write!(f, "{}{}", self.card_hi_lo[0], self.card_hi_lo[1])
     }
 }
 

@@ -15,7 +15,10 @@ export const SELECTABLE_RANGES: Array<{ title: string; value: string }> = [
     value: '22+,A2+,K2+,Q2+,J2+,T2s+,T6o+,92s+,95o+,82s+,84o+,72s+,74o+,62s+,65o,53s+'
   },
   { title: 'All', value: '22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32' },
-  //
+  {
+    title: 'Without Premium',
+    value: 'TT-22,AJs-A2s,AQo-A2o,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32'
+  },
   {
     title: 'Custom',
     value: ''

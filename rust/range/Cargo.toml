@@ -19,9 +19,5 @@ log = "*"
 # error object PokerError=>JsError
 js-sys = "0.3"
 
-[profile.release]
-codegen-units = 1
-lto = true
-
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ["-O4"]

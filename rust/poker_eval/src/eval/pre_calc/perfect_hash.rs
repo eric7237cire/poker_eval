@@ -1,16 +1,16 @@
 use boomphf::Mphf;
 //use log::info;
-#[cfg(not(target_arch = "wasm32"))]
-use ph::fmph;
+// #[cfg(not(target_arch = "wasm32"))]
+// use ph::fmph;
 use std::cmp::max;
 #[cfg(not(target_arch = "wasm32"))]
 use std::{
-    fs::{remove_file, File},
+    fs::File,
     io::Write,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::eval::pre_calc::{get_boom_path, get_perfect_hash_path};
+use crate::eval::pre_calc::get_boom_path;
 
 use super::{
     boom::BOOM_PHF_BYTES,
@@ -88,22 +88,22 @@ pub fn enumerate_all_unique_sets() -> Vec<u32> {
     keys
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-pub fn create_perfect_hash() {
-    let unique_sets = enumerate_all_unique_sets();
+// #[cfg(not(target_arch = "wasm32"))]
+// pub fn create_perfect_hash() {
+//     let unique_sets = enumerate_all_unique_sets();
 
-    //info!("Unique sets: {}", unique_sets.len());
+//     //info!("Unique sets: {}", unique_sets.len());
 
-    let f = fmph::Function::from(unique_sets.as_ref());
+//     let f = fmph::Function::from(unique_sets.as_ref());
 
-    //open a file hash1.dat in data dir
-    let path = get_perfect_hash_path();
-    remove_file(&path).unwrap_or_default();
-    let mut file = File::create(&path).unwrap();
+//     //open a file hash1.dat in data dir
+//     let path = get_perfect_hash_path();
+//     remove_file(&path).unwrap_or_default();
+//     let mut file = File::create(&path).unwrap();
 
-    f.write(&mut file).unwrap();
-    file.flush().unwrap();
-}
+//     f.write(&mut file).unwrap();
+//     file.flush().unwrap();
+// }
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn create_perfect_hash_boom_phf() {
@@ -146,14 +146,14 @@ pub fn load_boomperfect_hash() -> Mphf<u32> {
     deserialized_data
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-pub fn load_perfect_hash() -> fmph::Function {
-    let path = get_perfect_hash_path();
-    let mut file = File::open(&path).unwrap();
-    let f2 = fmph::Function::read(&mut file).unwrap();
+// #[cfg(not(target_arch = "wasm32"))]
+// pub fn load_perfect_hash() -> fmph::Function {
+//     let path = get_perfect_hash_path();
+//     let mut file = File::open(&path).unwrap();
+//     let f2 = fmph::Function::read(&mut file).unwrap();
 
-    f2
-}
+//     f2
+// }
 
 #[cfg(test)]
 mod tests {
@@ -161,24 +161,24 @@ mod tests {
     use bitvec::prelude::*;
     type SeenBitSet = BitArr!(for 73775, in usize, Lsb0);
 
-    #[cfg(not(target_arch = "wasm32"))]
-    //#[test]
-    #[allow(dead_code)]
-    fn is_perfect_hash_stable() {
-        let unique_sets = enumerate_all_unique_sets();
+    // #[cfg(not(target_arch = "wasm32"))]
+    // //#[test]
+    // #[allow(dead_code)]
+    // fn is_perfect_hash_stable() {
+    //     let unique_sets = enumerate_all_unique_sets();
 
-        create_perfect_hash();
+    //     create_perfect_hash();
 
-        let f = load_perfect_hash();
+    //     let f = load_perfect_hash();
 
-        create_perfect_hash();
+    //     create_perfect_hash();
 
-        let f2 = load_perfect_hash();
+    //     let f2 = load_perfect_hash();
 
-        for s in unique_sets {
-            assert_eq!(f.get(&s), f2.get(&s));
-        }
-    }
+    //     for s in unique_sets {
+    //         assert_eq!(f.get(&s), f2.get(&s));
+    //     }
+    // }
 
     #[test]
     fn is_hash_minimal() {

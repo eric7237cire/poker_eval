@@ -5,8 +5,8 @@
   </span>
 </template>
 <script setup lang="ts">
-import { toFixed1 } from '@src/utils';
-import { computed} from 'vue';
+import { toFixed1 } from '@src/lib/utils';
+import { computed } from 'vue';
 
 const props = defineProps<{
   perc: number;

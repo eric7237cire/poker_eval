@@ -5,7 +5,7 @@ This is a card like in a result table
   <span class="card-text" :class="card.colorClass">{{ card.rank + card.suit }} </span>
 </template>
 <script setup lang="ts">
-import { cardText } from '@src/utils';
+import { cardText } from '@src/lib/utils';
 import { computed } from 'vue';
 
 const props = defineProps<{

@@ -86,6 +86,7 @@ pub struct PartialRankContainer {
     pub flush_draw: Option<FlushDraw>,
     pub straight_draw: Option<StraightDraw>,
 
+    //means that we have the flush suit in our hand, there could be 5 on the board though
     pub made_flush: Option<CardValue>,
 
     pub pocket_pair: Option<PairInfo>,
@@ -179,6 +180,13 @@ impl PartialRankContainer {
         }
 
         return None;
+    }
+
+    pub fn made_two_pair(&self) -> Option<u8> {
+        if self.hi_pair.is_some() && self.lo_pair.is_some() {
+            return Some(self.hi_pair.unwrap().number_above);
+        }
+        None
     }
 
     pub fn made_set_with_n_above(&self, n_above: u8) -> bool {
@@ -475,26 +483,6 @@ impl PartialRankContainer {
                 });
             }
         }
-
-        // for (vs_it, bh_it) in
-        //     value_set_iterator(board_metrics.value_set, 4, CardValue::Two, CardValue::King).
-        //     zip(
-        //         value_set_iterator(combined_value_set, 4, CardValue::Two, CardValue::King)) {
-
-        //     assert!(vs_it.value_count <= 4);
-
-        //     //Same conditions except we also need the combined one to be 4
-        //     if vs_it.value_count >= 2 && vs_it.value_count < 4
-        //         && !vs_it.is_set_on_either_side(board_metrics.value_set)
-        //         && bh_it.value_count == 4
-        //         && !bh_it.is_set_on_either_side(combined_value_set) {
-
-        //         self.straight_draw = Some(StraightDraw {
-        //             straight_draw_type: StraightDrawType::OpenEndedDraw,
-        //             number_above: count_higher(all_draws, vs_it.window_stop.next_card().into())
-        //         });
-        //     }
-        // }
     }
 
     fn get_pair_info_for_single_hole_card(
@@ -650,6 +638,16 @@ pub fn partial_rank_cards(hole_cards: &HoleCards, board: &[Card]) -> PartialRank
             partial_ranks.get_pair_info_for_single_hole_card(hi_card_value, &board_metrics);
         partial_ranks.lo_pair =
             partial_ranks.get_pair_info_for_single_hole_card(lo_card_value, &board_metrics);
+
+        //If we have a higher pair on the board, this nullifies the lo pair
+        if partial_ranks.hi_pair.is_some() && partial_ranks.lo_pair.is_some() {
+            let higher_pair_on_board =
+                count_higher(board_metrics.count_to_value[2], lo_card_value as usize) > 0;
+
+            if higher_pair_on_board {
+                partial_ranks.lo_pair = None;
+            }
+        }
 
         //special case if we have 2 matching pairs we need to tweak the above/below
         if partial_ranks.hi_pair.is_some()
@@ -1265,5 +1263,41 @@ mod tests {
         let prc = partial_rank_cards(&hole_cards, &board_cards);
 
         assert_eq!(prc.made_flush, Some(CardValue::Ten));
+    }
+
+    #[test]
+    fn test_made_two_pair() {
+        let hc: HoleCards = "Qc 4s".parse().unwrap();
+
+        let board: Board = "Qh 9d 4c 9h".parse().unwrap();
+
+        let prc = partial_rank_cards(&hc, board.as_slice_card());
+
+        assert!(prc.lo_pair.is_none());
+        assert!(prc.made_two_pair().is_none());
+
+        let hc: HoleCards = "Qc 4s".parse().unwrap();
+
+        let board: Board = "Qh 9d 4c".parse().unwrap();
+
+        let prc = partial_rank_cards(&hc, board.as_slice_card());
+
+        assert_eq!(prc.made_two_pair(), Some(0));
+
+        let hc: HoleCards = "4s 9h".parse().unwrap();
+
+        let board: Board = "Qh 9d 4c".parse().unwrap();
+
+        let prc = partial_rank_cards(&hc, board.as_slice_card());
+
+        assert_eq!(prc.made_two_pair(), Some(1));
+
+        let hc: HoleCards = "8d 9h".parse().unwrap();
+
+        let board: Board = "Qh 9d 4c 4d 8s".parse().unwrap();
+
+        let prc = partial_rank_cards(&hc, board.as_slice_card());
+
+        assert_eq!(prc.made_two_pair(), Some(1));
     }
 }

@@ -21,6 +21,15 @@ path = "src/test_perf.rs"
 name = "try_agent"
 path = "src/try_agent.rs"
 
+[[bin]]
+name = "gen_hole_card_data"
+path = "src/gen_hole_card_data.rs"
+
+[[bin]]
+name = "calc_dominated"
+path = "src/calc_dominated.rs"
+
+
 [dependencies]
 bitvec = {version = "1.0.1", features=["serde"]}
 itertools = "*"
@@ -29,7 +38,7 @@ env_logger = "*"
 getrandom = { version = "0.2", features = ["js"] }
 rand="0.8"
 wasm-bindgen = "0.2.89"
-
+num-format = "0.4.4"
 regex="1"
 
 # redirect logs to console
@@ -38,6 +47,7 @@ wasm-logger = "0.2.0"
 # show rust stack trace
 console_error_panic_hook = "*"
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
 # To return jsvalue
 serde-wasm-bindgen = "0.6"
@@ -57,12 +67,14 @@ bincode = "1.3.3"
 fastrand = "2.0.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-jammdb = "0.11"
-redb = "1.4"
-rmp-serde = "1.1.2"
+# jammdb = "0.11"
+redb = "1.4.0"
 
+# rmp-serde = "1.1.2"
 
 dotenv = "0.15"
 
 # doesn't compile in 32 bits
-ph = "0.8.2"
+# ph = "0.8.2"
+
+csv = "1.1"

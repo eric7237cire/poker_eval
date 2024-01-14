@@ -1,10 +1,13 @@
 use std::{cell::RefCell, rc::Rc};
 
+use boomphf::Mphf;
+
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
-    ActionEnum, BoolRange, CardValue, CommentedAction, FlushDrawType, GameState, HoleCards,
-    PlayerState, Round, StraightDrawType,
+    likes_hands::{likes_hand, LikesHandLevel},
+    pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash},
+    ActionEnum, BoolRange, CommentedAction, GameState, HoleCards, PlayerState, Round,
 };
 
 use super::Agent;
@@ -16,6 +19,7 @@ pub struct PassiveCallingStation {
     pub name: String,
     flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
     partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
+    hash_func: Mphf<u32>,
 }
 
 impl PassiveCallingStation {
@@ -36,12 +40,13 @@ impl PassiveCallingStation {
             name: name.to_string(),
             partial_rank_db,
             flop_texture_db,
+            hash_func: load_boomperfect_hash(),
         }
     }
 
     fn decide_postflop(
         &mut self,
-        _player_state: &PlayerState,
+        player_state: &PlayerState,
         game_state: &GameState,
     ) -> CommentedAction {
         if game_state.current_to_call == 0 {
@@ -54,91 +59,53 @@ impl PassiveCallingStation {
         //We'll call with literally anything interesting
         let hc = self.hole_cards.as_ref().unwrap();
         let mut pr_db = self.partial_rank_db.borrow_mut();
-        let prc = pr_db.get_put(&game_state.board, hc).unwrap();
+        let prc = pr_db.get_put(&game_state.board, hc, 0).unwrap();
         let mut ft_db = self.flop_texture_db.borrow_mut();
         let ft = ft_db.get_put(&game_state.board).unwrap();
-        let mut likes_hand_comments: Vec<String> = Vec::new();
-        let mut not_like_hand_comments: Vec<String> = Vec::new();
 
-        if let Some(p) = prc.lo_pair {
-            //if p.number_above == 0 {
-            likes_hand_comments.push(format!("lo pair {}", hc.get_hi_card().value));
-            //}
-            if p.made_quads {
-                likes_hand_comments.push(format!("Quads {}", hc.get_hi_card().value));
-            }
-            if p.made_set {
-                likes_hand_comments.push(format!("Set {}", hc.get_hi_card().value));
-            }
-        }
-        if let Some(p) = prc.hi_pair {
-            //if p.number_above == 0 {
-            likes_hand_comments.push(format!("pair {}", hc.get_hi_card().value));
-            //}
-            if p.made_quads {
-                likes_hand_comments.push(format!("Quads {}", hc.get_hi_card().value));
-            }
-            if p.made_set {
-                likes_hand_comments.push(format!("Set {}", hc.get_hi_card().value));
-            }
-        }
-        if let Some(p) = prc.pocket_pair {
-            //if p.number_above == 0 {
-            likes_hand_comments.push(format!("pocket pair {}", hc.get_hi_card().value));
-            //}
-            if p.made_set {
-                likes_hand_comments.push(format!("Pocket Pair Set {}", hc.get_hi_card().value));
-            }
-            if p.made_quads {
-                likes_hand_comments.push(format!("Pocket Pair Quads {}", hc.get_hi_card().value));
-            }
-        }
-        if let Some(p) = prc.hi_card {
-            //if the board is paired, then only stay in with an ace or king
-            if p.number_above == 0 {
-                if ft.has_pair || ft.has_trips || ft.has_two_pair {
-                    if hc.get_hi_card().value >= CardValue::King {
-                        likes_hand_comments.push(format!(
-                            "hi card overcard is ace or king with paired board {}",
-                            hc.get_hi_card().value
-                        ));
-                    } else {
-                        not_like_hand_comments.push(format!(
-                            "hi card overcard is not ace or king with paired board {}",
-                            hc.get_hi_card().value
-                        ));
-                    }
-                } else {
-                    likes_hand_comments
-                        .push(format!("hi card is overpair {}", hc.get_hi_card().value));
-                }
-            }
-        }
-        if game_state.current_round != Round::River {
-            if let Some(p) = prc.flush_draw {
-                if p.flush_draw_type == FlushDrawType::FlushDraw {
-                    likes_hand_comments.push(format!("Flush draw {}", p.hole_card_value));
-                }
-            }
-            if let Some(p) = prc.straight_draw {
-                if p.straight_draw_type == StraightDrawType::OpenEnded
-                    || p.straight_draw_type == StraightDrawType::DoubleGutShot
-                {
-                    likes_hand_comments.push(format!("Straight draw"));
-                }
-                //likes_hand_comments.push( format!("Gutshot straight draw {}", p.) );
-            }
-        }
+        let rank = fast_hand_eval(
+            game_state.board.get_iter().chain(hc.get_iter()),
+            &self.hash_func,
+        );
 
-        if likes_hand_comments.len() > 0 {
+        let likes_hand_response = likes_hand(&prc, &ft, &rank, &game_state.board, &hc, 4).unwrap();
+
+        let half_pot = game_state.pot() / 2;
+
+        let call_amt =
+            game_state.current_to_call - player_state.cur_round_putting_in_pot.unwrap_or(0);
+
+        if game_state.current_to_call <= half_pot
+            && likes_hand_response.likes_hand >= LikesHandLevel::SmallBet
+        {
             return CommentedAction {
-                action: ActionEnum::Call,
-                comment: Some(likes_hand_comments.join(", ")),
+                action: ActionEnum::Call(call_amt),
+                comment: Some(format!(
+                    "Calling <= half pot bet with {}.  +1 {} -1 {}",
+                    likes_hand_response.likes_hand,
+                    likes_hand_response.likes_hand_comments.join(", "),
+                    likes_hand_response.not_like_hand_comments.join(", ")
+                )),
+            };
+        } else if likes_hand_response.likes_hand >= LikesHandLevel::LargeBet {
+            return CommentedAction {
+                action: ActionEnum::Call(call_amt),
+                comment: Some(format!(
+                    "Calling any pot with {}.  +1 {} -1 {}",
+                    likes_hand_response.likes_hand,
+                    likes_hand_response.likes_hand_comments.join(", "),
+                    likes_hand_response.not_like_hand_comments.join(", ")
+                )),
             };
         } else {
             return CommentedAction {
                 action: ActionEnum::Fold,
-                comment: Some("Folding ".to_string() + not_like_hand_comments.join(", ").as_str()),
+                comment: Some(format!(
+                    "Folding with {}.  +1 {} -1 {}",
+                    likes_hand_response.likes_hand,
+                    likes_hand_response.likes_hand_comments.join(", "),
+                    likes_hand_response.not_like_hand_comments.join(", ")
+                )),
             };
         }
     }
@@ -148,16 +115,18 @@ impl Agent for PassiveCallingStation {
     fn decide(&mut self, player_state: &PlayerState, game_state: &GameState) -> CommentedAction {
         let action = match game_state.current_round {
             Round::Preflop => {
+                let call_amt =
+                    game_state.current_to_call - player_state.cur_round_putting_in_pot.unwrap_or(0);
                 let ri = self.hole_cards.unwrap().to_range_index();
                 //not handling all ins
                 if let Some(calling_range) = self.calling_range.as_ref() {
                     if calling_range.data[ri] {
-                        ActionEnum::Call
+                        ActionEnum::Call(call_amt)
                     } else {
                         ActionEnum::Fold
                     }
                 } else {
-                    ActionEnum::Call
+                    ActionEnum::Call(call_amt)
                 }
             }
             _ => {

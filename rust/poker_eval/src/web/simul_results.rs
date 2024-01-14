@@ -65,7 +65,6 @@ impl FlopSimulationResults {
         active_player_index: Option<usize>,
         street_index: usize,
     ) -> Result<JsValue, PokerError> {
-        
         let r = if let Some(api) = active_player_index {
             &self.flop_results[api].street_rank_results[street_index].eq_by_range_index
         } else {
@@ -81,7 +80,6 @@ impl FlopSimulationResults {
         active_player_index: Option<usize>,
         street_index: usize,
     ) -> Result<JsValue, PokerError> {
-        
         let r = if let Some(api) = active_player_index {
             &self.flop_results[api].street_rank_results[street_index].num_it_by_range_index
         } else {

@@ -19,26 +19,37 @@ export interface Player extends RangeInStore {
 
   state: PlayerState;
   holeCards: CardList;
+
+  //oldest is 1st in the array
+  rangeStrHistory: Array<string>;
+
+  //index of the current rangeStr in the history, -1 for when user edits
+  historyIndex: number;
 }
 
 const PLAYER_ID_HERO = 0;
+const MAX_PLAYERS = 10;
+const RANGE_HISTORY_LIMIT = 5;
 
 // stores/counter.js
 import { defineStore } from 'pinia';
 import { RangeManager } from '@pkg/range';
 import { useLocalStorage } from '@vueuse/core';
 import { CardList } from './board';
-import { parseCardString } from '@src/utils';
-import { computed, ref } from 'vue';
+import { parseCardString } from '@src/lib/utils';
+import { computed, ref, watch } from 'vue';
+import * as _ from 'lodash';
 
 function initializePlayers(): Array<Player> {
   const players: Array<Player> = [];
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < MAX_PLAYERS; i++) {
     players.push({
       index: i,
       name: `Player ${i}`,
       rangeStr: '',
+      rangeStrHistory: [],
+      historyIndex: -1,
       holeCards: {
         cardText: '',
         cards: []
@@ -77,6 +88,21 @@ function()s become actions*/
     mergeDefaults: true
   });
 
+  for (let i = 0; i < players.value.length; ++i) {
+    if (!_.isArray(players.value[i].rangeStrHistory)) {
+      players.value[i].rangeStrHistory = [];
+    }
+    if (!_.isString(players.value[i].rangeStr)) {
+      players.value[i].rangeStr = '';
+    }
+    players.value[i].index = i;
+  }
+
+  if (players.value.length < MAX_PLAYERS) {
+    const newPlayers = initializePlayers();
+    players.value = newPlayers;
+  }
+
   const curPlayerData = computed(() => {
     return players.value[currentPlayer.value];
   });
@@ -91,25 +117,34 @@ function()s become actions*/
   function updateRangeStr(newRangeStr: string) {
     updateRangeStrForPlayer(currentPlayer.value, newRangeStr);
   }
-  function updateRangeStrForPlayer(playerId: number, newRangeStr: string) {
+  function updateRangeStrForPlayer(playerId: number, newRangeStr: string, saveHistory = false) {
     if (range.value == null) {
       console.log('Range not initialized yet');
       return;
     }
+    const pData = players.value[playerId];
+    if (saveHistory) {
+      //save history
+      if (pData.rangeStrHistory.length >= RANGE_HISTORY_LIMIT) {
+        pData.rangeStrHistory.shift();
+      }
+      pData.rangeStrHistory.push(newRangeStr);
+      pData.historyIndex = pData.rangeStrHistory.length - 1;
+    }
     //console.log('updateRangeStrForPlayer', playerId, newRangeStr);
-    players.value[playerId].rangeStr = newRangeStr;
+    pData.rangeStr = newRangeStr;
 
     //update stats
     range.value.from_string(newRangeStr);
     const rawData = range.value.raw_data();
     const numCombos = rawData.reduce((acc, cur) => acc + cur, 0);
-    players.value[playerId].percHands = numCombos / ((52 * 51) / 2);
+    pData.percHands = numCombos / ((52 * 51) / 2);
     const weights = range.value.get_weights();
     for (let i = 0; i < 13 * 13; ++i) {
-      players.value[playerId].range[i] = weights[i] * 100;
+      pData.range[i] = weights[i] * 100;
     }
-    const check = players.value[playerId].range.filter((r) => r > 0).length;
-    console.log(`updateRangeStrForPlayer range check ${check}`);
+    const check = pData.range.filter((r) => r > 0).length;
+    console.log(`updateRangeStrForPlayer range check ${check}; saved history ${saveHistory}`);
   }
 
   return {

@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 
-use crate::{core::Card, CardValue, CardValueRange, Suit};
+use crate::{core::Card, CardValue, CardValueRange, Suit, ALL_CARDS};
 use bitvec::prelude::*;
 use itertools::Itertools;
 use log::trace;
@@ -289,6 +289,243 @@ impl OldRank {
             }
         }
     }
+
+    /*
+    Gets winning cards in order
+
+    High Card: HC 1st Kicker 2nd Kicker 3rd Kicker 4th Kicker
+    Pair: P P 1st Kicker 2nd Kicker 3rd Kicker
+    Trips: T T T 1st Kicker 2nd Kicker
+    FH: T T T P P
+    Stright: Highest => Lowest
+    Flush: F F F F F
+    Quads: Q Q Q Q 1st Kicker
+
+    */
+    pub fn get_winning(&self, cards: &[Card]) -> [Card; 5] {
+        let low_set_mask: u32 = 0b1_1111_1111_1111;
+        let mut ret = [ALL_CARDS[0]; 5];
+        let mut cur_card_index = 0;
+
+        match self {
+            OldRank::HighCard(k) => {
+                let bvs: ValueSetType = ValueSetType::new([*k]);
+                assert_eq!(5, bvs.count_ones());
+
+                for set_bit in bvs.iter_ones().rev() {
+                    let value: CardValue = set_bit.try_into().unwrap();
+                    let card = cards.iter().find(|c| c.value == value).unwrap();
+
+                    ret[cur_card_index] = *card;
+                    cur_card_index += 1;
+                }
+            }
+            OldRank::OnePair(k) => {
+                let pair_value_u32 = (k >> 13).trailing_zeros();
+                let pair_value: CardValue = (pair_value_u32 as u8).try_into().unwrap();
+
+                let first_card = cards.iter().find(|c| c.value == pair_value).unwrap();
+                let second_card = cards.iter().rev().find(|c| c.value == pair_value).unwrap();
+
+                ret[cur_card_index] = *first_card;
+                cur_card_index += 1;
+                ret[cur_card_index] = *second_card;
+                cur_card_index += 1;
+
+                let bvs = ValueSetType::new([*k & low_set_mask]);
+
+                for set_bit in bvs.iter_ones().rev() {
+                    let value: CardValue = set_bit.try_into().unwrap();
+                    let card = cards.iter().find(|c| c.value == value).unwrap();
+                    ret[cur_card_index] = *card;
+                    cur_card_index += 1;
+                }
+            }
+            OldRank::TwoPair(k) => {
+                let pair_values_u32 = k >> 13;
+                let pv_bvs = ValueSetType::new([pair_values_u32]);
+
+                for set_bit in pv_bvs.iter_ones().rev() {
+                    let pair_value: CardValue = set_bit.try_into().unwrap();
+                    let first_card = cards.iter().find(|c| c.value == pair_value).unwrap();
+                    let second_card = cards.iter().rev().find(|c| c.value == pair_value).unwrap();
+
+                    ret[cur_card_index] = *first_card;
+                    cur_card_index += 1;
+                    ret[cur_card_index] = *second_card;
+                    cur_card_index += 1;
+                }
+
+                let last_kicker = (*k & low_set_mask).trailing_zeros();
+                let last_kicker_value: CardValue = (last_kicker as u8).try_into().unwrap();
+                let card = cards.iter().find(|c| c.value == last_kicker_value).unwrap();
+                ret[cur_card_index] = *card;
+            }
+            OldRank::ThreeOfAKind(k) => {
+                let trips_value_u32 = (k >> 13).trailing_zeros();
+                let trips_value: CardValue = (trips_value_u32 as u8).try_into().unwrap();
+
+                for c in cards.iter() {
+                    if c.value == trips_value {
+                        ret[cur_card_index] = *c;
+                        cur_card_index += 1;
+                    }
+                }
+
+                let bvs = ValueSetType::new([*k & low_set_mask]);
+
+                for set_bit in bvs.iter_ones().rev() {
+                    let value: CardValue = set_bit.try_into().unwrap();
+                    let card = cards.iter().find(|c| c.value == value).unwrap();
+                    ret[cur_card_index] = *card;
+                    cur_card_index += 1;
+                }
+            }
+            OldRank::Straight(k) => {
+                let straight_value = if *k == 0 {
+                    CardValue::Five
+                } else {
+                    //let straight_value_u32 = k.trailing_zeros();
+                    let straight_value: CardValue = ((*k + 3) as u8).try_into().unwrap();
+                    straight_value
+                };
+
+                if straight_value == CardValue::Five {
+                    //Find the ace
+                    let ace = cards.iter().find(|c| c.value == CardValue::Ace).unwrap();
+                    ret[cur_card_index] = *ace;
+                    cur_card_index += 1;
+
+                    for card_value in CardValueRange::new(CardValue::Two, CardValue::Five) {
+                        let card = cards.iter().find(|c| c.value == card_value).unwrap();
+                        ret[cur_card_index] = *card;
+                        cur_card_index += 1;
+                    }
+                } else {
+                    let start = CardValue::try_from(straight_value as u8 - 4).unwrap();
+
+                    for card_value in CardValueRange::new(start, straight_value) {
+                        let card = cards.iter().find(|c| c.value == card_value).unwrap();
+                        ret[cur_card_index] = *card;
+                        cur_card_index += 1;
+                    }
+                }
+            }
+            OldRank::Flush(k) => {
+                let bvs: ValueSetType = ValueSetType::new([*k]);
+                assert_eq!(5, bvs.count_ones());
+
+                for set_bit in bvs.iter_ones().rev() {
+                    let value: CardValue = set_bit.try_into().unwrap();
+                    let card = cards.iter().find(|c| c.value == value).unwrap();
+                    ret[cur_card_index] = *card;
+                    cur_card_index += 1;
+                }
+            }
+            OldRank::FullHouse(k) => {
+                let trips_values_u32 = k >> 13;
+                let pair_value_u32 = k & low_set_mask;
+                let trips_value: CardValue = (trips_values_u32.trailing_zeros() as u8)
+                    .try_into()
+                    .unwrap();
+                let pair_value: CardValue =
+                    (pair_value_u32.trailing_zeros() as u8).try_into().unwrap();
+
+                for c in cards {
+                    if c.value == trips_value {
+                        ret[cur_card_index] = *c;
+                        cur_card_index += 1;
+                    }
+                }
+                //it's possible to have TTT PPP 
+                for c in cards {
+                    if c.value == pair_value && cur_card_index < 5 {
+                        ret[cur_card_index] = *c;
+                        cur_card_index += 1;
+                    }
+                }
+            }
+            OldRank::FourOfAKind(k) => {
+                let quads_value_u32 = (k >> 13).trailing_zeros();
+                let quads_value: CardValue = (quads_value_u32 as u8).try_into().unwrap();
+
+                for c in cards {
+                    if c.value == quads_value {
+                        ret[cur_card_index] = *c;
+                        cur_card_index += 1;
+                    }
+                }
+
+                let bvs = ValueSetType::new([*k & low_set_mask]);
+
+                for set_bit in bvs.iter_ones().rev() {
+                    let value: CardValue = set_bit.try_into().unwrap();
+                    let card = cards.iter().find(|c| c.value == value).unwrap();
+                    ret[cur_card_index] = *card;
+                    cur_card_index += 1;
+                }
+            }
+            OldRank::StraightFlush(k) => {
+                let straight_value = if *k == 0 {
+                    CardValue::Five
+                } else {
+                    //let straight_value_u32 = k.trailing_zeros();
+                    let straight_value: CardValue = ((*k + 3) as u8).try_into().unwrap();
+                    straight_value
+                };
+
+                //Find most common suit
+                let mut suit_counts = [0; 4];
+                for card in cards.iter() {
+                    suit_counts[card.suit as usize] += 1;
+                }
+                let (max_suit, _max_suit_count) = suit_counts
+                    .iter()
+                    .enumerate()
+                    .max_by_key(|&(_, count)| count)
+                    .unwrap();
+                let max_suit_class: Suit = (max_suit as u8).try_into().unwrap();
+
+                let suited_cards = cards
+                    .iter()
+                    .filter(|c| c.suit == max_suit_class)
+                    .collect::<Vec<_>>();
+
+                trace!(
+                    "Straight value {}=={}, is wheel {}",
+                    straight_value,
+                    straight_value as u8,
+                    straight_value == CardValue::Five
+                );
+
+                if straight_value == CardValue::Five {
+                    //Find the ace
+                    let ace = suited_cards
+                        .iter()
+                        .find(|c| c.value == CardValue::Ace)
+                        .unwrap();
+                    ret[cur_card_index] = **ace;
+                    cur_card_index += 1;
+
+                    for cv in CardValueRange::new(CardValue::Two, CardValue::Five) {
+                        let card = suited_cards.iter().find(|c| c.value == cv).unwrap();
+                        ret[cur_card_index] = **card;
+                        cur_card_index += 1;
+                    }
+                } else {
+                    let start = CardValue::try_from(straight_value as u8 - 4).unwrap();
+
+                    for cv in CardValueRange::new(start, straight_value) {
+                        let card = suited_cards.iter().find(|c| c.value == cv).unwrap();
+                        ret[cur_card_index] = **card;
+                        cur_card_index += 1;
+                    }
+                }
+            }
+        }
+
+        ret
+    }
 }
 
 /// Bit mask for the wheel (Ace, two, three, four, five)
@@ -374,9 +611,16 @@ pub fn count_lower(value_set: ValueSetType, value: usize) -> u8 {
 }
 
 pub struct BitSetCardsMetrics {
+    //value_to_count[0] is how many 2s, value_to_count[1] is how many 3s, etc.
     pub value_to_count: [u8; 13],
+    //count_to_value[0] is a bitset of all the card values that have 0 cards
+    //count_to_value[1] is a bitset of all the card values that have 1 card, etc.
     pub count_to_value: [ValueSetType; 5],
+
+    //suit_value_sets[0] is a bitset of all the values that have a club
     pub suit_value_sets: [ValueSetType; 4],
+
+    //value_set is a bitset of all the values that are in the hand
     pub value_set: ValueSetType,
 }
 

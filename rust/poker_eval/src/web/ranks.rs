@@ -2,9 +2,7 @@ use boomphf::Mphf;
 
 use crate::pre_calc::fast_eval::fast_hand_eval;
 use crate::pre_calc::rank::Rank;
-use crate::web::{
-    PlayerFlopResults, PlayerPreFlopState, PreflopPlayerInfo, ResultType, 
-};
+use crate::web::{PlayerFlopResults, PlayerPreFlopState, PreflopPlayerInfo, ResultType};
 use crate::{Card, HoleCards, PokerError, NUM_RANK_FAMILIES, SIMPLE_RANGE_INDEX_LEN};
 
 pub struct RankResults {
@@ -119,12 +117,11 @@ pub fn eval_current(
     update_results_from_rank(
         &mut villian_results.street_rank_results[street_index],
         &best_villian_rank,
-        villian_rnk_amt
+        villian_rnk_amt,
     );
     //Making it like hero vs villian, so a tie is just between hero & villian
     if villian_rnk_amt == 0.5 {
-        villian_results.street_rank_results[street_index].tie_eq +=
-                        villian_rnk_amt
+        villian_results.street_rank_results[street_index].tie_eq += villian_rnk_amt
     }
     if villian_rnk_amt == 1.0 {
         villian_results.street_rank_results[street_index].win_eq += 1.0;
@@ -146,7 +143,8 @@ pub fn eval_current(
             if active_player_index > 0 {
                 //villian; ok we add ties together, will balance out with ties with hero
                 //not sure if this needs to be among 2 like the street rank results
-                villian_results.street_rank_results[street_index].eq_by_range_index[range_index] += 1.0 / num_with_max as f64;
+                villian_results.street_rank_results[street_index].eq_by_range_index[range_index] +=
+                    1.0 / num_with_max as f64;
             }
 
             update_results_from_rank(
