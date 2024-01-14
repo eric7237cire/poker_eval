@@ -42,7 +42,7 @@
                 <tr
                   class="relative"
                   style="height: calc(1.9rem + 1px)"
-                  v-if="resultsStore.streetVisible[street_index - 1]"
+                  v-if="resultsStore.streetVisible[street_index - 1] && (!heroVillianOnly || item.player_index <= 0)"
                 >
                   <td>
                     <template v-if="item.player_index >= 0">
@@ -255,6 +255,7 @@ import { useResultsStore } from '@src/stores/results';
 const props = defineProps<{
   results: Array<ResultsInterface>;
   equityOnly: boolean;
+  heroVillianOnly: boolean;
 }>();
 
 const columnNames = ['Player Id', 'Cards', 'Street', 'Equity', ...RANK_FAMILY_NAMES];

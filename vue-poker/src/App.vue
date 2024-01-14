@@ -7,6 +7,7 @@
       <ResultTable
         :results="myResultsList"
         :equityOnly="equityOnly"
+        :heroVillianOnly="heroVillianOnly"
         v-if="myResultsList.length > 0"
       />
     </Transition>
@@ -16,6 +17,8 @@
     <div class="go-row">
       <input type="checkbox" id="checkbox" v-model="equityOnly" />
       <label for="checkbox">Equity Only</label>
+      <input type="checkbox" id="checkbox" v-model="heroVillianOnly" />
+      <label for="checkbox">Hero/Villian Only</label>
       <button @click="go" class="button-base button-green">Go</button>
       <button @click="stop" class="button-base button-red">Stop</button>
       <button @click="load" class="button-base button-blue">Load</button>
@@ -194,6 +197,7 @@ const rangeStore = useRangesStore();
 const pauseAfterTickMs = 500;
 
 const equityOnly = ref(true);
+const heroVillianOnly = ref(true);
 
 const iterationsPerTick = computed(() => {
   if (equityOnly.value) {

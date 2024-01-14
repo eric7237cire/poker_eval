@@ -86,7 +86,7 @@ Have classifier based on performance vs 4 players
 
 3 -- Position (1st, last, middle)
 4 -- Number of players (2, 3, 4+)
-20-25 -- Hole cards (grouping into categories)
+3 -- Hole cards (grouping into categories, because of # of players can make this into 3 groups maybe)
 4 -- Round
 3 -- Equity (high, medium, low)
 3 -- Bet situation (unbet, facing bet, facing raise)
