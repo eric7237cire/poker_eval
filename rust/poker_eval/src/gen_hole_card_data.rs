@@ -2,16 +2,14 @@ use std::{
     cmp::{max, min},
     fs::{File, self},
     io::Write,
-    time::Instant,
 };
 
 use log::info;
 use poker_eval::{
-    board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
     init_logger,
-    monte_carlo_equity::{get_equivalent_hole_board, calc_equity_vs_random},
-    pre_calc::{get_data_file_path, get_repo_root},
-    Board, Card, CardValue, Deck, HoleCards, PokerError, Round, Suit,
+    monte_carlo_equity::calc_equity_vs_random,
+    pre_calc::get_repo_root,
+    Board, Card, CardValue, HoleCards, PokerError, Round, Suit,
 };
 
 /*
@@ -44,7 +42,7 @@ fn simulate(round: Round, num_players: u8) -> Result<(), PokerError>
     let num_hands_to_simulate = 10_000;
 
     info!("Creating {:?} for round {}, {} players {} simulations", &p, round, num_players, num_hands_to_simulate);
-    
+
     fs::create_dir_all( p.parent().unwrap() ).unwrap();
 
     let mut wtr = File::create(p).unwrap();
@@ -70,15 +68,15 @@ fn simulate(round: Round, num_players: u8) -> Result<(), PokerError>
             // );
 
             line_values.push(format!("{}", hole_cards.to_simple_range_index()));
-            line_values.push(format!("{}", hole_cards));
+            line_values.push(format!("{}", hole_cards.to_simple_range_string()));
 
             let eq = calc_equity_vs_random(&board, &hole_cards, num_players as usize, num_hands_to_simulate, round.get_num_board_cards())?;
                
             line_values.push(format!("{}", eq));
 
-            line_values.push("\n".to_string());
-
             wtr.write_all(line_values.join(",").as_bytes()).unwrap();
+            
+            wtr.write_all(b"\n").unwrap();
         }
     }
 
