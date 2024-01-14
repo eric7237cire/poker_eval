@@ -11,7 +11,23 @@ https://rnikhil.com/2023/12/31/ai-cfr-solver-poker.html
 
 https://dash.harvard.edu/bitstream/handle/1/37370951/thesis_submission.pdf?sequence=1
 
+## Python implementation of Kuhn CFR
+
 https://github.com/IanSullivan/PokerCFR
+
+## Kuhn CFR Explation w/ math translation
+
+https://justinsermeno.com/posts/cfr/
+
+## C++ CFR Implemenatations
+
+https://github.com/bakanaouji/cpp-cfr/blob/master/RegretMinimization/Trainer/Trainer.cpp
+
+F# -- https://github.com/brianberns/Cfrm/tree/master/Cfrm
+
+## Python Implementation
+
+https://github.com/tansey/pycfr
 
 Goal -- Human consumable advice
 
@@ -69,12 +85,16 @@ Have classifier based on performance vs 4 players
 # Node Definition:
 
 3 -- Position (1st, last, middle)
-4 -- Number of players (2, 3, 4, 5+)
+4 -- Number of players (2, 3, 4+)
 20-25 -- Hole cards (grouping into categories)
 4 -- Round
 3 -- Equity (high, medium, low)
 3 -- Bet situation (unbet, facing bet, facing raise)
-4 -- Check, Bet/Raise, Fold, Call
+
+Actions:
+Check, Bet/Raise, Fold, Call
+
+Run through, just tracking gains/loses per node & action
 
 # Tester
 

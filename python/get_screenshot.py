@@ -18,9 +18,12 @@ import pytz  # Import the pytz library for timezone handling
 # Create a timezone object for GMT/UTC
 gmt_timezone = pytz.timezone('UTC')
 
-#base_path = Path(r"\\wsl.localhost\Ubuntu-20.04\home\eric\git\poker_eval\python\datasets\incoming")
-work_path = Path(os.environ["WORK_PATH"])
-incoming_path = Path(os.environ["INCOMING_PATH"])
+datasets_path = Path(os.environ["DATASETS_PATH"])
+work_path = datasets_path / "work"
+incoming_path = datasets_path 
+save_path = datasets_path / "save"
+
+save_mode = int(os.environ["SAVE_MODE"]) == 1
 
 if not work_path.exists():
     raise Exception(f"Work path [{work_path}] does not exist")
@@ -60,7 +63,7 @@ def get_file_path()->Path:
     now = datetime.now(gmt_timezone)
 
     formatted_string = now.strftime("%Y%m%d_%H%M%S_%f")[:-3]
-
+    
     file_path = work_path / f"{formatted_string}.bmp"
     
     return file_path
@@ -124,13 +127,19 @@ def get_screenshot():
         file_path.unlink()
 
     # move the png to incoming
-    target_path = incoming_path / png_file_path.name
+    if save_mode:
+        target_path = save_path / png_file_path.name
+    else:
+        target_path = incoming_path / png_file_path.name
     print(f"Moving PNG to file [{target_path}]")
     shutil.move(png_file_path, target_path)
     
     
 
 if __name__ == "__main__":
-    for i in range(0, 10_000):
+    if save_mode:
         get_screenshot()
-        time.sleep(0.75)
+    else:
+        for i in range(0, 10_000):
+            get_screenshot()
+            time.sleep(0.75)

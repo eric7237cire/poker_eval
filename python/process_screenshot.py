@@ -70,6 +70,7 @@ def process_screenshots():
             print(f"Producing annotated image [{annotated_image_path}]")
             draw_box_on_image(image_file, classes, colors, annotated_image_path)
 
+        
 
         # Sleep 500 ms
         time.sleep(2.5)
@@ -138,6 +139,12 @@ def run_classification(image_file: Path, box_coords: List[List[float]], box_coor
             else:
                 f.write("")
 
+    else:
+        # clean 
+        dir_to_clean = cfg.LIVE_CARD_IMAGES_PATH / image_file.stem 
+        if dir_to_clean.exists():
+            shutil.rmtree( dir_to_clean )
+
     return ret
 
 def clean_detect():
@@ -145,6 +152,10 @@ def clean_detect():
         if sub_dir.is_dir() and sub_dir.name.startswith("predict"):
 
             shutil.rmtree(sub_dir)
+
+    if cfg.LIVE_CARD_IMAGES_PATH.exists():
+        shutil.rmtree(cfg.LIVE_CARD_IMAGES_PATH)
+    cfg.LIVE_CARD_IMAGES_PATH.mkdir(parents=True, exist_ok=True)
 
 
 # https://github.com/waittim/draw-YOLO-box/blob/main/draw_box.py
@@ -300,7 +311,8 @@ def process_screenshots_for_json():
 
         
 if __name__ == '__main__':
-    # clean_detect()
+    clean_detect()
+    # saves in annotated
     # process_screenshots()
 
     process_screenshots_for_json()
