@@ -1,4 +1,6 @@
 from pathlib import Path
+import shutil
+import time
 import pygetwindow as gw
 from PIL import ImageGrab
 import pyautogui
@@ -17,7 +19,11 @@ import pytz  # Import the pytz library for timezone handling
 gmt_timezone = pytz.timezone('UTC')
 
 #base_path = Path(r"\\wsl.localhost\Ubuntu-20.04\home\eric\git\poker_eval\python\datasets\incoming")
-base_path = Path(r"\\wsl.localhost\Ubuntu-22.04\home\eric\git\poker_eval\python\datasets\incoming")
+work_path = Path(os.environ["WORK_PATH"])
+incoming_path = Path(os.environ["INCOMING_PATH"])
+
+if not work_path.exists():
+    raise Exception(f"Work path [{work_path}] does not exist")
 
 # Anaconda installation
 # Admin prompt
@@ -55,7 +61,7 @@ def get_file_path()->Path:
 
     formatted_string = now.strftime("%Y%m%d_%H%M%S_%f")[:-3]
 
-    file_path = base_path / f"{formatted_string}.bmp"    
+    file_path = work_path / f"{formatted_string}.bmp"
     
     return file_path
 
@@ -116,10 +122,15 @@ def get_screenshot():
     # delete the bmp
     if file_path.exists():
         file_path.unlink()
+
+    # move the png to incoming
+    target_path = incoming_path / png_file_path.name
+    print(f"Moving PNG to file [{target_path}]")
+    shutil.move(png_file_path, target_path)
     
     
 
 if __name__ == "__main__":
-    get_screenshot()
-
-
+    for i in range(0, 10_000):
+        get_screenshot()
+        time.sleep(0.75)

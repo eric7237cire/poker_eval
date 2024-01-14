@@ -212,18 +212,32 @@ def process_screenshots_for_json():
     
     for i in range(0, 10_000):
         try:    
-            images = cfg.INCOMING_PATH.glob("*.png")
+            images = list(cfg.INCOMING_PATH.glob("*.png"))
+
+            if len(images) == 0:
+                print("No images found")
+                time.sleep(0.5)
+                continue
+
             most_recent = max(images, key=lambda p: p.stat().st_ctime)
 
             print(f"Processing {most_recent}")
 
             image_file = most_recent
 
-            results = detect_model.predict(
-                image_file, conf=0.55, 
-                imgsz=cfg.DETECT_IMG_SZ,
-                save=False
-            )
+            try:
+                results = detect_model.predict(
+                    image_file, conf=0.55, 
+                    imgsz=cfg.DETECT_IMG_SZ,
+                    save=False
+                )
+            except Exception as e:
+                print(f"Exception {e} in loading file {image_file}, removing")
+                image_file.unlink()
+
+                time.sleep(0.5)
+                continue
+
             result = results[0]
 
             # print(f"Predicted {image_file} to {result}")
@@ -251,6 +265,8 @@ def process_screenshots_for_json():
 
             if not len(box_y_index) in [2, 5, 6, 7]:
                 print(f"Skipping {image_file}, strange number of cards: {len(box_y_index)}")
+                image_file.unlink()
+                time.sleep(0.25)
                 continue
 
             hole_card_index1 = box_y_index[0][2]
@@ -272,8 +288,9 @@ def process_screenshots_for_json():
                     "board_cards": " ".join(board_classes)
                 }, f)
 
-            # Sleep 500 ms
-            time.sleep(2.5)
+            print(f"Deleting {image_file}")
+            image_file.unlink()
+            time.sleep(0.25)
         except Exception as e:
             print("Exception!")
             print(e)
