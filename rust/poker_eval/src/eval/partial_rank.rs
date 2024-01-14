@@ -104,6 +104,12 @@ pub struct PartialRankContainer {
     pub hi_card: Option<PairFamilyRank>,
     pub lo_card: Option<PairFamilyRank>,
     //num over_cards
+
+
+    //Add something like rank_index given a flop, so 1 if nuts, 2 if 2nd nuts, etc
+    //Also distinct hand ranks
+
+    //Calculate if preflop, heads up equity rank == multipot
 }
 
 impl Default for PartialRankContainer {

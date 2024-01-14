@@ -4,6 +4,8 @@
 
 Equity and Draw Analysis.  Try it out on [Github pages](https://eric7237cire.github.io/poker_eval)
 
+Card recognition using image detection & classification using [ultralytics](https://github.com/ultralytics/ultralytics)
+
 ## Tech Stack
 
 * ![Rust](http://rust-lang.org/logos/rust-logo-32x32.png) Rust

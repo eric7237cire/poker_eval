@@ -1,6 +1,6 @@
 use std::{
     cmp::{max, min},
-    fs::File,
+    fs::{File, self},
     io::Write,
     time::Instant,
 };
@@ -9,8 +9,8 @@ use log::info;
 use poker_eval::{
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
     init_logger,
-    monte_carlo_equity::get_equivalent_hole_board,
-    pre_calc::get_data_file_path,
+    monte_carlo_equity::{get_equivalent_hole_board, calc_equity_vs_random},
+    pre_calc::{get_data_file_path, get_repo_root},
     Board, Card, CardValue, Deck, HoleCards, PokerError, Round, Suit,
 };
 
@@ -26,33 +26,32 @@ fn main() {
 fn main_impl() -> Result<(), PokerError> {
     init_logger();
 
-    let mut check_index = 0;
+    for num_players in 2..=9 {
+        for round in [Round::Flop, Round::Turn, Round::River].iter() {
+            simulate(*round, num_players)?;
+        }
+    }
 
-    let mut monte_carlo_equity_db: EvalCacheWithHcReDb<ProduceMonteCarloEval> =
-        EvalCacheWithHcReDb::new().unwrap();
+    Ok(())
+}
 
-    //let rcref_mcedb = Rc::new(RefCell::new(monte_carlo_equity_db));
+fn simulate(round: Round, num_players: u8) -> Result<(), PokerError>
+{
 
-    let mut deck = Deck::new();
+    //let round = Round::River;
+    let p  = get_repo_root().join(format!("python/from_rust/hole_card_data_{}_{}.csv", round, num_players));
+    
+    let num_hands_to_simulate = 10_000;
 
-    //let p = get_data_file_path("hole_card_data_river_4.csv");
-    let num_players = 4;
-    //let round = Round::Flop;
-    let round = Round::River;
-    let p = get_data_file_path(&format!("hole_card_data_{}_{}.csv", round, num_players));
-
-    let cards_needed = match round {
-        Round::Flop => 3,
-        Round::Turn => 4,
-        Round::River => 5,
-        _ => panic!("Invalid round"),
-    };
+    info!("Creating {:?} for round {}, {} players {} simulations", &p, round, num_players, num_hands_to_simulate);
+    
+    fs::create_dir_all( p.parent().unwrap() ).unwrap();
 
     let mut wtr = File::create(p).unwrap();
 
-    let num_hands_to_simulate = 10_000;
+    
 
-    let mut last_output = Instant::now();
+    let board = Board::new();
 
     for row in 0..13u8 {
         for col in 0..13 {
@@ -65,51 +64,17 @@ fn main_impl() -> Result<(), PokerError> {
             let card2 = Card::new(lo_card, if is_suited { Suit::Club } else { Suit::Diamond });
             let hole_cards = HoleCards::new(card1, card2)?;
 
-            info!(
-                "row {} col {} -- index {}: {}",
-                row, col, check_index, hole_cards
-            );
+            // info!(
+            //     "row {} col {} -- {}",
+            //     row, col, hole_cards
+            // );
 
-            assert_eq!(check_index, hole_cards.to_simple_range_index());
-
-            line_values.push(format!("{}", check_index));
+            line_values.push(format!("{}", hole_cards.to_simple_range_index()));
             line_values.push(format!("{}", hole_cards));
 
-            check_index += 1;
-
-            for i in 0..num_hands_to_simulate {
-                if i % 100 == 0 && last_output.elapsed().as_secs() > 3 {
-                    info!(
-                        "{} hands simulated for #{}: {}",
-                        i,
-                        check_index - 1,
-                        hole_cards
-                    );
-                    last_output = Instant::now();
-                }
-
-                deck.reset();
-
-                deck.set_used_card(hole_cards.get_hi_card());
-                deck.set_used_card(hole_cards.get_lo_card());
-
-                let mut board = Board::new();
-                for _ in 0..cards_needed {
-                    let card = deck.get_unused_card()?;
-                    board.add_card(card)?;
-                }
-
-                let (eq_hole_cards, mut eq_board) = get_equivalent_hole_board(&hole_cards, board.as_slice_card());
-                eq_board.get_index();
-                //board.get_index();
-
-                //let eq = monte_carlo_equity_db.get_put(&board, &hole_cards, 4).unwrap();
-                let eq = monte_carlo_equity_db
-                    .get_put(&eq_board, &eq_hole_cards, 4)
-                    .unwrap();
-                //info!("eq {}", eq);
-                line_values.push(format!("{}", eq));
-            }
+            let eq = calc_equity_vs_random(&board, &hole_cards, num_players as usize, num_hands_to_simulate, round.get_num_board_cards())?;
+               
+            line_values.push(format!("{}", eq));
 
             line_values.push("\n".to_string());
 
@@ -119,14 +84,5 @@ fn main_impl() -> Result<(), PokerError> {
 
     Ok(())
 
-    // for suited in [false, true] {
-
-    //     for lo_card in CardValueRange::new(CardValue::Two, CardValue::Ace) {
-    //         for hi_card in CardValueRange::new(lo_card, CardValue::Ace) {
-
-    //             info!("{}{}{}", hi_card, lo_card, if suited { "s" } else { "o" });
-    //         }
-
-    //     }
-    // }
+   
 }

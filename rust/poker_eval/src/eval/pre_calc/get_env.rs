@@ -41,3 +41,11 @@ pub fn get_data_file_path(file_name: &str) -> PathBuf {
 
     path
 }
+
+pub fn get_repo_root() -> PathBuf {
+    dotenv().ok();
+
+    let data_dir = env::var("REPO_ROOT").unwrap();
+
+    PathBuf::from(data_dir)
+}

@@ -802,6 +802,7 @@ pub struct CsvLineForPokerHand {
     #[serde(rename = "HERO_EQ_PREFLOP")]
     pub hero_eq_start_pre_flop: f64,
 
+    //This is simulating equity up until the river
     #[serde(rename = "HERO_EQ_FLOP")]
     pub hero_eq_start_flop: f64,
 

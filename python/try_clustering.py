@@ -111,7 +111,7 @@ def chi_square_distance(hist1, hist2):
 
 def produce_histograms():
 
-    create_charts = True
+    create_charts = False
     num_bins = 80
     num_clusters = 24  # Define the number of clusters
     

@@ -135,8 +135,13 @@ pub fn calc_equity_vs_random(
     hole_cards: &HoleCards,
     num_players: usize,
     num_simulations: usize,
+    //5 to go to river, 4 to go to turn, 3 to go to flop
+    num_community_cards: usize,
 ) -> Result<f64, PokerError> {
     assert!(num_players >= 2 && num_players <= 10);
+    assert!(num_community_cards >= 3 && num_community_cards <= 5);
+    assert!(board.get_num_cards() <= num_community_cards);
+
     let hash_func = load_boomperfect_hash();
 
     let mut deck = Deck::new();
@@ -149,7 +154,7 @@ pub fn calc_equity_vs_random(
 
     let mut board_cards = board.as_slice_card().iter().map(|c| *c).collect_vec();
 
-    while board_cards.len() < 5 {
+    while board_cards.len() < num_community_cards {
         //just a place holder
         board_cards.push(ALL_CARDS[0]);
     }
@@ -170,26 +175,20 @@ pub fn calc_equity_vs_random(
         deck.set_used_card(player_hole_cards[0].get_lo_card());
 
         //We need to deal hole cards to each player
-        for player_index in 1..num_players {
-            // trace!(
-            //     "Choosing range for {} with {} possibilities",
-            //     p,
-            //     possible_hole_cards[p].len()
-            // );
-
+        for player_index in 1..num_players {            
             //This takes into account the used cards
             let card1 = deck.get_unused_card().unwrap();
             let card2 = deck.get_unused_card().unwrap();
             player_hole_cards[player_index] = HoleCards::new(card1, card2)?;
         }
 
-        for board_index in board.get_num_cards()..5 {
+        for board_index in board.get_num_cards()..num_community_cards {
             let card = deck.get_unused_card().unwrap();
             board_cards[board_index] = card;
         }
 
         assert_eq!(
-            2 * player_hole_cards.len() + 5,
+            2 * player_hole_cards.len() + num_community_cards,
             deck.get_number_of_used_cards()
         );
 
