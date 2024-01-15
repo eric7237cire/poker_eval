@@ -140,10 +140,8 @@ impl EqAgent {
             .get_put(&eq_board, &eq_hole_cards, players_at_round_start)
             .unwrap();
 
-        let call_amt = min(
-            game_state.current_to_call - player_state.cur_round_putting_in_pot.unwrap_or(0),
-            player_state.stack,
-        );
+        let helpers = player_state.get_helpers(game_state);
+        let call_amt = helpers.call_amount;
 
         //max is always just the remaining stack
 
@@ -167,22 +165,13 @@ impl EqAgent {
                 game_state.pot().to_formatted_string(&Locale::en)
             ));
 
-            if eq >= EQ_TO_ALL_IN && call_amt < player_state.stack {
-                let max_can_raise =
-                    player_state.stack + player_state.cur_round_putting_in_pot.unwrap_or(0);
-                //let min_can_raise = min(game_state.min_raise + game_state.current_to_call, max_can_raise);
+            if eq >= EQ_TO_ALL_IN  {
 
-                return CommentedAction {
-                    action: ActionEnum::Raise(
-                        max_can_raise - game_state.current_to_call,
-                        max_can_raise,
-                    ),
-                    comment: Some(format!(
+                return helpers.build_raise_to(game_state, helpers.max_can_raise, format!(
                         "Raising all in, equity at least {:.2}%;{}",
                         EQ_TO_ALL_IN * 100.0,
                         comment_common
-                    )),
-                };
+                    ));
             } else if eq >= pot_eq {
                 return CommentedAction {
                     action: ActionEnum::Call(call_amt),
@@ -230,17 +219,20 @@ impl EqAgent {
             }
         }
 
-        let half_pot_bet = min(game_state.pot() / 2, player_state.stack);
+        let mut bet_size = game_state.pot() / 2;
+
+        if game_state.num_non_folded_players() == 3 {
+            bet_size = game_state.pot() / 3;
+        } else if game_state.num_non_folded_players() > 3 {
+            bet_size = game_state.pot() / 4;
+        }
 
         if eq > bet_threshold {
-            return CommentedAction {
-                action: ActionEnum::Bet(half_pot_bet),
-                comment: Some(format!(
+            return helpers.build_bet(bet_size, format!(
                     "Eq is at least {:.2}%;{}",
                     bet_threshold * 100.0,
                     comment_common
-                )),
-            };
+                ));
         } else {
             return CommentedAction {
                 action: ActionEnum::Check,

@@ -426,6 +426,7 @@ impl GameLog {
     pub fn get_csv_line(
         &self,
         hero_index: usize,
+        iteration_number: u32,
         monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
         hash_func: &Mphf<u32>
     ) -> Result<CsvLineForPokerHand, PokerError> {
@@ -435,6 +436,7 @@ impl GameLog {
         //Position 0 sb, 1 bb, 2 UTG
 
         ret.position = hero_index as u8;
+        ret.iteration_number = iteration_number;
         ret.hole_cards = format!("{}", self.players[hero_index].cards.as_ref().unwrap());
         ret.hole_cards_simple = self.players[hero_index].cards.as_ref().unwrap().simple_range_string();
 
@@ -731,6 +733,9 @@ impl Default for ActionString {
 
 #[derive(Serialize, Debug, Default)]
 pub struct CsvLineForPokerHand {
+    #[serde(rename = "ITERATION_NUMBER")]
+    pub iteration_number: u32,
+
     #[serde(rename = "POSITION")]
     pub position: u8,
 

@@ -116,7 +116,7 @@ fn main() {
     let mut agent_deck = Deck::new();
 
     //we want to track the worst loses
-    let mut heap: BinaryHeap<(i64, i32, GameLog)> = BinaryHeap::new();
+    //let mut heap: BinaryHeap<(i64, i32, GameLog)> = BinaryHeap::new();
 
     let num_total_iterations = 20_000;
     let num_worst_hands_to_keep = 5;
@@ -210,7 +210,9 @@ fn main() {
         //     break;
         // }
 
-        let game_csv_line  = game_log.get_csv_line(hero_index, rcref_mcedb.clone(), &hash_func).unwrap();
+        let game_csv_line  = game_log.get_csv_line(hero_index,
+            it_num,
+             rcref_mcedb.clone(), &hash_func).unwrap();
         wtr.serialize(game_csv_line).unwrap();
         // for (c, it, _log) in heap.iter() {
         //     debug!(
@@ -223,21 +225,21 @@ fn main() {
 
 
         //if we have enough hands and this hand is not worse than the worst hand
-        if heap.len() == num_worst_hands_to_keep && change > heap.peek().unwrap().0 {
-            continue;
-        }
+        // if heap.len() == num_worst_hands_to_keep && change > heap.peek().unwrap().0 {
+        //     continue;
+        // }
 
-        heap.push((
-            change,
-            it_num,
-            //game_runner.to_game_log_string(true, true, hero_position),
-            game_log,
-            //game_runner.to_pokerstars_string()
-        ));
+        // heap.push((
+        //     change,
+        //     it_num,
+        //     //game_runner.to_game_log_string(true, true, hero_position),
+        //     game_log,
+        //     //game_runner.to_pokerstars_string()
+        // ));
 
-        if heap.len() > num_worst_hands_to_keep {
-            heap.pop();
-        }
+        // if heap.len() > num_worst_hands_to_keep {
+        //     heap.pop();
+        // }
 
         // if it_num >= 79 {
 

@@ -153,6 +153,21 @@ impl AgentDecisionHelpers {
             }
         }
     }
+
+    pub fn build_bet(
+        &self,
+        bet: ChipType,
+        comment: String,
+    ) -> CommentedAction {
+        //Apply max (we can use raise since if we are betting, the amt we already put in is 0)
+        let bet_amt = min(self.max_can_raise, bet);
+
+        CommentedAction {
+            action: crate::ActionEnum::Bet(bet_amt),
+            comment: Some(comment),
+        }
+    
+    }
 }
 
 pub struct GameState {
