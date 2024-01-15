@@ -14,7 +14,7 @@ use poker_eval::{
 
 /*
 cargo run --release --bin gen_hole_card_data
-python3 /home/eric/git/poker_eval/python/try_clustering.py
+HoleCards.ipynb
 */
 
 fn main() {
