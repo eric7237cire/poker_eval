@@ -71,13 +71,15 @@ class Kunh:
         # Utility of information set.
         util = sum(action_utils * strategy)
         regrets = action_utils - util
+
+        assert len(regrets) == 2
         # action is pass/bet
-        print('*' * 80)
-        print(f"Player1 Card: {self.deck[0]} Player2 Card: {self.deck[1]}\nHistory: {history} Pr1: {pr_1} Pr2: {pr_2}")
-        print(f"Action Utils: {action_utils}")
-        print(f"Strategy: {strategy}")
+        # print('*' * 80)
+        # print(f"Player1 Card: {self.deck[0]} Player2 Card: {self.deck[1]}\nHistory: {history} Pr1: {pr_1} Pr2: {pr_2}")
+        # print(f"Action Utils: {action_utils}")
+        # print(f"Strategy: {strategy}")
         print(f"Util: {util}")
-        print(f"Regrets: {regrets}")
+        # print(f"Regrets: {regrets}")
 
         # In regrets, positive is 'good' for that player
         # though the description says the opposite
@@ -89,11 +91,13 @@ class Kunh:
 
         if is_player_1:
             node.reach_pr += pr_1
+            # regrets are 'weighted' by the probability of this node
             node.regret_sum += pr_2 * regrets
         else:
             node.reach_pr += pr_2
             node.regret_sum += pr_1 * regrets
 
+        # Utility is the money gained / lost, so varies from 2 (winning bet & ante) to -2 (losing bet & ante)
         return util
 
     @staticmethod
@@ -120,6 +124,8 @@ class Kunh:
                 return 1
         elif double_bet:
             return 2 if player_card > opponent_card else -2
+        
+        raise Exception(f"Invalid history: {history}")
 
     def get_node(self, card: int, history: str) -> "Node":
         if card < 0 or card > 2:
