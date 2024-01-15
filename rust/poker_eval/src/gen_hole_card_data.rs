@@ -67,8 +67,8 @@ fn simulate(round: Round, num_players: u8) -> Result<(), PokerError>
             //     row, col, hole_cards
             // );
 
-            line_values.push(format!("{}", hole_cards.to_simple_range_index()));
-            line_values.push(format!("{}", hole_cards.to_simple_range_string()));
+            line_values.push(format!("{}", hole_cards.simple_range_index()));
+            line_values.push(format!("{}", hole_cards.simple_range_string()));
 
             let eq = calc_equity_vs_random(&board, &hole_cards, num_players as usize, num_hands_to_simulate, round.get_num_board_cards())?;
                

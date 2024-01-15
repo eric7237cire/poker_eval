@@ -83,15 +83,15 @@ impl Deck {
                 .into());
             }
 
-            if self.used_cards[hole_cards.get_hi_card().index as usize] {
+            if self.used_cards[hole_cards.hi_card().index as usize] {
                 continue;
             }
-            if self.used_cards[hole_cards.get_lo_card().index as usize] {
+            if self.used_cards[hole_cards.lo_card().index as usize] {
                 continue;
             }
 
-            self.set_used_card(hole_cards.get_hi_card());
-            self.set_used_card(hole_cards.get_lo_card());
+            self.set_used_card(hole_cards.hi_card());
+            self.set_used_card(hole_cards.lo_card());
             return Ok(hole_cards);
         }
     }

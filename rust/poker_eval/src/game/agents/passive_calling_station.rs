@@ -64,7 +64,7 @@ impl PassiveCallingStation {
         let ft = ft_db.get_put(&game_state.board).unwrap();
 
         let rank = fast_hand_eval(
-            game_state.board.get_iter().chain(hc.get_iter()),
+            game_state.board.get_iter().chain(hc.iter()),
             &self.hash_func,
         );
 

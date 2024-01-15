@@ -811,8 +811,8 @@ mod tests {
         let mut eval_cards = flop.clone().to_vec();
 
         for hole_cards in possible.iter() {
-            eval_cards.push(hole_cards.get_hi_card());
-            eval_cards.push(hole_cards.get_lo_card());
+            eval_cards.push(hole_cards.hi_card());
+            eval_cards.push(hole_cards.lo_card());
 
             let rank = rank_cards(eval_cards.iter());
             match rank {

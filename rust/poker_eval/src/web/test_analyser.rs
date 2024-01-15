@@ -353,16 +353,16 @@ mod tests {
 
         let kj_index = HoleCards::from_str("Kd Jc")
             .unwrap()
-            .to_simple_range_index();
+            .simple_range_index();
         let t2_index = HoleCards::from_str("Th 2h")
             .unwrap()
-            .to_simple_range_index();
+            .simple_range_index();
         let e7_index = HoleCards::from_str("8d 7c")
             .unwrap()
-            .to_simple_range_index();
+            .simple_range_index();
         let e7s_index = HoleCards::from_str("8d 7d")
             .unwrap()
-            .to_simple_range_index();
+            .simple_range_index();
 
         assert_eq!(3, results.flop_results[1].player_index);
 

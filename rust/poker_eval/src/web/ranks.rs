@@ -78,11 +78,11 @@ pub fn eval_current(
         let rank = fast_hand_eval(eval_cards.iter(), hash_func);
 
         flop_results[active_index].street_rank_results[street_index].num_it_by_range_index
-            [player_cards[active_index].to_simple_range_index()] += 1;
+            [player_cards[active_index].simple_range_index()] += 1;
 
         if active_index > 0 {
             villian_results.street_rank_results[street_index].num_it_by_range_index
-                [player_cards[active_index].to_simple_range_index()] += 1;
+                [player_cards[active_index].simple_range_index()] += 1;
         }
 
         hand_evals.push(rank);
@@ -137,7 +137,7 @@ pub fn eval_current(
             }
 
             //Update equity by range index
-            let range_index = player_cards[active_player_index].to_simple_range_index();
+            let range_index = player_cards[active_player_index].simple_range_index();
             results.eq_by_range_index[range_index] += 1.0 / num_with_max as f64;
 
             if active_player_index > 0 {

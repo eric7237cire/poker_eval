@@ -62,7 +62,7 @@ impl HoleCards {
     // row 0, col 0 is AA
     // row 0, col 1 is AKs
     // row 1, col 0 is AKo
-    pub fn to_simple_range_index(&self) -> usize {
+    pub fn simple_range_index(&self) -> usize {
         //suited
         if self.card_hi_lo[0].suit == self.card_hi_lo[1].suit {
             //ace is first row, 2 is last row
@@ -83,7 +83,7 @@ impl HoleCards {
         return row * 13 + col;
     }
 
-    pub fn to_simple_range_string(&self) -> String {
+    pub fn simple_range_string(&self) -> String {
         let mut s = String::new();
         s.push(char::from(self.card_hi_lo[0].value));
         s.push(char::from(self.card_hi_lo[1].value));
@@ -99,18 +99,22 @@ impl HoleCards {
         s
     }
 
-    pub fn get_hi_card(&self) -> Card {
+    pub fn hi_card(&self) -> Card {
         assert!(self.card_hi_lo[0].value >= self.card_hi_lo[1].value);
         self.card_hi_lo[0]
     }
 
-    pub fn get_lo_card(&self) -> Card {
+    pub fn lo_card(&self) -> Card {
         assert!(self.card_hi_lo[0].value >= self.card_hi_lo[1].value);
         self.card_hi_lo[1]
     }
 
     pub fn is_pocket_pair(&self) -> bool {
         self.card_hi_lo[0].value == self.card_hi_lo[1].value
+    }
+
+    pub fn is_suited(&self) -> bool {
+        self.card_hi_lo[0].suit == self.card_hi_lo[1].suit
     }
 
     pub fn as_slice(&self) -> &[Card] {
@@ -141,8 +145,8 @@ impl HoleCards {
         Ok(())
     }
 
-    pub fn get_iter(&self) -> Chain<Once<Card>, Once<Card>> {
-        once(self.get_hi_card()).chain(once(self.get_lo_card()))
+    pub fn iter(&self) -> Chain<Once<Card>, Once<Card>> {
+        once(self.hi_card()).chain(once(self.lo_card()))
     }
 
     pub fn add_to_eval(&self, eval_cards: &mut Vec<Card>) {
@@ -263,42 +267,42 @@ mod tests {
         assert_eq!(
             HoleCards::new("Ac".parse().unwrap(), "Ad".parse().unwrap())
                 .unwrap()
-                .to_simple_range_index(),
+                .simple_range_index(),
             0
         );
 
         assert_eq!(
             HoleCards::new("2c".parse().unwrap(), "Ac".parse().unwrap())
                 .unwrap()
-                .to_simple_range_index(),
+                .simple_range_index(),
             12
         );
 
         assert_eq!(
             HoleCards::new("Kc".parse().unwrap(), "Ad".parse().unwrap())
                 .unwrap()
-                .to_simple_range_index(),
+                .simple_range_index(),
             13
         );
 
         assert_eq!(
             HoleCards::new("Kd".parse().unwrap(), "3d".parse().unwrap())
                 .unwrap()
-                .to_simple_range_index(),
+                .simple_range_index(),
             24
         );
 
         assert_eq!(
             HoleCards::new("2c".parse().unwrap(), "2d".parse().unwrap())
                 .unwrap()
-                .to_simple_range_index(),
+                .simple_range_index(),
             168
         );
 
         assert_eq!(
             HoleCards::new("7c".parse().unwrap(), "2d".parse().unwrap())
                 .unwrap()
-                .to_simple_range_index(),
+                .simple_range_index(),
             163
         );
     }

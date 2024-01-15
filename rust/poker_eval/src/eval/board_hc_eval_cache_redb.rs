@@ -78,8 +78,8 @@ where
         index_bytes[1] = (index >> 16) as u8; // Extracts the second byte
         index_bytes[2] = (index >> 8) as u8; // Extracts the third byte
         index_bytes[3] = index as u8; // Extracts the fourth byte
-        index_bytes[4] = hole_cards.get_hi_card().into();
-        index_bytes[5] = hole_cards.get_lo_card().into();
+        index_bytes[4] = hole_cards.hi_card().into();
+        index_bytes[5] = hole_cards.lo_card().into();
         index_bytes[6] = num_players;
 
         let opt = self.get(&index_bytes)?;

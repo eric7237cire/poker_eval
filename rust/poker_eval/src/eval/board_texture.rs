@@ -35,12 +35,14 @@ use std::cmp::max;
 
 use serde::{Deserialize, Serialize};
 // use rmps crate to serialize structs using the MessagePack format
-use crate::{calc_cards_metrics, pre_calc::{NUMBER_OF_RANKS, NUMBER_OF_HOLE_CARDS}, rank_straight, Card, CardValue, Suit, CardUsedType};
+use crate::{calc_cards_metrics, pre_calc::{NUMBER_OF_RANKS, fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash, rank::Rank}, rank_straight, Card, CardValue, Suit, CardUsedType, ALL_HOLE_CARDS};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct BoardTexture {
     // Highest same suited count, 1 is a raindbow board
     pub same_suited_max_count: u8,
+
+    //This can be 2 with 4 cards HH CC for example
     pub suits_with_max_count: Vec<Suit>,
 
     pub gaps: Vec<u8>, // a flop will have 2
@@ -71,7 +73,8 @@ pub struct BoardTexture {
     //rank 1 means the nuts
     //For suited, it's assumed the best choice is the suited version
     //Capped at rank 256, length is 169
-    pub simple_rank_index: Vec<u8>
+    pub simple_rank_index: Vec<u8>,
+    pub lowest_rank_index: u8,
 }
 
 pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
@@ -94,7 +97,8 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
         others_with_str8_draw: Vec::new(),
         others_with_gut_shot: Vec::new(),
 
-        simple_rank_index: vec![0; 169]
+        simple_rank_index: vec![0; 169],
+        lowest_rank_index: 0,
     };
 
     let cards_metrics = calc_cards_metrics(cards.iter());
@@ -177,29 +181,71 @@ pub fn calc_board_texture(cards: &[Card]) -> BoardTexture {
 
 fn calc_simple_rank_index(texture: &mut BoardTexture, cards: &[Card]) {
 
-    let mut used_cards: CardUsedType = CardUsedType::default();
-    for c in cards.iter() {
-        used_cards.set(c.index as usize, true);
-    }
-    //suits don't matter
-    if texture.same_suited_max_count <= 0 {
-        for hi_val1 in 0..NUMBER_OF_RANKS {
-            let hi_card1_value: CardValue = hi_val1.try_into().unwrap();
-            let hi_card1_suit: Option<Suit> = Suit::suits() {
+    let hash_func = load_boomperfect_hash();
+    texture.simple_rank_index = vec![0; 169];
 
-            }
-            //for hi_suit in Suits::suits()
-            for lo_val1 in hi_val1..NUMBER_OF_RANKS {
-                let lo_card1_value: CardValue = lo_val1.try_into().unwrap();
-                let hole_cards = HoleCards::new(
-                    Card::new(hi_card1_value, Suit::Club),
-                    Card::new(lo_card1_value, Suit::Diamond),
-                )
-                .unwrap();
-                texture.simple_rank_index[hole_cards.to_simple_range_index() as usize] = 1;
-            }
+    //along with index
+    let mut raw_eval_values: Vec< (Option<Rank>, u8) > = (0..texture.simple_rank_index.len()).map(|i| (None, i as u8)).collect();
+
+    let used_cards: CardUsedType = {
+        let mut uc = CardUsedType::default();
+        for c in cards.iter() {
+            uc.set(c.index as usize, true);
+        }
+        uc 
+    };
+
+    // get flush suit
+    let flush_suit = if texture.same_suited_max_count >= 3 {
+        assert_eq!(1, texture.suits_with_max_count.len());
+        Some(texture.suits_with_max_count[0])
+    } else {
+        None
+    };
+
+    for hole_cards in ALL_HOLE_CARDS.iter() {
+
+        let simple_index = hole_cards.simple_range_index();
+        assert_eq!(raw_eval_values[simple_index].1, simple_index as u8);
+
+        if used_cards[hole_cards.hi_card().index as usize] || used_cards[hole_cards.lo_card().index as usize] {
+            //Already used
+            continue;
+        }
+
+        if hole_cards.is_suited() && flush_suit.is_some() && hole_cards.hi_card().suit == flush_suit.unwrap() {        
+            //Always recompute
+        } else if raw_eval_values[simple_index].0.is_some() {
+            //Already computed
+            continue;
+        }
+                
+        let eval = fast_hand_eval(cards.iter().cloned().chain(hole_cards.iter()), &hash_func);
+
+        raw_eval_values[simple_index].0 = Some(eval);
+                
+    }
+
+    //Sort by rank, highest first
+    raw_eval_values.sort_by(|a, b| b.0.cmp(&a.0));
+
+    let mut current_rank = 1;
+    let mut current_eval_value = raw_eval_values[0].0;
+
+    for (rank_value, simple_range_index) in raw_eval_values.into_iter() {
+        if rank_value != current_eval_value && rank_value.is_some() {
+            current_rank += 1;
+            current_eval_value = rank_value;
+        }
+
+        if rank_value.is_none() {
+            texture.simple_rank_index[simple_range_index as usize] = u8::MAX;
+        } else {
+            texture.simple_rank_index[simple_range_index as usize] = current_rank;
         }
     }
+    texture.lowest_rank_index = current_rank;
+     
 }
 
 fn calc_straight_texture(texture: &mut BoardTexture, value_set: u32, cards: &[Card]) {
@@ -470,21 +516,21 @@ mod tests {
         let nuts4 : HoleCards = "2d 2h".parse().unwrap();
         let nuts5 : HoleCards = "Ac 3d".parse().unwrap();
 
-        assert_eq!(texture.simple_rank_index[nuts1.to_simple_range_index() as usize], 1);
-        assert_eq!(texture.simple_rank_index[nuts2.to_simple_range_index() as usize], 2);
-        assert_eq!(texture.simple_rank_index[nuts3.to_simple_range_index() as usize], 3);
-        assert_eq!(texture.simple_rank_index[nuts4.to_simple_range_index() as usize], 4);
-        assert_eq!(texture.simple_rank_index[nuts5.to_simple_range_index() as usize], 5);
+        assert_eq!(texture.simple_rank_index[nuts1.simple_range_index() as usize], 1);
+        assert_eq!(texture.simple_rank_index[nuts2.simple_range_index() as usize], 2);
+        assert_eq!(texture.simple_rank_index[nuts3.simple_range_index() as usize], 3);
+        assert_eq!(texture.simple_rank_index[nuts4.simple_range_index() as usize], 4);
+        assert_eq!(texture.simple_rank_index[nuts5.simple_range_index() as usize], 5);
 
         //suited should not matter
         let nuts1s : HoleCards = "4s 5s".parse().unwrap();
         let nuts5s : HoleCards = "Ad 3d".parse().unwrap();
 
-        assert_eq!(texture.simple_rank_index[nuts1.to_simple_range_index() as usize], 1);
-        assert_eq!(texture.simple_rank_index[nuts5.to_simple_range_index() as usize], 5);
+        assert_eq!(texture.simple_rank_index[nuts1.simple_range_index() as usize], 1);
+        assert_eq!(texture.simple_rank_index[nuts5.simple_range_index() as usize], 5);
 
-        assert_ne!(nuts1.to_simple_range_index(), nuts1s.to_simple_range_index());
-        assert_ne!(nuts5.to_simple_range_index(), nuts5s.to_simple_range_index());
+        assert_ne!(nuts1.simple_range_index(), nuts1s.simple_range_index());
+        assert_ne!(nuts5.simple_range_index(), nuts5s.simple_range_index());
 
 
         let cards = Board::try_from("3d 5d Ad Ac Ks")
@@ -497,11 +543,46 @@ mod tests {
         let nuts2 : HoleCards = "As Ah".parse().unwrap();
         let nuts3 : HoleCards = "As Kc".parse().unwrap();
         let nuts4 : HoleCards = "Kd 2d".parse().unwrap();
-
-        assert_eq!(texture.simple_rank_index[nuts1.to_simple_range_index() as usize], 1);
-        assert_eq!(texture.simple_rank_index[nuts2.to_simple_range_index() as usize], 2);
-        assert_eq!(texture.simple_rank_index[nuts3.to_simple_range_index() as usize], 3);
+        
+        assert_eq!(texture.simple_rank_index[nuts1.simple_range_index() as usize], 1);
+        assert_eq!(texture.simple_rank_index[nuts2.simple_range_index() as usize], 2);
+        assert_eq!(texture.simple_rank_index[nuts3.simple_range_index() as usize], 3);
         // behind all the full houses
-        assert_eq!(texture.simple_rank_index[nuts4.to_simple_range_index() as usize], 12);
+        assert_eq!(texture.simple_rank_index[nuts4.simple_range_index() as usize], 17);
+
+        let h1 : HoleCards = "Ad 2d".parse().unwrap();
+        let h2 : HoleCards = "Ah 2d".parse().unwrap();
+        //Because the Ad is already being used, this should be the same rank as A2o
+        assert_eq!(texture.simple_rank_index[h1.simple_range_index() as usize], texture.simple_rank_index[h2.simple_range_index() as usize]);
+
+        let cards = Board::try_from("2d Ad 2c 2h 2s")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
+        let texture = calc_board_texture(&cards);
+
+        let h1 : HoleCards = "Kd Ks".parse().unwrap();
+        assert_eq!(texture.simple_rank_index[h1.simple_range_index() as usize], 1);
+
+        let h1 : HoleCards = "7d 8s".parse().unwrap();
+        assert_eq!(texture.simple_rank_index[h1.simple_range_index() as usize], 1);
+
+        let h1 : HoleCards = "Kd 2d".parse().unwrap();
+        assert_eq!(texture.simple_rank_index[h1.simple_range_index() as usize], u8::MAX);
+
+        //Every hand is the nuts
+        assert_eq!(texture.lowest_rank_index, 1);
+
+        let cards = Board::try_from("2d 7d 5h")
+            .unwrap()
+            .as_slice_card()
+            .to_vec();
+        let texture = calc_board_texture(&cards);
+
+        let h1 : HoleCards = "3s 4h".parse().unwrap();
+        assert_eq!(texture.simple_rank_index[h1.simple_range_index() as usize], texture.lowest_rank_index);
+        assert_eq!(texture.lowest_rank_index, 91);
+
+
     }
 }

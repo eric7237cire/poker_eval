@@ -113,6 +113,8 @@ mod tests {
 
         assert_eq!(rank.get_rank_enum(), RankEnum::HighCard);
         assert_eq!(rank.get_kicker(), 0);
+        assert_eq!(rank.raw_rank, 0);
+        assert_eq!(Rank::lowest_rank(), rank);
 
         let board = Board::try_from("Ad 5s Qd Tc Kh Js").unwrap();
         let rank = fast_hand_eval(board.as_slice_card().iter(), &f);

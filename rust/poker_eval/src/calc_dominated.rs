@@ -121,7 +121,7 @@ fn main_impl() -> Result<(), PokerError> {
                 let rankings = hole_card_vec
                     .iter()
                     .map(|hc| {
-                        fast_hand_eval(board.iter().cloned().chain(hc.get_iter()), &hash_func)
+                        fast_hand_eval(board.iter().cloned().chain(hc.iter()), &hash_func)
                     })
                     .collect_vec();
 
@@ -245,7 +245,7 @@ fn main_impl() -> Result<(), PokerError> {
 
             //print 80 *
             info!("{}", "*".repeat(80));
-            info!("For hole cards: {}", hole_cards.to_simple_range_string());
+            info!("For hole cards: {}", hole_cards.simple_range_string());
 
             for (s, v) in dv {
                 info!("{:width$}: {:.2}%", s, v * 100.0, width = largest_width);

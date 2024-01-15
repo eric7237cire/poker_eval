@@ -144,7 +144,7 @@ pub fn narrow_range_by_pref(
 
         let board_texture = calc_board_texture(board.as_slice_card());
 
-        let rank = fast_hand_eval(board.get_iter().chain(hc.get_iter()), hash_func);
+        let rank = fast_hand_eval(board.get_iter().chain(hc.iter()), hash_func);
 
         let likes_hand_response = likes_hand(&prc, &board_texture, &rank, board, &hc, num_players)?;
 

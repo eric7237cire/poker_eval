@@ -88,7 +88,7 @@ impl flop_analyzer {
             }
 
             if let Some(hc) = p.hole_cards {
-                if hc.get_hi_card() == card || hc.get_lo_card() == card {
+                if hc.hi_card() == card || hc.lo_card() == card {
                     return Err(PokerError::from_string(format!(
                         "set_board_cards: card {} already in hole cards",
                         card.to_string()
@@ -191,8 +191,8 @@ impl flop_analyzer {
                 "Player missing hole cards"
             )))?;
 
-            set_used_card(hc.get_hi_card().into(), &mut cards_used)?;
-            set_used_card(hc.get_lo_card().into(), &mut cards_used)?;
+            set_used_card(hc.hi_card().into(), &mut cards_used)?;
+            set_used_card(hc.lo_card().into(), &mut cards_used)?;
         }
 
         Ok(cards_used)

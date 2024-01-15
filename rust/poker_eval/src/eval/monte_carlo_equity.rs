@@ -101,7 +101,7 @@ pub fn calc_equity(
         for player_index in 0..player_hole_cards.len() {
             let hole_cards = &player_hole_cards[player_index];
 
-            let h1 = once(hole_cards.get_hi_card()).chain(once(hole_cards.get_lo_card()));
+            let h1 = once(hole_cards.hi_card()).chain(once(hole_cards.lo_card()));
             let c_it = board_cards.iter().map(|c| *c).chain(h1);
 
             let rank = fast_hand_eval(c_it, &hash_func);
@@ -171,8 +171,8 @@ pub fn calc_equity_vs_random(
         for c in board.as_slice_card().iter() {
             deck.set_used_card(*c);
         }
-        deck.set_used_card(player_hole_cards[0].get_hi_card());
-        deck.set_used_card(player_hole_cards[0].get_lo_card());
+        deck.set_used_card(player_hole_cards[0].hi_card());
+        deck.set_used_card(player_hole_cards[0].lo_card());
 
         //We need to deal hole cards to each player
         for player_index in 1..num_players {            
@@ -200,7 +200,7 @@ pub fn calc_equity_vs_random(
         for player_index in 0..player_hole_cards.len() {
             let hole_cards = &player_hole_cards[player_index];
 
-            let h1 = once(hole_cards.get_hi_card()).chain(once(hole_cards.get_lo_card()));
+            let h1 = once(hole_cards.hi_card()).chain(once(hole_cards.lo_card()));
             let c_it = board_cards.iter().map(|c| *c).chain(h1);
 
             let rank = fast_hand_eval(c_it, &hash_func);
@@ -257,8 +257,8 @@ pub fn get_equivalent_hole_board(hole_cards: &HoleCards, board: &[Card]) -> (Hol
     }
 
     //to tweak the sorting, set freq really hi for hole card1 and 2
-    suit_frequency[hole_cards.get_lo_card().suit as usize] = 10;
-    suit_frequency[hole_cards.get_hi_card().suit as usize] = 9;
+    suit_frequency[hole_cards.lo_card().suit as usize] = 10;
+    suit_frequency[hole_cards.hi_card().suit as usize] = 9;
 
     let mut suits = Suit::suits();
     suits.sort_by(|suit1, suit2| {
@@ -297,12 +297,12 @@ pub fn get_equivalent_hole_board(hole_cards: &HoleCards, board: &[Card]) -> (Hol
 
     let new_hole_cards = HoleCards::new(
         swap_suit(
-            hole_cards.get_hi_card(),
-            mapping[hole_cards.get_hi_card().suit as usize],
+            hole_cards.hi_card(),
+            mapping[hole_cards.hi_card().suit as usize],
         ),
         swap_suit(
-            hole_cards.get_lo_card(),
-            mapping[hole_cards.get_lo_card().suit as usize],
+            hole_cards.lo_card(),
+            mapping[hole_cards.lo_card().suit as usize],
         ),
     )
     .unwrap();
@@ -424,7 +424,7 @@ mod tests {
         let expected_hole_cards: HoleCards = "Ac Ad".parse().unwrap();
         let expected_board: Board = "Kc Qc Jc".parse().unwrap();
 
-        assert_eq!(hole_cards.get_lo_card().suit, Suit::Club);
+        assert_eq!(hole_cards.lo_card().suit, Suit::Club);
 
         compare_expected_actual(&hole_cards, &board, &expected_hole_cards, &expected_board);
 

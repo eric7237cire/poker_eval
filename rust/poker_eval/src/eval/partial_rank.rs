@@ -637,8 +637,8 @@ pub fn partial_rank_cards(hole_cards: &HoleCards, board: &[Card]) -> PartialRank
 
     // Calculate pairs
     if !hole_cards.is_pocket_pair() {
-        let hi_card_value = hole_cards.get_hi_card().value;
-        let lo_card_value = hole_cards.get_lo_card().value;
+        let hi_card_value = hole_cards.hi_card().value;
+        let lo_card_value = hole_cards.lo_card().value;
 
         partial_ranks.hi_pair =
             partial_ranks.get_pair_info_for_single_hole_card(hi_card_value, &board_metrics);
@@ -686,7 +686,7 @@ pub fn partial_rank_cards(hole_cards: &HoleCards, board: &[Card]) -> PartialRank
 
     //For each unpaired hole card, calculate overcard info
     if partial_ranks.lo_pair.is_none() && !hole_cards.is_pocket_pair() {
-        let lo_card_value = hole_cards.get_lo_card().value;
+        let lo_card_value = hole_cards.lo_card().value;
         let lo_card_value = lo_card_value as usize;
 
         let mut number_above = count_higher(board_metrics.count_to_value[1], lo_card_value);
@@ -706,7 +706,7 @@ pub fn partial_rank_cards(hole_cards: &HoleCards, board: &[Card]) -> PartialRank
     }
 
     if partial_ranks.hi_pair.is_none() && !hole_cards.is_pocket_pair() {
-        let hi_card_value = hole_cards.get_hi_card().value;
+        let hi_card_value = hole_cards.hi_card().value;
         let hi_card_value = hi_card_value as usize;
 
         let number_above = count_higher(board_metrics.count_to_value[1], hi_card_value);

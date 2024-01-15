@@ -159,7 +159,7 @@ impl Board {
     }
 
     pub fn intersects_holecards(&self, hole_cards: &HoleCards) -> bool {
-        for card in hole_cards.get_iter() {
+        for card in hole_cards.iter() {
             if self.cards.contains(&card) {
                 return true;
             }

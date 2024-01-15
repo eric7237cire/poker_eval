@@ -180,7 +180,7 @@ impl GameLog {
             .join("");
         //Hard code hero as button
         let hero_cards = self.players[hero_position].cards.unwrap();
-        let hero_url_param = format!("{}{}", hero_cards.get_hi_card(), hero_cards.get_lo_card());
+        let hero_url_param = format!("{}{}", hero_cards.hi_card(), hero_cards.lo_card());
 
         let url = format!(
             "http://localhost:5173/?board={}&hero={}",
@@ -262,8 +262,8 @@ impl GameLog {
             s.push_str(&format!(
                 "Dealt to {} [{} {}]\n",
                 player_state.player_name,
-                hole_cards.get_hi_card(),
-                hole_cards.get_lo_card(),
+                hole_cards.hi_card(),
+                hole_cards.lo_card(),
             ));
         }
 

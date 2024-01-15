@@ -375,7 +375,7 @@ impl GameRunner {
                 self.game_state
                     .board
                     .get_iter()
-                    .chain(hole_cards.get_iter()),
+                    .chain(hole_cards.iter()),
                 &self.hash_func,
             );
 
