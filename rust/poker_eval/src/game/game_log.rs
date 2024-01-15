@@ -435,6 +435,8 @@ impl GameLog {
         //Position 0 sb, 1 bb, 2 UTG
 
         ret.position = hero_index as u8;
+        ret.hole_cards = format!("{}", self.players[hero_index].cards.as_ref().unwrap());
+        ret.hole_cards_simple = self.players[hero_index].cards.as_ref().unwrap().simple_range_string();
 
         //Number of players in hand
 
@@ -731,6 +733,14 @@ impl Default for ActionString {
 pub struct CsvLineForPokerHand {
     #[serde(rename = "POSITION")]
     pub position: u8,
+
+    //Example: AcKh 
+    #[serde(rename = "HOLE_CARDS")]
+    pub hole_cards: String,
+
+    //Example: AKs AKo AA etc
+    #[serde(rename = "HOLE_CARDS_SIMPLE")]
+    pub hole_cards_simple: String,
 
     //Number of players in hand
     #[serde(rename = "PLR_START_PREFLOP")]
