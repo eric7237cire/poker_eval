@@ -12,8 +12,10 @@ import win32api
 from PIL import Image
 from datetime import datetime
 import os
-
+import socket
 import pytz  # Import the pytz library for timezone handling
+import io
+from PIL import Image
 
 # Create a timezone object for GMT/UTC
 gmt_timezone = pytz.timezone('UTC')
@@ -133,13 +135,88 @@ def get_screenshot():
         target_path = incoming_path / png_file_path.name
     print(f"Moving PNG to file [{target_path}]")
     shutil.move(png_file_path, target_path)
+
+
+def get_screenshot_to_buffer():
+    
+
+    window_title = find_title() 
+
+    print(f"Fetching window title [{window_title}]")
     
     
+    # Find the window by its title
+    hwnd = win32gui.FindWindow(None, window_title)
+    if hwnd == 0:
+        raise Exception('Window not found: ' + window_title)
+
+    left, top, right, bot = win32gui.GetWindowRect(hwnd)
+    w = right - left
+    h = bot - top
+    print(f"Window dims: Width: {w}, Height: {h}")
+    print(f"Left: {left}, Top: {top}, Right: {right}, Bot: {bot}")
+
+    hwin = win32gui.GetDesktopWindow()
+
+    desktop_dc = win32gui.GetWindowDC(hwin)
+
+    srcdc = win32ui.CreateDCFromHandle(desktop_dc)
+    memdc = srcdc.CreateCompatibleDC()
+    bmp = win32ui.CreateBitmap()
+    bmp.CreateCompatibleBitmap(srcdc, w, h)
+    memdc.SelectObject(bmp)
+    memdc.BitBlt((0, 0), (w, h), srcdc, (left, top), win32con.SRCCOPY)
+        
+    bmpinfo = bmp.GetInfo()
+    bmpstr = bmp.GetBitmapBits(True)
+    im = Image.frombuffer(
+        'RGB',
+        (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
+        bmpstr, 'raw', 'BGRX', 0, 1)
+
+    # Create an in-memory byte stream
+    output = io.BytesIO()
+    im.save(output, format='PNG')
+
+    win32gui.DeleteObject(bmp.GetHandle())
+    memdc.DeleteDC()
+    srcdc.DeleteDC()
+    win32gui.ReleaseDC(hwin, desktop_dc)
+
+    byte_data = output.getvalue()
+    output.close()
+
+    return byte_data
+    
+def listen():
+    # TCP server settings
+    host = '0.0.0.0'  # Listen on all interfaces
+    port = 4242       # Port number
+
+    # Create a socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((host, port))
+        s.listen()
+
+        print(f"Listening on {host}:{port}")
+
+        while True:
+            conn, addr = s.accept()
+            with conn:
+                print(f"Connected by {addr}")
+                while True:
+                    data = conn.recv(1024)
+                    if not data:
+                        break
+                    if data == b'1':
+                        screenshot = get_screenshot_to_buffer()
+                        conn.sendall(screenshot)
+                        conn.close()
+                        break
+
 
 if __name__ == "__main__":
     if save_mode:
         get_screenshot()
     else:
-        for i in range(0, 10_000):
-            get_screenshot()
-            time.sleep(0.75)
+        listen()

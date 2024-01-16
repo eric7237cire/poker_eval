@@ -33,6 +33,9 @@ Easier likely is using ultralytics docker container with nvidia docker driver
 
 # Running ultralytics in docker
 
+cd git/poker_eval
+source ./dev/local.env
+
 docker run -it --rm  \
 --ipc=host --gpus all \
 -p 6006:6006 \

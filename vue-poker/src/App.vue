@@ -382,7 +382,11 @@ function load() {
     const holeCardsStrings = data.hole_cards.split(" ") as Array<string>;
     const holeCards = holeCardsStrings.map(s => parseCardString(s)!)
     const boardCardStrings = data.board_cards.split(" ") as Array<string>;
-    const boardCards = boardCardStrings.map(s => parseCardString(s)!)
+    let boardCards = boardCardStrings.map(s => parseCardString(s)!);
+
+    if (boardCards.length < 3) {
+      boardCards = [];
+    }
 
     playerStore.playerDataForId(0).holeCards = {
       cardText: data.hole_cards,

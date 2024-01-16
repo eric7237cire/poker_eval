@@ -1,26 +1,35 @@
+# coding:utf-8
+print(f"Importing...")
+
 import json
 from pathlib import Path
 import shutil
 import time
 from typing import List, Tuple
-# coding:utf-8
 import cv2
-import os
 import random
 from matplotlib.pyplot import box
 from PIL import Image
+print(f"Importing Yolo...")
 from ultralytics import YOLO
+print(f"Done importing Yolo")
 from env_cfg import EnvCfg
 from classify import read_classes
-
+import socket 
+import io 
+import numpy as np
 cfg = EnvCfg()
+
+print(f"Done importing")
 
 def process_screenshots():
     """
     This processes the screenshots with QA in mind, saving the annotated screenshots
     """
-    
+    print(f"Loading detect model")
     detect_model = YOLO(cfg.RUNS_DIR / 'detect' / cfg.DETECT_MODEL_NAME / 'weights/best.pt')
+
+    print(f"Loading classify model")
     classify_model = YOLO(cfg.CLASSIFY_PROJECT_PATH / cfg.CLASSIFY_MODEL_NAME / 'weights/best.pt')
 
     classes = read_classes()
@@ -63,7 +72,8 @@ def process_screenshots():
             save_image_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(image_file, save_image_path)
 
-            run_classification(image_file, box_coords, box_coords_normalized, classify_model, True)
+            img = Image.open(image_file)
+            run_classification(img, box_coords, box_coords_normalized, classify_model, True)
             
             # We also want to visualize the results
             annotated_image_path = cfg.LIVE_CARD_IMAGES_PATH / image_file.name
@@ -78,13 +88,13 @@ def process_screenshots():
         # break
 
 
-def run_classification(image_file: Path, box_coords: List[List[float]], box_coords_normalized, classify_model, save: bool) -> List[int]:
+def run_classification(img: Image, box_coords: List[List[float]], box_coords_normalized, classify_model, save_stem: str) -> List[int]:
     """
     Saves each card image to a folder, and runs classification on each card image
     Also writes entries in yolo format to the LIVE dataset; meant to enhance training data
     """
     # Extract each image
-    img = Image.open(image_file)
+   
 
     label_lines = []
 
@@ -105,13 +115,17 @@ def run_classification(image_file: Path, box_coords: List[List[float]], box_coor
         # Resize the image 
         cropped_img = cropped_img.resize((cfg.CLASSIFY_IMG_SZ, cfg.CLASSIFY_IMG_SZ))
 
-        card_image_path = cfg.LIVE_CARD_IMAGES_PATH / image_file.stem / f"{box_index}.png"
-        
-        card_image_path.parent.mkdir(parents=True, exist_ok=True)
-        cropped_img.save(card_image_path)
+        if save_stem:
+            card_image_path = cfg.LIVE_CARD_IMAGES_PATH / save_stem / f"{box_index}.png"
+            
+            card_image_path.parent.mkdir(parents=True, exist_ok=True)
+            cropped_img.save(card_image_path)
+
+        # Convert PIL Image to NumPy array in BGR format
+        cropped_image_np = np.array(cropped_img)[:, :, ::-1]
 
         classify_results = classify_model.predict(
-            card_image_path, conf=0.15, 
+            cropped_image_np, conf=0.25, 
             project=cfg.CLASSIFY_PROJECT_PATH,
             imgsz=cfg.CLASSIFY_IMG_SZ)
         
@@ -124,14 +138,14 @@ def run_classification(image_file: Path, box_coords: List[List[float]], box_coor
 
         top_1 = names[top_1_index]
         
-        if save:
+        if save_stem:
             txt_path = card_image_path.with_suffix(".txt").with_stem(f"{box_index}_{top_1}")
             txt_path.touch()
 
             label_lines.append(f"{top_1_index} {box_coords_normalized[box_index][0]} {box_coords_normalized[box_index][1]} {box_coords_normalized[box_index][2]} {box_coords_normalized[box_index][3]}")
 
-    if save:
-        save_label_path = (cfg.LIVE_PATH / cfg.LABEL_FOLDER_NAME / image_file.name).with_suffix(".txt")
+    if save_stem:
+        save_label_path = (cfg.LIVE_PATH / cfg.LABEL_FOLDER_NAME / save_stem).with_suffix(".txt")
         save_label_path.parent.mkdir(parents=True, exist_ok=True)
         with open(save_label_path, "w") as f:
             if len(label_lines) > 0:
@@ -139,11 +153,11 @@ def run_classification(image_file: Path, box_coords: List[List[float]], box_coor
             else:
                 f.write("")
 
-    else:
-        # clean 
-        dir_to_clean = cfg.LIVE_CARD_IMAGES_PATH / image_file.stem 
-        if dir_to_clean.exists():
-            shutil.rmtree( dir_to_clean )
+    # else:
+    #     # clean 
+    #     dir_to_clean = cfg.LIVE_CARD_IMAGES_PATH / image_file.stem 
+    #     if dir_to_clean.exists():
+    #         shutil.rmtree( dir_to_clean )
 
     return ret
 
@@ -210,49 +224,67 @@ def draw_box_on_image(image_path: Path, classes: List[str], colors, output_path:
         cv2.imwrite(str(output_path), image)
 
 
+
+def receive_image(sock):
+    data = b''
+    while True:
+        packet = sock.recv(4096)
+        if not packet: 
+            break
+        data += packet
+
+    image_stream = io.BytesIO(data)
+    image_stream.seek(0)
+    image = Image.open(image_stream)
+    return image
+
+
 def process_screenshots_for_json():
     """
     This processes the screenshots only to get the cards, and write it to a json 
     """
-    
+    print(f"Loading detect model")
     detect_model = YOLO(cfg.RUNS_DIR / 'detect' / cfg.DETECT_MODEL_NAME / 'weights/best.pt')
+    print(f"Loading classify model")
     classify_model = YOLO(cfg.CLASSIFY_PROJECT_PATH / cfg.CLASSIFY_MODEL_NAME / 'weights/best.pt')
 
     classes = read_classes()
+
+    host = "host.docker.internal"
+    port = 4242
     
+    last_json_data = None
     
-    for i in range(0, 10_000):
+    while True:
         try:    
-            images = list(cfg.INCOMING_PATH.glob("*.png"))
-
-            if len(images) == 0:
-                print("No images found")
-                time.sleep(0.5)
-                continue
-
-            most_recent = max(images, key=lambda p: p.stat().st_ctime)
-
-            print(f"Processing {most_recent}")
-
-            image_file = most_recent
+            print(f"Connecting to {host}:{port} with")
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                print(f"Connecting to {host}:{port}")
+                s.connect((host, port))
+                print(f"Sending a 1")
+                s.sendall(b'1')
+                print(f"Receiving image")   
+                image = receive_image(s)
+                print(f"Received image")
+                # Convert PIL Image to NumPy array in BGR format
+                image_np = np.array(image)[:, :, ::-1]
 
             try:
                 results = detect_model.predict(
-                    image_file, conf=0.55, 
+                    image_np, conf=0.55, 
                     imgsz=cfg.DETECT_IMG_SZ,
                     save=False
                 )
             except Exception as e:
-                print(f"Exception {e} in loading file {image_file}, removing")
-                image_file.unlink()
-
-                time.sleep(0.5)
+                print(f"Exception {e} in loading data {len(image_np)}, removing")
+                
+                time.sleep(2.5)
                 continue
 
             result = results[0]
 
             # print(f"Predicted {image_file} to {result}")
-            print(f"Predicted {image_file}")
+            print(f"Predicted buffer")
 
             save_dir = result.save_dir
 
@@ -264,7 +296,7 @@ def process_screenshots_for_json():
 
             print(F"Box coords: {box_coords}\nSave dir: {save_dir}\nConfidence: {box_confidence_values}\nClasses: {box_classes}")   
 
-            results = run_classification(image_file, box_coords, box_coords_normalized, classify_model, False)
+            results = run_classification(image, box_coords, box_coords_normalized, classify_model, False)
             
             result_classes = [classes[result] for result in results]
 
@@ -275,9 +307,9 @@ def process_screenshots_for_json():
             box_y_index.sort()
 
             if not len(box_y_index) in [2, 5, 6, 7]:
-                print(f"Skipping {image_file}, strange number of cards: {len(box_y_index)}")
-                image_file.unlink()
-                time.sleep(0.25)
+                print(f"Skipping, strange number of cards: {len(box_y_index)}")
+                
+                time.sleep(0.70)
                 continue
 
             hole_card_index1 = box_y_index[0][2]
@@ -293,15 +325,20 @@ def process_screenshots_for_json():
             print(f"Board classes: {board_classes}")
             print(f"Hole cards: {hole_card_class1}, {hole_card_class2}")
 
-            with open(cfg.LIVE_JSON_PATH, "w") as f:
-                json.dump({
-                    "hole_cards": f"{hole_card_class1} {hole_card_class2}",
-                    "board_cards": " ".join(board_classes)
-                }, f)
+            json_data = {
+                "hole_cards": f"{hole_card_class1} {hole_card_class2}",
+                "board_cards": " ".join(board_classes)
+            }
+            if json_data != last_json_data:
+                print(f"Writing json to {json_data}")
+                with open(cfg.LIVE_JSON_PATH, "w") as f:
+                    json.dump(json_data, f)
 
-            print(f"Deleting {image_file}")
-            image_file.unlink()
-            time.sleep(0.25)
+                last_json_data = json_data
+            else:
+                print("Skipping, no change")
+
+            time.sleep(0.75)
         except Exception as e:
             print("Exception!")
             print(e)
@@ -311,6 +348,7 @@ def process_screenshots_for_json():
 
         
 if __name__ == '__main__':
+    print(f"Clean detect folder")
     clean_detect()
     # saves in annotated
     # process_screenshots()
