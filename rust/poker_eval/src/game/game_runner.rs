@@ -798,6 +798,7 @@ impl GameRunner {
             round: self.game_state.current_round,
             player_comment: Some(comment.to_string()),
             pot: self.game_state.pot(),
+            stack: player_state.stack,
             current_amt_to_call: self.game_state.current_to_call,
             amount_put_in_pot_this_round: player_state.cur_round_putting_in_pot.unwrap_or(0),
             total_amount_put_in_pot: player_state.total_put_in_pot,

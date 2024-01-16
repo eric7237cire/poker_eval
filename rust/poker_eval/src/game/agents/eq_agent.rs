@@ -18,6 +18,7 @@ use super::Agent;
 //Need some config struct, for like eq to raise, call
 //For now just constants
 const EQ_TO_ALL_IN: f64 = 0.75;
+const EQ_CALL_BIG_RIVER_BET: f64 = 0.50;
 use num_format::{Locale, ToFormattedString};
 
 pub struct NumPlayers {
@@ -165,6 +166,8 @@ impl EqAgent {
                 game_state.pot().to_formatted_string(&Locale::en)
             ));
 
+            let is_big_bet = call_amt >= game_state.bb * 30;
+
             if eq >= EQ_TO_ALL_IN  {
 
                 return helpers.build_raise_to(game_state, helpers.max_can_raise, format!(
@@ -172,7 +175,28 @@ impl EqAgent {
                         EQ_TO_ALL_IN * 100.0,
                         comment_common
                     ));
-            } else if eq >= pot_eq {
+            } else if game_state.current_round == Round::River && is_big_bet {
+                if eq >= EQ_CALL_BIG_RIVER_BET {
+                    return CommentedAction {
+                        action: ActionEnum::Call(call_amt),
+                        comment: Some(format!(
+                            "Calling a big river bet, equity at least {:.2}%;{}",
+                            EQ_CALL_BIG_RIVER_BET * 100.0,
+                            comment_common
+                        )),
+                    };
+                } else {
+                    return CommentedAction {
+                        action: ActionEnum::Fold,
+                        comment: Some(format!(
+                            "Not calling a big river bet, equity less than {:.2}%;{}",
+                            EQ_CALL_BIG_RIVER_BET * 100.0,
+                            comment_common
+                        )),
+                    };
+                }
+            }
+            else if eq >= pot_eq {
                 return CommentedAction {
                     action: ActionEnum::Call(call_amt),
                     comment: Some(format!("Enough to call;{}", comment_common)),

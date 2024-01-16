@@ -58,6 +58,10 @@ pub struct PlayerAction {
 
     //this is before their raise or bet has been added
     pub pot: ChipType,
+
+    //stack at start of action
+    pub stack: ChipType,
+
     //The total amount to call, so the amount they need to put in is this - amount_put_in_pot_this_round
     pub current_amt_to_call: ChipType,
     //this is the amount they put in the pot this round, before this action
@@ -95,6 +99,7 @@ impl PlayerAction {
             player_comment: self.player_comment.clone(),
             pot: self.pot + extra_amount_put_in_pot_this_round,
             current_amt_to_call: cur_amt_to_call,
+            stack: self.stack - extra_amount_put_in_pot_this_round,
             amount_put_in_pot_this_round: self.amount_put_in_pot_this_round
                 + extra_amount_put_in_pot_this_round,
             total_amount_put_in_pot: self.total_amount_put_in_pot

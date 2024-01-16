@@ -464,15 +464,12 @@ impl GameLog {
                 match cur_round {
                     Round::Flop => {
                         ret.players_starting_flop = action.non_folded_players as u8;
-                        ret.pot_start_flop = action.pot as f64 / self.bb as f64;
                     }
                     Round::Turn => {
                         ret.players_starting_turn = action.non_folded_players as u8;
-                        ret.pot_start_turn = action.pot as f64 / self.bb as f64;
                     }
                     Round::River => {
                         ret.players_starting_river = action.non_folded_players as u8;
-                        ret.pot_start_river = action.pot as f64 / self.bb as f64;
                     }
                     _ => panic!("Invalid round"),
                 }
@@ -501,6 +498,7 @@ impl GameLog {
                             .unwrap();
                         ret.amt_to_call_start_preflop =
                             action.current_amt_to_call as f64 / self.bb as f64;
+                        ret.pot_preflop = action.pot as f64 / self.bb as f64;                        
                         ret.first_action_preflop = action.action.into();
                         ret.first_action_amount_preflop =
                             get_action_amount(&action, self.bb);
@@ -513,6 +511,8 @@ impl GameLog {
                             .unwrap();
                         ret.amt_to_call_start_flop =
                             action.current_amt_to_call as f64 / self.bb as f64;
+                        ret.pot_flop = action.pot as f64 / self.bb as f64;
+                        ret.stack_flop = action.stack as f64 / self.bb as f64;
                         ret.first_action_flop = action.action.into();
                         ret.first_action_amount_flop =
                             get_action_amount(&action, self.bb);
@@ -525,6 +525,8 @@ impl GameLog {
                             .unwrap();
                         ret.amt_to_call_start_turn =
                             action.current_amt_to_call as f64 / self.bb as f64;
+                        ret.pot_turn = action.pot as f64 / self.bb as f64;
+                        ret.stack_turn = action.stack as f64 / self.bb as f64;
                         ret.first_action_turn = action.action.into();
                         ret.first_action_amount_turn =
                             get_action_amount(&action, self.bb);
@@ -537,6 +539,8 @@ impl GameLog {
                             .unwrap();
                         ret.amt_to_call_start_river =
                             action.current_amt_to_call as f64 / self.bb as f64;
+                        ret.pot_river = action.pot as f64 / self.bb as f64;
+                        ret.stack_river = action.stack as f64 / self.bb as f64;
                         ret.first_action_river = action.action.into();
                         ret.first_action_amount_river =
                             get_action_amount(&action, self.bb);
@@ -617,9 +621,9 @@ impl GameLog {
             }
         }
 
-        ret.initial_stack = self.players[hero_index].stack as f64 / self.bb as f64;
-        ret.final_stack = self.final_stacks[hero_index] as f64 / self.bb as f64;
-        ret.final_pot = self.actions.last().unwrap().get_fields_after_action().pot as f64 / self.bb as f64;
+        ret.stack_preflop = self.players[hero_index].stack as f64 / self.bb as f64;
+        ret.stack_final = self.final_stacks[hero_index] as f64 / self.bb as f64;
+        ret.pot_final = self.actions.last().unwrap().get_fields_after_action().pot as f64 / self.bb as f64;
         
         ret.in_showdown = match self.final_states[hero_index] {
             FinalPlayerState::Folded(_) => false,
@@ -630,16 +634,7 @@ impl GameLog {
         
         if ret.in_showdown {
 
-            //In the case of an all in, we may not have round data
-            if ret.pot_start_river == 0.0 {
-                ret.pot_start_river = ret.final_pot;
-            }
-            if ret.pot_start_turn == 0.0 {
-                ret.pot_start_turn = ret.final_pot;
-            }
-            if ret.pot_start_flop == 0.0 {
-                ret.pot_start_flop = ret.final_pot;
-            }
+            
 
             let player_ranks = self.players.iter().enumerate().map(|(p_idx, p)| {
 
@@ -795,21 +790,6 @@ pub struct CsvLineForPokerHand {
     #[serde(rename = "PLR_BEFORE_HERO_RIVER")]
     pub players_before_hero_river: u8,
 
-    //Pot at start of flop
-    //Pot at start of turn
-    //Pot at start of river
-    //Final pot
-    #[serde(rename = "POT_START_FLOP")]
-    pub pot_start_flop: f64,
-
-    #[serde(rename = "POT_START_TURN")]
-    pub pot_start_turn: f64,
-
-    #[serde(rename = "POT_START_RIVER")]
-    pub pot_start_river: f64,
-
-    #[serde(rename = "FINAL_POT")]
-    pub final_pot: f64,
 
     //Hero eq at start of flop
     //Hero eq at start of turn
@@ -827,9 +807,7 @@ pub struct CsvLineForPokerHand {
     #[serde(rename = "HERO_EQ_RIVER")]
     pub hero_eq_start_river: f64,
 
-    //Amt to call at start of flop
-    //Amt to call at start of turn
-    //Amt to call at start of river
+    //Amt to call when hero first acts that round
     #[serde(rename = "CALL_AMT_PREFLOP")]
     pub amt_to_call_start_preflop: f64,
 
@@ -841,6 +819,25 @@ pub struct CsvLineForPokerHand {
 
     #[serde(rename = "CALL_AMT_RIVER")]
     pub amt_to_call_start_river: f64,
+
+    /*
+    These are at heros 1st action, before they add to teh pot
+    */
+    #[serde(rename = "POT_PREFLOP")]
+    pub pot_preflop: f64,
+    
+    #[serde(rename = "POT_FLOP")]
+    pub pot_flop: f64,
+
+    #[serde(rename = "POT_TURN")]
+    pub pot_turn: f64,
+
+    #[serde(rename = "POT_RIVER")]
+    pub pot_river: f64,
+    
+    //Final pot    
+    #[serde(rename = "POT_FINAL")]
+    pub pot_final: f64,
 
     //First Action pre-flop (raise, fold, call, check (for bb))
     //first action flop (check, bet, raise, fold, call, check-raise?)
@@ -884,11 +881,22 @@ pub struct CsvLineForPokerHand {
     #[serde(rename = "BEST_NON_HERO_HAND")]
     pub non_hero_hand_showdown: u8,
 
-    #[serde(rename = "INIT_STACK")]
-    pub initial_stack: f64,
+    //the intial stack of the hero
+    #[serde(rename = "STACK_PREFLOP")]
+    pub stack_preflop: f64,
 
-    #[serde(rename = "FINAL_STACK")]
-    pub final_stack: f64,
+    //Stack before their first action on the given street
+    #[serde(rename = "STACK_FLOP")]
+    pub stack_flop: f64,
+
+    #[serde(rename = "STACK_TURN")]
+    pub stack_turn: f64,
+
+    #[serde(rename = "STACK_RIVER")]
+    pub stack_river: f64,
+
+    #[serde(rename = "STACK_FINAL")]
+    pub stack_final: f64,
 }
 
 impl FromStr for GameLog {
@@ -1334,7 +1342,7 @@ Agent 4               - 495 # Started with 500 change -5
             .unwrap();
 
         //Player B
-        let game_line = log2.get_csv_line(1, rcref_mcedb.clone(), &hash_func).unwrap();
+        let game_line = log2.get_csv_line(1, 1, rcref_mcedb.clone(), &hash_func).unwrap();
 
         assert_eq!(game_line.first_action_amount_preflop, 2.0);
         assert_eq!(game_line.first_action_amount_flop, 1.0);
@@ -1350,14 +1358,14 @@ Agent 4               - 495 # Started with 500 change -5
         //1 is all in
         assert_eq!(game_line.players_starting_river, 2);
 
-        assert_eq!(game_line.pot_start_flop, 62.0 / 10.0);
-        assert_eq!(game_line.pot_start_turn, 102.0 / 10.0);
-        assert_eq!(game_line.pot_start_river, 112.0 / 10.0);
+        assert_eq!(game_line.pot_flop, 62.0 / 10.0);
+        assert_eq!(game_line.pot_turn, 102.0 / 10.0);
+        assert_eq!(game_line.pot_river, 112.0 / 10.0);
 
-        assert_eq!(game_line.final_stack, 209.0 / 10.0);
+        assert_eq!(game_line.stack_final, 209.0 / 10.0);
 
         //Player D
-        let game_line = log2.get_csv_line(3, rcref_mcedb, &hash_func).unwrap();
+        let game_line = log2.get_csv_line(3, 1, rcref_mcedb, &hash_func).unwrap();
         assert_eq!(game_line.first_action_amount_preflop, 1.0);
         assert_eq!(game_line.first_action_amount_flop, 2.0);
         assert_eq!(game_line.first_action_turn, ActionString::Fold);
@@ -1365,12 +1373,12 @@ Agent 4               - 495 # Started with 500 change -5
         assert_eq!(game_line.first_action_river, ActionString::NA);
         assert_eq!(game_line.first_action_amount_river, 0.0);
 
-        assert_eq!(game_line.pot_start_flop, 62.0 / 10.0);
-        assert_eq!(game_line.pot_start_turn, 102.0 / 10.0);
+        assert_eq!(game_line.pot_flop, 62.0 / 10.0);
+        assert_eq!(game_line.pot_turn, 102.0 / 10.0);
         //We didn't make it
-        assert_eq!(game_line.pot_start_river, 0.0);
+        assert_eq!(game_line.pot_river, 0.0);
 
-        assert_eq!(game_line.final_stack, 15.0 / 10.0);
+        assert_eq!(game_line.stack_final, 15.0 / 10.0);
 
         //All in user counts, that's why it's 2 not 1
         assert_eq!(game_line.players_before_hero_turn, 2);
