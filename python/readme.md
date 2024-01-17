@@ -15,20 +15,12 @@ d:\anaconda3\python.exe "\\wsl.localhost\Ubuntu-20.04\home\eric\git\poker_eval\p
 
 https://learnopencv.com/train-yolov8-on-custom-dataset/
 
-In WSL
-
-```
-python3 -m pip install torch torchvision
-python3 -m pip install ultralytics
-```
 
 nvidia-smi
 
 Install cuda
 
 https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=WSL-Ubuntu&target_version=2.0&target_type=deb_local
-
-Easier likely is using ultralytics docker container with nvidia docker driver
 
 
 # Running ultralytics in docker
