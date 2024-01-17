@@ -135,3 +135,16 @@ try_agents produces a csv that is analyzed with Analyze.ipynb
 Store in code for all hole card types (169)
 The EQ vs random for 2-10 players
 
+
+# CFR
+
+Since our bots are deterministic, the probablity of reaching a node is 1 
+
+So to train a decision/action at an information set, simulate the game with the same cards
+for each action, adding the value in bb to each action.
+
+The strategy is 
+
+value of action / 
+total value of all actions
+
