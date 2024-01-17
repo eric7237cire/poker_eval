@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  ultralytics_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ipc: host
+    # runtime: nvidia
+    ports:
+      - "6006:6006"
+    volumes:
+      - ${REPO_ROOT}/python:/usr/src/python
+      - ${REPO_ROOT}/python/datasets:/usr/src/datasets
+      - ${REPO_ROOT}/python/runs:/usr/src/ultralytics/runs
+      - ${REPO_ROOT}/vue-poker/src/assets:/usr/src/assets
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  label_studio_service:
+    image: heartexlabs/label-studio:latest
+    ports:
+      - "9142:8080"
+    environment:
+      - LOCAL_FILES_SERVING_ENABLED=true
+    volumes:
+      - ${REPO_ROOT}/data/label-studio:/label-studio/data
+      - ${REPO_ROOT}/python:/home/user/python-data
+
+  jupyter_pytorch_service:
+    image: quay.io/jupyter/pytorch-notebook:latest
+    ports:
+      - "8888:8888"
+    volumes:
+      - ${REPO_ROOT}/python:/home/jovyan/work

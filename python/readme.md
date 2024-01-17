@@ -36,18 +36,7 @@ Easier likely is using ultralytics docker container with nvidia docker driver
 cd git/poker_eval
 source ./dev/local.env
 
-docker run -it --rm  \
---ipc=host --gpus all \
--p 6006:6006 \
--v ${REPO_ROOT}/python:/usr/src/python \
--v ${REPO_ROOT}/python/datasets:/usr/src/datasets \
--v ${REPO_ROOT}/python/runs:/usr/src/ultralytics/runs \
--v ${REPO_ROOT}/vue-poker/src/assets:/usr/src/assets \
-ultralytics/ultralytics:latest
-
-pip install pydantic.settings
-pip install torchsummary
-pip install -U ultralytics
+docker-compose run --rm ultralytics_service
 
 ## Tensorboard 
 
@@ -65,12 +54,7 @@ All params in /usr/src/ultralytics/ultralytics/cfg/default.yaml (open in vscode 
 
 # Starting label studio
 
-docker pull heartexlabs/label-studio:latest
-docker run -d -it -p 9142:8080 \
--e LOCAL_FILES_SERVING_ENABLED=true \
--v ${REPO_ROOT}/data/label-studio:/label-studio/data \
--v ${REPO_ROOT}/python:/home/user/python-data \
-heartexlabs/label-studio:latest
+docker-compose up -d label_studio_service
 
 ## Converting from yolo
 
