@@ -6,6 +6,7 @@ use num_integer::binomial;
 use crate::game::core::Round;
 use crate::{Card, Deck, HoleCards, PokerError};
 
+#[derive(Clone)]
 pub struct Board {
     cards: Vec<Card>,
 

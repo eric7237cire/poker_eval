@@ -20,6 +20,7 @@ use boomphf::Mphf;
 use log::trace;
 
 // Enforces the poker rules
+#[derive(Clone)]
 pub struct GameRunner {
     used_cards: CardUsedType,
 
@@ -29,7 +30,6 @@ pub struct GameRunner {
 
     //will pop off the back
     board_cards: Vec<Card>,
-
     player_cards: Vec<HoleCards>,
 }
 

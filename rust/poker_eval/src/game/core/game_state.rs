@@ -12,7 +12,7 @@ use crate::game::core::{ActionEnum, ChipType, CommentedAction, PlayerAction, Pos
 Everything that is known to all players,
 which is why hole cards are not here
 */
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct PlayerState {
     pub position: Position,
     pub player_name: String,
@@ -161,6 +161,7 @@ impl AgentDecisionHelpers {
     }
 }
 
+#[derive(Clone)]
 pub struct GameState {
     //sb first order
     pub player_states: Vec<PlayerState>,

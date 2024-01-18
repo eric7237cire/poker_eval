@@ -7,8 +7,8 @@ use poker_eval::{
     board_hc_eval_cache_redb::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
-    game::{core::InitialPlayerState, agents::PanicAgent},
-    game::runner::GameRunnerSourceEnum,
+    game::{runner::GameRunnerSourceEnum, core::{CommentedAction, ActionEnum}},
+    game::{agents::PanicAgent, core::InitialPlayerState},
     game::{
         agents::{
             build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
@@ -22,7 +22,6 @@ use poker_eval::{
 };
 use rand::seq::SliceRandom;
 
-
 //Need a game_runner, except one position will be the agent we're training
 //When it's the agents turn, we get an array of actions from it it would like to prototype
 
@@ -34,7 +33,6 @@ use rand::seq::SliceRandom;
 // with infostate + action == result (chips won/lost in bb)
 
 //For subsequent actions, we'll maybe just have additional infostates to update
-
 
 fn build_agents(
     flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
@@ -163,46 +161,131 @@ pub fn main() {
 
         let mut game_source = GameRunnerSourceEnum::from(agent_source);
 
-        let mut game_runner = GameRunner::new(
+        let game_runner = GameRunner::new(
             game_source.get_initial_players(),
             game_source.get_small_blind(),
             game_source.get_big_blind(),
             &board,
         )
         .unwrap();
+    
+        let mut game_runner_queue = Vec::new();
+        game_runner_queue.push(game_runner);
 
-        for _ in 0..2000 {
-            let action_count_before = game_runner.game_state.actions.len();
+        while !game_runner_queue.is_empty() {
 
-            //If we have a choice, need to run with those choices, then actually take the best one to
-            //evaluate the value of preceeding actions
+            let mut current_game_runner = game_runner_queue.pop().unwrap();
 
-            //In a game tree, if our agent being trained has 3 choices, to evaluate the 1st choice
-            //We need the value of the best choice
-
-            if game_runner.get_current_player_state().player_index() == hero_index {
-                //let action_choices = [...]
-
-                //If we have a value already evaluated for those action choices, we take it and
-                //move on
-
-                //Otherwise we queue all the possible choices, and also this game state
-                //We don't need to run the choice again, we should have its expected value
-
-            } else {
-                let action = game_source
-                    .get_action(
-                        game_runner.get_current_player_state(),
-                        &game_runner.game_state,
-                    )
-                    .unwrap();
-                let r = game_runner.process_next_action(&action).unwrap();
+            //Need to check if this is already done
+            if current_game_runner.game_state.player_states[0].final_state.is_some() {
+                process_finished_gamestate(current_game_runner);
+                continue;
             }
-            if r {
-                break;
+
+            //action loop
+            for _ in 0..2000 {
+                
+
+                //If we have a choice, need to run with those choices, then actually take the best one to
+                //evaluate the value of preceeding actions
+
+                //In a game tree, if our agent being trained has 3 choices, to evaluate the 1st choice
+                //We need the value of the best choice
+
+                if current_game_runner.get_current_player_state().player_index() == hero_index {
+                    //let action_choices = [...]
+
+                    //If we have a value already evaluated for those action choices, we take it and
+                    //move on
+
+                    //Otherwise we queue all the possible choices, and also this game state
+                    //We don't need to run the choice again, we should have its expected value
+
+                    //Action number is not perfect since rounds can have varaiable # of actions
+
+                    /*
+                    OO A1
+                    OO A2
+                    OO A3
+
+                    OO A3 MM A4
+                    OO A3 MM A5
+                    OO A3 MM A6
+
+                    OO A3 MM A4 NN A7
+                    OO A3 MM A4 NN A8
+                    OO A3 MM A4 NN A9
+
+                    OO A3 MM A4 NN A9 P [45]
+                    OO A3 MM A4 NN A8 Q [99]
+
+                    give each action an integer, maybe action number will work
+
+                    clear every action in gamestate that is not heros
+
+                    Then at end, get info states for each action, update equity for that infostate
+
+                    InfoState can be derived from PlayerAction
+                    */
+
+                    let hero_helpers = current_game_runner
+                        .get_current_player_state()
+                        .get_helpers(&current_game_runner.game_state);
+                    //Are we facing a bet?
+                    if current_game_runner.game_state.current_to_call > 0 {
+                        //Fold, call, raise
+                        let mut fold_game_runner = current_game_runner.clone();
+                        let fold_action = CommentedAction {
+                            action: ActionEnum::Fold,
+                            comment: None,
+                        };
+                        fold_game_runner.process_next_action(&fold_action).unwrap();
+                        game_runner_queue.push(fold_game_runner);
+
+                        let mut call_game_runner = current_game_runner.clone();
+                        let call_action = CommentedAction {
+                            action: ActionEnum::Call(hero_helpers.call_amount),
+                            comment: None
+                        };
+                        call_game_runner.process_next_action(&call_action).unwrap();
+                        game_runner_queue.push(call_game_runner);
+
+                        if hero_helpers.can_raise {
+                            let mut raise_game_runner = current_game_runner.clone();
+                            let raise_action = hero_helpers.build_raise_to(&raise_game_runner.game_state, 
+                                    raise_game_runner.game_state.current_to_call * 3, "".to_string());
+                            
+                            raise_game_runner
+                                .process_next_action(&raise_action)
+                                .unwrap();
+                            game_runner_queue.push(raise_game_runner);
+                        }
+
+                        //out of action loop
+                        break;
+
+
+                    } else {
+                    }
+                } else {
+                    let action = game_source
+                        .get_action(
+                            current_game_runner.get_current_player_state(),
+                            &current_game_runner.game_state,
+                        )
+                        .unwrap();
+                    let r = current_game_runner.process_next_action(&action).unwrap();
+
+                    //We don't keep the action if it's not the hero's
+                    current_game_runner.game_state.actions.pop().unwrap();
+
+                    if r {
+                        process_finished_gamestate(current_game_runner);
+                        break;
+                    }
+                }
+                
             }
-            let action_count_after = game_runner.game_state.actions.len();
-            assert_eq!(action_count_before + 1, action_count_after);
         }
 
         // let _change = game_runner.game_state.player_states[hero_index].stack as i64
@@ -236,4 +319,8 @@ pub fn main() {
     //     serde_json::to_string_pretty(&overview).unwrap(),
     // )
     // .unwrap();
+}
+
+fn process_finished_gamestate(game_runner: GameRunner) {
+
 }
