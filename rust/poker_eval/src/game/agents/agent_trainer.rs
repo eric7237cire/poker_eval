@@ -9,7 +9,7 @@ use std::{
 use log::debug;
 use num_format::{Locale, ToFormattedString};
 use crate::{
-    agents::{
+    game::agents::{
         build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
         EqAgentConfig, Tag,
     },
@@ -17,7 +17,7 @@ use crate::{
     board_hc_eval_cache_redb::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
-    init_logger, Card, Deck,  pre_calc::{perfect_hash::load_boomperfect_hash, get_repo_root}, game::core::InitialPlayerState, runner::{GameRunner, GameRunnerSourceEnum},
+    init_logger, Card, Deck,  pre_calc::{perfect_hash::load_boomperfect_hash, get_repo_root}, game::core::InitialPlayerState, game::runner::{GameRunner, GameRunnerSourceEnum},
 };
 use rand::seq::SliceRandom;
 

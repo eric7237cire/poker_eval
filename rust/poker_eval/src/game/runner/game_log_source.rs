@@ -2,7 +2,7 @@ use crate::{
     Card, HoleCards, PokerError,
 };
 use crate::game::core::{ChipType, CommentedAction, GameState, InitialPlayerState, PlayerState};
-use crate::runner::{GameRunnerSource, GameLog};
+use crate::game::runner::{GameRunnerSource, GameLog};
 
 pub struct GameLogSource {
     game_log: GameLog,

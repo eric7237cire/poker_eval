@@ -9,7 +9,7 @@ use std::{
 use log::debug;
 use num_format::{Locale, ToFormattedString};
 use poker_eval::{
-    agents::{
+    game::agents::{
         build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
         EqAgentConfig, Tag,
     },
@@ -17,8 +17,9 @@ use poker_eval::{
     board_hc_eval_cache_redb::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
-    game_runner_source::GameRunnerSourceEnum,
-    init_logger, Card, Deck, GameLog, GameRunner, InitialPlayerState, pre_calc::perfect_hash::load_boomperfect_hash,
+    game::core::InitialPlayerState,
+    game::runner::{GameRunnerSourceEnum, GameLog,  GameRunner, },
+    init_logger, Card, Deck, pre_calc::{perfect_hash::load_boomperfect_hash, get_repo_root},
 };
 use rand::seq::SliceRandom;
 

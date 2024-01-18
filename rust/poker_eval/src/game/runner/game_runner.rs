@@ -7,7 +7,7 @@ use std::cmp::min;
 use crate::pre_calc::fast_eval::fast_hand_eval;
 use crate::pre_calc::perfect_hash::load_boomperfect_hash;
 use crate::pre_calc::rank::Rank;
-use crate::{set_used_card, Board, Card, runner::GameLog, };
+use crate::{set_used_card, Board, Card, game::runner::GameLog, };
 use crate:: {PokerError, CardUsedType};
 use crate::game::core::{
     ActionEnum, ChipType, FinalPlayerState, GameState, PlayerState, 
