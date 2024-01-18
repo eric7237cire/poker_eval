@@ -200,7 +200,7 @@ mod tests {
             v_r.street_rank_results[0]
                 .win_rank_family_count
                 .iter()
-                .sum()
+                .sum::<f64>()
         );
         assert_eq!(0, v_r.street_draws[0].gut_shot);
         assert_eq!(0, v_r.street_draws[0].two_overcards);
@@ -221,7 +221,7 @@ mod tests {
             v_r.street_rank_results[1]
                 .win_rank_family_count
                 .iter()
-                .sum()
+                .sum::<f64>()
         );
         assert_eq!(1, v_r.street_draws[1].gut_shot);
         assert_eq!(0, v_r.street_draws[1].two_overcards);
@@ -242,7 +242,7 @@ mod tests {
             v_r.street_rank_results[2]
                 .win_rank_family_count
                 .iter()
-                .sum()
+                .sum::<f64>()
         );
         assert_eq!(2, v_r.street_draws.len());
     }
@@ -291,7 +291,7 @@ mod tests {
             v_r.street_rank_results[0]
                 .win_rank_family_count
                 .iter()
-                .sum()
+                .sum::<f64>()
         );
         assert_eq!(1, v_r.street_draws[0].two_overcards);
         assert_eq!(0, v_r.street_draws[0].one_overcard);
@@ -306,7 +306,7 @@ mod tests {
             v_r.street_rank_results[1]
                 .win_rank_family_count
                 .iter()
-                .sum()
+                .sum::<f64>()
         );
         assert_eq!(0, v_r.street_draws[1].two_overcards);
         assert_eq!(1, v_r.street_draws[1].one_overcard);
@@ -321,7 +321,7 @@ mod tests {
             v_r.street_rank_results[2]
                 .win_rank_family_count
                 .iter()
-                .sum()
+                .sum::<f64>()
         );
         assert_eq!(2, v_r.street_draws.len());
     }
