@@ -2,8 +2,8 @@ use crate::{Board, HoleCards};
 use log::trace;
 use regex::Regex;
 
-use crate::{Card, PokerError,};
-use crate::game::core::{ChipType, InitialPlayerState, PlayerAction, Round, ActionEnum};
+use crate::game::core::{ActionEnum, ChipType, InitialPlayerState, PlayerAction, Round};
+use crate::{Card, PokerError};
 
 pub struct GameLogParser {
     pub section_name_regex: Regex,

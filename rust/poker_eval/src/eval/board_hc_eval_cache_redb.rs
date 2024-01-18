@@ -5,7 +5,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use crate::{
     board_eval_cache_redb::{get_data_path, EvalCacheEnum},
     monte_carlo_equity::calc_equity_vs_random,
-    partial_rank_cards, Board, Card, HoleCards, PartialRankContainer,  
+    partial_rank_cards, Board, Card, HoleCards, PartialRankContainer,
 };
 
 use crate::game::core::Round;
@@ -161,8 +161,14 @@ impl ProduceEvalWithHcResult for ProduceMonteCarloEval {
     //num_players -- This is indcluing the hero
     fn produce_eval_result(cards: &[Card], hole_cards: &HoleCards, num_players: u8) -> f64 {
         let board: Board = Board::new_from_cards(cards);
-        let eq = calc_equity_vs_random(&board, &hole_cards, num_players as usize, NUM_SIMULATIONS, Round::River.get_num_board_cards()     )
-            .unwrap();
+        let eq = calc_equity_vs_random(
+            &board,
+            &hole_cards,
+            num_players as usize,
+            NUM_SIMULATIONS,
+            Round::River.get_num_board_cards(),
+        )
+        .unwrap();
 
         eq
     }

@@ -1,6 +1,5 @@
 use std::io::Write;
 
-
 pub fn init_test_logger() {
     let _ = env_logger::builder()
         .is_test(true)
@@ -35,9 +34,7 @@ pub fn init_logger() {
     let _ = env_logger::builder()
         .is_test(false)
         .filter_level(log::LevelFilter::Trace)
-        .filter_module("poker_eval::game::game_log_parser", log::LevelFilter::Debug)
-        .filter_module("poker_eval::game::game_log_source", log::LevelFilter::Debug)
-        .filter_module("poker_eval::game::game_runner", log::LevelFilter::Debug)
+        .filter_module("poker_eval::game::runner", log::LevelFilter::Debug)
         .filter_module(
             "poker_eval::game::agents::agent_source",
             log::LevelFilter::Debug,
@@ -70,4 +67,3 @@ fn take_after_last_slash(s: &str) -> &str {
     }
     &s[last_slash + 1..]
 }
-

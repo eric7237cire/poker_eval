@@ -7,10 +7,11 @@ use crate::{
     board_hc_eval_cache_redb::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
+    game::core::{ActionEnum, CommentedAction, GameState, PlayerState, PositionFamily, Round},
     likes_hands::likes_hand,
     monte_carlo_equity::get_equivalent_hole_board,
     pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash},
-     BoolRange,  HoleCards, game::core::{PlayerState, GameState, CommentedAction, ActionEnum, Round, PositionFamily}, 
+    BoolRange, HoleCards,
 };
 
 use super::Agent;
@@ -85,10 +86,8 @@ impl EqAgent {
         partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
         monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
     ) -> Self {
-        
-
         EqAgent {
-           // calling_range,
+            // calling_range,
             hole_cards: None,
             name: name.to_string(),
             partial_rank_db,
@@ -168,13 +167,16 @@ impl EqAgent {
 
             let is_big_bet = call_amt >= game_state.bb * 30;
 
-            if eq >= EQ_TO_ALL_IN  {
-
-                return helpers.build_raise_to(game_state, helpers.max_can_raise, format!(
+            if eq >= EQ_TO_ALL_IN {
+                return helpers.build_raise_to(
+                    game_state,
+                    helpers.max_can_raise,
+                    format!(
                         "Raising all in, equity at least {:.2}%;{}",
                         EQ_TO_ALL_IN * 100.0,
                         comment_common
-                    ));
+                    ),
+                );
             } else if game_state.current_round == Round::River && is_big_bet {
                 if eq >= EQ_CALL_BIG_RIVER_BET {
                     return CommentedAction {
@@ -195,8 +197,7 @@ impl EqAgent {
                         )),
                     };
                 }
-            }
-            else if eq >= pot_eq {
+            } else if eq >= pot_eq {
                 return CommentedAction {
                     action: ActionEnum::Call(call_amt),
                     comment: Some(format!("Enough to call;{}", comment_common)),
@@ -252,11 +253,14 @@ impl EqAgent {
         }
 
         if eq > bet_threshold {
-            return helpers.build_bet(bet_size, format!(
+            return helpers.build_bet(
+                bet_size,
+                format!(
                     "Eq is at least {:.2}%;{}",
                     bet_threshold * 100.0,
                     comment_common
-                ));
+                ),
+            );
         } else {
             return CommentedAction {
                 action: ActionEnum::Check,

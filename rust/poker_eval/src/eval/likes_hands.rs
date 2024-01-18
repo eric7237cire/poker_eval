@@ -4,12 +4,12 @@ use std::{
     mem,
 };
 
+use crate::game::core::Round;
 use crate::{
     pre_calc::rank::{Rank, RankEnum},
     Board, BoardTexture, CardValue, FlushDrawType, HoleCards, MadeWith, PartialRankContainer,
     PokerError, StraightDrawType,
 };
-use crate::game::core::Round;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 #[repr(u8)]
@@ -175,17 +175,11 @@ fn handle_set_and_two_pair(
     if let Some(s) = prc.made_a_set() {
         match s {
             MadeWith::HiCard => {
-                likes_hand_comments.push(format!(
-                    "Made a set with hi card {}",
-                    hc.hi_card().value
-                ));
+                likes_hand_comments.push(format!("Made a set with hi card {}", hc.hi_card().value));
                 *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
             }
             MadeWith::LoCard => {
-                likes_hand_comments.push(format!(
-                    "Made a set with lo card {}",
-                    hc.lo_card().value
-                ));
+                likes_hand_comments.push(format!("Made a set with lo card {}", hc.lo_card().value));
                 *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
             }
             MadeWith::BothCards => {
@@ -244,10 +238,8 @@ fn handle_hi_card(
         //if the board is paired, then only stay in with an ace or king
         if p.number_above == 0 {
             if ft.has_trips && hc.hi_card().value > CardValue::King {
-                likes_hand_comments.push(format!(
-                    "Trips on board with an Ace {}",
-                    hc.hi_card().value
-                ));
+                likes_hand_comments
+                    .push(format!("Trips on board with an Ace {}", hc.hi_card().value));
                 *likes_hand = max(*likes_hand, LikesHandLevel::SmallBet);
             } else if ft.has_pair || ft.has_trips || ft.has_two_pair {
                 if hc.hi_card().value >= CardValue::King {
@@ -301,8 +293,7 @@ fn handle_hi_and_lo_pair(
     if let Some(p) = prc.hi_pair {
         if p.number_above == 0 {
             if let Some(_p) = prc.lo_pair {
-                likes_hand_comments
-                    .push(format!("two pair with hi card {}", hc.hi_card().value));
+                likes_hand_comments.push(format!("two pair with hi card {}", hc.hi_card().value));
                 *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
             } else {
                 if hc.hi_card().value >= CardValue::Eight {
@@ -357,10 +348,7 @@ fn handle_hi_and_lo_pair(
             likes_hand_comments.push(format!("lo card is mid pair {}", hc.lo_card().value));
             *likes_hand = max(*likes_hand, LikesHandLevel::SmallBet);
         } else {
-            not_like_hand_comments.push(format!(
-                "lo card is not top pair {}",
-                hc.lo_card().value
-            ));
+            not_like_hand_comments.push(format!("lo card is not top pair {}", hc.lo_card().value));
         }
     }
 }
@@ -403,10 +391,7 @@ fn handle_pocket_pair(
     }
 
     if !ft.has_quads && !ft.has_fh && rank.get_rank_enum() >= RankEnum::FullHouse {
-        likes_hand_comments.push(format!(
-            "Pocket Pair FH or better {}",
-            hc.hi_card().value
-        ));
+        likes_hand_comments.push(format!("Pocket Pair FH or better {}", hc.hi_card().value));
         *likes_hand = max(*likes_hand, LikesHandLevel::AllIn);
     }
 }

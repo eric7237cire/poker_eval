@@ -105,7 +105,6 @@ pub struct PartialRankContainer {
     pub lo_card: Option<PairFamilyRank>,
     //num over_cards
 
-
     //Add something like rank_index given a flop, so 1 if nuts, 2 if 2nd nuts, etc
     //Also distinct hand ranks
 

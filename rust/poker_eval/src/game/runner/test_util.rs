@@ -1,20 +1,28 @@
 use log::debug;
 
-use super::{GameLogSource, GameLog, GameRunnerSourceEnum, GameRunnerSource, GameRunner};
+use super::{GameLog, GameLogSource, GameRunner, GameRunnerSource, GameRunnerSourceEnum};
 
-
-pub fn run_gamelog(game_log: GameLog) -> GameRunner{
+pub fn run_gamelog(game_log: GameLog) -> GameRunner {
     let board = game_log.board.clone();
     let game_log_source = GameLogSource::new(game_log);
-    
+
     let mut game_source = GameRunnerSourceEnum::from(game_log_source);
-    let mut game_runner = GameRunner::new(game_source.get_initial_players(), game_source.get_small_blind(),
-    game_source.get_big_blind(), &board
-).unwrap();
+    let mut game_runner = GameRunner::new(
+        game_source.get_initial_players(),
+        game_source.get_small_blind(),
+        game_source.get_big_blind(),
+        &board,
+    )
+    .unwrap();
 
     for _ in 0..200 {
         let action_count_before = game_runner.game_state.actions.len();
-        let action = game_source.get_action(game_runner.get_current_player_state(), &game_runner.game_state).unwrap();
+        let action = game_source
+            .get_action(
+                game_runner.get_current_player_state(),
+                &game_runner.game_state,
+            )
+            .unwrap();
         let r = game_runner.process_next_action(&action).unwrap();
         if r {
             break;
@@ -29,7 +37,6 @@ pub fn run_gamelog(game_log: GameLog) -> GameRunner{
 
     game_runner
 }
-
 
 // pub fn test_game_runner(game_runner: &mut GameRunner) -> Result<(), PokerError> {
 //     for _ in 0..200 {

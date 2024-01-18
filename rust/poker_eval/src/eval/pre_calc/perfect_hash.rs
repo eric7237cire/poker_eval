@@ -4,10 +4,7 @@ use boomphf::Mphf;
 // use ph::fmph;
 use std::cmp::max;
 #[cfg(not(target_arch = "wasm32"))]
-use std::{
-    fs::File,
-    io::Write,
-};
+use std::{fs::File, io::Write};
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::eval::pre_calc::get_boom_path;

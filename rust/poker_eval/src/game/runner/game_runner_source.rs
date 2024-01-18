@@ -1,8 +1,5 @@
-use crate::{
-    game::runner::GameLogSource, Card, HoleCards,
-    PokerError,
-};
 use crate::game::core::{ChipType, CommentedAction, GameState, InitialPlayerState, PlayerState};
+use crate::{game::runner::GameLogSource, Card, HoleCards, PokerError};
 use enum_dispatch::enum_dispatch;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -30,6 +27,4 @@ pub trait GameRunnerSource {
 
     //get cards for player?
     fn get_hole_cards(&self, player_index: usize) -> Result<HoleCards, PokerError>;
-
-
 }

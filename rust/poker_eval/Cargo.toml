@@ -22,6 +22,10 @@ name = "try_agent"
 path = "src/try_agent.rs"
 
 [[bin]]
+name = "train_agent"
+path = "src/train_agent.rs"
+
+[[bin]]
 name = "gen_hole_card_data"
 path = "src/gen_hole_card_data.rs"
 

@@ -120,9 +120,7 @@ fn main_impl() -> Result<(), PokerError> {
 
                 let rankings = hole_card_vec
                     .iter()
-                    .map(|hc| {
-                        fast_hand_eval(board.iter().cloned().chain(hc.iter()), &hash_func)
-                    })
+                    .map(|hc| fast_hand_eval(board.iter().cloned().chain(hc.iter()), &hash_func))
                     .collect_vec();
 
                 let is_above_threshold = rankings

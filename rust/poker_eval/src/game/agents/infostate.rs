@@ -1,5 +1,4 @@
-pub struct infostate 
-{
+pub struct infostate {
     //For now limited to 0 1st position, 1 middle, 2 last
     //This depends on the round too
     //So Preflop this could be middle, and flop could be last
@@ -19,12 +18,9 @@ pub struct infostate
     pub bet_situation: u8,
 }
 
-impl infostate
-{
-    pub fn new() -> Self
-    {
-        infostate
-        {
+impl infostate {
+    pub fn new() -> Self {
+        infostate {
             position: 0,
             num_players: 0,
             hole_card_category: 0,
@@ -33,8 +29,7 @@ impl infostate
         }
     }
 
-    pub fn to_bytes(&self) -> Vec<u8>
-    {
+    pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(5);
         bytes.push(self.position);
         bytes.push(self.num_players);

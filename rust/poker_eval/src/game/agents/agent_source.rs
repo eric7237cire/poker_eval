@@ -1,10 +1,5 @@
-
-
-use crate::game::core::{InitialPlayerState, ChipType, PlayerState, CommentedAction, GameState};
-use crate::{
-    Card,  HoleCards, 
-    PokerError,
-};
+use crate::game::core::{ChipType, CommentedAction, GameState, InitialPlayerState, PlayerState};
+use crate::{Card, HoleCards, PokerError};
 
 use crate::game::agents::Agent;
 use crate::game::runner::GameRunnerSource;
@@ -16,7 +11,6 @@ pub struct AgentSource {
     pub players: Vec<InitialPlayerState>,
     pub sb: ChipType,
     pub bb: ChipType,
-
 }
 
 impl GameRunnerSource for AgentSource {
@@ -41,16 +35,13 @@ impl GameRunnerSource for AgentSource {
         let agent = &mut self.agents[player_index];
         Ok(agent.decide(player_state, game_state))
     }
-    
+
     fn get_hole_cards(&self, player_index: usize) -> Result<HoleCards, PokerError> {
         //Agents shouldn't say what cards they have, get it from player data
         self.players[player_index].cards.ok_or_else(|| {
             PokerError::from_string(format!("No hole cards for player {}", player_index))
         })
     }
-    
-    
-
 }
 
 #[cfg(test)]

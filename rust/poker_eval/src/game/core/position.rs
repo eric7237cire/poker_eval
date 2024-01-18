@@ -2,8 +2,8 @@ use std::fmt::{Display, Formatter};
 
 use serde::Serialize;
 
-use crate::PokerError;
 use crate::game::core::Round;
+use crate::PokerError;
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Serialize, Default)]
 pub struct Position {

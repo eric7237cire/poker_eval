@@ -437,7 +437,7 @@ impl OldRank {
                         cur_card_index += 1;
                     }
                 }
-                //it's possible to have TTT PPP 
+                //it's possible to have TTT PPP
                 for c in cards {
                     if c.value == pair_value && cur_card_index < 5 {
                         ret[cur_card_index] = *c;

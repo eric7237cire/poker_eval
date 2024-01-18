@@ -10,8 +10,6 @@ use itertools::Itertools;
 use log::trace;
 use serde::Serialize;
 
-use crate::Card;
-use crate::OldRank;
 use crate::board_hc_eval_cache_redb::EvalCacheWithHcReDb;
 use crate::board_hc_eval_cache_redb::ProduceMonteCarloEval;
 use crate::game::runner::GameLogParser;
@@ -19,12 +17,13 @@ use crate::monte_carlo_equity::get_equivalent_hole_board;
 use crate::pre_calc::fast_eval::fast_hand_eval;
 use crate::pre_calc::rank::Rank;
 use crate::rank_cards;
+use crate::Card;
+use crate::OldRank;
 use crate::PokerError;
 
-
-use crate::game::core::{Round, PlayerAction, ChipType, InitialPlayerState, FinalPlayerState, ActionEnum};
-
-
+use crate::game::core::{
+    ActionEnum, ChipType, FinalPlayerState, InitialPlayerState, PlayerAction, Round,
+};
 
 #[derive(Default, Serialize)]
 pub struct GameLog {
@@ -386,9 +385,7 @@ impl GameLog {
 
             let best_player_hands = player_hand_ranks
                 .iter()
-                .map(|(_, _, wc)| {
-                    *wc
-                })
+                .map(|(_, _, wc)| *wc)
                 .collect::<Vec<[Card; 5]>>();
 
             v.push(best_player_hands);
@@ -406,7 +403,7 @@ impl GameLog {
                     rank_order += 1;
                     last_rank_value = *rank;
                 }
-                
+
                 cur_round_rank_order[*p_idx] = rank_order;
             }
 
@@ -424,7 +421,7 @@ impl GameLog {
         hero_index: usize,
         iteration_number: u32,
         monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
-        hash_func: &Mphf<u32>
+        hash_func: &Mphf<u32>,
     ) -> Result<CsvLineForPokerHand, PokerError> {
         let mut ret = CsvLineForPokerHand::default();
 
@@ -434,12 +431,15 @@ impl GameLog {
         ret.position = hero_index as u8;
         ret.iteration_number = iteration_number;
         ret.hole_cards = format!("{}", self.players[hero_index].cards.as_ref().unwrap());
-        ret.hole_cards_simple = self.players[hero_index].cards.as_ref().unwrap().simple_range_string();
+        ret.hole_cards_simple = self.players[hero_index]
+            .cards
+            .as_ref()
+            .unwrap()
+            .simple_range_string();
 
         //Number of players in hand
 
         ret.players_starting_preflop = self.players.len() as u8;
-        
 
         let mut when_players_folded: Vec<Option<Round>> = vec![None; self.players.len()];
 
@@ -494,10 +494,9 @@ impl GameLog {
                             .unwrap();
                         ret.amt_to_call_start_preflop =
                             action.current_amt_to_call as f64 / self.bb as f64;
-                        ret.pot_preflop = action.pot as f64 / self.bb as f64;                        
+                        ret.pot_preflop = action.pot as f64 / self.bb as f64;
                         ret.first_action_preflop = action.action.into();
-                        ret.first_action_amount_preflop =
-                            get_action_amount(&action, self.bb);
+                        ret.first_action_amount_preflop = get_action_amount(&action, self.bb);
                     }
                     Round::Flop => {
                         ret.players_before_hero_flop =
@@ -510,8 +509,7 @@ impl GameLog {
                         ret.pot_flop = action.pot as f64 / self.bb as f64;
                         ret.stack_flop = action.stack as f64 / self.bb as f64;
                         ret.first_action_flop = action.action.into();
-                        ret.first_action_amount_flop =
-                            get_action_amount(&action, self.bb);
+                        ret.first_action_amount_flop = get_action_amount(&action, self.bb);
                     }
                     Round::Turn => {
                         ret.players_before_hero_turn =
@@ -524,8 +522,7 @@ impl GameLog {
                         ret.pot_turn = action.pot as f64 / self.bb as f64;
                         ret.stack_turn = action.stack as f64 / self.bb as f64;
                         ret.first_action_turn = action.action.into();
-                        ret.first_action_amount_turn =
-                            get_action_amount(&action, self.bb);
+                        ret.first_action_amount_turn = get_action_amount(&action, self.bb);
                     }
                     Round::River => {
                         ret.players_before_hero_river =
@@ -538,8 +535,7 @@ impl GameLog {
                         ret.pot_river = action.pot as f64 / self.bb as f64;
                         ret.stack_river = action.stack as f64 / self.bb as f64;
                         ret.first_action_river = action.action.into();
-                        ret.first_action_amount_river =
-                            get_action_amount(&action, self.bb);
+                        ret.first_action_amount_river = get_action_amount(&action, self.bb);
                     }
                 }
 
@@ -549,7 +545,6 @@ impl GameLog {
 
         //calculate hand strength in each round
         for round_index in (Round::Flop as u8)..=(Round::River as u8) {
-
             //If everyone folded, we are done
             if self.board.is_empty() {
                 break;
@@ -566,13 +561,11 @@ impl GameLog {
                 })
                 .collect_vec();
 
-            let round_var = 
-            match round {
+            let round_var = match round {
                 Round::Flop => &mut ret.players_starting_flop,
                 Round::Turn => &mut ret.players_starting_turn,
                 Round::River => &mut ret.players_starting_river,
                 _ => panic!("Invalid round"),
-                
             };
 
             //In case of all ins, we might not have the rounds with no actions
@@ -586,24 +579,31 @@ impl GameLog {
             if players_in_hand.len() <= 0 {
                 continue;
             }
-            
-            trace!("Round {} Players in hand {}", 
-                round,
-                players_in_hand.len());
+
+            trace!("Round {} Players in hand {}", round, players_in_hand.len());
             // for p_idx in players_in_hand.iter() {
             //     trace!("Player {} has not folded", &self.players[*p_idx].player_name);
             // }
             //assert_eq!(players_in_hand.len(), num_players_in_round as usize);
 
             let hero_strength = fast_hand_eval(
-                self.board.iter().take(round.get_num_board_cards()).chain(
-                    self.players[hero_index].cards.as_ref().unwrap().as_slice()), hash_func);
+                self.board
+                    .iter()
+                    .take(round.get_num_board_cards())
+                    .chain(self.players[hero_index].cards.as_ref().unwrap().as_slice()),
+                hash_func,
+            );
 
             let all_strength = players_in_hand
                 .iter()
                 .map(|p_idx| {
-                    fast_hand_eval(self.board.iter().take(round.get_num_board_cards()).chain(
-                        self.players[*p_idx].cards.as_ref().unwrap().as_slice()), hash_func)
+                    fast_hand_eval(
+                        self.board
+                            .iter()
+                            .take(round.get_num_board_cards())
+                            .chain(self.players[*p_idx].cards.as_ref().unwrap().as_slice()),
+                        hash_func,
+                    )
                 })
                 .collect_vec();
 
@@ -619,45 +619,54 @@ impl GameLog {
 
         ret.stack_preflop = self.players[hero_index].stack as f64 / self.bb as f64;
         ret.stack_final = self.final_stacks[hero_index] as f64 / self.bb as f64;
-        ret.pot_final = self.actions.last().unwrap().get_fields_after_action().pot as f64 / self.bb as f64;
-        
+        ret.pot_final =
+            self.actions.last().unwrap().get_fields_after_action().pot as f64 / self.bb as f64;
+
         ret.in_showdown = match self.final_states[hero_index] {
             FinalPlayerState::Folded(_) => false,
             FinalPlayerState::LostShowdown => true,
             FinalPlayerState::WonShowdown => true,
             FinalPlayerState::EveryoneElseFolded => false,
         };
-        
+
         if ret.in_showdown {
+            let player_ranks = self
+                .players
+                .iter()
+                .enumerate()
+                .map(|(p_idx, p)| {
+                    if self.final_states[p_idx].is_folded() {
+                        Rank::lowest_rank()
+                    } else {
+                        let mut board_cards = self.board.clone();
+                        board_cards.extend(p.cards.as_ref().unwrap().as_slice());
 
-            
-
-            let player_ranks = self.players.iter().enumerate().map(|(p_idx, p)| {
-
-                if self.final_states[p_idx].is_folded() {
-                    Rank::lowest_rank()
-                } else {
-
-                    let mut board_cards = self.board.clone();
-                    board_cards.extend(p.cards.as_ref().unwrap().as_slice());
-
-                    fast_hand_eval(self.board.iter().chain(p.cards.as_ref().unwrap().as_slice()), hash_func)
-                }
-            }).collect_vec();
+                        fast_hand_eval(
+                            self.board
+                                .iter()
+                                .chain(p.cards.as_ref().unwrap().as_slice()),
+                            hash_func,
+                        )
+                    }
+                })
+                .collect_vec();
 
             let hero_rank = player_ranks[hero_index];
-            let max_rank = player_ranks.iter().enumerate().map(|(p_idx, rank)|{
-                if p_idx == hero_index {
-                    Rank::lowest_rank()
-                } else {
-                    *rank
-                }
-            }).max().unwrap();
+            let max_rank = player_ranks
+                .iter()
+                .enumerate()
+                .map(|(p_idx, rank)| {
+                    if p_idx == hero_index {
+                        Rank::lowest_rank()
+                    } else {
+                        *rank
+                    }
+                })
+                .max()
+                .unwrap();
             ret.hero_hand_showdown = hero_rank.get_rank_enum() as u8;
             ret.non_hero_hand_showdown = max_rank.get_rank_enum() as u8;
         }
-
-
 
         Ok(ret)
     }
@@ -672,7 +681,6 @@ fn get_action_amount(action: &PlayerAction, bb: ChipType) -> f64 {
         ActionEnum::Bet(amount) => amount as f64 / bb as f64,
         ActionEnum::Raise(_, amount) => amount as f64 / bb as f64,
     }
-
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
@@ -721,7 +729,6 @@ impl Default for ActionString {
 //     }
 // }
 
-
 #[derive(Serialize, Debug, Default)]
 pub struct CsvLineForPokerHand {
     #[serde(rename = "ITERATION_NUMBER")]
@@ -730,7 +737,7 @@ pub struct CsvLineForPokerHand {
     #[serde(rename = "POSITION")]
     pub position: u8,
 
-    //Example: AcKh 
+    //Example: AcKh
     #[serde(rename = "HOLE_CARDS")]
     pub hole_cards: String,
 
@@ -770,7 +777,6 @@ pub struct CsvLineForPokerHand {
     #[serde(rename = "HND_RNK_RIVER")]
     pub hero_hand_rank_river: u8,
 
-
     //Number of players acting before hero on flop (so 3rd, this == 2)
     //Number of players acting before hero on turn
     //Number of players acting before hero on river
@@ -785,7 +791,6 @@ pub struct CsvLineForPokerHand {
 
     #[serde(rename = "PLR_BEFORE_HERO_RIVER")]
     pub players_before_hero_river: u8,
-
 
     //Hero eq at start of flop
     //Hero eq at start of turn
@@ -821,7 +826,7 @@ pub struct CsvLineForPokerHand {
     */
     #[serde(rename = "POT_PREFLOP")]
     pub pot_preflop: f64,
-    
+
     #[serde(rename = "POT_FLOP")]
     pub pot_flop: f64,
 
@@ -830,8 +835,8 @@ pub struct CsvLineForPokerHand {
 
     #[serde(rename = "POT_RIVER")]
     pub pot_river: f64,
-    
-    //Final pot    
+
+    //Final pot
     #[serde(rename = "POT_FINAL")]
     pub pot_final: f64,
 
@@ -1026,7 +1031,15 @@ impl Eq for GameLog {}
 
 #[cfg(test)]
 mod tests {
-    use crate::{init_test_logger, pre_calc::perfect_hash::load_boomperfect_hash,  HoleCards, game::runner::{GameLogSource, GameRunner, GameRunnerSourceEnum, GameRunnerSource, test_util::run_gamelog}};
+    use crate::{
+        game::runner::{
+            test_util::run_gamelog, GameLogSource, GameRunner, GameRunnerSource,
+            GameRunnerSourceEnum,
+        },
+        init_test_logger,
+        pre_calc::perfect_hash::load_boomperfect_hash,
+        HoleCards,
+    };
 
     use super::*;
 
@@ -1275,10 +1288,9 @@ Agent 4               - 495 # Started with 500 change -5
     //#[test]
     #[allow(dead_code)]
     fn test_csv_line() {
-        
         init_test_logger();
-    
-    //Same as test_parse_with_hole_cards
+
+        //Same as test_parse_with_hole_cards
         let hh = "
     *** Players *** 
     Plyr A - 12 - As Kh
@@ -1316,7 +1328,7 @@ Agent 4               - 495 # Started with 500 change -5
         let parsed_game_log: GameLog = hh.parse().unwrap();
 
         let monte_carlo_equity_db: EvalCacheWithHcReDb<ProduceMonteCarloEval> =
-        EvalCacheWithHcReDb::new().unwrap();
+            EvalCacheWithHcReDb::new().unwrap();
         let rcref_mcedb = Rc::new(RefCell::new(monte_carlo_equity_db));
 
         let hash_func = load_boomperfect_hash();
@@ -1327,16 +1339,16 @@ Agent 4               - 495 # Started with 500 change -5
 
         //let mut game_runner2 = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
         //let game_log_source = GameLogSource::new(game_log);
-    
+
         //let mut game_source = GameRunnerSourceEnum::from(game_log_source);
         let mut game_runner2 = run_gamelog(parsed_game_log);
 
-        let log2 = game_runner2
-            .to_game_log()
-            .unwrap();
+        let log2 = game_runner2.to_game_log().unwrap();
 
         //Player B
-        let game_line = log2.get_csv_line(1, 1, rcref_mcedb.clone(), &hash_func).unwrap();
+        let game_line = log2
+            .get_csv_line(1, 1, rcref_mcedb.clone(), &hash_func)
+            .unwrap();
 
         assert_eq!(game_line.first_action_amount_preflop, 2.0);
         assert_eq!(game_line.first_action_amount_flop, 1.0);

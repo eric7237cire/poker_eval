@@ -7,11 +7,11 @@ use crate::{
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
     likes_hands::{likes_hand, LikesHandLevel, LikesHandResponse},
     pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash},
-     BoolRange, HoleCards,
+    BoolRange, HoleCards,
 };
 
-use crate::game::core::{PlayerState, GameState, CommentedAction, ActionEnum, Round};
 use super::Agent;
+use crate::game::core::{ActionEnum, CommentedAction, GameState, PlayerState, Round};
 
 //#[derive(Default)]
 pub struct Tag {

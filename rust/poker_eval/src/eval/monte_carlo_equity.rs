@@ -175,7 +175,7 @@ pub fn calc_equity_vs_random(
         deck.set_used_card(player_hole_cards[0].lo_card());
 
         //We need to deal hole cards to each player
-        for player_index in 1..num_players {            
+        for player_index in 1..num_players {
             //This takes into account the used cards
             let card1 = deck.get_unused_card().unwrap();
             let card2 = deck.get_unused_card().unwrap();

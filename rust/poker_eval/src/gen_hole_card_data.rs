@@ -1,15 +1,13 @@
 use std::{
     cmp::{max, min},
-    fs::{File, self},
+    fs::{self, File},
     io::Write,
 };
 
 use log::info;
 use poker_eval::{
-    init_logger,
-    monte_carlo_equity::calc_equity_vs_random,
-    pre_calc::get_repo_root,
-    Board, Card, CardValue, HoleCards, PokerError, game::core::Round, Suit,
+    game::core::Round, init_logger, monte_carlo_equity::calc_equity_vs_random,
+    pre_calc::get_repo_root, Board, Card, CardValue, HoleCards, PokerError, Suit,
 };
 
 /*
@@ -33,21 +31,23 @@ fn main_impl() -> Result<(), PokerError> {
     Ok(())
 }
 
-fn simulate(round: Round, num_players: u8) -> Result<(), PokerError>
-{
-
+fn simulate(round: Round, num_players: u8) -> Result<(), PokerError> {
     //let round = Round::River;
-    let p  = get_repo_root().join(format!("python/from_rust/hole_card_data_{}_{}.csv", round, num_players));
-    
+    let p = get_repo_root().join(format!(
+        "python/from_rust/hole_card_data_{}_{}.csv",
+        round, num_players
+    ));
+
     let num_hands_to_simulate = 10_000;
 
-    info!("Creating {:?} for round {}, {} players {} simulations", &p, round, num_players, num_hands_to_simulate);
+    info!(
+        "Creating {:?} for round {}, {} players {} simulations",
+        &p, round, num_players, num_hands_to_simulate
+    );
 
-    fs::create_dir_all( p.parent().unwrap() ).unwrap();
+    fs::create_dir_all(p.parent().unwrap()).unwrap();
 
     let mut wtr = File::create(p).unwrap();
-
-    
 
     let board = Board::new();
 
@@ -70,17 +70,21 @@ fn simulate(round: Round, num_players: u8) -> Result<(), PokerError>
             line_values.push(format!("{}", hole_cards.simple_range_index()));
             line_values.push(format!("{}", hole_cards.simple_range_string()));
 
-            let eq = calc_equity_vs_random(&board, &hole_cards, num_players as usize, num_hands_to_simulate, round.get_num_board_cards())?;
-               
+            let eq = calc_equity_vs_random(
+                &board,
+                &hole_cards,
+                num_players as usize,
+                num_hands_to_simulate,
+                round.get_num_board_cards(),
+            )?;
+
             line_values.push(format!("{}", eq));
 
             wtr.write_all(line_values.join(",").as_bytes()).unwrap();
-            
+
             wtr.write_all(b"\n").unwrap();
         }
     }
 
     Ok(())
-
-   
 }

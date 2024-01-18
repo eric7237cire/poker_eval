@@ -4,10 +4,9 @@ use serde::Serialize;
 
 use crate::Board;
 
-
 use crate::HoleCards;
 
-use crate::game::core::{Round, Position, ChipType, PlayerAction, CommentedAction, ActionEnum};
+use crate::game::core::{ActionEnum, ChipType, CommentedAction, PlayerAction, Position, Round};
 
 /*
 Everything that is known to all players,
@@ -151,11 +150,7 @@ impl AgentDecisionHelpers {
         }
     }
 
-    pub fn build_bet(
-        &self,
-        bet: ChipType,
-        comment: String,
-    ) -> CommentedAction {
+    pub fn build_bet(&self, bet: ChipType, comment: String) -> CommentedAction {
         //Apply max (we can use raise since if we are betting, the amt we already put in is 0)
         let bet_amt = min(self.max_can_raise, bet);
 
@@ -163,7 +158,6 @@ impl AgentDecisionHelpers {
             action: ActionEnum::Bet(bet_amt),
             comment: Some(comment),
         }
-    
     }
 }
 
@@ -219,14 +213,17 @@ impl GameState {
     }
 
     pub fn num_players_at_round_start(&self) -> u8 {
-        self.player_states.iter().filter(|ps| {
-            if let Some(FinalPlayerState::Folded(round)) = ps.final_state {
-                //If they folded in this round then they count
-                round >= self.current_round
-            } else {
-                //not folded
-                true
-            }
-        }).count() as u8
+        self.player_states
+            .iter()
+            .filter(|ps| {
+                if let Some(FinalPlayerState::Folded(round)) = ps.final_state {
+                    //If they folded in this round then they count
+                    round >= self.current_round
+                } else {
+                    //not folded
+                    true
+                }
+            })
+            .count() as u8
     }
 }

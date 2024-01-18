@@ -1,24 +1,24 @@
-use std::{
-    cell::RefCell,
-    collections::{HashMap},
-    fs,
-    rc::Rc,
-};
+use std::{cell::RefCell, collections::HashMap, fs, rc::Rc};
 
 use log::debug;
 use num_format::{Locale, ToFormattedString};
 use poker_eval::{
-    game::{agents::{
-        build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
-        EqAgentConfig, Tag,
-    }, runner::GameRunnerSource},
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
     game::core::InitialPlayerState,
-    game::runner::{GameRunnerSourceEnum,  GameRunner, },
-    init_logger, Card, Deck, pre_calc::{perfect_hash::load_boomperfect_hash, get_repo_root},
+    game::runner::{GameRunner, GameRunnerSourceEnum},
+    game::{
+        agents::{
+            build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
+            EqAgentConfig, Tag,
+        },
+        runner::GameRunnerSource,
+    },
+    init_logger,
+    pre_calc::{get_repo_root, perfect_hash::load_boomperfect_hash},
+    Card, Deck,
 };
 use rand::seq::SliceRandom;
 
@@ -32,14 +32,13 @@ fn build_agents(
 
     let mut agents: Vec<Box<dyn Agent>> = Vec::new();
 
-    agents.push(Box::new(EqAgent::new(        
+    agents.push(Box::new(EqAgent::new(
         "EqAggroA",
         EqAgentConfig::get_aggressive(),
         flop_texture_db.clone(),
         partial_rank_db.clone(),
         monte_carlo_equity_db.clone(),
     )));
-    
 
     // agents.push(Box::new(PassiveCallingStation::new(
     //     None,
@@ -152,7 +151,10 @@ fn main() {
         );
         agents.shuffle(&mut agent_deck.rng);
 
-        let hero_index = agents.iter().position(|a| a.get_name() == hero_name).unwrap();
+        let hero_index = agents
+            .iter()
+            .position(|a| a.get_name() == hero_name)
+            .unwrap();
         set_agent_hole_cards(&mut agent_deck, &mut agents);
 
         let players: Vec<InitialPlayerState> = build_initial_players_from_agents(&agents);
@@ -165,16 +167,24 @@ fn main() {
             bb: 5,
         };
 
-
         let mut game_source = GameRunnerSourceEnum::from(agent_source);
 
-        let mut game_runner = GameRunner::new(game_source.get_initial_players(), game_source.get_small_blind(),
-    game_source.get_big_blind(), &board
-).unwrap();
+        let mut game_runner = GameRunner::new(
+            game_source.get_initial_players(),
+            game_source.get_small_blind(),
+            game_source.get_big_blind(),
+            &board,
+        )
+        .unwrap();
 
         for _ in 0..2000 {
             let action_count_before = game_runner.game_state.actions.len();
-            let action = game_source.get_action(game_runner.get_current_player_state(), &game_runner.game_state).unwrap();
+            let action = game_source
+                .get_action(
+                    game_runner.get_current_player_state(),
+                    &game_runner.game_state,
+                )
+                .unwrap();
             let r = game_runner.process_next_action(&action).unwrap();
             if r {
                 break;
@@ -196,10 +206,7 @@ fn main() {
         }
 
         if it_num % 100 == 0 {
-            debug!(
-                "Iteration {}",
-                it_num,
-            );
+            debug!("Iteration {}", it_num,);
         }
 
         let mut game_log = game_runner.to_game_log().unwrap();
@@ -215,9 +222,9 @@ fn main() {
         //     break;
         // }
 
-        let game_csv_line  = game_log.get_csv_line(hero_index,
-            it_num,
-             rcref_mcedb.clone(), &hash_func).unwrap();
+        let game_csv_line = game_log
+            .get_csv_line(hero_index, it_num, rcref_mcedb.clone(), &hash_func)
+            .unwrap();
         wtr.serialize(game_csv_line).unwrap();
         // for (c, it, _log) in heap.iter() {
         //     debug!(
@@ -227,7 +234,6 @@ fn main() {
         //         it,
         //     );
         // }
-
 
         //if we have enough hands and this hand is not worse than the worst hand
         // if heap.len() == num_worst_hands_to_keep && change > heap.peek().unwrap().0 {
@@ -264,8 +270,6 @@ fn main() {
         //     //panic!();
         // }
     }
-
-    
 
     // for (_i, (_change, it_num, mut game_log)) in heap.into_iter().enumerate() {
     //     // let file_path = hh_path.join(format!("{}.txt", it_num));

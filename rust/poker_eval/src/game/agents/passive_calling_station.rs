@@ -2,15 +2,15 @@ use std::{cell::RefCell, rc::Rc};
 
 use boomphf::Mphf;
 
+use super::Agent;
+use crate::game::core::{ActionEnum, CommentedAction, GameState, PlayerState, Round};
 use crate::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
     likes_hands::{likes_hand, LikesHandLevel},
     pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash},
-    BoolRange, HoleCards, 
+    BoolRange, HoleCards,
 };
-use crate::game::core::{PlayerState, GameState, CommentedAction, ActionEnum, Round};
-use super::Agent;
 
 //#[derive(Default)]
 pub struct PassiveCallingStation {

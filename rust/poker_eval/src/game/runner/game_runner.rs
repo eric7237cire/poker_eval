@@ -4,15 +4,15 @@
 
 use std::cmp::min;
 
+use crate::game::core::{
+    ActionEnum, ChipType, CommentedAction, FinalPlayerState, GameState, InitialPlayerState,
+    PlayerAction, PlayerState, Position, Round,
+};
 use crate::pre_calc::fast_eval::fast_hand_eval;
 use crate::pre_calc::perfect_hash::load_boomperfect_hash;
 use crate::pre_calc::rank::Rank;
-use crate::{set_used_card, Board, Card, game::runner::GameLog, };
-use crate:: {PokerError, CardUsedType, HoleCards};
-use crate::game::core::{
-    ActionEnum, ChipType, FinalPlayerState, GameState, PlayerState, 
-    Position, Round, InitialPlayerState, PlayerAction, CommentedAction
-};
+use crate::{game::runner::GameLog, set_used_card, Board, Card};
+use crate::{CardUsedType, HoleCards, PokerError};
 
 use crate::game::runner::{GameRunnerSource, GameRunnerSourceEnum};
 use boomphf::Mphf;
@@ -34,9 +34,12 @@ pub struct GameRunner {
 }
 
 impl GameRunner {
-    pub fn new(initial_players: &[InitialPlayerState], sb: ChipType, bb: ChipType, board_cards: &[Card]) -> Result<Self, PokerError> {
-        
-
+    pub fn new(
+        initial_players: &[InitialPlayerState],
+        sb: ChipType,
+        bb: ChipType,
+        board_cards: &[Card],
+    ) -> Result<Self, PokerError> {
         if initial_players.len() < 2 {
             return Err(PokerError::from_string(format!(
                 "Invalid number of players {}",
@@ -51,10 +54,7 @@ impl GameRunner {
 
         let game_state = GameState {
             player_states: player_states,
-            current_to_act: Position::first_to_act(
-                initial_players.len() as _,
-                Round::Preflop,
-            ),
+            current_to_act: Position::first_to_act(initial_players.len() as _, Round::Preflop),
             prev_round_pot: 0,
             round_pot: 0,
             current_to_call: bb,
@@ -76,9 +76,9 @@ impl GameRunner {
             let hole_cards = initial_players[player_index].cards.unwrap();
             hole_cards.set_used(&mut used_cards)?;
             player_cards.push(hole_cards);
-        }   
+        }
 
-        let mut board_cards = board_cards.to_vec();             
+        let mut board_cards = board_cards.to_vec();
         //because we pop off the end, we need to reverse to preserve that the 1st card passed is the 1st one used
         board_cards.reverse();
 
@@ -110,7 +110,6 @@ impl GameRunner {
 
         Ok(())
     }
-
 
     //Note this puts the difference in the pot
     //This is make total chips this player has put into the pot this round == amount
@@ -343,7 +342,6 @@ impl GameRunner {
             self.game_state.player_states[player_index].final_state =
                 Some(FinalPlayerState::EveryoneElseFolded);
 
-            
             return Ok(());
         }
 
@@ -374,10 +372,7 @@ impl GameRunner {
             let hole_cards = self.player_cards[player_index];
 
             let rank = fast_hand_eval(
-                self.game_state
-                    .board
-                    .get_iter()
-                    .chain(hole_cards.iter()),
+                self.game_state.board.get_iter().chain(hole_cards.iter()),
                 &self.hash_func,
             );
 
@@ -484,7 +479,6 @@ impl GameRunner {
                     player_state.final_state = Some(FinalPlayerState::LostShowdown);
                 }
             }
-            
         }
         Ok(())
     }
@@ -510,7 +504,6 @@ impl GameRunner {
         assert!(self.game_state.num_left_to_act > 0);
         self.game_state.num_left_to_act -= 1;
 
-        
         let action = decision.action;
 
         trace!(
@@ -545,8 +538,6 @@ impl GameRunner {
                         .cur_round_putting_in_pot
                         .unwrap_or(0),
                 );
-
-                
             }
             ActionEnum::Call(check_amt) => {
                 let amt_to_call = self.game_state.current_to_call;
@@ -563,7 +554,7 @@ impl GameRunner {
                 self.game_state.actions.push(self.build_player_action(
                     &self.game_state.player_states[player_index],
                     &action,
-                    &decision.comment.as_deref().unwrap_or("")
+                    &decision.comment.as_deref().unwrap_or(""),
                 ));
 
                 let actual_amt = self.handle_put_money_in_pot(player_index, amt_to_call)?;
@@ -594,7 +585,7 @@ impl GameRunner {
                 self.game_state.actions.push(self.build_player_action(
                     &self.game_state.player_states[player_index],
                     &action,
-                    &decision.comment.as_deref().unwrap_or("")
+                    &decision.comment.as_deref().unwrap_or(""),
                 ));
 
                 //this is also the amount increased from the bet
@@ -602,8 +593,6 @@ impl GameRunner {
                 //the next raise also has to increase by at least this amount
                 self.game_state.min_raise = increase_amt;
                 self.game_state.current_to_call = raise_amt;
-
-                
 
                 let amount_already_put = self.game_state.player_states[player_index]
                     .cur_round_putting_in_pot
@@ -661,13 +650,11 @@ impl GameRunner {
                 self.game_state.actions.push(self.build_player_action(
                     &self.game_state.player_states[player_index],
                     &action,
-                    &decision.comment.as_deref().unwrap_or("")
+                    &decision.comment.as_deref().unwrap_or(""),
                 ));
 
                 assert_eq!(0, self.game_state.current_to_call);
                 self.game_state.player_states[player_index].cur_round_putting_in_pot = Some(0);
-
-                
             }
             ActionEnum::Bet(bet_amt) => {
                 self.check_able_to_bet(bet_amt)?;
@@ -676,7 +663,7 @@ impl GameRunner {
                 self.game_state.actions.push(self.build_player_action(
                     &self.game_state.player_states[player_index],
                     &action,
-                    &decision.comment.as_deref().unwrap_or("")
+                    &decision.comment.as_deref().unwrap_or(""),
                 ));
 
                 self.game_state.min_raise = bet_amt;
@@ -725,10 +712,9 @@ impl GameRunner {
         let any_all_in = self.game_state.total_players_all_in > 0;
 
         //either only all in left or only 1 active left that is ok with the pot
-        if self.game_state.total_active_players <= 0 || (
-            self.game_state.num_left_to_act == 0 && 
-            self.game_state.total_active_players == 1)
-            {
+        if self.game_state.total_active_players <= 0
+            || (self.game_state.num_left_to_act == 0 && self.game_state.total_active_players == 1)
+        {
             trace!("Only all in player left, and we have at least 1 all in, advancing to river");
 
             assert!(any_all_in);
@@ -924,8 +910,7 @@ impl GameRunner {
             .player_states
             .iter()
             .map(|p| {
-                let hole_cards = self
-                    .player_cards[p.player_index()];
+                let hole_cards = self.player_cards[p.player_index()];
 
                 InitialPlayerState {
                     player_name: p.player_name.clone(),
@@ -976,7 +961,8 @@ mod tests {
     use log::debug;
 
     use crate::{
-        game::runner::{GameLog,GameLogSource, test_util::run_gamelog}, init_test_logger,  
+        game::runner::{test_util::run_gamelog, GameLog, GameLogSource},
+        init_test_logger,
     };
 
     use super::*;
@@ -1066,7 +1052,6 @@ Player D1 - 60 # Keeps what's left of his stack
         let game_log: GameLog = hh.parse().unwrap();
 
         let _ = run_gamelog(game_log);
-        
     }
 
     #[test]
@@ -1128,7 +1113,6 @@ W3 - 126 #
         assert_eq!(game_runner.game_state.player_states[0].stack, 70);
         assert_eq!(game_runner.game_state.player_states[1].stack, 126);
         assert_eq!(game_runner.game_state.player_states[4].stack, 126);
-        
     }
 
     #[test]

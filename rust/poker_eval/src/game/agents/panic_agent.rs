@@ -1,12 +1,6 @@
-
-
-
-
-use crate::{
-    HoleCards, 
-};
-use crate::game::core::{PlayerState, GameState, CommentedAction};
 use super::Agent;
+use crate::game::core::{CommentedAction, GameState, PlayerState};
+use crate::HoleCards;
 
 pub struct PanicAgent {
     pub hole_cards: Option<HoleCards>,
@@ -14,9 +8,7 @@ pub struct PanicAgent {
 }
 
 impl PanicAgent {
-    pub fn new(
-        name: &str,
-    ) -> Self {
+    pub fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
             hole_cards: None,
@@ -30,8 +22,6 @@ impl PanicAgent {
     ) -> CommentedAction {
         panic!("Panic Agent");
     }
-
-    
 }
 
 impl Agent for PanicAgent {

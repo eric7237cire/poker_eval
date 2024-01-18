@@ -25,7 +25,7 @@ impl Rank {
         }
     }
 
-    //The rest of the bits     
+    //The rest of the bits
     pub fn get_kicker(&self) -> u16 {
         let kicker_mask = (1 << RANK_FAMILY_OFFEST) - 1;
 
