@@ -1,15 +1,11 @@
-use std::{cell::RefCell, cmp::min, rc::Rc};
 
-use boomphf::Mphf;
+
+
 
 use crate::{
-    board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
-    board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
-    likes_hands::{likes_hand, LikesHandLevel, LikesHandResponse},
-    pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash},
-     HoleCards, 
+    HoleCards, 
 };
-use crate::game::core::{PlayerState, GameState, CommentedAction, ActionEnum, Round, PositionFamily};
+use crate::game::core::{PlayerState, GameState, CommentedAction};
 use super::Agent;
 
 pub struct PanicAgent {
@@ -29,8 +25,8 @@ impl PanicAgent {
 
     fn decide_preflop(
         &self,
-        player_state: &PlayerState,
-        game_state: &GameState,
+        _player_state: &PlayerState,
+        _game_state: &GameState,
     ) -> CommentedAction {
         panic!("Panic Agent");
     }
@@ -39,7 +35,7 @@ impl PanicAgent {
 }
 
 impl Agent for PanicAgent {
-    fn decide(&mut self, player_state: &PlayerState, game_state: &GameState) -> CommentedAction {
+    fn decide(&mut self, _player_state: &PlayerState, _game_state: &GameState) -> CommentedAction {
         panic!("Panic Agent");
     }
 

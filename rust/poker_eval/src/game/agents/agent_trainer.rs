@@ -1,13 +1,12 @@
 use std::{
     cell::RefCell,
-    collections::{BinaryHeap, HashMap},
+    collections::{HashMap},
     fs,
-    path::PathBuf,
     rc::Rc,
 };
 
 use log::debug;
-use num_format::{Locale, ToFormattedString};
+
 use crate::{
     game::agents::{
         build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
@@ -17,7 +16,7 @@ use crate::{
     board_hc_eval_cache_redb::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
-    init_logger, Card, Deck,  pre_calc::{perfect_hash::load_boomperfect_hash, get_repo_root}, game::core::InitialPlayerState, game::runner::{GameRunner, GameRunnerSourceEnum},
+    init_logger, Card, Deck,  pre_calc::{get_repo_root}, game::core::InitialPlayerState, game::runner::{GameRunner, GameRunnerSourceEnum},
 };
 use rand::seq::SliceRandom;
 
@@ -181,7 +180,7 @@ pub fn try_trainer() {
             assert_eq!(action_count_before + 1, action_count_after);
         }
 
-        let change = game_runner.game_state.player_states[hero_index].stack as i64
+        let _change = game_runner.game_state.player_states[hero_index].stack as i64
             - game_runner.game_state.player_states[hero_index].initial_stack as i64;
 
         

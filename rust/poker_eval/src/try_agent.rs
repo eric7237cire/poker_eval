@@ -1,8 +1,7 @@
 use std::{
     cell::RefCell,
-    collections::{BinaryHeap, HashMap},
+    collections::{HashMap},
     fs,
-    path::PathBuf,
     rc::Rc,
 };
 
@@ -18,7 +17,7 @@ use poker_eval::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
     game::core::InitialPlayerState,
-    game::runner::{GameRunnerSourceEnum, GameLog,  GameRunner, },
+    game::runner::{GameRunnerSourceEnum,  GameRunner, },
     init_logger, Card, Deck, pre_calc::{perfect_hash::load_boomperfect_hash, get_repo_root},
 };
 use rand::seq::SliceRandom;
@@ -120,7 +119,7 @@ fn main() {
     //let mut heap: BinaryHeap<(i64, i32, GameLog)> = BinaryHeap::new();
 
     let num_total_iterations = 20_000;
-    let num_worst_hands_to_keep = 5;
+    let _num_worst_hands_to_keep = 5;
     let num_players = 9;
     let hero_name = "EqAggroA";
     let mut winnings: HashMap<String, i64> = HashMap::new();
@@ -183,7 +182,7 @@ fn main() {
             assert_eq!(action_count_before + 1, action_count_after);
         }
 
-        let change = game_runner.game_state.player_states[hero_index].stack as i64
+        let _change = game_runner.game_state.player_states[hero_index].stack as i64
             - game_runner.game_state.player_states[hero_index].initial_stack as i64;
 
         for p in game_runner.game_state.player_states.iter() {
