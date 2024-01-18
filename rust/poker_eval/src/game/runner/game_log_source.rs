@@ -7,7 +7,6 @@ use crate::game::runner::{GameRunnerSource, GameLog};
 pub struct GameLogSource {
     game_log: GameLog,
     cur_action: usize,
-    cur_board_card: usize,
 }
 
 impl GameLogSource {
@@ -15,7 +14,6 @@ impl GameLogSource {
         GameLogSource {
             game_log,
             cur_action: 0,
-            cur_board_card: 0,
         }
     }
 }
@@ -85,17 +83,7 @@ impl GameRunnerSource for GameLogSource {
             )))
     }
 
-    fn get_next_board_card(&mut self) -> Result<Card, PokerError> {
-        if self.cur_board_card >= self.game_log.board.len() {
-            return Err(PokerError::from_string(format!(
-                "Invalid board card index {}",
-                self.cur_board_card
-            )));
-        }
-        let card = self.game_log.board[self.cur_board_card];
-        self.cur_board_card += 1;
-        Ok(card)
-    }
+    
 
     
 }

@@ -1026,7 +1026,7 @@ impl Eq for GameLog {}
 
 #[cfg(test)]
 mod tests {
-    use crate::{init_test_logger, pre_calc::perfect_hash::load_boomperfect_hash,  HoleCards, game::runner::{GameLogSource, GameRunner, GameRunnerSourceEnum}};
+    use crate::{init_test_logger, pre_calc::perfect_hash::load_boomperfect_hash,  HoleCards, game::runner::{GameLogSource, GameRunner, GameRunnerSourceEnum, GameRunnerSource, test_util::run_gamelog}};
 
     use super::*;
 
@@ -1322,16 +1322,14 @@ Agent 4               - 495 # Started with 500 change -5
         let hash_func = load_boomperfect_hash();
 
         //We run it through the game runner to have all fields filled in
-        let game_log_source: GameLogSource = GameLogSource::new(parsed_game_log);
+        //let board = parsed_game_log.board.clone();
+        //let game_log_source: GameLogSource = GameLogSource::new(parsed_game_log);
 
-        let mut game_runner2 = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
-
-        for _ in 0..200 {
-            let r = game_runner2.process_next_action().unwrap();
-            if r {
-                break;
-            }
-        }
+        //let mut game_runner2 = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
+        //let game_log_source = GameLogSource::new(game_log);
+    
+        //let mut game_source = GameRunnerSourceEnum::from(game_log_source);
+        let mut game_runner2 = run_gamelog(parsed_game_log);
 
         let log2 = game_runner2
             .to_game_log()

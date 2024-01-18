@@ -31,7 +31,5 @@ pub trait GameRunnerSource {
     //get cards for player?
     fn get_hole_cards(&self, player_index: usize) -> Result<HoleCards, PokerError>;
 
-    //get board cards?
-    fn get_next_board_card(&mut self) -> Result<Card, PokerError>;
 
 }

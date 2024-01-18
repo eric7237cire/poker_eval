@@ -17,8 +17,6 @@ pub struct AgentSource {
     pub sb: ChipType,
     pub bb: ChipType,
 
-    //depending on the game, maybe this is 0, 3, 4, 5 cards
-    pub board: Vec<Card>,
 }
 
 impl GameRunnerSource for AgentSource {
@@ -51,15 +49,7 @@ impl GameRunnerSource for AgentSource {
         })
     }
     
-    fn get_next_board_card(&mut self) -> Result<Card, PokerError> {
-        if self.board.is_empty() {
-            return Err(PokerError::from_string(format!(
-                "No more board cards to provide"
-            )));
-        }
-        let card = self.board.pop().unwrap();
-        Ok(card)
-    }
+    
 
 }
 

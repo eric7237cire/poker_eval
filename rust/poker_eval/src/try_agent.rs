@@ -8,10 +8,10 @@ use std::{
 use log::debug;
 use num_format::{Locale, ToFormattedString};
 use poker_eval::{
-    game::agents::{
+    game::{agents::{
         build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
         EqAgentConfig, Tag,
-    },
+    }, runner::GameRunnerSource},
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
@@ -163,14 +163,19 @@ fn main() {
             players,
             sb: 2,
             bb: 5,
-            board,
         };
 
-        let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(agent_source)).unwrap();
+
+        let mut game_source = GameRunnerSourceEnum::from(agent_source);
+
+        let mut game_runner = GameRunner::new(game_source.get_initial_players(), game_source.get_small_blind(),
+    game_source.get_big_blind(), &board
+).unwrap();
 
         for _ in 0..2000 {
             let action_count_before = game_runner.game_state.actions.len();
-            let r = game_runner.process_next_action().unwrap();
+            let action = game_source.get_action(game_runner.get_current_player_state(), &game_runner.game_state).unwrap();
+            let r = game_runner.process_next_action(&action).unwrap();
             if r {
                 break;
             }

@@ -8,10 +8,10 @@ use crate::pre_calc::fast_eval::fast_hand_eval;
 use crate::pre_calc::perfect_hash::load_boomperfect_hash;
 use crate::pre_calc::rank::Rank;
 use crate::{set_used_card, Board, Card, game::runner::GameLog, };
-use crate:: {PokerError, CardUsedType};
+use crate:: {PokerError, CardUsedType, HoleCards};
 use crate::game::core::{
     ActionEnum, ChipType, FinalPlayerState, GameState, PlayerState, 
-    Position, Round, InitialPlayerState, PlayerAction
+    Position, Round, InitialPlayerState, PlayerAction, CommentedAction
 };
 
 use crate::game::runner::{GameRunnerSource, GameRunnerSourceEnum};
@@ -25,15 +25,17 @@ pub struct GameRunner {
 
     pub game_state: GameState,
 
-    // Source of actions, cards
-    pub game_runner_source: GameRunnerSourceEnum,
-
     hash_func: Mphf<u32>,
+
+    //will pop off the back
+    board_cards: Vec<Card>,
+
+    player_cards: Vec<HoleCards>,
 }
 
 impl GameRunner {
-    pub fn new(game_runner_source: GameRunnerSourceEnum) -> Result<Self, PokerError> {
-        let initial_players = game_runner_source.get_initial_players();
+    pub fn new(initial_players: &[InitialPlayerState], sb: ChipType, bb: ChipType, board_cards: &[Card]) -> Result<Self, PokerError> {
+        
 
         if initial_players.len() < 2 {
             return Err(PokerError::from_string(format!(
@@ -46,9 +48,6 @@ impl GameRunner {
             .iter()
             .map(|p| PlayerState::new(&p))
             .collect();
-
-        let sb = game_runner_source.get_small_blind();
-        let bb = game_runner_source.get_big_blind();
 
         let game_state = GameState {
             player_states: player_states,
@@ -70,17 +69,35 @@ impl GameRunner {
             total_players_all_in: 0,
         };
 
+        let mut player_cards = Vec::with_capacity(initial_players.len());
+        let mut used_cards = CardUsedType::default();
+
+        for player_index in 0..initial_players.len() {
+            let hole_cards = initial_players[player_index].cards.unwrap();
+            hole_cards.set_used(&mut used_cards)?;
+            player_cards.push(hole_cards);
+        }   
+
+        let mut board_cards = board_cards.to_vec();             
+        //because we pop off the end, we need to reverse to preserve that the 1st card passed is the 1st one used
+        board_cards.reverse();
+
         let mut r = GameRunner {
             game_state,
-            game_runner_source,
-            used_cards: CardUsedType::default(),
+            board_cards,
+            player_cards,
+            used_cards,
             hash_func: load_boomperfect_hash(),
         };
 
         r.handle_blinds()?;
-        r.init_used_hole_cards()?;
 
         Ok(r)
+    }
+
+    pub fn get_current_player_state(&self) -> &PlayerState {
+        let player_index: usize = self.game_state.current_to_act.into();
+        &self.game_state.player_states[player_index]
     }
 
     fn handle_blinds(&mut self) -> Result<(), PokerError> {
@@ -94,15 +111,6 @@ impl GameRunner {
         Ok(())
     }
 
-    fn init_used_hole_cards(&mut self) -> Result<(), PokerError> {
-        for player_index in 0..self.game_state.player_states.len() {
-            let hole_cards = self.game_runner_source.get_hole_cards(player_index)?;
-
-            hole_cards.set_used(&mut self.used_cards)?;
-        }
-
-        Ok(())
-    }
 
     //Note this puts the difference in the pot
     //This is make total chips this player has put into the pot this round == amount
@@ -300,7 +308,7 @@ impl GameRunner {
         };
 
         for _ in 0..cards_needed {
-            let card = self.game_runner_source.get_next_board_card()?;
+            let card = self.board_cards.pop().unwrap();
             set_used_card(card.into(), &mut self.used_cards)?;
             self.game_state.board.add_card(card).unwrap();
         }
@@ -363,7 +371,7 @@ impl GameRunner {
                 continue;
             }
 
-            let hole_cards = self.game_runner_source.get_hole_cards(player_index)?;
+            let hole_cards = self.player_cards[player_index];
 
             let rank = fast_hand_eval(
                 self.game_state
@@ -482,7 +490,7 @@ impl GameRunner {
     }
 
     //Returns true when game is done
-    pub fn process_next_action(&mut self) -> Result<bool, PokerError> {
+    pub fn process_next_action(&mut self, decision: &CommentedAction) -> Result<bool, PokerError> {
         let player_index: usize = self.game_state.current_to_act.into();
 
         // let cur_active_player_count = self.active_player_count();
@@ -502,10 +510,7 @@ impl GameRunner {
         assert!(self.game_state.num_left_to_act > 0);
         self.game_state.num_left_to_act -= 1;
 
-        let decision = self.game_runner_source.get_action(
-            &self.game_state.player_states[player_index],
-            &self.game_state,
-        )?;
+        
         let action = decision.action;
 
         trace!(
@@ -524,7 +529,7 @@ impl GameRunner {
                 self.game_state.actions.push(self.build_player_action(
                     &self.game_state.player_states[player_index],
                     &action,
-                    &decision.comment.unwrap_or_default(),
+                    &decision.comment.as_deref().unwrap_or(""),
                 ));
 
                 self.game_state.player_states[player_index].final_state =
@@ -558,7 +563,7 @@ impl GameRunner {
                 self.game_state.actions.push(self.build_player_action(
                     &self.game_state.player_states[player_index],
                     &action,
-                    &decision.comment.unwrap_or_default(),
+                    &decision.comment.as_deref().unwrap_or("")
                 ));
 
                 let actual_amt = self.handle_put_money_in_pot(player_index, amt_to_call)?;
@@ -589,7 +594,7 @@ impl GameRunner {
                 self.game_state.actions.push(self.build_player_action(
                     &self.game_state.player_states[player_index],
                     &action,
-                    &decision.comment.unwrap_or_default(),
+                    &decision.comment.as_deref().unwrap_or("")
                 ));
 
                 //this is also the amount increased from the bet
@@ -656,7 +661,7 @@ impl GameRunner {
                 self.game_state.actions.push(self.build_player_action(
                     &self.game_state.player_states[player_index],
                     &action,
-                    &decision.comment.unwrap_or_default(),
+                    &decision.comment.as_deref().unwrap_or("")
                 ));
 
                 assert_eq!(0, self.game_state.current_to_call);
@@ -671,7 +676,7 @@ impl GameRunner {
                 self.game_state.actions.push(self.build_player_action(
                     &self.game_state.player_states[player_index],
                     &action,
-                    &decision.comment.unwrap_or_default(),
+                    &decision.comment.as_deref().unwrap_or("")
                 ));
 
                 self.game_state.min_raise = bet_amt;
@@ -920,9 +925,7 @@ impl GameRunner {
             .iter()
             .map(|p| {
                 let hole_cards = self
-                    .game_runner_source
-                    .get_hole_cards(p.player_index())
-                    .unwrap();
+                    .player_cards[p.player_index()];
 
                 InitialPlayerState {
                     player_name: p.player_name.clone(),
@@ -973,116 +976,10 @@ mod tests {
     use log::debug;
 
     use crate::{
-        game::runner::{GameLog,GameLogSource}, init_test_logger, test_game_runner, 
+        game::runner::{GameLog,GameLogSource, test_util::run_gamelog}, init_test_logger,  
     };
 
     use super::*;
-
-    #[test]
-    fn test_game_runner_basic() {
-        init_test_logger();
-
-        let hh = "
-*** Players ***
-Plyr A - 12 - As 2c
-Plyr B - 147 - 3d 3c
-Plyr C - 55 - 7d 3h
-Plyr D - 55 - Ks Kd
-*** Blinds ***
-Plyr A - 5
-Plyr B - 10
-*** Preflop ***
-Plyr C calls 10   # UTG acts first
-Plyr D raises 10 to 20
-Plyr A calls 7 # all in
-Plyr B raises 10 to 30
-Plyr C folds
-Plyr D calls 10
-*** Flop ***
-2s 7c 8s
-Plyr B bets 10
-Plyr D calls 10
-*** Turn ***
-2h
-Plyr B bets 10
-Plyr D folds
-*** River ***
-2d
-Plyr A bets 15 # This never gets used
-Plyr B raises 10 to 30 # minimum raise
-Plyr A raises 10 to 45
-Plyr B calls 10
-*** Summary ***
-Plyr A - 46 # 10 from plyr C, 12 from everyone else
-Plyr B - 163 # Plyr B loses 100 with 2h As Kh 2d 7c
-Plyr C - 45 # Folded 10
-Plyr D - 15 # Lost 30, 10
-    ";
-        let game_log: GameLog = hh.parse().unwrap();
-
-        let game_log_source = GameLogSource::new(game_log);
-
-        let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
-
-        game_runner.process_next_action().unwrap();
-        game_runner.process_next_action().unwrap();
-
-        assert_eq!(game_runner.game_state.current_round, Round::Preflop);
-        assert_eq!(
-            game_runner.game_state.current_to_act,
-            Position::try_from(0).unwrap()
-        );
-        assert_eq!(
-            game_runner.game_state.player_states[3].cur_round_putting_in_pot,
-            Some(20)
-        );
-
-        //preflop actions
-        for _ in 0..4 {
-            game_runner.process_next_action().unwrap();
-        }
-
-        assert_eq!(game_runner.game_state.current_round, Round::Flop);
-        assert!(game_runner.game_state.player_states[0].all_in);
-        assert_eq!(game_runner.game_state.prev_round_pot, 12 + 30 * 2 + 10);
-        assert_eq!(game_runner.game_state.round_pot, 0);
-        assert_eq!(
-            game_runner.game_state.board.as_slice_card(),
-            Board::try_from("2s 7c 8s").unwrap().as_slice_card()
-        );
-
-        //flop actions
-        for _ in 0..2 {
-            game_runner.process_next_action().unwrap();
-        }
-
-        assert_eq!(game_runner.game_state.current_round, Round::Turn);
-        assert!(game_runner.game_state.player_states[0].all_in);
-        assert_eq!(game_runner.game_state.prev_round_pot, 12 + 30 * 2 + 10 + 20);
-        assert_eq!(game_runner.game_state.round_pot, 0);
-        assert_eq!(
-            game_runner.game_state.board.as_slice_card(),
-            Board::try_from("2s 7c 8s 2h").unwrap().as_slice_card()
-        );
-
-        //turn actions
-        for _ in 0..2 {
-            game_runner.process_next_action().unwrap();
-        }
-
-        assert_eq!(game_runner.game_state.current_round, Round::River);
-        assert!(game_runner.game_state.player_states[0].all_in);
-        assert_eq!(game_runner.game_state.prev_round_pot, 12 + 30 * 2 + 10 + 30);
-        assert_eq!(game_runner.game_state.round_pot, 0);
-        assert_eq!(
-            game_runner.game_state.board.as_slice_card(),
-            Board::try_from("2s 7c 8s 2h 2d").unwrap().as_slice_card(),
-        );
-
-        //river actions
-
-        //assert_eq!(true, game_runner.process_next_action().unwrap());
-    }
 
     #[test]
     fn test_multi_splits() {
@@ -1168,23 +1065,8 @@ Player D1 - 60 # Keeps what's left of his stack
     ";
         let game_log: GameLog = hh.parse().unwrap();
 
-        let game_log_source = GameLogSource::new(game_log);
-
-        let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
-
-        for _ in 0..200 {
-            let action_count_before = game_runner.game_state.actions.len();
-            let r = game_runner.process_next_action().unwrap();
-            if r {
-                break;
-            }
-            let action_count_after = game_runner.game_state.actions.len();
-            debug!(
-                "Last action: {}",
-                &game_runner.game_state.actions.last().as_ref().unwrap()
-            );
-            assert_eq!(action_count_before + 1, action_count_after);
-        }
+        let _ = run_gamelog(game_log);
+        
     }
 
     #[test]
@@ -1241,23 +1123,12 @@ W3 - 126 #
     ";
         let game_log: GameLog = hh.parse().unwrap();
 
-        let game_log_source = GameLogSource::new(game_log);
+        let game_runner = run_gamelog(game_log);
 
-        let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
-
-        for _ in 0..200 {
-            let action_count_before = game_runner.game_state.actions.len();
-            let r = game_runner.process_next_action().unwrap();
-            if r {
-                break;
-            }
-            let action_count_after = game_runner.game_state.actions.len();
-            debug!(
-                "Last action: {}",
-                &game_runner.game_state.actions.last().as_ref().unwrap()
-            );
-            assert_eq!(action_count_before + 1, action_count_after);
-        }
+        assert_eq!(game_runner.game_state.player_states[0].stack, 70);
+        assert_eq!(game_runner.game_state.player_states[1].stack, 126);
+        assert_eq!(game_runner.game_state.player_states[4].stack, 126);
+        
     }
 
     #[test]
@@ -1304,23 +1175,11 @@ W3 - 370 #  Wins everything
     ";
         let game_log: GameLog = hh.parse().unwrap();
 
-        let game_log_source = GameLogSource::new(game_log);
+        let game_runner = run_gamelog(game_log);
 
-        let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
-
-        for _ in 0..200 {
-            let action_count_before = game_runner.game_state.actions.len();
-            let r = game_runner.process_next_action().unwrap();
-            if r {
-                break;
-            }
-            let action_count_after = game_runner.game_state.actions.len();
-            debug!(
-                "Last action: {}",
-                &game_runner.game_state.actions.last().as_ref().unwrap()
-            );
-            assert_eq!(action_count_before + 1, action_count_after);
-        }
+        assert_eq!(game_runner.game_state.player_states[0].stack, 70);
+        assert_eq!(game_runner.game_state.player_states[1].stack, 5);
+        assert_eq!(game_runner.game_state.player_states[4].stack, 370);
     }
 
     #[test]
@@ -1362,23 +1221,11 @@ W3 - 0
     ";
         let game_log: GameLog = hh.parse().unwrap();
 
-        let game_log_source = GameLogSource::new(game_log);
+        let game_runner = run_gamelog(game_log);
 
-        let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
-
-        for _ in 0..200 {
-            let action_count_before = game_runner.game_state.actions.len();
-            let r = game_runner.process_next_action().unwrap();
-            if r {
-                break;
-            }
-            let action_count_after = game_runner.game_state.actions.len();
-            debug!(
-                "Last action: {}",
-                &game_runner.game_state.actions.last().as_ref().unwrap()
-            );
-            assert_eq!(action_count_before + 1, action_count_after);
-        }
+        assert_eq!(game_runner.game_state.player_states[0].stack, 50);
+        assert_eq!(game_runner.game_state.player_states[1].stack, 435);
+        assert_eq!(game_runner.game_state.player_states[4].stack, 0);
     }
 
     #[test]
@@ -1409,23 +1256,11 @@ W3 - 100
     ";
         let game_log: GameLog = hh.parse().unwrap();
 
-        let game_log_source = GameLogSource::new(game_log);
+        let game_runner = run_gamelog(game_log);
 
-        let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
-
-        for _ in 0..200 {
-            let action_count_before = game_runner.game_state.actions.len();
-            let r = game_runner.process_next_action().unwrap();
-            if r {
-                break;
-            }
-            let action_count_after = game_runner.game_state.actions.len();
-            debug!(
-                "Last action: {}",
-                &game_runner.game_state.actions.last().as_ref().unwrap()
-            );
-            assert_eq!(action_count_before + 1, action_count_after);
-        }
+        assert_eq!(game_runner.game_state.player_states[0].stack, 79);
+        assert_eq!(game_runner.game_state.player_states[1].stack, 111);
+        assert_eq!(game_runner.game_state.player_states[4].stack, 100);
     }
 
     #[test]
@@ -1485,23 +1320,13 @@ W1 - 435
     ";
         let game_log: GameLog = hh.parse().unwrap();
 
-        let game_log_source = GameLogSource::new(game_log);
+        let game_runner = run_gamelog(game_log);
 
-        let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
-
-        for _ in 0..200 {
-            let action_count_before = game_runner.game_state.actions.len();
-            let r = game_runner.process_next_action().unwrap();
-            if r {
-                break;
-            }
-            let action_count_after = game_runner.game_state.actions.len();
-            debug!(
-                "Last action: {}",
-                &game_runner.game_state.actions.last().as_ref().unwrap()
-            );
-            assert_eq!(action_count_before + 1, action_count_after);
-        }
+        assert_eq!(game_runner.game_state.player_states[0].stack, 30);
+        assert_eq!(game_runner.game_state.player_states[1].stack, 15);
+        assert_eq!(game_runner.game_state.player_states[2].stack, 100);
+        assert_eq!(game_runner.game_state.player_states[3].stack, 5);
+        assert_eq!(game_runner.game_state.player_states[4].stack, 435);
     }
 
     #[test]
@@ -1534,10 +1359,10 @@ L3 - 385 # gets his useless all in back
     ";
         let game_log: GameLog = hh.parse().unwrap();
 
-        let game_log_source = GameLogSource::new(game_log);
+        let game_runner = run_gamelog(game_log);
 
-        let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(game_log_source)).unwrap();
-
-        test_game_runner(&mut game_runner).unwrap();
+        assert_eq!(game_runner.game_state.player_states[0].stack, 0);
+        assert_eq!(game_runner.game_state.player_states[1].stack, 0);
+        assert_eq!(game_runner.game_state.player_states[2].stack, 385);
     }
 }

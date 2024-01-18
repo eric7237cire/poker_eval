@@ -8,15 +8,15 @@ use std::{
 use log::debug;
 
 use crate::{
-    game::agents::{
+    game::{agents::{
         build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
         EqAgentConfig, Tag,
-    },
+    }, runner::GameRunner},
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
-    init_logger, Card, Deck,  pre_calc::get_repo_root, game::core::InitialPlayerState, game::runner::{GameRunner, GameRunnerSourceEnum},
+    init_logger, Card, Deck,  pre_calc::get_repo_root, game::core::InitialPlayerState, game::runner::{ GameRunnerSourceEnum},
 };
 use rand::seq::SliceRandom;
 
@@ -133,7 +133,7 @@ pub fn try_trainer() {
     
     let json_hh_path = repo_root.join("vue-poker/src/assets/hand_history");
     
-    let mut json_filenames = Vec::new();
+    //let mut json_filenames = Vec::new();
 
     let hero_name = "PanicAgent";
 
@@ -159,63 +159,62 @@ pub fn try_trainer() {
             players,
             sb: 2,
             bb: 5,
-            board,
         };
 
-        let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(agent_source)).unwrap();
+        // let mut game_runner = GameRunner::new(GameRunnerSourceEnum::from(agent_source)).unwrap();
 
-        for _ in 0..2000 {
-            let action_count_before = game_runner.game_state.actions.len();
+        // for _ in 0..2000 {
+        //     let action_count_before = game_runner.game_state.actions.len();
 
-            //If the game runner is on the 'panic agent', we need to provide it a different action based on what is possible
-            let r = game_runner.process_next_action().unwrap();
-            if r {
-                break;
-            }
-            let action_count_after = game_runner.game_state.actions.len();
-            // debug!(
-            //     "Last action: {}",
-            //     &game_runner.game_state.actions.last().as_ref().unwrap()
-            // );
-            assert_eq!(action_count_before + 1, action_count_after);
-        }
+        //     //If the game runner is on the 'panic agent', we need to provide it a different action based on what is possible
+        //     let r = game_runner.process_next_action().unwrap();
+        //     if r {
+        //         break;
+        //     }
+        //     let action_count_after = game_runner.game_state.actions.len();
+        //     // debug!(
+        //     //     "Last action: {}",
+        //     //     &game_runner.game_state.actions.last().as_ref().unwrap()
+        //     // );
+        //     assert_eq!(action_count_before + 1, action_count_after);
+        // }
 
-        let _change = game_runner.game_state.player_states[hero_index].stack as i64
-            - game_runner.game_state.player_states[hero_index].initial_stack as i64;
+        // let _change = game_runner.game_state.player_states[hero_index].stack as i64
+        //     - game_runner.game_state.player_states[hero_index].initial_stack as i64;
 
         
 
-        if it_num % 100 == 0 {
-            debug!(
-                "Iteration {}",
-                it_num,
-            );
-        }
+        // if it_num % 100 == 0 {
+        //     debug!(
+        //         "Iteration {}",
+        //         it_num,
+        //     );
+        // }
 
-        let mut game_log = game_runner.to_game_log().unwrap();
+        // let mut game_log = game_runner.to_game_log().unwrap();
 
-        game_log.calc_best_hands();
-        let json_str = serde_json::to_string_pretty(&game_log).unwrap();
-        let json_filename = format!("{}.json", it_num);
-        let file_path = json_hh_path.join(&json_filename);
-        json_filenames.push(json_filename);
-        fs::write(file_path, json_str).unwrap();
+        // game_log.calc_best_hands();
+        // let json_str = serde_json::to_string_pretty(&game_log).unwrap();
+        // let json_filename = format!("{}.json", it_num);
+        // let file_path = json_hh_path.join(&json_filename);
+        // json_filenames.push(json_filename);
+        // fs::write(file_path, json_str).unwrap();
 
     }
 
     
 
-    let mut overview: HashMap<String, serde_json::Value> = HashMap::new();
-    overview.insert(
-        "json_filenames".to_string(),
-        serde_json::to_value(json_filenames).unwrap(),
-    );
-    let overview_filename = json_hh_path.join("overview.json");
-    fs::write(
-        overview_filename,
-        serde_json::to_string_pretty(&overview).unwrap(),
-    )
-    .unwrap();
+    // let mut overview: HashMap<String, serde_json::Value> = HashMap::new();
+    // overview.insert(
+    //     "json_filenames".to_string(),
+    //     serde_json::to_value(json_filenames).unwrap(),
+    // );
+    // let overview_filename = json_hh_path.join("overview.json");
+    // fs::write(
+    //     overview_filename,
+    //     serde_json::to_string_pretty(&overview).unwrap(),
+    // )
+    // .unwrap();
 
     
 
