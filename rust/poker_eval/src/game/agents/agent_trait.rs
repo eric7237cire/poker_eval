@@ -1,4 +1,5 @@
-use crate::{CommentedAction, GameState, HoleCards, PlayerState};
+use crate::{HoleCards, game::core::{PlayerState, GameState, CommentedAction}};
+
 
 pub trait Agent {
     //Get hand cards with index_to_card_pair

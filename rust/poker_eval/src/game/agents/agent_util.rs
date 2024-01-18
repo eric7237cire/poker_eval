@@ -1,4 +1,4 @@
-use crate::{Card, Deck, HoleCards, InitialPlayerState, Position};
+use crate::{Card, Deck, HoleCards, game::core::{InitialPlayerState, Position}, };
 
 use super::Agent;
 

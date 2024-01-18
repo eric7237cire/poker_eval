@@ -2,9 +2,8 @@ use crate::{Board, HoleCards};
 use log::trace;
 use regex::Regex;
 
-use crate::{Card, ChipType, InitialPlayerState, PlayerAction, PokerError, Round};
-
-use super::action;
+use crate::{Card, PokerError,};
+use crate::game::core::{ChipType, InitialPlayerState, PlayerAction, Round, ActionEnum};
 
 pub struct GameLogParser {
     pub section_name_regex: Regex,
@@ -369,16 +368,16 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             //trace!("Action: {}", action_str);
 
             let action = match action_str {
-                "checks" => action::ActionEnum::Check,
-                "bets" => action::ActionEnum::Bet(self.parse_chip_amount(remaining_str)?),
+                "checks" => ActionEnum::Check,
+                "bets" => ActionEnum::Bet(self.parse_chip_amount(remaining_str)?),
 
-                "folds" => action::ActionEnum::Fold,
-                "calls" => action::ActionEnum::Call(self.parse_chip_amount(remaining_str)?),
+                "folds" => ActionEnum::Fold,
+                "calls" => ActionEnum::Call(self.parse_chip_amount(remaining_str)?),
                 "raises" => {
                     let increase = self.parse_chip_amount(remaining_str)?;
                     self.parse_word(remaining_str)?; // to
                     let amount = self.parse_chip_amount(remaining_str)?;
-                    action::ActionEnum::Raise(increase, amount)
+                    ActionEnum::Raise(increase, amount)
                 }
                 _ => {
                     return Err(PokerError::from_string(format!(

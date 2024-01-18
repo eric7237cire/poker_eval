@@ -4,11 +4,7 @@ use std::io::Write;
 use log::debug;
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::game::game_runner_source::GameRunnerSourceEnum;
-#[cfg(not(target_arch = "wasm32"))]
-use crate::game_log_source::GameLogSource;
-#[cfg(not(target_arch = "wasm32"))]
-use crate::{GameLog, GameRunner};
+use crate::game::runner::{GameLog, GameRunner, GameLogSource, GameRunnerSourceEnum,};
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::PokerError;

@@ -9,7 +9,7 @@ use poker_eval::{
     init_logger,
     monte_carlo_equity::calc_equity_vs_random,
     pre_calc::get_repo_root,
-    Board, Card, CardValue, HoleCards, PokerError, Round, Suit,
+    Board, Card, CardValue, HoleCards, PokerError, game::core::Round, Suit,
 };
 
 /*

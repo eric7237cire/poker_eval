@@ -10,7 +10,7 @@ use crate::{
     likes_hands::likes_hand,
     monte_carlo_equity::get_equivalent_hole_board,
     pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash},
-    ActionEnum, BoolRange, CommentedAction, GameState, HoleCards, PlayerState, Round,
+     BoolRange,  HoleCards, game::core::{PlayerState, GameState, CommentedAction, ActionEnum, Round, PositionFamily}, 
 };
 
 use super::Agent;
@@ -283,11 +283,11 @@ impl EqAgent {
         let position_family = player_state.position.get_position_family(num_players);
 
         let range_to_use = match position_family {
-            crate::PositionFamily::UTG => &self.agent_config.early_position_range,
-            crate::PositionFamily::Middle => &self.agent_config.mid_position_range,
-            crate::PositionFamily::Late => &self.agent_config.late_position_range,
-            crate::PositionFamily::Button => &self.agent_config.button_range,
-            crate::PositionFamily::Blinds => &self.agent_config.button_range,
+            PositionFamily::UTG => &self.agent_config.early_position_range,
+            PositionFamily::Middle => &self.agent_config.mid_position_range,
+            PositionFamily::Late => &self.agent_config.late_position_range,
+            PositionFamily::Button => &self.agent_config.button_range,
+            PositionFamily::Blinds => &self.agent_config.button_range,
         };
 
         let helpers = player_state.get_helpers(game_state);

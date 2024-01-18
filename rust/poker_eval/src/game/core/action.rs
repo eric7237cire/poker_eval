@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 
 use serde::Serialize;
 
-use crate::{ChipType, Round};
+use crate::game::core::{ChipType, Round};
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize)]
 pub enum ActionEnum {

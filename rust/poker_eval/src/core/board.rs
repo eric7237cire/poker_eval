@@ -3,7 +3,8 @@ use std::{fmt::Display, iter::Cloned, slice::Iter, str::FromStr};
 
 use num_integer::binomial;
 
-use crate::{Card, Deck, HoleCards, PokerError, Round};
+use crate::{Card, Deck, HoleCards, PokerError};
+use crate::game::core::Round;
 
 pub struct Board {
     cards: Vec<Card>,

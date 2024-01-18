@@ -10,23 +10,19 @@ use itertools::Itertools;
 use log::trace;
 use serde::Serialize;
 
-use crate::ActionEnum;
 use crate::Card;
-use crate::FinalPlayerState;
-
-use crate::InitialPlayerState;
 use crate::OldRank;
 use crate::board_hc_eval_cache_redb::EvalCacheWithHcReDb;
 use crate::board_hc_eval_cache_redb::ProduceMonteCarloEval;
-use crate::game::game_log_parser::GameLogParser;
+use crate::game::runner::GameLogParser;
 use crate::monte_carlo_equity::get_equivalent_hole_board;
 use crate::pre_calc::fast_eval::fast_hand_eval;
 use crate::pre_calc::rank::Rank;
 use crate::rank_cards;
-use crate::ChipType;
-use crate::PlayerAction;
 use crate::PokerError;
-use crate::Round;
+
+
+use crate::game::core::{Round, PlayerAction, ChipType, InitialPlayerState, FinalPlayerState, ActionEnum};
 
 
 
@@ -1030,7 +1026,7 @@ impl Eq for GameLog {}
 
 #[cfg(test)]
 mod tests {
-    use crate::{init_test_logger, ActionEnum, pre_calc::perfect_hash::load_boomperfect_hash, game_log_source::GameLogSource, game_runner_source::GameRunnerSourceEnum, GameRunner, HoleCards};
+    use crate::{init_test_logger, pre_calc::perfect_hash::load_boomperfect_hash,  HoleCards, runner::{GameLogSource, GameRunner, GameRunnerSourceEnum}};
 
     use super::*;
 

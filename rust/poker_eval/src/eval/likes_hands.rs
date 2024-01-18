@@ -7,8 +7,9 @@ use std::{
 use crate::{
     pre_calc::rank::{Rank, RankEnum},
     Board, BoardTexture, CardValue, FlushDrawType, HoleCards, MadeWith, PartialRankContainer,
-    PokerError, Round, StraightDrawType,
+    PokerError, StraightDrawType,
 };
+use crate::game::core::Round;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 #[repr(u8)]

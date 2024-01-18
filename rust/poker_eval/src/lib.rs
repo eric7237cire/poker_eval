@@ -1,5 +1,5 @@
-mod game;
-pub use game::*;
+pub mod game;
+
 pub mod eval;
 pub use eval::*;
 mod core;

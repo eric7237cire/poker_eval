@@ -8,7 +8,7 @@ use std::{
 
 use log::debug;
 use num_format::{Locale, ToFormattedString};
-use poker_eval::{
+use crate::{
     agents::{
         build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
         EqAgentConfig, Tag,
@@ -17,10 +17,28 @@ use poker_eval::{
     board_hc_eval_cache_redb::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
-    game_runner_source::GameRunnerSourceEnum,
-    init_logger, Card, Deck, GameLog, GameRunner, InitialPlayerState, pre_calc::perfect_hash::load_boomperfect_hash,
+    init_logger, Card, Deck,  pre_calc::{perfect_hash::load_boomperfect_hash, get_repo_root}, game::core::InitialPlayerState, runner::{GameRunner, GameRunnerSourceEnum},
 };
 use rand::seq::SliceRandom;
+
+use super::PanicAgent;
+
+//Need a game_runner, except one position will be the agent we're training
+//When it's the agents turn, we get an array of actions from it it would like to prototype
+
+// The actions go into a queue which holds --
+// Infostate of agent (or id of it)
+// Gamestate
+
+// Once this gamestate reaches the end of the hand, update the agents data
+// with infostate + action == result (chips won/lost in bb)
+
+//For subsequent actions, we'll maybe just have additional infostates to update
+
+pub struct AgentTrainer {
+    
+}
+
 
 fn build_agents(
     flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
@@ -40,14 +58,6 @@ fn build_agents(
         monte_carlo_equity_db.clone(),
     )));
     
-
-    // agents.push(Box::new(PassiveCallingStation::new(
-    //     None,
-    //     "CallAllB",
-    //     flop_texture_db.clone(),
-    //     partial_rank_db.clone(),
-    // )));
-
     agents.push(Box::new(EqAgent::new(
         "EqAggroB",
         EqAgentConfig::get_aggressive(),
@@ -76,6 +86,8 @@ fn build_agents(
 
     agents.push(Box::new(tag));
 
+    agents.push(Box::new(PanicAgent::new("PanicAgent")));
+
     let mut i = 0;
     while agents.len() < num_total_players {
         i += 1;
@@ -91,12 +103,10 @@ fn build_agents(
     agents
 }
 
-fn main() {
-    /*
-    cargo run --release --bin try_agent
-    */
+pub fn try_trainer() {
     init_logger();
 
+    //Building what the agents need
     let partial_rank_db: EvalCacheWithHcReDb<ProducePartialRankCards> =
         EvalCacheWithHcReDb::new().unwrap();
 
@@ -111,35 +121,22 @@ fn main() {
 
     let rcref_mcedb = Rc::new(RefCell::new(monte_carlo_equity_db));
 
-    let hash_func = load_boomperfect_hash();
-
     let mut agent_deck = Deck::new();
 
     //we want to track the worst loses
     //let mut heap: BinaryHeap<(i64, i32, GameLog)> = BinaryHeap::new();
 
     let num_total_iterations = 20_000;
-    let num_worst_hands_to_keep = 5;
+    
     let num_players = 9;
-    let hero_name = "EqAggroA";
-    let mut winnings: HashMap<String, i64> = HashMap::new();
-
+    
     let repo_root = get_repo_root();
-    //let hh_path = repo_root.join("rust/hand_history");
-    //let ps_hh_path = repo_root.join("rust/ps_hand_history");
+    
     let json_hh_path = repo_root.join("vue-poker/src/assets/hand_history");
-    let csv_path = repo_root.join("python/hand_history.csv");
-
-    //delete tree hh_path
-    // for path in [hh_path.clone(), ps_hh_path.clone(), json_hh_path.clone()].iter() {
-    //     if path.exists() {
-    //         std::fs::remove_dir_all(path).unwrap();
-    //     }
-    //     fs::create_dir_all(path).unwrap();
-    // }
-
-    let mut wtr = csv::Writer::from_path(csv_path).unwrap();
+    
     let mut json_filenames = Vec::new();
+
+    let hero_name = "PanicAgent";
 
     for it_num in 0..num_total_iterations {
         agent_deck.reset();
@@ -170,6 +167,8 @@ fn main() {
 
         for _ in 0..2000 {
             let action_count_before = game_runner.game_state.actions.len();
+
+            //If the game runner is on the 'panic agent', we need to provide it a different action based on what is possible
             let r = game_runner.process_next_action().unwrap();
             if r {
                 break;
@@ -185,10 +184,7 @@ fn main() {
         let change = game_runner.game_state.player_states[hero_index].stack as i64
             - game_runner.game_state.player_states[hero_index].initial_stack as i64;
 
-        for p in game_runner.game_state.player_states.iter() {
-            let winnings = winnings.entry(p.player_name.clone()).or_insert(0);
-            *winnings += p.stack as i64 - p.initial_stack as i64;
-        }
+        
 
         if it_num % 100 == 0 {
             debug!(
@@ -206,74 +202,9 @@ fn main() {
         json_filenames.push(json_filename);
         fs::write(file_path, json_str).unwrap();
 
-        // if it_num == 107 {
-        //     break;
-        // }
-
-        let game_csv_line  = game_log.get_csv_line(hero_index,
-            it_num,
-             rcref_mcedb.clone(), &hash_func).unwrap();
-        wtr.serialize(game_csv_line).unwrap();
-        // for (c, it, _log) in heap.iter() {
-        //     debug!(
-        //         "In heap at iteration {}, have {}, {}",
-        //         it_num,
-        //         c,
-        //         it,
-        //     );
-        // }
-
-
-        //if we have enough hands and this hand is not worse than the worst hand
-        // if heap.len() == num_worst_hands_to_keep && change > heap.peek().unwrap().0 {
-        //     continue;
-        // }
-
-        // heap.push((
-        //     change,
-        //     it_num,
-        //     //game_runner.to_game_log_string(true, true, hero_position),
-        //     game_log,
-        //     //game_runner.to_pokerstars_string()
-        // ));
-
-        // if heap.len() > num_worst_hands_to_keep {
-        //     heap.pop();
-        // }
-
-        // if it_num >= 79 {
-
-        //     assert!(heap.iter().any(|(_c, it, _log)| *it==79));
-        // }
-
-        //if it_num == 5 || it_num == 36
-        //if it_num == 35
-        //if it_num == 70
-        //if it_num == 101
-        // if it_num == 89 {
-        //     debug!(
-        //         "Losing hand #{}\n{}",
-        //         it_num,
-        //         game_runner.to_game_log_string(true, true, hero_position)
-        //     );
-        //     //panic!();
-        // }
     }
 
     
-
-    // for (_i, (_change, it_num, mut game_log)) in heap.into_iter().enumerate() {
-    //     // let file_path = hh_path.join(format!("{}.txt", it_num));
-    //     // fs::write(file_path, &log).unwrap();
-    //     // let file_path = ps_hh_path.join(format!("{}.txt", it_num));
-    //     // fs::write(file_path, ps_str).unwrap();
-    //     game_log.calc_best_hands();
-    //     let json_str = serde_json::to_string_pretty(&game_log).unwrap();
-    //     let json_filename = format!("{}.json", it_num);
-    //     let file_path = json_hh_path.join(&json_filename);
-    //     json_filenames.push(json_filename);
-    //     fs::write(file_path, json_str).unwrap();
-    // }
 
     let mut overview: HashMap<String, serde_json::Value> = HashMap::new();
     overview.insert(
@@ -287,13 +218,6 @@ fn main() {
     )
     .unwrap();
 
-    for (name, winnings) in winnings.iter() {
-        debug!(
-            "{} winnings: {}; per hand {:.1} in {} iterations",
-            name,
-            winnings.to_formatted_string(&Locale::en),
-            *winnings as f64 / num_total_iterations as f64,
-            num_total_iterations.to_formatted_string(&Locale::en)
-        );
-    }
+    
+
 }

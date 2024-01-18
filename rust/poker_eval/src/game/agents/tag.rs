@@ -7,9 +7,10 @@ use crate::{
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProducePartialRankCards},
     likes_hands::{likes_hand, LikesHandLevel, LikesHandResponse},
     pre_calc::{fast_eval::fast_hand_eval, perfect_hash::load_boomperfect_hash},
-    ActionEnum, BoolRange, CommentedAction, GameState, HoleCards, PlayerState, Round,
+     BoolRange, HoleCards,
 };
 
+use crate::game::core::{PlayerState, GameState, CommentedAction, ActionEnum, Round, PositionFamily};
 use super::Agent;
 
 //#[derive(Default)]

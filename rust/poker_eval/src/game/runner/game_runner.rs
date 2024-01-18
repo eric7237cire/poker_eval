@@ -7,14 +7,14 @@ use std::cmp::min;
 use crate::pre_calc::fast_eval::fast_hand_eval;
 use crate::pre_calc::perfect_hash::load_boomperfect_hash;
 use crate::pre_calc::rank::Rank;
-use crate::{set_used_card, Board, Card, GameLog, InitialPlayerState, PlayerAction};
-use crate::{
-    ActionEnum, CardUsedType, ChipType, FinalPlayerState, GameState, PlayerState, PokerError,
-    Position, Round,
+use crate::{set_used_card, Board, Card, runner::GameLog, };
+use crate:: {PokerError, CardUsedType};
+use crate::game::core::{
+    ActionEnum, ChipType, FinalPlayerState, GameState, PlayerState, 
+    Position, Round, InitialPlayerState, PlayerAction
 };
 
-use crate::game::game_runner_source::GameRunnerSource;
-use crate::game::game_runner_source::GameRunnerSourceEnum;
+use crate::game::runner::{GameRunnerSource, GameRunnerSourceEnum};
 use boomphf::Mphf;
 
 use log::trace;
@@ -54,7 +54,7 @@ impl GameRunner {
             player_states: player_states,
             current_to_act: Position::first_to_act(
                 initial_players.len() as _,
-                crate::Round::Preflop,
+                Round::Preflop,
             ),
             prev_round_pot: 0,
             round_pot: 0,
@@ -335,13 +335,7 @@ impl GameRunner {
             self.game_state.player_states[player_index].final_state =
                 Some(FinalPlayerState::EveryoneElseFolded);
 
-            for player_index in 0..self.game_state.player_states.len() {
-                self.game_runner_source.set_final_player_state(
-                    player_index,
-                    &self.game_state.player_states[player_index],
-                    None,
-                )?;
-            }
+            
             return Ok(());
         }
 
@@ -482,11 +476,7 @@ impl GameRunner {
                     player_state.final_state = Some(FinalPlayerState::LostShowdown);
                 }
             }
-            self.game_runner_source.set_final_player_state(
-                player_index,
-                &self.game_state.player_states[player_index],
-                None,
-            )?;
+            
         }
         Ok(())
     }
@@ -983,7 +973,7 @@ mod tests {
     use log::debug;
 
     use crate::{
-        game::game_log_source::GameLogSource, init_test_logger, test_game_runner, GameLog,
+        game::runner::{GameLog,GameLogSource}, init_test_logger, test_game_runner, 
     };
 
     use super::*;

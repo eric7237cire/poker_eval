@@ -4,13 +4,10 @@ use serde::Serialize;
 
 use crate::Board;
 
-use crate::CommentedAction;
-use crate::HoleCards;
-use crate::PlayerAction;
-use crate::Position;
 
-use crate::ChipType;
-use crate::Round;
+use crate::HoleCards;
+
+use crate::game::core::{Round, Position, ChipType, PlayerAction, CommentedAction, ActionEnum};
 
 /*
 Everything that is known to all players,
@@ -143,12 +140,12 @@ impl AgentDecisionHelpers {
 
         if self.can_raise {
             CommentedAction {
-                action: crate::ActionEnum::Raise(raise_to - game_state.current_to_call, raise_to),
+                action: ActionEnum::Raise(raise_to - game_state.current_to_call, raise_to),
                 comment: Some(comment),
             }
         } else {
             CommentedAction {
-                action: crate::ActionEnum::Call(self.call_amount),
+                action: ActionEnum::Call(self.call_amount),
                 comment: Some(comment),
             }
         }
@@ -163,7 +160,7 @@ impl AgentDecisionHelpers {
         let bet_amt = min(self.max_can_raise, bet);
 
         CommentedAction {
-            action: crate::ActionEnum::Bet(bet_amt),
+            action: ActionEnum::Bet(bet_amt),
             comment: Some(comment),
         }
     
