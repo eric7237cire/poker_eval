@@ -311,7 +311,7 @@ impl EqAgent {
                     format!("Opening raise;{}", common_comment),
                 )
             } else {
-                if game_state.current_to_call == 0 {
+                if helpers.call_amount == 0 {
                     CommentedAction {
                         action: ActionEnum::Check,
                         comment: Some("Checking the big blind".to_string()),

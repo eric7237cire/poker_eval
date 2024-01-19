@@ -53,34 +53,17 @@ impl Tag {
         //Anyone bet so far?
         let any_raises = game_state.current_to_call > game_state.bb;
 
-        let max_can_raise = player_state.stack + player_state.cur_round_putting_in_pot.unwrap_or(0);
+        
+        let helpers = player_state.get_helpers(game_state);
 
-        //How much extra we need to put in to call the current bet, can be less than the total call required
-        //if we are calling a raise to our bet
-        let call_amt = min(
-            game_state.current_to_call - player_state.cur_round_putting_in_pot.unwrap_or(0),
-            player_state.stack,
-        );
-
-        let can_raise =
-            max_can_raise > call_amt + player_state.cur_round_putting_in_pot.unwrap_or(0);
 
         if !any_raises {
             if self.pfr_range.data[ri] {
-                if can_raise {
-                    let raise_to = min(game_state.current_to_call * 3, max_can_raise);
-                    CommentedAction {
-                        action: ActionEnum::Raise(raise_to - game_state.current_to_call, raise_to),
-                        comment: Some("Opening raise".to_string()),
-                    }
-                } else {
-                    CommentedAction {
-                        action: ActionEnum::Call(call_amt),
-                        comment: Some("Calling because can't raise any more".to_string()),
-                    }
-                }
+                helpers.build_raise_to(game_state, game_state.current_to_call * 3, 
+                    
+                        "Opening raise".to_string())
             } else {
-                if game_state.current_to_call == 0 {
+                if helpers.call_amount == 0 {
                     CommentedAction {
                         action: ActionEnum::Check,
                         comment: Some("Checking the big blind".to_string()),
@@ -96,21 +79,11 @@ impl Tag {
             let bb_amt = game_state.current_to_call as f64 / game_state.bb as f64;
 
             if self.three_bet_range.data[ri] {
-                if can_raise {
-                    let raise_to = min(game_state.current_to_call * 3, max_can_raise);
-                    CommentedAction {
-                        action: ActionEnum::Raise(raise_to - game_state.current_to_call, raise_to),
-                        comment: Some("3 (4/5)-betting".to_string()),
-                    }
-                } else {
-                    CommentedAction {
-                        action: ActionEnum::Call(call_amt),
-                        comment: Some("Calling because can't raise any more".to_string()),
-                    }
-                }
+                helpers.build_raise_to(game_state, game_state.current_to_call * 3, 
+                        "3 (4/5)-betting".to_string())
             } else if bb_amt <= 5.0 && self.pfr_range.data[ri] {
                 CommentedAction {
-                    action: ActionEnum::Call(call_amt),
+                    action: ActionEnum::Call(helpers.call_amount),
                     comment: Some("Calling a PFR".to_string()),
                 }
             } else {
@@ -206,7 +179,7 @@ impl Tag {
         player_state: &PlayerState,
         game_state: &GameState,
     ) -> CommentedAction {
-        let max_can_raise = player_state.stack + player_state.cur_round_putting_in_pot.unwrap_or(0);
+        let max_can_raise = player_state.stack + player_state.cur_round_putting_in_pot;
         //let min_can_raise = min(game_state.min_raise, player_state.stack);
 
         let current_pot = game_state.pot();

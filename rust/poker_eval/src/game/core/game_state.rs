@@ -20,10 +20,9 @@ pub struct PlayerState {
 
     //what has not yet been put in the middle
     pub stack: ChipType,
-
-    //None means not yet acted this round
+    
     //already deducted from stack
-    pub cur_round_putting_in_pot: Option<ChipType>,
+    pub cur_round_putting_in_pot: ChipType,
 
     pub total_put_in_pot: ChipType,
 
@@ -81,7 +80,7 @@ impl PlayerState {
             stack: initial_player_state.stack,
             initial_stack: initial_player_state.stack,
             final_state: None,
-            cur_round_putting_in_pot: None,
+            cur_round_putting_in_pot: 0,
             all_in: false,
             player_name: initial_player_state.player_name.clone(),
             total_put_in_pot: 0,
@@ -102,13 +101,17 @@ impl PlayerState {
     }
 
     pub fn get_helpers(&self, game_state: &GameState) -> AgentDecisionHelpers {
+        assert!(game_state.current_to_call >= self.cur_round_putting_in_pot);
+
+        //How much extra we need to put in to call the current bet, can be less than the total call required
+        //if we are calling a raise to our bet
         let call_amt = min(
-            game_state.current_to_call - self.cur_round_putting_in_pot.unwrap_or(0),
+            game_state.current_to_call - self.cur_round_putting_in_pot,
             self.stack,
         );
         //we can raise to a stack more that what we've already put in
         //Both these values are the total amount, not the increase
-        let max_can_raise = self.stack + self.cur_round_putting_in_pot.unwrap_or(0);
+        let max_can_raise = self.stack + self.cur_round_putting_in_pot;
         let min_can_raise = min(
             game_state.min_raise + game_state.current_to_call,
             max_can_raise,
@@ -116,7 +119,7 @@ impl PlayerState {
 
         //let third_pot = max(min_can_raise, min(max_can_raise, current_pot / 3));
 
-        let can_raise = max_can_raise > call_amt + self.cur_round_putting_in_pot.unwrap_or(0);
+        let can_raise = max_can_raise > call_amt + self.cur_round_putting_in_pot;
 
         AgentDecisionHelpers {
             call_amount: call_amt,

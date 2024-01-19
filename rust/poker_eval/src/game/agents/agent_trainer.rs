@@ -10,9 +10,10 @@
 
 //For subsequent actions, we'll maybe just have additional infostates to update
 
+
 use log::info;
 
-use crate::{game::{runner::{GameRunnerSource, GameRunner}, core::{CommentedAction, ActionEnum}}, Card};
+use crate::{game::{runner::{GameRunnerSource, GameRunner}, core::{CommentedAction, ActionEnum, Round, Position, BIG_BLIND}}, Card};
 
 pub struct AgentTrainer {}
 
@@ -89,7 +90,7 @@ pub fn run_full_game_tree<T: GameRunnerSource>(game_source: &mut T, board: Vec<C
                     .get_current_player_state()
                     .get_helpers(&current_game_runner.game_state);
                 //Are we facing a bet?
-                if current_game_runner.game_state.current_to_call > 0 {
+                if hero_helpers.call_amount > 0 {
                     //Fold, call, raise
                     let mut fold_game_runner = current_game_runner.clone();
                     let fold_action = CommentedAction {
@@ -129,6 +130,30 @@ pub fn run_full_game_tree<T: GameRunnerSource>(game_source: &mut T, board: Vec<C
                         action: ActionEnum::Check,
                         comment: None
                     };
+                    check_game_runner.process_next_action(&check_action).unwrap();
+                    game_runner_queue.push(check_game_runner);
+
+                    if current_game_runner.game_state.current_round == Round::Preflop {
+                        //3 bet in bb; 1 is always the big blind player index
+                        assert_eq!(hero_index, 1);
+                        let mut bet_game_runner = current_game_runner.clone();
+                        let bet_action = hero_helpers.build_raise_to(&current_game_runner.game_state,
+                            current_game_runner.game_state.current_to_call * 3,
+                                "".to_string());
+                        bet_game_runner.process_next_action(&bet_action).unwrap();
+                        game_runner_queue.push(bet_game_runner);
+
+                    } else {
+                        //bet half pot
+                        let mut bet_game_runner = current_game_runner.clone();
+                        let bet_action = hero_helpers.build_bet(bet_game_runner.game_state.pot() / 2,
+                                "".to_string());
+                        bet_game_runner.process_next_action(&bet_action).unwrap();
+                        game_runner_queue.push(bet_game_runner);
+                    }
+
+                    
+
                     break;
                 }
             } else {
