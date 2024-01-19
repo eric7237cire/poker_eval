@@ -51,9 +51,17 @@ impl Display for InfoState {
         };
 
         let eq_str = match self.equity {
-            0 => "low",
-            1 => "medium",
-            2 => "high",
+            0 => "low eq",
+            1 => "medium eq",
+            2 => "high eq",
+            _ => "unknown",
+        };
+
+        let round_str = match self.round {
+            0 => "preflop",
+            1 => "flop",
+            2 => "turn",
+            3 => "river",
             _ => "unknown",
         };
 
@@ -65,7 +73,7 @@ impl Display for InfoState {
             self.hole_card_category,
             eq_str,
             self.bet_situation,
-            self.round
+            round_str
         )
     }
 }
@@ -150,6 +158,8 @@ impl InfoState {
             .get_put(&eq_board, &eq_hole_cards, ps.non_folded_players)
             .unwrap();
 
+        let equity = if eq < 0.33 { 0 } else if eq < 0.66 { 1 } else { 2 };
+
         let info_state_action: u8 = match ps.action {
             ActionEnum::Fold => info_state_actions::FOLD,
             ActionEnum::Call(_) => info_state_actions::CALL,
@@ -169,9 +179,9 @@ impl InfoState {
                 position,
                 num_players: ps.non_folded_players,
                 hole_card_category,
-                equity: 1, //
+                equity,
                 bet_situation,
-                round: game_state.current_round as usize as u8,
+                round: ps.round as usize as u8,
             },
             info_state_action,
         )

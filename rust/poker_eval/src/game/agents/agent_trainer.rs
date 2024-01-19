@@ -223,17 +223,20 @@ fn process_finished_gamestate(
     monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
 ) {
     info!("Processing finished gamestate");
-
-    let player_state = game_runner.get_current_player_state();
+    assert!(game_runner.game_state.player_states[hero_index]
+        .final_state
+        .is_some());
+    let player_state = &game_runner.game_state.player_states[hero_index];
     let value = ( player_state.stack as f64 / game_runner.game_state.bb as f64
         - player_state.initial_stack as f64 / game_runner.game_state.bb as f64 ) as InfoStateActionValueType;
 
     //assign the max ev for each infostate in the game
     for action in game_runner.game_state.actions.iter() {
         info!(
-            "Action {}, info_state_value len {}",
+            "Action {}, info_state_value len {} value {}",
             action,
-            info_state_value.len()
+            info_state_value.len(),
+            value
         );
         assert_eq!(hero_index, action.player_index);
 
@@ -401,11 +404,24 @@ mod tests {
                 if info_state.round == round_u8 {
                     found = true;
                     info!("{} {:?}", info_state, value);
-                    assert_eq!(value[BET_HALF as usize], -1.0);
+                    assert_eq!(value[BET_HALF as usize], -35.0 / 19.0);
                     break;
                 }
             }
             assert!(found);
         }
+
+        let mut found = false;
+        let round_u8 = Round::River as usize as u8;
+        for (info_state, value) in best_values.iter() {
+            if info_state.round == round_u8 {
+                assert!(!found);
+                found = true;
+                info!("{} {:?}", info_state, value);
+                
+                assert_eq!(value[BET_HALF as usize], 2.0);
+            }
+        }
+        assert!(found);
     }
 }
