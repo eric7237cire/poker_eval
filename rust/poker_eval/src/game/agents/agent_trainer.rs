@@ -11,25 +11,27 @@
 //For subsequent actions, we'll maybe just have additional infostates to update
 
 
-use std::{collections::HashMap, cell::RefCell, rc::Rc};
+use std::{collections::HashMap, cell::RefCell, rc::Rc, hash::Hash};
 
 use log::info;
 
-use crate::{game::{runner::{GameRunnerSource, GameRunner}, core::{CommentedAction, ActionEnum, Round, Position, BIG_BLIND}}, Card, board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval}};
+use crate::{game::{runner::{GameRunnerSource, GameRunner}, core::{CommentedAction, ActionEnum, Round, Position, BIG_BLIND}}, Card, board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval}, HoleCards, PokerError};
 
 use super::InfoState;
 
 pub struct AgentTrainer {}
 
 
-pub fn run_full_game_tree<T: GameRunnerSource>(game_source: &mut T, board: Vec<Card>, hero_index: usize) {
+pub fn run_full_game_tree<T: GameRunnerSource>(
+    game_source: &mut T, board: Vec<Card>, hero_index: usize,
+    monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>
+) -> Result<(), PokerError> {
     let game_runner = GameRunner::new(
         game_source.get_initial_players(),
         game_source.get_small_blind(),
         game_source.get_big_blind(),
         &board,
-    )
-    .unwrap();
+    )?;
 
     let mut game_runner_queue = Vec::new();
     game_runner_queue.push(game_runner);
@@ -40,7 +42,9 @@ pub fn run_full_game_tree<T: GameRunnerSource>(game_source: &mut T, board: Vec<C
 
         //Need to check if this is already done
         if current_game_runner.game_state.player_states[0].final_state.is_some() {
-            process_finished_gamestate(current_game_runner);
+            process_finished_gamestate(current_game_runner, 
+                hero_index, &game_source.get_hole_cards(hero_index)?,
+                monte_carlo_db.clone());
             continue;
         }
 
@@ -173,33 +177,50 @@ pub fn run_full_game_tree<T: GameRunnerSource>(game_source: &mut T, board: Vec<C
                 current_game_runner.game_state.actions.pop().unwrap();
 
                 if r {
-                    process_finished_gamestate(current_game_runner);
+                    process_finished_gamestate(current_game_runner, 
+                        hero_index, &game_source.get_hole_cards(hero_index)?,
+                        monte_carlo_db.clone());
                     break;
                 }
             }
             
         }
     }
+
+    Ok(())
 }
 
 fn process_finished_gamestate(
     game_runner: GameRunner, 
     hero_index: usize,
+    player_hole_cards: &HoleCards,
     monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>
 ) -> HashMap<InfoState, f64> {
     info!("Processing finished gamestate");
 
+    let mut ret = HashMap::new();
+
+    let player_state = game_runner.get_current_player_state();
+    let value = 
+    player_state.stack as f64 / game_runner.game_state.bb as f64 -
+    player_state.initial_stack as f64 / game_runner.game_state.bb as f64;
+
+    
     //assign the max ev for each infostate in the game
     for action in game_runner.game_state.actions.iter() {
         info!("Action {}", action);
         assert_eq!(hero_index, action.player_index);
 
         let info_state = InfoState::from(
-            game_runner.get_current_player_state(),
+            &action,
             &game_runner.game_state,
+            &player_hole_cards,            
             monte_carlo_db.clone()
-        )
+        );
+        ret.insert(info_state, value);
     }
+
+    ret
 
     //info!("{}", game_runner.to_game_log().unwrap().to_game_log_string(false, true, 1));
 }
@@ -207,7 +228,9 @@ fn process_finished_gamestate(
 
 #[cfg(test)]
 mod tests {
-    use crate::{init_test_logger, game::{runner::GameRunnerSource, core::{InitialPlayerState, ChipType, PlayerState, GameState, CommentedAction, ActionEnum, Round}}, PokerError, HoleCards, Board};
+    use std::{cell::RefCell, rc::Rc};
+
+    use crate::{init_test_logger, game::{runner::GameRunnerSource, core::{InitialPlayerState, ChipType, PlayerState, GameState, CommentedAction, ActionEnum, Round}}, PokerError, HoleCards, Board, board_hc_eval_cache_redb::{ProduceMonteCarloEval, EvalCacheWithHcReDb}};
 
     use super::run_full_game_tree;
 
@@ -300,9 +323,14 @@ mod tests {
 
         // cargo test --lib test_run_full_game_tree -- --nocapture
 
+        let monte_carlo_equity_db: EvalCacheWithHcReDb<ProduceMonteCarloEval> =
+        EvalCacheWithHcReDb::new().unwrap();
+        let rcref_mcedb = Rc::new(RefCell::new(monte_carlo_equity_db));
+
         let mut game_source = TestGameSource::new();
         let board: Board = "3s 4c 5h 7d 8h".parse().unwrap();
-        run_full_game_tree(&mut game_source, board.as_slice_card().to_vec(), 1);
+        run_full_game_tree(&mut game_source, board.as_slice_card().to_vec(), 1, rcref_mcedb);
+    
 
 
     }

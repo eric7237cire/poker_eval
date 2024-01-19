@@ -163,7 +163,7 @@ pub fn main() {
 
         let mut game_source = GameRunnerSourceEnum::from(agent_source);
 
-        run_full_game_tree(&mut game_source, board, hero_index);
+        run_full_game_tree(&mut game_source, board, hero_index, rcref_mcedb.clone());
 
         // let _change = game_runner.game_state.player_states[hero_index].stack as i64
         //     - game_runner.game_state.player_states[hero_index].initial_stack as i64;

@@ -2,11 +2,12 @@ use std::{collections::HashMap, cell::RefCell, rc::Rc};
 
 use log::info;
 use once_cell::sync::Lazy;
-use redb::{Database, TableDefinition, Error as ReDbError};
+use redb::{Database, TableDefinition, Error as ReDbError, ReadTransaction, ReadableTable};
 
 
 use crate::{game::core::{PlayerState, PlayerAction, GameState}, ALL_HOLE_CARDS, HoleCards, board_hc_eval_cache_redb::{ProduceMonteCarloEval, EvalCacheWithHcReDb}, monte_carlo_equity::get_equivalent_hole_board, board_eval_cache_redb::{get_data_path, EvalCacheEnum}};
 
+#[derive(Eq, PartialEq, Hash)]
 pub struct InfoState {
     //For now limited to 0 1st position, 1 middle, 2 last
     //This depends on the round too
@@ -129,7 +130,7 @@ impl InfoState {
 }
 
 
-const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("eval_cache");
+const TABLE: TableDefinition<&[u8], f64> = TableDefinition::new("eval_cache");
 
 pub struct InfoStateDb {
     db: Database,    
@@ -156,61 +157,27 @@ impl InfoStateDb
         })
     }
 
-    pub fn get_put(
-        &mut self,
-        cards: &Board,
-        hole_cards: &HoleCards,
-        num_players: u8,
-    ) -> Result<P::Result, ReDbError> {
-        let index = cards.get_precalc_index().unwrap();
+    
 
-        let mut index_bytes: [u8; 7] = [0; 7];
-        // Packing the u32 into the first 4 bytes of the array
-        index_bytes[0] = (index >> 24) as u8; // Extracts the first byte
-        index_bytes[1] = (index >> 16) as u8; // Extracts the second byte
-        index_bytes[2] = (index >> 8) as u8; // Extracts the third byte
-        index_bytes[3] = index as u8; // Extracts the fourth byte
-        index_bytes[4] = hole_cards.hi_card().into();
-        index_bytes[5] = hole_cards.lo_card().into();
-        index_bytes[6] = num_players;
-
-        let opt = self.get(&index_bytes)?;
-        if opt.is_some() {
-            self.cache_hits += 1;
-            return Ok(opt.unwrap());
-        }
-
-        let result = P::produce_eval_result(cards.as_slice_card(), hole_cards, num_players);
-        self.cache_misses += 1;
-
-        self.put(&index_bytes, &result)?;
-
-        Ok(result)
-    }
-
-    fn get(&mut self, index: &[u8]) -> Result<Option<P::Result>, ReDbError> {
+    fn get(&mut self, index: &[u8]) -> Result<Option<f64>, ReDbError> {
         let read_txn: ReadTransaction = self.db.begin_read()?;
         let table = read_txn.open_table(TABLE)?;
 
         let data = table.get(index)?;
         if let Some(data) = data {
-            //let texture: BoardTexture = rmp_serde::from_slice(data.value()).unwrap();
-            let texture: P::Result = bincode::deserialize(&data.value()).unwrap();
-
-            Ok(Some(texture))
+            
+            Ok(Some(data.value()))
         } else {
             Ok(None)
         }
     }
 
-    fn put(&mut self, index: &[u8], result: &P::Result) -> Result<(), ReDbError> {
+    fn put(&mut self, index: &[u8], result: f64) -> Result<(), ReDbError> {
         let write_txn = self.db.begin_write()?;
         {
             let mut table = write_txn.open_table(TABLE)?;
-            //let texture_bytes = rmp_serde::to_vec(texture).unwrap();
-            let texture_bytes: Vec<u8> = bincode::serialize(&result).unwrap();
-
-            table.insert(index, texture_bytes.as_slice())?;
+            
+            table.insert(index, result)?;
         }
 
         write_txn.commit()?;
