@@ -53,15 +53,15 @@ impl Tag {
         //Anyone bet so far?
         let any_raises = game_state.current_to_call > game_state.bb;
 
-        
         let helpers = player_state.get_helpers(game_state);
-
 
         if !any_raises {
             if self.pfr_range.data[ri] {
-                helpers.build_raise_to(game_state, game_state.current_to_call * 3, 
-                    
-                        "Opening raise".to_string())
+                helpers.build_raise_to(
+                    game_state,
+                    game_state.current_to_call * 3,
+                    "Opening raise".to_string(),
+                )
             } else {
                 if helpers.call_amount == 0 {
                     CommentedAction {
@@ -79,8 +79,11 @@ impl Tag {
             let bb_amt = game_state.current_to_call as f64 / game_state.bb as f64;
 
             if self.three_bet_range.data[ri] {
-                helpers.build_raise_to(game_state, game_state.current_to_call * 3, 
-                        "3 (4/5)-betting".to_string())
+                helpers.build_raise_to(
+                    game_state,
+                    game_state.current_to_call * 3,
+                    "3 (4/5)-betting".to_string(),
+                )
             } else if bb_amt <= 5.0 && self.pfr_range.data[ri] {
                 CommentedAction {
                     action: ActionEnum::Call(helpers.call_amount),

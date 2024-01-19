@@ -129,9 +129,7 @@ impl GameRunner {
         if amount < player_state.cur_round_putting_in_pot {
             return Err(PokerError::from_string(format!(
                 "Player {} tried to put {} in pot, but already put in {}",
-                player_state.player_name,
-                amount,
-                player_state.cur_round_putting_in_pot
+                player_state.player_name, amount, player_state.cur_round_putting_in_pot
             )));
         }
 
@@ -533,9 +531,8 @@ impl GameRunner {
 
                 //if we folded before betting anything then make sure we have a not None value
                 //to indicate we acted
-                self.game_state.player_states[player_index].cur_round_putting_in_pot = 
-                    self.game_state.player_states[player_index]
-                        .cur_round_putting_in_pot;
+                self.game_state.player_states[player_index].cur_round_putting_in_pot =
+                    self.game_state.player_states[player_index].cur_round_putting_in_pot;
             }
             ActionEnum::Call(check_amt) => {
                 let amt_to_call = self.game_state.current_to_call;
@@ -592,9 +589,8 @@ impl GameRunner {
                 self.game_state.min_raise = increase_amt;
                 self.game_state.current_to_call = raise_amt;
 
-                let amount_already_put = self.game_state.player_states[player_index]
-                    .cur_round_putting_in_pot
-                    ;
+                let amount_already_put =
+                    self.game_state.player_states[player_index].cur_round_putting_in_pot;
                 let actual_amt = self.handle_put_money_in_pot(player_index, raise_amt)?;
 
                 if increase_amt_check != increase_amt {
@@ -654,7 +650,10 @@ impl GameRunner {
                 ));
 
                 //Possible to check bb
-                assert_eq!(player_state.cur_round_putting_in_pot, self.game_state.current_to_call);
+                assert_eq!(
+                    player_state.cur_round_putting_in_pot,
+                    self.game_state.current_to_call
+                );
             }
             ActionEnum::Bet(bet_amt) => {
                 self.check_able_to_bet(bet_amt)?;
@@ -1349,7 +1348,6 @@ L3 - 385 # gets his useless all in back
         assert_eq!(game_runner.game_state.player_states[1].stack, 0);
         assert_eq!(game_runner.game_state.player_states[2].stack, 385);
     }
-
 
     #[test]
     fn test_bb_checks() {

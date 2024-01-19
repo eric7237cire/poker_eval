@@ -7,7 +7,11 @@ use poker_eval::{
     board_hc_eval_cache_redb::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
-    game::{runner::GameRunnerSourceEnum, core::{CommentedAction, ActionEnum}, agents::run_full_game_tree},
+    game::{
+        agents::run_full_game_tree,
+        core::{ActionEnum, CommentedAction},
+        runner::GameRunnerSourceEnum,
+    },
     game::{agents::PanicAgent, core::InitialPlayerState},
     game::{
         agents::{
@@ -96,7 +100,6 @@ fn build_agents(
 
     agents
 }
-
 
 // cargo run --release --bin train_agent
 pub fn main() {
@@ -197,4 +200,3 @@ pub fn main() {
     // )
     // .unwrap();
 }
-

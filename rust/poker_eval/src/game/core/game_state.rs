@@ -20,7 +20,7 @@ pub struct PlayerState {
 
     //what has not yet been put in the middle
     pub stack: ChipType,
-    
+
     //already deducted from stack
     pub cur_round_putting_in_pot: ChipType,
 

@@ -6,7 +6,6 @@ pub fn init_test_logger() {
         .filter_level(log::LevelFilter::Trace)
         .filter_module("poker_eval::game::game_log_parser", log::LevelFilter::Debug)
         .filter_module("poker_eval::game::game_log_source", log::LevelFilter::Debug)
-        
         .filter_module("poker_eval::game::runner", log::LevelFilter::Debug)
         .filter_module(
             "poker_eval::game::agents::agent_source",

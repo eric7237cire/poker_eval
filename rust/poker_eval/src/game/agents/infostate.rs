@@ -1,11 +1,22 @@
-use std::{collections::HashMap, cell::RefCell, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    fmt::{Display, Formatter},
+    mem,
+    rc::Rc,
+};
 
 use log::info;
 use once_cell::sync::Lazy;
-use redb::{Database, TableDefinition, Error as ReDbError, ReadTransaction, ReadableTable};
+use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDefinition};
 
-
-use crate::{game::core::{PlayerState, PlayerAction, GameState}, ALL_HOLE_CARDS, HoleCards, board_hc_eval_cache_redb::{ProduceMonteCarloEval, EvalCacheWithHcReDb}, monte_carlo_equity::get_equivalent_hole_board, board_eval_cache_redb::{get_data_path, EvalCacheEnum}};
+use crate::{
+    board_eval_cache_redb::{get_data_path, EvalCacheEnum},
+    board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
+    game::core::{ActionEnum, GameState, PlayerAction, PlayerState},
+    monte_carlo_equity::get_equivalent_hole_board,
+    HoleCards, ALL_HOLE_CARDS,
+};
 
 #[derive(Eq, PartialEq, Hash)]
 pub struct InfoState {
@@ -30,12 +41,39 @@ pub struct InfoState {
     pub round: u8,
 }
 
+impl Display for InfoState {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let pos_str = match self.position {
+            0 => "first",
+            1 => "middle",
+            2 => "last",
+            _ => "unknown",
+        };
+
+        let eq_str = match self.equity {
+            0 => "low",
+            1 => "medium",
+            2 => "high",
+            _ => "unknown",
+        };
+
+        write!(
+            f,
+            "InfoState: {} {} {} {} {} {}",
+            pos_str,
+            self.num_players,
+            self.hole_card_category,
+            eq_str,
+            self.bet_situation,
+            self.round
+        )
+    }
+}
 
 pub static HOLE_CARDS_CATEGORY: Lazy<Vec<u8>> = Lazy::new(|| {
+    let mut catMap = HashMap::new();
 
-  let mut catMap = HashMap::new();
-
-  let catStrings = [
+    let catStrings = [
     "AA, KK, QQ, JJ, TT",
     "AKs, AQs, AJs, ATs, A9s, A8s, AKo, KQs, KJs, KTs, AQo, KQo, AJo, ATo, A9o, 99, 88, 77, 66, 55",
     "A7s, A6s, A5s, A4s, A3s, A2s, K9s, K8s, K7s, K6s, K5s, K4s, K3s, QJs, QTs, Q9s, Q8s, Q7s, Q6s, KJo, QJo, JTs, J9s, J8s, KTo, QTo, JTo, T9s, K9o, Q9o, J9o, A8o, K8o, Q8o, A7o, K7o, A6o, K6o, A5o, K5o, A4o, 44, A3o, 33, A2o, 22" ,
@@ -52,22 +90,17 @@ pub static HOLE_CARDS_CATEGORY: Lazy<Vec<u8>> = Lazy::new(|| {
     }
 
     let mut ret = vec![u8::MAX; ALL_HOLE_CARDS.len()];
-    
+
     for hc in ALL_HOLE_CARDS.iter() {
         let simplyRangeString = hc.simple_range_string();
         assert!(catMap.contains_key(&simplyRangeString));
         ret[hc.simple_range_index()] = *catMap.get(&simplyRangeString).unwrap() as u8;
-        
     }
 
     ret
 });
 
-
-
 impl InfoState {
-    
-
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(5);
         bytes.push(self.position);
@@ -79,13 +112,13 @@ impl InfoState {
         bytes
     }
 
+    //returns action as well
     pub fn from(
-        ps: &PlayerAction, 
-        game_state: &GameState, 
+        ps: &PlayerAction,
+        game_state: &GameState,
         player_hole_cards: &HoleCards,
-        monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>
-    ) -> Self {
-
+        monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
+    ) -> (Self, u8) {
         let position = if ps.players_left_to_act == 0 {
             2
         } else if ps.players_left_to_act == ps.non_folded_players {
@@ -106,8 +139,7 @@ impl InfoState {
 
         let board = game_state.board.as_slice_card();
         assert_eq!(board.len(), game_state.current_round.get_num_board_cards());
-        let (eq_hole_cards, mut eq_board) =
-            get_equivalent_hole_board(&player_hole_cards, board);
+        let (eq_hole_cards, mut eq_board) = get_equivalent_hole_board(&player_hole_cards, board);
         eq_board.get_index();
 
         assert!(ps.non_folded_players >= 2);
@@ -118,26 +150,55 @@ impl InfoState {
             .get_put(&eq_board, &eq_hole_cards, ps.non_folded_players)
             .unwrap();
 
-        Self {
-            position,
-            num_players: ps.non_folded_players,
-            hole_card_category, 
-            equity: 1, //
-            bet_situation,
-            round: game_state.current_round as usize as u8,
-        }
+        let info_state_action: u8 = match ps.action {
+            ActionEnum::Fold => info_state_actions::FOLD,
+            ActionEnum::Call(_) => info_state_actions::CALL,
+            ActionEnum::Check => info_state_actions::CHECK,
+            ActionEnum::Bet(amt) => {
+                if amt <= game_state.pot() / 2 {
+                    info_state_actions::BET_HALF
+                } else {
+                    info_state_actions::BET_POT
+                }
+            }
+            ActionEnum::Raise(_, _) => info_state_actions::RAISE_3X,
+        };
+
+        (
+            Self {
+                position,
+                num_players: ps.non_folded_players,
+                hole_card_category,
+                equity: 1, //
+                bet_situation,
+                round: game_state.current_round as usize as u8,
+            },
+            info_state_action,
+        )
     }
 }
 
+pub type InfoStateActionValueType = f32;
 
-const TABLE: TableDefinition<&[u8], f64> = TableDefinition::new("eval_cache");
+pub mod info_state_actions {
+    pub const FOLD: u8 = 0;
+    pub const CHECK: u8 = 1;
+    pub const CALL: u8 = 2;
+    pub const BET_HALF: u8 = 3;
+    pub const BET_POT: u8 = 4;
+    pub const RAISE_3X: u8 = 5;
+    pub const ALL_IN: u8 = 6;
 
-pub struct InfoStateDb {
-    db: Database,    
+    pub const NUM_ACTIONS: usize = 7;
 }
 
-impl InfoStateDb
-{
+const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("eval_cache");
+
+pub struct InfoStateDb {
+    db: Database,
+}
+
+impl InfoStateDb {
     //each different struct should get its own db path
     pub fn new() -> Result<Self, ReDbError> {
         let db_name = get_data_path(EvalCacheEnum::InfostateTraining);
@@ -152,39 +213,59 @@ impl InfoStateDb
             write_txn.commit()?;
         }
 
-        Ok(Self {
-            db,
-        })
+        Ok(Self { db })
     }
 
-    
-
-    fn get(&mut self, index: &[u8]) -> Result<Option<f64>, ReDbError> {
+    fn get(
+        &mut self,
+        infostate: &InfoState,
+    ) -> Result<Option<[InfoStateActionValueType; info_state_actions::NUM_ACTIONS]>, ReDbError>
+    {
         let read_txn: ReadTransaction = self.db.begin_read()?;
         let table = read_txn.open_table(TABLE)?;
 
-        let data = table.get(index)?;
+        let index = infostate.to_bytes();
+        let data = table.get(index.as_slice())?;
         if let Some(data) = data {
-            
-            Ok(Some(data.value()))
+            let bytes = data.value();
+            let mut ret = [0.0; info_state_actions::NUM_ACTIONS];
+            for i in 0..info_state_actions::NUM_ACTIONS {
+                ret[i] = InfoStateActionValueType::from_le_bytes(
+                    bytes[i * 8..(i + 1) * 8].try_into().unwrap(),
+                );
+            }
+            Ok(Some(ret))
         } else {
             Ok(None)
         }
     }
 
-    fn put(&mut self, index: &[u8], result: f64) -> Result<(), ReDbError> {
+    fn put(
+        &mut self,
+        infostate: &InfoState,
+        result: [InfoStateActionValueType; info_state_actions::NUM_ACTIONS],
+    ) -> Result<(), ReDbError> {
         let write_txn = self.db.begin_write()?;
         {
             let mut table = write_txn.open_table(TABLE)?;
-            
-            table.insert(index, result)?;
+
+            let index = infostate.to_bytes();
+
+            let mut bytes = Vec::with_capacity(
+                info_state_actions::NUM_ACTIONS * mem::size_of::<InfoStateActionValueType>(),
+            );
+
+            for i in 0..info_state_actions::NUM_ACTIONS {
+                bytes.extend_from_slice(&result[i].to_le_bytes());
+            }
+
+            table.insert(index.as_slice(), bytes.as_slice())?;
         }
 
         write_txn.commit()?;
         Ok(())
     }
 }
-
 
 #[cfg(test)]
 mod tests {
