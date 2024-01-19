@@ -28,3 +28,4 @@ pub trait GameRunnerSource {
     //get cards for player?
     fn get_hole_cards(&self, player_index: usize) -> Result<HoleCards, PokerError>;
 }
+
