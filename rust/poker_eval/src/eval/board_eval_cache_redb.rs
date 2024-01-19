@@ -16,11 +16,13 @@ use dotenv::dotenv;
 const PARTIAL_RANK_FILENAME: &str = "partial_rank_re.db";
 const FLOP_TEXTURE_FILENAME: &str = "flop_texture_re.db";
 const MONTE_CARLO_EVAL_FILENAME: &str = "monte_carlo_eval_re.db";
+const INFOSTATE_TRAINING_FILENAME: &str = "infostate_eq.db";
 
 pub enum EvalCacheEnum {
     PartialRank,
     FlopTexture,
     MonteCarloEval,
+    InfostateTraining,
 }
 
 pub fn get_data_path(cache_name: EvalCacheEnum) -> PathBuf {
@@ -28,6 +30,7 @@ pub fn get_data_path(cache_name: EvalCacheEnum) -> PathBuf {
         EvalCacheEnum::PartialRank => PARTIAL_RANK_FILENAME,
         EvalCacheEnum::FlopTexture => FLOP_TEXTURE_FILENAME,
         EvalCacheEnum::MonteCarloEval => MONTE_CARLO_EVAL_FILENAME,
+        EvalCacheEnum::InfostateTraining => INFOSTATE_TRAINING_FILENAME,
     };
 
     dotenv().ok();

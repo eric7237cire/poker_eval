@@ -11,9 +11,13 @@
 //For subsequent actions, we'll maybe just have additional infostates to update
 
 
+use std::{collections::HashMap, cell::RefCell, rc::Rc};
+
 use log::info;
 
-use crate::{game::{runner::{GameRunnerSource, GameRunner}, core::{CommentedAction, ActionEnum, Round, Position, BIG_BLIND}}, Card};
+use crate::{game::{runner::{GameRunnerSource, GameRunner}, core::{CommentedAction, ActionEnum, Round, Position, BIG_BLIND}}, Card, board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval}};
+
+use super::InfoState;
 
 pub struct AgentTrainer {}
 
@@ -166,7 +170,7 @@ pub fn run_full_game_tree<T: GameRunnerSource>(game_source: &mut T, board: Vec<C
                 let r = current_game_runner.process_next_action(&action).unwrap();
 
                 //We don't keep the action if it's not the hero's
-                //current_game_runner.game_state.actions.pop().unwrap();
+                current_game_runner.game_state.actions.pop().unwrap();
 
                 if r {
                     process_finished_gamestate(current_game_runner);
@@ -178,15 +182,26 @@ pub fn run_full_game_tree<T: GameRunnerSource>(game_source: &mut T, board: Vec<C
     }
 }
 
-fn process_finished_gamestate(game_runner: GameRunner) {
+fn process_finished_gamestate(
+    game_runner: GameRunner, 
+    hero_index: usize,
+    monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>
+) -> HashMap<InfoState, f64> {
     info!("Processing finished gamestate");
 
     //assign the max ev for each infostate in the game
     for action in game_runner.game_state.actions.iter() {
-        //info!("Action {}", action);
+        info!("Action {}", action);
+        assert_eq!(hero_index, action.player_index);
+
+        let info_state = InfoState::from(
+            game_runner.get_current_player_state(),
+            &game_runner.game_state,
+            monte_carlo_db.clone()
+        )
     }
 
-    info!("{}", game_runner.to_game_log().unwrap().to_game_log_string(false, true, 1));
+    //info!("{}", game_runner.to_game_log().unwrap().to_game_log_string(false, true, 1));
 }
 
 
