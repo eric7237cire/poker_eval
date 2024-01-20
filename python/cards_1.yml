@@ -1,15 +1,13 @@
+names:
+  0: Button
+  1: Check
+  2: Empty Seat
+  3: Fold
+  4: HoleCards
+  5: Pot
+  6: Stack
+  7: Card
+  8: Chips in Pot
+path: detect/
 train: train/images
 val: valid/images
-path: detect/
-names:
-  0: Bet
-  1: Button
-  2: Call
-  3: Check
-  4: Empty Seat
-  5: Fold
-  6: HoleCards
-  7: Pot
-  8: Raise
-  9: Stack
-  10: Card

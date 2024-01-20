@@ -60,11 +60,25 @@ def do_split(validation_split = 0.2, collapse_card_classes = False) :
     new_classes = [c for c in orig_classes if c not in card_set]
     new_classes.append("Card")
 
+    # also consolidate bet, call, and raise into one class "Chips in Pot"
+    new_classes.remove("Bet")
+    new_classes.remove("Call")
+    new_classes.remove("Raise")
+
+    new_classes.append("Chips in Pot")
+
     new_class_map = get_class_map(new_classes)
     card_index = new_class_map["Card"]
+    cip_index = new_class_map["Chips in Pot"]
 
+    # have old cards map back
     for c in card_set:
         new_class_map[c] = card_index
+
+    # have old chips map back
+    new_class_map["Bet"] = cip_index
+    new_class_map["Call"] = cip_index
+    new_class_map["Raise"] = cip_index
 
     target_train_dir = cfg.DETECT_DATA_PATH / cfg.TRAIN_FOLDER_NAME
     target_validate_dir = cfg.DETECT_DATA_PATH / cfg.VALID_FOLDER_NAME
@@ -93,13 +107,13 @@ def do_split(validation_split = 0.2, collapse_card_classes = False) :
             replace_with_one_class(orig_classes, new_class_map, target_label_path / label_file.name)
 
     # lastly open cards_1.yml and replace the classes with the new ones
-    # with open(cfg.PYTHON_SRC_DIR / 'cards_1.yml', "r") as f:
-    #     config = yaml.safe_load(f)
+    with open(cfg.PYTHON_SRC_DIR / 'cards_1.yml', "r") as f:
+        config = yaml.safe_load(f)
 
-    # config["names"] = {idx: name for idx, name in enumerate(new_classes)}
+    config["names"] = {idx: name for idx, name in enumerate(new_classes)}
 
-    # with open(cfg.PYTHON_SRC_DIR / 'cards_1.yml', "w") as f:
-    #     yaml.dump(config, f)
+    with open(cfg.PYTHON_SRC_DIR / 'cards_1.yml', "w") as f:
+        yaml.dump(config, f)
 
 def replace_with_one_class(orig_classes: List[str], new_class_map: Dict[str, int], txt_file: Path):
     with open(txt_file, "r") as f:
