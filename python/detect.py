@@ -9,7 +9,7 @@ import yaml
 from env_cfg import EnvCfg
 import random
 
-from classify import get_class_map, read_classes
+from classify import get_class_map, read_classes, get_card_classes
 # Runs in the ultralytics container
 # switch function in main
 # Runs 'detect' finding the cards in the screenshot
@@ -127,13 +127,6 @@ def replace_with_one_class(orig_classes: List[str], new_class_map: Dict[str, int
             fields[0] = str(new_id)
             f.write(" ".join(fields))
 
-def get_card_classes():
-    card_values = list(range(2, 10))
-    card_values.extend(['T', 'J', 'Q', 'K', 'A'])
-
-    for value in card_values :
-        for suits in ['c', 'd', 'h', 's'] :        
-            yield f"{value}{suits}"
 
 
 def train():
@@ -146,7 +139,7 @@ def train():
     results = model.train(
         data=cfg.PYTHON_SRC_DIR / 'cards_1.yml',
         imgsz=cfg.DETECT_IMG_SZ,
-        epochs=100,
+        epochs=200,
         batch=4,
         degrees=45,
         name=cfg.DETECT_MODEL_NAME)

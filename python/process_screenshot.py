@@ -43,59 +43,55 @@ def process_screenshots():
     with open(cfg.PYTHON_SRC_DIR / 'cards_1.yml', "r") as f:
         config = yaml.safe_load(f)
 
-    for i in range(0, 10_000):
-    
-        images = cfg.INCOMING_PATH.glob("*.png")
 
-        for image_file in images:
-            # Run detection on the screenshot
-            save_image_path = cfg.LIVE_PATH / cfg.IMAGE_FOLDER_NAME / image_file.name
 
-            if save_image_path.exists():
-                print(f"Skipping {image_file}, already processed")
-                continue
+    images = cfg.INCOMING_PATH.glob("*.png")
 
-            results = detect_model.predict(
-                image_file, conf=0.25, 
-                imgsz=cfg.DETECT_IMG_SZ,
-                save=False
-            )
-            result = results[0]
+    for image_file in images:
+        # Run detection on the screenshot
+        save_image_path = cfg.LIVE_PATH / cfg.IMAGE_FOLDER_NAME / image_file.name
 
-            # print(f"Predicted {image_file} to {result}")
-            print(f"Predicted {image_file}")
+        if save_image_path.exists():
+            print(f"Skipping {image_file}, already processed")
+            continue
 
-            save_dir = result.save_dir
+        results = detect_model.predict(
+            image_file, conf=0.25, 
+            imgsz=cfg.DETECT_IMG_SZ,
+            save=True
+        )
+        result = results[0]
 
-            # center x, center y, width, height
-            box_coords = result.boxes.xywh.tolist()
-            box_coords_normalized = result.boxes.xywhn.tolist()
-            box_confidence_values = result.boxes.conf.tolist()
-            box_classes = result.boxes.cls.tolist()
+        # print(f"Predicted {image_file} to {result}")
+        print(f"Predicted {image_file}")
 
-            print(F"Box coords: {box_coords}\nSave dir: {save_dir}\nConfidence: {box_confidence_values}\nClasses: {box_classes}")   
+        save_dir = result.save_dir
 
-            # Save the original image to the live yolo format            
-            save_image_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy(image_file, save_image_path)
+        # center x, center y, width, height
+        box_coords = result.boxes.xywh.tolist()
+        box_coords_normalized = result.boxes.xywhn.tolist()
+        box_confidence_values = result.boxes.conf.tolist()
+        box_classes = result.boxes.cls.tolist()
 
-            img = Image.open(image_file)
-            run_classification(img, config["names"], orig_class_map, box_classes, box_coords, box_coords_normalized, classify_model, image_file.stem)
-            
-            # We also want to visualize the results
-            annotated_image_path = cfg.LIVE_CARD_IMAGES_PATH / image_file.name
-            print(f"Producing annotated image [{annotated_image_path}]")
-            draw_box_on_image(image_file, classes, colors, annotated_image_path)
+        # print(F"Box coords: {box_coords}\nSave dir: {save_dir}\nConfidence: {box_confidence_values}\nClasses: {box_classes}")   
+        print(F"Save dir: {save_dir}\nConfidence: {box_confidence_values}\nClasses: {box_classes}")
 
+        # Save the original image to the live yolo format            
+        save_image_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(image_file, save_image_path)
+
+        img = Image.open(image_file)
+        run_classification(img, config["names"], orig_class_map, box_classes, box_coords, box_coords_normalized, classify_model, image_file.stem)
         
+        # We also want to visualize the results
+        annotated_image_path = cfg.LIVE_CARD_IMAGES_PATH / image_file.name
+        print(f"Producing annotated image [{annotated_image_path}]")
+        draw_box_on_image(image_file, classes, colors, annotated_image_path)
 
-        # Sleep 500 ms
-        time.sleep(2.5)
-
-        # break
+   
 
 
-def run_classification(img: Image, 
+def run_classification(img: Image.Image, 
                        # mapping class index => class name (e.g.) 1: Check, see cards_1.yml
                        names: Dict[int, str],
                        # The yolo dataset we use to train has more classes, this maps the class name to the index in the yolo dataset
@@ -120,8 +116,11 @@ def run_classification(img: Image,
 
     for box_index in range(0, len(box_coords)):
 
-        predicted_class_index = box_classes[box_index]
+        predicted_class_index = int(box_classes[box_index])
+        assert len(names) == 9
         predicted_class_name = names[predicted_class_index]
+
+        print(f"For box #{box_index}, predicted class name: {predicted_class_name}")
 
         if predicted_class_name == "Card":
             center_x, center_y, width, height = box_coords[box_index]
@@ -143,6 +142,8 @@ def run_classification(img: Image,
                 
                 card_image_path.parent.mkdir(parents=True, exist_ok=True)
                 cropped_img.save(card_image_path)
+            else:
+                card_image_path = None
 
             # Convert PIL Image to NumPy array in BGR format
             cropped_image_np = np.array(cropped_img)[:, :, ::-1]
@@ -154,16 +155,16 @@ def run_classification(img: Image,
             
             classify_result = classify_results[0]
 
-            names = classify_result.names
+            classify_names = classify_result.names
             top_1_index = classify_result.probs.top1
 
             ret.append(top_1_index)
 
-            top_1 = names[top_1_index]
+            top_1 = classify_names[top_1_index]
 
             orig_index = orig_class_map[top_1]
             
-            if save_stem:
+            if save_stem and card_image_path:
                 txt_path = card_image_path.with_suffix(".txt").with_stem(f"{box_index}_{top_1}")
                 txt_path.touch()
 

@@ -2,7 +2,7 @@ from re import sub
 from shutil import rmtree
 import shutil
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, Generator, List
 
 from py import test
 from ultralytics import YOLO
@@ -17,6 +17,14 @@ from PIL import Image
 
 cfg = EnvCfg()
 
+
+def get_card_classes() -> Generator[str, None, None]:
+    card_values = list([str(c) for c in range(2, 10)])
+    card_values.extend(['T', 'J', 'Q', 'K', 'A'])
+
+    for value in card_values :
+        for suits in ['c', 'd', 'h', 's'] :        
+            yield f"{value}{suits}"
 
 def read_classes() -> List[str]:
     with open(cfg.CARD_YOLO_PATH / "classes.txt") as f:
@@ -53,6 +61,8 @@ def prepare_data(valid_percent: float=0.0, test_percent: float =0.35):
 
     classes = read_classes()
 
+    card_set = set(get_card_classes())
+
     # first put everything into train
 
     for label_file in labels_dir.iterdir():
@@ -65,7 +75,9 @@ def prepare_data(valid_percent: float=0.0, test_percent: float =0.35):
 
         for line in label_file.open("r").readlines():
             fields = line.split(" ")
-            card_class = classes[int(fields[0])]
+            card_class:str = classes[int(fields[0])]
+            if card_class not in card_set:
+                continue
             center_x = float(fields[1])
             center_y = float(fields[2])
             width = float(fields[3])
@@ -145,9 +157,12 @@ def prepare_data(valid_percent: float=0.0, test_percent: float =0.35):
 def count_instances_per_class():
     
     classes = read_classes()
+    card_set = set(get_card_classes())
     
     # now count how many of each class we have
     for class_name in classes:
+        if class_name not in card_set:
+            continue
         train_dir = cfg.CLASSIFY_DATA_PATH / cfg.TRAIN_FOLDER_NAME / class_name
         num_train_files = len(list(train_dir.iterdir()))
 
