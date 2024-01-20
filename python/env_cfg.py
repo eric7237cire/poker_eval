@@ -26,7 +26,8 @@ class EnvCfg(BaseSettings):
     @computed_field
     @property
     def INCOMING_PATH(self) -> Path:
-        return self.PYTHON_SRC_DIR / "datasets/incoming"
+        # where get_screenshot.py puts the screenshots
+        return self.PYTHON_SRC_DIR / "datasets/incoming/save"
 
     @computed_field
     @property

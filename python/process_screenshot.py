@@ -5,16 +5,17 @@ import json
 from pathlib import Path
 import shutil
 import time
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 import cv2
 import random
 from matplotlib.pyplot import box
 from PIL import Image
+import yaml
 print(f"Importing Yolo...")
 from ultralytics import YOLO
 print(f"Done importing Yolo")
 from env_cfg import EnvCfg
-from classify import read_classes
+from classify import get_class_map, read_classes
 import socket 
 import io 
 import numpy as np
@@ -33,8 +34,14 @@ def process_screenshots():
     classify_model = YOLO(cfg.CLASSIFY_PROJECT_PATH / cfg.CLASSIFY_MODEL_NAME / 'weights/best.pt')
 
     classes = read_classes()
+    orig_classes = read_classes()
+    orig_class_map = get_class_map(orig_classes)
+    
     colors = [[random.randint(0, 255) for _ in range(3)]
               for _ in range(len(classes))]
+    
+    with open(cfg.PYTHON_SRC_DIR / 'cards_1.yml', "r") as f:
+        config = yaml.safe_load(f)
 
     for i in range(0, 10_000):
     
@@ -73,7 +80,7 @@ def process_screenshots():
             shutil.copy(image_file, save_image_path)
 
             img = Image.open(image_file)
-            run_classification(img, box_coords, box_coords_normalized, classify_model, True)
+            run_classification(img, config["names"], orig_class_map, box_classes, box_coords, box_coords_normalized, classify_model, image_file.stem)
             
             # We also want to visualize the results
             annotated_image_path = cfg.LIVE_CARD_IMAGES_PATH / image_file.name
@@ -88,7 +95,18 @@ def process_screenshots():
         # break
 
 
-def run_classification(img: Image, box_coords: List[List[float]], box_coords_normalized, classify_model, save_stem: str) -> List[int]:
+def run_classification(img: Image, 
+                       # mapping class index => class name (e.g.) 1: Check, see cards_1.yml
+                       names: Dict[int, str],
+                       # The yolo dataset we use to train has more classes, this maps the class name to the index in the yolo dataset
+                       orig_class_map: Dict[str, int],
+                       # predicted class index (see cards_1.yml)
+                       box_classes: List[float],
+                       # center x, center y, width, height
+                       box_coords: List[List[float]], 
+                       # center x, center y, width, height but between 0 and 1 normalized by total image width or height
+                       box_coords_normalized, 
+                       classify_model, save_stem: str) -> List[int]:
     """
     Saves each card image to a folder, and runs classification on each card image
     Also writes entries in yolo format to the LIVE dataset; meant to enhance training data
@@ -101,48 +119,62 @@ def run_classification(img: Image, box_coords: List[List[float]], box_coords_nor
     ret = []
 
     for box_index in range(0, len(box_coords)):
-        center_x, center_y, width, height = box_coords[box_index]
-        x_min = center_x - width / 2
-        x_max = center_x + width / 2
-        y_min = center_y - height / 2
-        y_max = center_y + height / 2
 
-        # open the png image and crop this box out
-        # Crop the image to the specified rectangle
+        predicted_class_index = box_classes[box_index]
+        predicted_class_name = names[predicted_class_index]
 
-        cropped_img = img.crop((x_min, y_min, x_max, y_max))
+        if predicted_class_name == "Card":
+            center_x, center_y, width, height = box_coords[box_index]
+            x_min = center_x - width / 2
+            x_max = center_x + width / 2
+            y_min = center_y - height / 2
+            y_max = center_y + height / 2
 
-        # Resize the image 
-        cropped_img = cropped_img.resize((cfg.CLASSIFY_IMG_SZ, cfg.CLASSIFY_IMG_SZ))
+            # open the png image and crop this box out
+            # Crop the image to the specified rectangle
 
-        if save_stem:
-            card_image_path = cfg.LIVE_CARD_IMAGES_PATH / save_stem / f"{box_index}.png"
+            cropped_img = img.crop((x_min, y_min, x_max, y_max))
+
+            # Resize the image 
+            cropped_img = cropped_img.resize((cfg.CLASSIFY_IMG_SZ, cfg.CLASSIFY_IMG_SZ))
+
+            if save_stem:
+                card_image_path = cfg.LIVE_CARD_IMAGES_PATH / save_stem / f"{box_index}.png"
+                
+                card_image_path.parent.mkdir(parents=True, exist_ok=True)
+                cropped_img.save(card_image_path)
+
+            # Convert PIL Image to NumPy array in BGR format
+            cropped_image_np = np.array(cropped_img)[:, :, ::-1]
+
+            classify_results = classify_model.predict(
+                cropped_image_np, conf=0.25, 
+                project=cfg.CLASSIFY_PROJECT_PATH,
+                imgsz=cfg.CLASSIFY_IMG_SZ)
             
-            card_image_path.parent.mkdir(parents=True, exist_ok=True)
-            cropped_img.save(card_image_path)
+            classify_result = classify_results[0]
 
-        # Convert PIL Image to NumPy array in BGR format
-        cropped_image_np = np.array(cropped_img)[:, :, ::-1]
+            names = classify_result.names
+            top_1_index = classify_result.probs.top1
 
-        classify_results = classify_model.predict(
-            cropped_image_np, conf=0.25, 
-            project=cfg.CLASSIFY_PROJECT_PATH,
-            imgsz=cfg.CLASSIFY_IMG_SZ)
-        
-        classify_result = classify_results[0]
+            ret.append(top_1_index)
 
-        names = classify_result.names
-        top_1_index = classify_result.probs.top1
+            top_1 = names[top_1_index]
 
-        ret.append(top_1_index)
+            orig_index = orig_class_map[top_1]
+            
+            if save_stem:
+                txt_path = card_image_path.with_suffix(".txt").with_stem(f"{box_index}_{top_1}")
+                txt_path.touch()
 
-        top_1 = names[top_1_index]
-        
-        if save_stem:
-            txt_path = card_image_path.with_suffix(".txt").with_stem(f"{box_index}_{top_1}")
-            txt_path.touch()
+                label_lines.append(f"{orig_index} {box_coords_normalized[box_index][0]} {box_coords_normalized[box_index][1]} {box_coords_normalized[box_index][2]} {box_coords_normalized[box_index][3]}")
+        else:
+            # need to convert Chips in Pot => Bet
+            if predicted_class_name == "Chips in Pot":
+                predicted_class_name = "Bet"
+            orig_index = orig_class_map[predicted_class_name]
 
-            label_lines.append(f"{top_1_index} {box_coords_normalized[box_index][0]} {box_coords_normalized[box_index][1]} {box_coords_normalized[box_index][2]} {box_coords_normalized[box_index][3]}")
+            label_lines.append(f"{orig_index} {box_coords_normalized[box_index][0]} {box_coords_normalized[box_index][1]} {box_coords_normalized[box_index][2]} {box_coords_normalized[box_index][3]}")              
 
     if save_stem:
         save_label_path = (cfg.LIVE_PATH / cfg.LABEL_FOLDER_NAME / save_stem).with_suffix(".txt")
@@ -161,15 +193,22 @@ def run_classification(img: Image, box_coords: List[List[float]], box_coords_nor
 
     return ret
 
-def clean_detect():
+def clean_all():
+    """
+    Since all the images we want to process is in the incoming/save folder, clean out 
+    the live , live_images
+    """
     for sub_dir in (cfg.RUNS_DIR / "detect" ).iterdir():
         if sub_dir.is_dir() and sub_dir.name.startswith("predict"):
 
             shutil.rmtree(sub_dir)
 
-    if cfg.LIVE_CARD_IMAGES_PATH.exists():
-        shutil.rmtree(cfg.LIVE_CARD_IMAGES_PATH)
-    cfg.LIVE_CARD_IMAGES_PATH.mkdir(parents=True, exist_ok=True)
+    
+    for path_to_clean in [cfg.LIVE_CARD_IMAGES_PATH, cfg.LIVE_PATH / cfg.IMAGE_FOLDER_NAME, cfg.LIVE_PATH / cfg.LABEL_FOLDER_NAME]:
+        if path_to_clean.exists():
+            shutil.rmtree(path_to_clean)
+    
+        path_to_clean.mkdir(parents=True, exist_ok=True)
 
 
 # https://github.com/waittim/draw-YOLO-box/blob/main/draw_box.py
@@ -349,8 +388,8 @@ def process_screenshots_for_json():
         
 if __name__ == '__main__':
     print(f"Clean detect folder")
-    clean_detect()
+    clean_all()
     # saves in annotated
-    # process_screenshots()
+    process_screenshots()
 
-    process_screenshots_for_json()
+    # process_screenshots_for_json()

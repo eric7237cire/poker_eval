@@ -29,7 +29,9 @@ services:
     environment:
       - LOCAL_FILES_SERVING_ENABLED=true
     volumes:
+      # Label studios internal data
       - ${REPO_ROOT}/data/label-studio:/label-studio/data
+      # used to be able to use local files in label studio
       - ${REPO_ROOT}/python:/home/user/python-data
 
   jupyter_pytorch_service:
