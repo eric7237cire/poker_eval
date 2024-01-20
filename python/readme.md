@@ -124,6 +124,30 @@ Import live.json from
 
 Copy paste the xml live.label_config.xml into the view settings in the ui
 
+## Importing to label studio from scratch
+
+Unzip to datasets/all
+
+```
+cd python
+
+. ../dev/local.env
+export DATASET_NAME=all
+
+docker-compose run --rm label_studio_service  \
+label-studio-converter import yolo \
+-i /home/user/python-data/datasets/${DATASET_NAME} \
+-o /home/user/python-data/label_studio_import/${DATASET_NAME}.json \
+--image-ext .png --out-type annotations \
+--image-root-url /data/local-files/?d=/home/user/python-data/datasets/all/images/
+
+docker-compose up -d label_studio_service
+
+Import
+Copy xml from label_config.xml to view settings in ui
+
+```
+```
 
 ## To fix dir permissions
 

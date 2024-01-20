@@ -91,35 +91,46 @@ def get_screenshot():
     w = right - left
     h = bot - top
     print(f"Window dims: Width: {w}, Height: {h}")
-    print(f"Left: {left}, Top: {top}, Right: {right}, Bot: {bot}")
+    print(f"Left: {left}, Top: {top}, Right: {right}, Bottom: {bot}")
 
-    if False:
-        win32gui.SetForegroundWindow(hwnd)
-        x, y, x1, y1 = win32gui.GetClientRect(hwnd)
-        x, y = win32gui.ClientToScreen(hwnd, (x, y))
-        x1, y1 = win32gui.ClientToScreen(hwnd, (x1 - x, y1 - y))
-        img = pyautogui.screenshot(region=(x, y, x1, y1))
-        
-    else:
-        hwin = win32gui.GetDesktopWindow()
+    v_width = win32api.GetSystemMetrics(win32con.SM_CXVIRTUALSCREEN)
+    v_height = win32api.GetSystemMetrics(win32con.SM_CYVIRTUALSCREEN)
+    v_left = win32api.GetSystemMetrics(win32con.SM_XVIRTUALSCREEN)
+    v_top = win32api.GetSystemMetrics(win32con.SM_YVIRTUALSCREEN)
 
-        desktop_dc = win32gui.GetWindowDC(hwin)
+    print(f"Virtual dims: Width: {v_width}, Height: {v_height}")
+    print(f"Virtual Left: {v_left}, Virtual Top: {v_top}")
 
-        srcdc = win32ui.CreateDCFromHandle(desktop_dc)
-        memdc = srcdc.CreateCompatibleDC()
-        bmp = win32ui.CreateBitmap()
-        bmp.CreateCompatibleBitmap(srcdc, w, h)
-        memdc.SelectObject(bmp)
-        memdc.BitBlt((0, 0), (w, h), srcdc, (left, top), win32con.SRCCOPY)
-        print(f"Saving to file [{file_path}]")
-        bmp.SaveBitmapFile(memdc, str(file_path))
+    hwin = win32gui.GetDesktopWindow()
+    desktop_dc = win32gui.GetWindowDC(hwin)
+    srcdc = win32ui.CreateDCFromHandle(desktop_dc)
 
-        win32gui.DeleteObject(bmp.GetHandle())
-        memdc.DeleteDC()
-        srcdc.DeleteDC()
-        win32gui.ReleaseDC(hwin, desktop_dc)
+    # Get the scaling factor
+    LOGPIXELSX = 88
+    LOGPIXELSY = 90
+    actual_dpi_x = srcdc.GetDeviceCaps(LOGPIXELSX)
+    actual_dpi_y = srcdc.GetDeviceCaps(LOGPIXELSY)
+    scale_factor_x = actual_dpi_x / 96.0
+    scale_factor_y = actual_dpi_y / 96.0
+    print(f"Scale factor: X: {scale_factor_x}, Y: {scale_factor_y}")
 
-        img = Image.open(file_path)
+    memdc = srcdc.CreateCompatibleDC()
+    bmp = win32ui.CreateBitmap()
+    bmp.CreateCompatibleBitmap(srcdc, int(w / scale_factor_x), int(h / scale_factor_y))
+    memdc.SelectObject(bmp)
+    memdc.BitBlt((0, 0), (int(w / scale_factor_x), int(h / scale_factor_y)), srcdc, (
+        int(left / scale_factor_x), int(top / scale_factor_y)), win32con.SRCCOPY)
+    print(f"Saving to file [{file_path}]")
+    bmp.SaveBitmapFile(memdc, str(file_path))
+
+
+    win32gui.DeleteObject(bmp.GetHandle())
+    memdc.DeleteDC()
+    srcdc.DeleteDC()
+    win32gui.ReleaseDC(hwin, desktop_dc)
+
+    img = Image.open(file_path)
+
     png_file_path = file_path.with_suffix('.png')  # Change file extension to .png
     print(f"Saving PNG to file [{png_file_path}]")
     img.save(png_file_path, 'PNG')
