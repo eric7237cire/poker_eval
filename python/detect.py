@@ -2,9 +2,14 @@ from re import split, sub
 from shutil import rmtree
 import shutil
 from pathlib import Path
+import sys
+from typing import Dict, List, Set
 from ultralytics import YOLO
+import yaml
 from env_cfg import EnvCfg
 import random
+
+from classify import get_class_map, read_classes
 # Runs in the ultralytics container
 # switch function in main
 # Runs 'detect' finding the cards in the screenshot
@@ -13,7 +18,7 @@ import random
 
 cfg = EnvCfg()
 
-def do_split(validation_split = 0.2, collapse_to_one_class = False) :
+def do_split(validation_split = 0.2, collapse_card_classes = False) :
 
     print(f"Cleaning {cfg.DETECT_DATA_PATH}")
     if cfg.DETECT_DATA_PATH.exists():
@@ -47,6 +52,19 @@ def do_split(validation_split = 0.2, collapse_to_one_class = False) :
     train_files = image_files[num_validate:]
 
     print(f"Split into {len(validate_files)} validation files and {len(train_files)} training files")
+    card_set = set(get_card_classes())
+    orig_classes = read_classes()
+    orig_class_map = get_class_map(orig_classes)
+
+    # all 52 cards are now just 1 class called card
+    new_classes = [c for c in orig_classes if c not in card_set]
+    new_classes.append("Card")
+
+    new_class_map = get_class_map(new_classes)
+    card_index = new_class_map["Card"]
+
+    for c in card_set:
+        new_class_map[c] = card_index
 
     target_train_dir = cfg.DETECT_DATA_PATH / cfg.TRAIN_FOLDER_NAME
     target_validate_dir = cfg.DETECT_DATA_PATH / cfg.VALID_FOLDER_NAME
@@ -62,8 +80,8 @@ def do_split(validation_split = 0.2, collapse_to_one_class = False) :
         target_label_path = target_validate_dir /  cfg.LABEL_FOLDER_NAME
         shutil.copy(label_file, target_label_path)
 
-        if collapse_to_one_class :
-            replace_with_one_class(target_label_path / label_file.name)
+        if collapse_card_classes :
+            replace_with_one_class(orig_classes, new_class_map, target_label_path / label_file.name)
 
     for f in train_files :
         shutil.copy(f, target_train_dir / cfg.IMAGE_FOLDER_NAME)
@@ -71,19 +89,37 @@ def do_split(validation_split = 0.2, collapse_to_one_class = False) :
         target_label_path = target_train_dir /  cfg.LABEL_FOLDER_NAME
         shutil.copy(label_file, target_label_path)
 
-        if collapse_to_one_class :
-            replace_with_one_class(target_label_path / label_file.name)
+        if collapse_card_classes :
+            replace_with_one_class(orig_classes, new_class_map, target_label_path / label_file.name)
 
-def replace_with_one_class(txt_file: Path):
+    # lastly open cards_1.yml and replace the classes with the new ones
+    # with open(cfg.PYTHON_SRC_DIR / 'cards_1.yml', "r") as f:
+    #     config = yaml.safe_load(f)
+
+    # config["names"] = {idx: name for idx, name in enumerate(new_classes)}
+
+    # with open(cfg.PYTHON_SRC_DIR / 'cards_1.yml', "w") as f:
+    #     yaml.dump(config, f)
+
+def replace_with_one_class(orig_classes: List[str], new_class_map: Dict[str, int], txt_file: Path):
     with open(txt_file, "r") as f:
         lines = f.readlines()
     
     with open(txt_file, "w") as f:
         for line in lines:
             fields = line.split(" ")
-            fields[0] = "0"
+            orig_class = orig_classes[int(fields[0])]
+            new_id = new_class_map[orig_class]
+            fields[0] = str(new_id)
             f.write(" ".join(fields))
 
+def get_card_classes():
+    card_values = list(range(2, 10))
+    card_values.extend(['T', 'J', 'Q', 'K', 'A'])
+
+    for value in card_values :
+        for suits in ['c', 'd', 'h', 's'] :        
+            yield f"{value}{suits}"
 
 
 def train():
@@ -141,7 +177,9 @@ def clean_run_dir():
 if __name__ == "__main__":
     
     do_split(0.2, True)
+
+    #sys.exit(0)
     clean_run_dir()
 
     train()    
-    # predict()
+    predict()

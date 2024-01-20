@@ -2,7 +2,7 @@ from re import sub
 from shutil import rmtree
 import shutil
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 from py import test
 from ultralytics import YOLO
@@ -22,10 +22,14 @@ def read_classes() -> List[str]:
     with open(cfg.CARD_YOLO_PATH / "classes.txt") as f:
         classes = f.read().strip().split("\n")
 
-    if len(classes) != 52:
-        raise Exception(f"Expected 52 classes, was {len(classes)}")
+    if len(classes) != 62:
+        raise Exception(f"Expected 62 classes, was {len(classes)}")
     
     return classes
+
+
+def get_class_map(classes: List[str]) -> Dict[str, int]:
+    return {c: i for i, c in enumerate(classes)}
     
 
 def prepare_data(valid_percent: float=0.0, test_percent: float =0.35):

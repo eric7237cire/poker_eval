@@ -1,6 +1,15 @@
-train: 'train/images'
-val: 'valid/images'
+train: train/images
+val: valid/images
 path: detect/
-# class names
-names: 
-  0: Card
+names:
+  0: Bet
+  1: Button
+  2: Call
+  3: Check
+  4: Empty Seat
+  5: Fold
+  6: HoleCards
+  7: Pot
+  8: Raise
+  9: Stack
+  10: Card

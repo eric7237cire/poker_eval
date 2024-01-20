@@ -25,8 +25,8 @@ https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&D
 
 # Running ultralytics in docker
 
-cd git/poker_eval
-source ./dev/local.env
+cd git/poker_eval/python
+source ../dev/local.env
 
 docker-compose run --rm ultralytics_service
 
