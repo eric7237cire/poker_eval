@@ -158,7 +158,13 @@ impl InfoState {
             .get_put(&eq_board, &eq_hole_cards, ps.non_folded_players)
             .unwrap();
 
-        let equity = if eq < 0.33 { 0 } else if eq < 0.66 { 1 } else { 2 };
+        let equity = if eq < 0.33 {
+            0
+        } else if eq < 0.66 {
+            1
+        } else {
+            2
+        };
 
         let info_state_action: u8 = match ps.action {
             ActionEnum::Fold => info_state_actions::FOLD,

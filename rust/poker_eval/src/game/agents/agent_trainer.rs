@@ -32,8 +32,12 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
     board: Vec<Card>,
     hero_index: usize,
     monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
-) -> Result<HashMap<InfoState, [InfoStateActionValueType; info_state_actions::NUM_ACTIONS]>, PokerError> {
-    let mut ret: HashMap<InfoState, [InfoStateActionValueType; info_state_actions::NUM_ACTIONS]> = HashMap::new();
+) -> Result<
+    HashMap<InfoState, [InfoStateActionValueType; info_state_actions::NUM_ACTIONS]>,
+    PokerError,
+> {
+    let mut ret: HashMap<InfoState, [InfoStateActionValueType; info_state_actions::NUM_ACTIONS]> =
+        HashMap::new();
 
     let game_runner = GameRunner::new(
         game_source.get_initial_players(),
@@ -227,8 +231,9 @@ fn process_finished_gamestate(
         .final_state
         .is_some());
     let player_state = &game_runner.game_state.player_states[hero_index];
-    let value = ( player_state.stack as f64 / game_runner.game_state.bb as f64
-        - player_state.initial_stack as f64 / game_runner.game_state.bb as f64 ) as InfoStateActionValueType;
+    let value = (player_state.stack as f64 / game_runner.game_state.bb as f64
+        - player_state.initial_stack as f64 / game_runner.game_state.bb as f64)
+        as InfoStateActionValueType;
 
     //assign the max ev for each infostate in the game
     for action in game_runner.game_state.actions.iter() {
@@ -272,11 +277,12 @@ mod tests {
     use crate::{
         board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
         game::{
+            agents::info_state_actions::BET_HALF,
             core::{
                 ActionEnum, ChipType, CommentedAction, GameState, InitialPlayerState, PlayerState,
                 Round,
             },
-            runner::GameRunnerSource, agents::info_state_actions::BET_HALF,
+            runner::GameRunnerSource,
         },
         init_test_logger, Board, HoleCards, PokerError,
     };
@@ -418,7 +424,7 @@ mod tests {
                 assert!(!found);
                 found = true;
                 info!("{} {:?}", info_state, value);
-                
+
                 assert_eq!(value[BET_HALF as usize], 2.0);
             }
         }
