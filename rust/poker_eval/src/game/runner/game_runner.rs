@@ -14,7 +14,6 @@ use crate::pre_calc::rank::Rank;
 use crate::{game::runner::GameLog, set_used_card, Board, Card};
 use crate::{CardUsedType, HoleCards, PokerError};
 
-
 use boomphf::Mphf;
 
 use log::trace;
@@ -357,7 +356,7 @@ impl GameRunner {
         assert!(self.game_state.board.len() >= 3);
 
         let mut hand_rankings: Vec<(Rank, usize)> = Vec::new();
-        
+
         for player_index in 0..self.game_state.player_states.len() {
             let p_data = &self.game_state.player_states[player_index];
 
@@ -942,7 +941,11 @@ impl GameRunner {
             .player_states
             .iter()
             //.map(|p| p.final_state.unwrap().clone())
-            .map(|p| p.final_state.unwrap_or(FinalPlayerState::Folded(Round::River)).clone())
+            .map(|p| {
+                p.final_state
+                    .unwrap_or(FinalPlayerState::Folded(Round::River))
+                    .clone()
+            })
             .collect();
 
         let game_log: GameLog = GameLog {
@@ -964,14 +967,11 @@ impl GameRunner {
 
 #[cfg(test)]
 mod tests {
-    
 
     use crate::{
         game::runner::{test_util::run_gamelog, GameLog},
         init_test_logger,
     };
-
-    
 
     #[test]
     fn test_multi_splits() {
@@ -1442,13 +1442,15 @@ Hero (Ad2s)        - 500
 EqAggroA (7d2c)    - 500
 EqPsvAgent3 (7c5d) - 500";
 
-let game_log: GameLog = hh.parse().unwrap();
+        let game_log: GameLog = hh.parse().unwrap();
 
-let game_runner = run_gamelog(game_log);
+        let game_runner = run_gamelog(game_log);
 
-assert_eq!(game_runner.game_state.player_states[0].stack, 498);
-assert_eq!(game_runner.game_state.player_states[3].stack, 95);
-assert_eq!(game_runner.game_state.player_states[5].stack, 500+405+22);
-
+        assert_eq!(game_runner.game_state.player_states[0].stack, 498);
+        assert_eq!(game_runner.game_state.player_states[3].stack, 95);
+        assert_eq!(
+            game_runner.game_state.player_states[5].stack,
+            500 + 405 + 22
+        );
     }
 }

@@ -14,7 +14,6 @@ impl PanicAgent {
             hole_cards: None,
         }
     }
-
 }
 
 impl Agent for PanicAgent {

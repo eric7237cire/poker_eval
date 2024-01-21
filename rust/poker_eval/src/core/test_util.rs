@@ -33,7 +33,7 @@ pub fn init_logger() {
     let _ = env_logger::builder()
         .is_test(false)
         .filter_level(log::LevelFilter::Trace)
-        //.filter_module("poker_eval::game::runner", log::LevelFilter::Trace)        
+        //.filter_module("poker_eval::game::runner", log::LevelFilter::Trace)
         .filter_module("poker_eval", log::LevelFilter::Debug)
         .format(|buf, record| {
             writeln!(

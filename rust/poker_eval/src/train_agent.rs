@@ -1,22 +1,20 @@
 use std::{cell::RefCell, rc::Rc, time::Instant};
 
-
-
 use log::debug;
 use poker_eval::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
-    game::{
-        agents::{run_full_game_tree, InfoStateDb, info_state_actions, AgentEnum},
-        runner::GameRunnerSourceEnum,
+    game::agents::{
+        build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
+        EqAgentConfig, Tag,
     },
     game::{agents::PanicAgent, core::InitialPlayerState},
-    game::agents::{
-            build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
-            EqAgentConfig, Tag,
-        },
+    game::{
+        agents::{info_state_actions, run_full_game_tree, AgentEnum, InfoStateDb},
+        runner::GameRunnerSourceEnum,
+    },
     init_logger,
     pre_calc::get_repo_root,
     Card, Deck,
@@ -122,7 +120,6 @@ pub fn main() {
 
     let mut agent_deck = Deck::new();
 
-
     let num_total_iterations = 10_000;
 
     let num_players = 9;
@@ -139,7 +136,6 @@ pub fn main() {
     let mut info_state_db = InfoStateDb::new(true).unwrap();
 
     for it_num in 0..num_total_iterations {
-
         if last_status_update.elapsed().as_secs() > 10 {
             last_status_update = Instant::now();
             debug!("Iteration: {} of {}", it_num, num_total_iterations);
@@ -173,18 +169,31 @@ pub fn main() {
 
         let mut game_source = GameRunnerSourceEnum::from(agent_source);
 
-        let infostate_values = run_full_game_tree(&mut game_source, board, hero_index, rcref_mcedb.clone()).unwrap();
+        let infostate_values =
+            run_full_game_tree(&mut game_source, board, hero_index, rcref_mcedb.clone()).unwrap();
 
         for (infostate, action) in infostate_values {
             //println!("{} {:?}", infostate, action);
-            let mut infostate_weights = info_state_db.get(&infostate).unwrap().unwrap_or([0.0; info_state_actions::NUM_ACTIONS]);
+            let mut infostate_weights = info_state_db
+                .get(&infostate)
+                .unwrap()
+                .unwrap_or([0.0; info_state_actions::NUM_ACTIONS]);
+
+            if infostate.num_players == 5
+                && infostate.hole_card_category == 3
+                && infostate.equity == 0
+                && infostate.bet_situation == 1
+                && infostate.round == 0
+            {
+                debug!(
+                    "#{} Info state weights: {:?}\nAdding {:?}",
+                    it_num, &infostate_weights, &action
+                );
+            }
             for i in 0..infostate_weights.len() {
                 infostate_weights[i] += action[i].unwrap_or(0.0);
             }
             info_state_db.put(&infostate, infostate_weights).unwrap();
         }
-        
     }
-
-    
 }

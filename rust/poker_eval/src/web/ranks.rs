@@ -1,8 +1,8 @@
 use boomphf::Mphf;
 
-use crate::pre_calc::NUMBER_OF_SIMPLE_HOLE_CARDS;
 use crate::pre_calc::fast_eval::fast_hand_eval;
 use crate::pre_calc::rank::Rank;
+use crate::pre_calc::NUMBER_OF_SIMPLE_HOLE_CARDS;
 use crate::web::{PlayerFlopResults, PlayerPreFlopState, PreflopPlayerInfo, ResultType};
 use crate::{Card, HoleCards, PokerError, NUM_RANK_FAMILIES};
 

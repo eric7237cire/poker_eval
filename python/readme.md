@@ -165,11 +165,13 @@ Absolute Local path: /home/user/python-data  (in /home/user)
 
 # Start jupyter
 
-juyter lab
-source ./dev/local.env
-docker run --rm --detach -p 8888:8888  -v ${REPO_ROOT}/python:/home/jovyan/work quay.io/jupyter/pytorch-notebook:latest
+cd python
+source ../dev/local.env
+docker-compose run --rm --detach jupyter_pytorch_service
 
 In visual studio code, need to copy the url with the token and sometimes the token for it to connect
+
+
 
 #  start-notebook.sh --ip='*' --NotebookApp.token='' --NotebookApp.password=''
 

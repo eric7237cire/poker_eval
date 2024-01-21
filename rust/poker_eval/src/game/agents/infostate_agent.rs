@@ -1,11 +1,13 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::game::agents::{Agent, InfoStateDb, InfoState, info_state_actions};
 use crate::board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval};
-use crate::game::core::{CommentedAction, GameState, PlayerState, ActionEnum};
+use crate::game::agents::{
+    info_state_actions, Agent, InfoState, InfoStateActionValueType, InfoStateDb,
+};
+use crate::game::core::{ActionEnum, CommentedAction, GameState, PlayerState};
+use crate::monte_carlo_equity::get_equivalent_hole_board;
 use crate::HoleCards;
-
 
 pub struct InfoStateAgent {
     pub hole_cards: Option<HoleCards>,
@@ -16,9 +18,10 @@ pub struct InfoStateAgent {
 }
 
 impl InfoStateAgent {
-    pub fn new(name: &str,
+    pub fn new(
+        name: &str,
         monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
-        info_state_db: Rc<RefCell<InfoStateDb>>
+        info_state_db: Rc<RefCell<InfoStateDb>>,
     ) -> Self {
         Self {
             name: name.to_string(),
@@ -27,13 +30,16 @@ impl InfoStateAgent {
             info_state_db,
         }
     }
-
 }
 
 impl Agent for InfoStateAgent {
     fn decide(&mut self, player_state: &PlayerState, game_state: &GameState) -> CommentedAction {
-        let info_state = 
-        InfoState::from_game_state(game_state, player_state,self.hole_cards.as_ref().unwrap(), self.monte_carlo_db.clone());
+        let info_state = InfoState::from_game_state(
+            game_state,
+            player_state,
+            self.hole_cards.as_ref().unwrap(),
+            self.monte_carlo_db.clone(),
+        );
 
         let info_state_db = self.info_state_db.borrow();
 
@@ -42,70 +48,105 @@ impl Agent for InfoStateAgent {
         if action_values.is_none() {
             return CommentedAction {
                 action: ActionEnum::Fold,
-                comment: Some(format!("[{}]; did not exist, so folding", &info_state))
+                comment: Some(format!("[{}]; did not exist, so folding", &info_state)),
             };
         }
 
-        let action_values = action_values.unwrap();
+        let mut action_values = action_values.unwrap();
 
         assert_eq!(action_values.len(), info_state_actions::NUM_ACTIONS);
 
-        let max_action_index = action_values.iter()
-        .enumerate().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).unwrap().0 as u8;
+        action_values[info_state_actions::ALL_IN as usize] = InfoStateActionValueType::MIN;
+        action_values[info_state_actions::BET_POT as usize] = InfoStateActionValueType::MIN;
+
+        if game_state.current_to_call > 0 {
+            action_values[info_state_actions::CHECK as usize] = InfoStateActionValueType::MIN;
+            action_values[info_state_actions::BET_HALF as usize] = InfoStateActionValueType::MIN;
+        } else {
+            action_values[info_state_actions::RAISE_3X as usize] = InfoStateActionValueType::MIN;
+            action_values[info_state_actions::CALL as usize] = InfoStateActionValueType::MIN;
+        }
+
+        let max_action_index = action_values
+            .iter()
+            .enumerate()
+            .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+            .unwrap()
+            .0 as u8;
 
         //let normalized = InfoStateDb::normalize_array(&action_values);
         //let common_comment = InfoStateDb::normalized_array_to_string(&normalized);
 
-        let common_comment = InfoStateDb::normalized_array_to_string(&action_values);
+        let common_comment_is = InfoStateDb::normalized_array_to_string(&action_values);
+
+        let (eq_hole_cards, mut eq_board) =
+            get_equivalent_hole_board(&self.hole_cards.unwrap(), game_state.board.as_slice_card());
+        eq_board.get_index();
+
+        let eq = self
+            .monte_carlo_db
+            .borrow_mut()
+            .get_put(
+                &eq_board,
+                &eq_hole_cards,
+                game_state.num_players_at_round_start(),
+            )
+            .unwrap();
+
+        let common_comment = format!(
+            "Eq {:.2}% with {} players in round;Non Folded Player Count: {} left to act: {};{}",
+            eq * 100.0,
+            game_state.num_players_at_round_start(),
+            game_state.num_non_folded_players(),
+            game_state.num_left_to_act,
+            common_comment_is
+        );
 
         let helpers = player_state.get_helpers(game_state);
 
         match max_action_index {
-            info_state_actions::FOLD => {
-                CommentedAction {
-                    action: ActionEnum::Fold,
-                    comment: Some(format!("[{}]; folded {}", &info_state, &common_comment))
-                }
+            info_state_actions::FOLD => CommentedAction {
+                action: ActionEnum::Fold,
+                comment: Some(format!("[{}]; folded {}", &info_state, &common_comment)),
             },
-            info_state_actions::CHECK => {
-                CommentedAction {
-                    action: ActionEnum::Check,
-                    comment: Some(format!("[{}]; checked {}", &info_state, &common_comment))
-                }
+            info_state_actions::CHECK => CommentedAction {
+                action: ActionEnum::Check,
+                comment: Some(format!("[{}]; checked {}", &info_state, &common_comment)),
             },
-            info_state_actions::CALL => {
-                CommentedAction {
-                    action: ActionEnum::Call(helpers.call_amount),
-                    comment: Some(format!("[{}]; called {}", &info_state, &common_comment))
-                }
+            info_state_actions::CALL => CommentedAction {
+                action: ActionEnum::Call(helpers.call_amount),
+                comment: Some(format!("[{}]; called {}", &info_state, &common_comment)),
             },
-            info_state_actions::BET_HALF => {
-                helpers.build_bet(game_state.pot() / 2, 
-                    format!("[{}]; bet {}", &info_state, &common_comment))
-                
-            },
-            info_state_actions::BET_POT => {
-                helpers.build_bet(game_state.pot(), 
-                    format!("[{}]; bet {}", &info_state, &common_comment))
-            },
-            info_state_actions::RAISE_3X => {
-                helpers.build_raise_to(game_state, game_state.current_to_call * 3, 
-                    format!("[{}]; raised {}", &info_state, &common_comment))
-                
-            },
+            info_state_actions::BET_HALF => helpers.build_bet(
+                game_state.pot() / 2,
+                format!("[{}]; bet {}", &info_state, &common_comment),
+            ),
+            info_state_actions::BET_POT => helpers.build_bet(
+                game_state.pot(),
+                format!("[{}]; bet {}", &info_state, &common_comment),
+            ),
+            info_state_actions::RAISE_3X => helpers.build_raise_to(
+                game_state,
+                game_state.current_to_call * 3,
+                format!("[{}]; raised {}", &info_state, &common_comment),
+            ),
             info_state_actions::ALL_IN => {
                 if game_state.current_to_call == 0 {
-                    helpers.build_bet( helpers.max_can_raise, 
-                        format!("[{}]; Bet All In {}", &info_state, &common_comment))
+                    helpers.build_bet(
+                        helpers.max_can_raise,
+                        format!("[{}]; Bet All In {}", &info_state, &common_comment),
+                    )
                 } else {
-                    helpers.build_raise_to(game_state, helpers.max_can_raise, 
-                        format!("[{}]; Raise All In {}", &info_state, &common_comment))
+                    helpers.build_raise_to(
+                        game_state,
+                        helpers.max_can_raise,
+                        format!("[{}]; Raise All In {}", &info_state, &common_comment),
+                    )
                 }
-            },
+            }
             _ => {
                 panic!("Unknown action index {}", max_action_index);
             }
-        
         }
     }
 

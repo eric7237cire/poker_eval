@@ -7,7 +7,6 @@ use poker_eval::{
     board_hc_eval_cache_redb::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
-    game::{core::InitialPlayerState, agents::{InfoStateAgent, InfoStateDb, AgentEnum}},
     game::runner::{GameRunner, GameRunnerSourceEnum},
     game::{
         agents::{
@@ -15,6 +14,10 @@ use poker_eval::{
             EqAgentConfig, Tag,
         },
         runner::GameRunnerSource,
+    },
+    game::{
+        agents::{AgentEnum, InfoStateAgent, InfoStateDb},
+        core::InitialPlayerState,
     },
     init_logger,
     pre_calc::{get_repo_root, perfect_hash::load_boomperfect_hash},
@@ -41,7 +44,6 @@ fn build_agents(
         monte_carlo_equity_db.clone(),
     )));
 
-    
     agents.push(AgentEnum::from(EqAgent::new(
         "EqAggroB",
         EqAgentConfig::get_aggressive(),
@@ -127,7 +129,7 @@ fn main() {
     let num_total_iterations = 1_000;
     let _num_worst_hands_to_keep = 5;
     let num_players = 9;
-    let hero_name = "EqAggroA";
+    let hero_name = "InfoStateAgent";
     let mut winnings: HashMap<String, i64> = HashMap::new();
 
     let repo_root = get_repo_root();

@@ -5,7 +5,7 @@ use crate::{
 
 use enum_dispatch::enum_dispatch;
 
-use super::{PassiveCallingStation, InfoStateAgent, EqAgent, Tag, PanicAgent};
+use super::{EqAgent, InfoStateAgent, PanicAgent, PassiveCallingStation, Tag};
 
 #[enum_dispatch]
 pub enum AgentEnum {
