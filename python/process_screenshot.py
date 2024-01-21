@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import shutil
 import time
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 import cv2
 import random
 from matplotlib.pyplot import box
@@ -215,20 +215,21 @@ def clean_all():
 # https://github.com/waittim/draw-YOLO-box/blob/main/draw_box.py
 
 
-def plot_one_box(x, image, color=None, label=None, line_thickness=None):
+def plot_one_box(x, image, color=None, label: Optional[str]=None, line_thickness=None):
     # Plots one bounding box on image img
     tl = line_thickness or round(
         0.002 * (image.shape[0] + image.shape[1]) / 2) + 1  # line/font thickness
     color = color or [random.randint(0, 255) for _ in range(3)]
     c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
     cv2.rectangle(image, c1, c2, color, thickness=tl, lineType=cv2.LINE_AA)
-    if label:
-        tf = max(tl - 1, 1)  # font thickness
-        t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
-        c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
-        cv2.rectangle(image, c1, c2, color, -1, cv2.LINE_AA)  # filled
-        cv2.putText(image, label, (c1[0], c1[1] - 2), 0, tl / 3,
-                    [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
+    if not label:
+        return
+    tf = max(tl - 1, 1)  # font thickness
+    t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
+    c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
+    cv2.rectangle(image, c1, c2, color, -1, cv2.LINE_AA)  # filled
+    cv2.putText(image, label, (c1[0], c1[1] - 2), 0, tl / 3,
+                [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
 
 def draw_box_on_image(image_path: Path, classes: List[str], colors, output_path: Path):
     """
@@ -259,7 +260,7 @@ def draw_box_on_image(image_path: Path, classes: List[str], colors, output_path:
         y2 = round(y_center+h/2)
 
         plot_one_box([x1, y1, x2, y2], image, color=colors[class_idx],
-                     label=classes[class_idx], line_thickness=None)
+                     label=classes[class_idx], line_thickness=1)
 
         cv2.imwrite(str(output_path), image)
 

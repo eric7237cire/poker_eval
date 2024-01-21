@@ -1,6 +1,6 @@
-use std::{cell::RefCell, collections::HashMap, fs, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
-use log::{debug, info};
+
 
 use poker_eval::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
@@ -9,7 +9,6 @@ use poker_eval::{
     },
     game::{
         agents::run_full_game_tree,
-        core::{ActionEnum, CommentedAction},
         runner::GameRunnerSourceEnum,
     },
     game::{agents::PanicAgent, core::InitialPlayerState},
@@ -18,7 +17,6 @@ use poker_eval::{
             build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
             EqAgentConfig, Tag,
         },
-        runner::{GameRunner, GameRunnerSource},
     },
     init_logger,
     pre_calc::get_repo_root,
@@ -131,13 +129,13 @@ pub fn main() {
 
     let repo_root = get_repo_root();
 
-    let json_hh_path = repo_root.join("vue-poker/src/assets/hand_history");
+    let _json_hh_path = repo_root.join("vue-poker/src/assets/hand_history");
 
     //let mut json_filenames = Vec::new();
 
     let hero_name = "PanicAgent";
 
-    for it_num in 0..num_total_iterations {
+    for _it_num in 0..num_total_iterations {
         agent_deck.reset();
 
         let mut agents = build_agents(
@@ -166,7 +164,7 @@ pub fn main() {
 
         let mut game_source = GameRunnerSourceEnum::from(agent_source);
 
-        run_full_game_tree(&mut game_source, board, hero_index, rcref_mcedb.clone());
+        run_full_game_tree(&mut game_source, board, hero_index, rcref_mcedb.clone()).unwrap();
 
         // let _change = game_runner.game_state.player_states[hero_index].stack as i64
         //     - game_runner.game_state.player_states[hero_index].initial_stack as i64;

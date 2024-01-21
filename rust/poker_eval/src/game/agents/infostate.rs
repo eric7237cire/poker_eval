@@ -13,7 +13,7 @@ use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDe
 use crate::{
     board_eval_cache_redb::{get_data_path, EvalCacheEnum},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
-    game::core::{ActionEnum, GameState, PlayerAction, PlayerState},
+    game::core::{ActionEnum, GameState, PlayerAction},
     monte_carlo_equity::get_equivalent_hole_board,
     HoleCards, ALL_HOLE_CARDS,
 };
@@ -79,9 +79,9 @@ impl Display for InfoState {
 }
 
 pub static HOLE_CARDS_CATEGORY: Lazy<Vec<u8>> = Lazy::new(|| {
-    let mut catMap = HashMap::new();
+    let mut cat_map = HashMap::new();
 
-    let catStrings = [
+    let cat_strings = [
     "AA, KK, QQ, JJ, TT",
     "AKs, AQs, AJs, ATs, A9s, A8s, AKo, KQs, KJs, KTs, AQo, KQo, AJo, ATo, A9o, 99, 88, 77, 66, 55",
     "A7s, A6s, A5s, A4s, A3s, A2s, K9s, K8s, K7s, K6s, K5s, K4s, K3s, QJs, QTs, Q9s, Q8s, Q7s, Q6s, KJo, QJo, JTs, J9s, J8s, KTo, QTo, JTo, T9s, K9o, Q9o, J9o, A8o, K8o, Q8o, A7o, K7o, A6o, K6o, A5o, K5o, A4o, 44, A3o, 33, A2o, 22" ,
@@ -89,20 +89,20 @@ pub static HOLE_CARDS_CATEGORY: Lazy<Vec<u8>> = Lazy::new(|| {
     "93s, 92s, 84s, 83s, 82s, 75s, 74s, 73s, 72s, 86o, 76o, 65s, 64s, 63s, 62s, 95o, 85o, 75o, 65o, 54s, 53s, 52s, T4o, 94o, 84o, 74o, 64o, 54o, 43s, 42s, T3o, 93o, 83o, 73o, 63o, 53o, 43o, 32s, T2o, 92o, 82o, 72o, 62o, 52o, 42o, 32o"
   ];
 
-    for (i, catString) in catStrings.iter().enumerate() {
-        let cards = catString.split(",");
+    for (i, cat_str) in cat_strings.iter().enumerate() {
+        let cards = cat_str.split(",");
         for card in cards {
             let card = card.trim();
-            catMap.insert(card.to_string(), i);
+            cat_map.insert(card.to_string(), i);
         }
     }
 
     let mut ret = vec![u8::MAX; ALL_HOLE_CARDS.len()];
 
     for hc in ALL_HOLE_CARDS.iter() {
-        let simplyRangeString = hc.simple_range_string();
-        assert!(catMap.contains_key(&simplyRangeString));
-        ret[hc.simple_range_index()] = *catMap.get(&simplyRangeString).unwrap() as u8;
+        let simple_range_string = hc.simple_range_string();
+        assert!(cat_map.contains_key(&simple_range_string));
+        ret[hc.simple_range_index()] = *cat_map.get(&simple_range_string).unwrap() as u8;
     }
 
     ret

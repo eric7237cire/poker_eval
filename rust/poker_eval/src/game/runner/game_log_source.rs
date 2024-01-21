@@ -1,6 +1,6 @@
 use crate::game::core::{ChipType, CommentedAction, GameState, InitialPlayerState, PlayerState};
 use crate::game::runner::{GameLog, GameRunnerSource};
-use crate::{Card, HoleCards, PokerError};
+use crate::{HoleCards, PokerError};
 
 pub struct GameLogSource {
     game_log: GameLog,

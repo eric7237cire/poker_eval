@@ -14,7 +14,7 @@ use crate::pre_calc::rank::Rank;
 use crate::{game::runner::GameLog, set_used_card, Board, Card};
 use crate::{CardUsedType, HoleCards, PokerError};
 
-use crate::game::runner::{GameRunnerSource, GameRunnerSourceEnum};
+
 use boomphf::Mphf;
 
 use log::trace;
@@ -957,14 +957,14 @@ impl GameRunner {
 
 #[cfg(test)]
 mod tests {
-    use log::debug;
+    
 
     use crate::{
-        game::runner::{test_util::run_gamelog, GameLog, GameLogSource},
+        game::runner::{test_util::run_gamelog, GameLog},
         init_test_logger,
     };
 
-    use super::*;
+    
 
     #[test]
     fn test_multi_splits() {

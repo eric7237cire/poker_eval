@@ -1033,8 +1033,7 @@ impl Eq for GameLog {}
 mod tests {
     use crate::{
         game::runner::{
-            test_util::run_gamelog, GameLogSource, GameRunner, GameRunnerSource,
-            GameRunnerSourceEnum,
+            test_util::run_gamelog,
         },
         init_test_logger,
         pre_calc::perfect_hash::load_boomperfect_hash,
@@ -1341,7 +1340,7 @@ Agent 4               - 495 # Started with 500 change -5
         //let game_log_source = GameLogSource::new(game_log);
 
         //let mut game_source = GameRunnerSourceEnum::from(game_log_source);
-        let mut game_runner2 = run_gamelog(parsed_game_log);
+        let game_runner2 = run_gamelog(parsed_game_log);
 
         let log2 = game_runner2.to_game_log().unwrap();
 
