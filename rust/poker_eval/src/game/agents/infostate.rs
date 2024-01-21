@@ -13,7 +13,7 @@ use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDe
 use crate::{
     board_eval_cache_redb::{get_data_path, EvalCacheEnum},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
-    game::core::{ActionEnum, GameState, PlayerAction, Round},
+    game::core::{ActionEnum, GameState, PlayerAction, Round, PlayerState},
     monte_carlo_equity::get_equivalent_hole_board,
     HoleCards, ALL_HOLE_CARDS, pre_calc::NUMBER_OF_SIMPLE_HOLE_CARDS,
 };
@@ -121,7 +121,8 @@ impl InfoState {
     }
 
     //returns action as well
-    pub fn from(
+    //Used in training once poker hand is over
+    pub fn from_player_action(
         ps: &PlayerAction,
         game_state: &GameState,
         player_hole_cards: &HoleCards,
@@ -198,6 +199,74 @@ impl InfoState {
             info_state_action,
         )
     }
+
+    //Used by the agent
+    pub fn from_game_state(
+        game_state: &GameState,
+        player_state: &PlayerState,
+        player_hole_cards: &HoleCards,
+        monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
+    ) -> Self {
+        let non_folded_players = game_state.total_active_players
+        + game_state.total_players_all_in;
+
+        let position = if game_state.num_left_to_act == 0 {
+            2
+        } else if game_state.num_left_to_act == non_folded_players {
+            0
+        } else {
+            1
+        };
+
+        let hole_card_category = HOLE_CARDS_CATEGORY[player_hole_cards.simple_range_index()];
+
+        let bet_situation = if game_state.current_to_call == 0 {
+            0 //unbet
+        } else if player_state.cur_round_putting_in_pot > 0 {
+            2 //facing raise
+        } else {
+            1 //facing bet
+        };
+
+        let board = game_state.board.as_slice_card();
+        assert_eq!(board.len(), game_state.current_round.get_num_board_cards());
+        
+        assert!(non_folded_players >= 2);
+        assert!(non_folded_players <= 10);
+
+        let eq =
+        if game_state.current_round > Round::Preflop {
+            let (eq_hole_cards, mut eq_board) = get_equivalent_hole_board(&player_hole_cards, board);
+            eq_board.get_index();
+         monte_carlo_db
+            .borrow_mut()
+            .get_put(&eq_board, &eq_hole_cards, non_folded_players)
+            .unwrap()
+        } else {
+            //Don't calculate equity for preflop
+            0.0
+        };
+
+        let equity = if eq < 0.33 {
+            0
+        } else if eq < 0.66 {
+            1
+        } else {
+            2
+        };
+        
+
+        
+            Self {
+                position,
+                num_players: non_folded_players,
+                hole_card_category,
+                equity,
+                bet_situation,
+                round: game_state.current_round as usize as u8,
+            }
+        
+    }
 }
 
 pub type InfoStateActionValueType = f32;
@@ -245,7 +314,7 @@ impl InfoStateDb {
     }
 
     pub fn get(
-        &mut self,
+        &self,
         infostate: &InfoState,
     ) -> Result<Option<[InfoStateActionValueType; info_state_actions::NUM_ACTIONS]>, ReDbError>
     {
@@ -293,6 +362,49 @@ impl InfoStateDb {
 
         write_txn.commit()?;
         Ok(())
+    }
+
+    pub fn normalize_array(arr: &[InfoStateActionValueType]) -> [InfoStateActionValueType; info_state_actions::NUM_ACTIONS] {
+        assert_eq!(arr.len(), info_state_actions::NUM_ACTIONS);
+
+        let mut ret = [0.0; info_state_actions::NUM_ACTIONS];
+    
+        let min = arr.iter().cloned().fold(InfoStateActionValueType::INFINITY, InfoStateActionValueType::min);
+        let max = arr.iter().cloned().fold(InfoStateActionValueType::NEG_INFINITY, InfoStateActionValueType::max);
+    
+        if (max - min).abs() < InfoStateActionValueType::EPSILON {
+            // Avoid division by zero if all elements are the same
+            return ret;
+        }
+    
+        for i in 0..info_state_actions::NUM_ACTIONS {
+            ret[i] = (arr[i] - min) / (max - min);
+        }
+        ret
+    }
+
+    pub fn normalized_array_to_string(arr: &[InfoStateActionValueType]) -> String {
+        assert_eq!(arr.len(), info_state_actions::NUM_ACTIONS);
+
+        let mut ret = String::new();   
+        
+    
+        for i in 0..info_state_actions::NUM_ACTIONS as u8 {
+
+            let action_name = match i {
+                info_state_actions::FOLD => "FOLD",
+                info_state_actions::CHECK => "CHECK",
+                info_state_actions::CALL => "CALL",
+                info_state_actions::BET_HALF => "BET_HALF",
+                info_state_actions::BET_POT => "BET_POT",
+                info_state_actions::RAISE_3X => "RAISE_3X",
+                info_state_actions::ALL_IN => "ALL_IN",
+                _ => "UNKNOWN",
+            };
+
+            ret.push_str(&format!(";{} -> {:.1}%", action_name, arr[i as usize] * 100.0));
+        }
+        ret
     }
 }
 

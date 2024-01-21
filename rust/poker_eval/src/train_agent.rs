@@ -9,7 +9,7 @@ use poker_eval::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
     game::{
-        agents::{run_full_game_tree, InfoStateDb, info_state_actions},
+        agents::{run_full_game_tree, InfoStateDb, info_state_actions, AgentEnum},
         runner::GameRunnerSourceEnum,
     },
     game::{agents::PanicAgent, core::InitialPlayerState},
@@ -42,12 +42,12 @@ fn build_agents(
     partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
     monte_carlo_equity_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
     num_total_players: usize,
-) -> Vec<Box<dyn Agent>> {
+) -> Vec<AgentEnum> {
     //let calling_75 = "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+";
 
-    let mut agents: Vec<Box<dyn Agent>> = Vec::new();
+    let mut agents: Vec<AgentEnum> = Vec::new();
 
-    agents.push(Box::new(EqAgent::new(
+    agents.push(AgentEnum::from(EqAgent::new(
         "EqAggroA",
         EqAgentConfig::get_aggressive(),
         flop_texture_db.clone(),
@@ -55,7 +55,7 @@ fn build_agents(
         monte_carlo_equity_db.clone(),
     )));
 
-    agents.push(Box::new(EqAgent::new(
+    agents.push(AgentEnum::from(EqAgent::new(
         "EqAggroB",
         EqAgentConfig::get_aggressive(),
         flop_texture_db.clone(),
@@ -71,7 +71,7 @@ fn build_agents(
         partial_rank_db.clone(),
     );
 
-    agents.push(Box::new(tag));
+    agents.push(AgentEnum::from(tag));
 
     let tag = Tag::new(
         "JJ+,AJs+,AQo+,KQs",
@@ -81,15 +81,15 @@ fn build_agents(
         partial_rank_db.clone(),
     );
 
-    agents.push(Box::new(tag));
+    agents.push(AgentEnum::from(tag));
 
     // Since we are training the agent, this one should be asked for an action
-    agents.push(Box::new(PanicAgent::new("PanicAgent")));
+    agents.push(AgentEnum::from(PanicAgent::new("PanicAgent")));
 
     let mut i = 0;
     while agents.len() < num_total_players {
         i += 1;
-        agents.push(Box::new(EqAgent::new(
+        agents.push(AgentEnum::from(EqAgent::new(
             &format!("EqPsvAgent{}", i + 1),
             EqAgentConfig::get_passive(),
             flop_texture_db.clone(),

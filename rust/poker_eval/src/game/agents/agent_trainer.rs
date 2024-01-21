@@ -304,7 +304,7 @@ fn process_finished_gamestate(
         }
         assert_eq!(hero_index, action.player_index);
 
-        let (info_state, action_id) = InfoState::from(
+        let (info_state, action_id) = InfoState::from_player_action(
             &action,
             &game_runner.game_state,
             &player_hole_cards,

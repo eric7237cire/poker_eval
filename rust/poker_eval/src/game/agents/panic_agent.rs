@@ -15,13 +15,6 @@ impl PanicAgent {
         }
     }
 
-    fn decide_preflop(
-        &self,
-        _player_state: &PlayerState,
-        _game_state: &GameState,
-    ) -> CommentedAction {
-        panic!("Panic Agent");
-    }
 }
 
 impl Agent for PanicAgent {

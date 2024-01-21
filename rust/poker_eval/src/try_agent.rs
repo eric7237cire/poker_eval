@@ -7,7 +7,7 @@ use poker_eval::{
     board_hc_eval_cache_redb::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
-    game::core::InitialPlayerState,
+    game::{core::InitialPlayerState, agents::{InfoStateAgent, InfoStateDb, AgentEnum}},
     game::runner::{GameRunner, GameRunnerSourceEnum},
     game::{
         agents::{
@@ -26,13 +26,14 @@ fn build_agents(
     flop_texture_db: Rc<RefCell<EvalCacheReDb<ProduceFlopTexture>>>,
     partial_rank_db: Rc<RefCell<EvalCacheWithHcReDb<ProducePartialRankCards>>>,
     monte_carlo_equity_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
+    info_state_db: Rc<RefCell<InfoStateDb>>,
     num_total_players: usize,
-) -> Vec<Box<dyn Agent>> {
+) -> Vec<AgentEnum> {
     //let calling_75 = "22+,A2+,K2+,Q2+,J2+,T2s+,T5o+,93s+,96o+,85s+,87o,75s+";
 
-    let mut agents: Vec<Box<dyn Agent>> = Vec::new();
+    let mut agents: Vec<AgentEnum> = Vec::new();
 
-    agents.push(Box::new(EqAgent::new(
+    agents.push(AgentEnum::from(EqAgent::new(
         "EqAggroA",
         EqAgentConfig::get_aggressive(),
         flop_texture_db.clone(),
@@ -40,14 +41,8 @@ fn build_agents(
         monte_carlo_equity_db.clone(),
     )));
 
-    // agents.push(Box::new(PassiveCallingStation::new(
-    //     None,
-    //     "CallAllB",
-    //     flop_texture_db.clone(),
-    //     partial_rank_db.clone(),
-    // )));
-
-    agents.push(Box::new(EqAgent::new(
+    
+    agents.push(AgentEnum::from(EqAgent::new(
         "EqAggroB",
         EqAgentConfig::get_aggressive(),
         flop_texture_db.clone(),
@@ -63,7 +58,7 @@ fn build_agents(
         partial_rank_db.clone(),
     );
 
-    agents.push(Box::new(tag));
+    agents.push(AgentEnum::from(tag));
 
     let tag = Tag::new(
         "JJ+,AJs+,AQo+,KQs",
@@ -73,12 +68,20 @@ fn build_agents(
         partial_rank_db.clone(),
     );
 
-    agents.push(Box::new(tag));
+    agents.push(AgentEnum::from(tag));
+
+    let info_state_agent = InfoStateAgent::new(
+        "InfoStateAgent",
+        monte_carlo_equity_db.clone(),
+        info_state_db.clone(),
+    );
+
+    agents.push(AgentEnum::from(info_state_agent));
 
     let mut i = 0;
     while agents.len() < num_total_players {
         i += 1;
-        agents.push(Box::new(EqAgent::new(
+        agents.push(AgentEnum::from(EqAgent::new(
             &format!("EqPsvAgent{}", i + 1),
             EqAgentConfig::get_passive(),
             flop_texture_db.clone(),
@@ -110,6 +113,10 @@ fn main() {
 
     let rcref_mcedb = Rc::new(RefCell::new(monte_carlo_equity_db));
 
+    let info_state_db = InfoStateDb::new(false).unwrap();
+
+    let rcref_is_db = Rc::new(RefCell::new(info_state_db));
+
     let hash_func = load_boomperfect_hash();
 
     let mut agent_deck = Deck::new();
@@ -117,7 +124,7 @@ fn main() {
     //we want to track the worst loses
     //let mut heap: BinaryHeap<(i64, i32, GameLog)> = BinaryHeap::new();
 
-    let num_total_iterations = 20_000;
+    let num_total_iterations = 1_000;
     let _num_worst_hands_to_keep = 5;
     let num_players = 9;
     let hero_name = "EqAggroA";
@@ -147,6 +154,7 @@ fn main() {
             rcref_ftdb.clone(),
             rcref_pdb.clone(),
             rcref_mcedb.clone(),
+            rcref_is_db.clone(),
             num_players,
         );
         agents.shuffle(&mut agent_deck.rng);

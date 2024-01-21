@@ -10,6 +10,7 @@ mod agent_trainer;
 mod eq_agent;
 mod infostate;
 mod panic_agent;
+mod infostate_agent;
 
 pub use agent_source::*;
 pub use agent_trainer::*;
@@ -20,3 +21,4 @@ pub use infostate::*;
 pub use panic_agent::*;
 pub use passive_calling_station::*;
 pub use tag::*;
+pub use infostate_agent::*;

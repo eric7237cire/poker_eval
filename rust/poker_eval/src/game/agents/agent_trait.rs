@@ -3,6 +3,20 @@ use crate::{
     HoleCards,
 };
 
+use enum_dispatch::enum_dispatch;
+
+use super::{PassiveCallingStation, InfoStateAgent, EqAgent, Tag, PanicAgent};
+
+#[enum_dispatch]
+pub enum AgentEnum {
+    InfoStateAgent,
+    EqAgent,
+    Tag,
+    PassiveCallingStation,
+    PanicAgent,
+}
+
+#[enum_dispatch(AgentEnum)]
 pub trait Agent {
     //Get hand cards with index_to_card_pair
     fn decide(

@@ -846,7 +846,7 @@ impl GameRunner {
         //Can only raise if there is a current to call
         if amt_to_call == 0 {
             return Err(format!(
-                "Player #{} {} tried to raise {} but there is no bet to call, must bet or fold",
+                "Player #{} {} tried to raise {} but there is no bet to call, must bet, check or fold",
                 player_index, &player_state.player_name, raise_amt,
             )
             .into());

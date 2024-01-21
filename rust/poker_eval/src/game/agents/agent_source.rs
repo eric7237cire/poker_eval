@@ -4,8 +4,10 @@ use crate::{HoleCards, PokerError};
 use crate::game::agents::Agent;
 use crate::game::runner::GameRunnerSource;
 
+use super::AgentEnum;
+
 pub struct AgentSource {
-    pub agents: Vec<Box<dyn Agent>>,
+    pub agents: Vec<AgentEnum>,
 
     //Contains their hole cards
     pub players: Vec<InitialPlayerState>,

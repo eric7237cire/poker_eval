@@ -3,9 +3,10 @@ use crate::{
     Card, Deck, HoleCards,
 };
 
-use super::Agent;
+use super::{AgentEnum};
+use crate::game::agents::agent_trait::Agent;
 
-pub fn set_agent_hole_cards(deck: &mut Deck, agents: &mut Vec<Box<dyn Agent>>) {
+pub fn set_agent_hole_cards(deck: &mut Deck, agents: &mut Vec<AgentEnum>) {
     for agent_index in 0..agents.len() {
         let agent = &mut agents[agent_index];
 
@@ -21,7 +22,7 @@ pub fn set_agent_hole_cards(deck: &mut Deck, agents: &mut Vec<Box<dyn Agent>>) {
     }
 }
 
-pub fn build_initial_players_from_agents(agents: &[Box<dyn Agent>]) -> Vec<InitialPlayerState> {
+pub fn build_initial_players_from_agents(agents: &[AgentEnum]) -> Vec<InitialPlayerState> {
     let mut players: Vec<InitialPlayerState> = Vec::new();
 
     for agent_index in 0..agents.len() {
