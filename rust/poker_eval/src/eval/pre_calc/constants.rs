@@ -8,6 +8,8 @@ pub const NUMBER_OF_CARDS: usize = NUMBER_OF_SUITS * NUMBER_OF_RANKS;
 
 pub const NUMBER_OF_HOLE_CARDS: usize = 1326; //52 choose 2
 
+pub const NUMBER_OF_SIMPLE_HOLE_CARDS: usize = 169; 
+
 //We want 32 (not 31) so we can truncate easily via as u32
 pub const GLOBAL_SUIT_SHIFT: u64 = 32;
 

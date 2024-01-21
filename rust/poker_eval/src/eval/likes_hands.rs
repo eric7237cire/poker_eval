@@ -197,7 +197,7 @@ fn handle_set_and_two_pair(
     }
 
     if let Some(num_above) = prc.made_two_pair() {
-        if board.get_num_cards() == 3 {
+        if board.len() == 3 {
             likes_hand_comments.push(format!(
                 "Made two pair on flop with {} above hi card ",
                 num_above
@@ -454,7 +454,7 @@ fn likes_draws(
                     p.straight_draw_type
                 ));
                 *likes_hand = max(*likes_hand, LikesHandLevel::LargeBet);
-            } else if board.get_num_cards() == 3 && prc.get_num_overcards() >= 1 {
+            } else if board.len() == 3 && prc.get_num_overcards() >= 1 {
                 //on flop with 1 overcard we up this
                 likes_hand_comments.push(format!(
                     "Straight draw {} with 1 or more overcards",

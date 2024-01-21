@@ -156,7 +156,7 @@ impl Board {
         })
     }
 
-    pub fn get_num_cards(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.cards.len()
     }
 

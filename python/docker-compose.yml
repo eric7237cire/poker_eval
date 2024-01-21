@@ -14,6 +14,7 @@ services:
       - ${REPO_ROOT}/python/datasets:/usr/src/datasets
       - ${REPO_ROOT}/python/runs:/usr/src/ultralytics/runs
       - ${REPO_ROOT}/vue-poker/src/assets:/usr/src/assets
+      - ultralytics_root:/root
     deploy:
       resources:
         reservations:
@@ -40,3 +41,6 @@ services:
       - "8888:8888"
     volumes:
       - ${REPO_ROOT}/python:/home/jovyan/work
+
+volumes:
+  ultralytics_root:

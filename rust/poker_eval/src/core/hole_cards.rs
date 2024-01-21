@@ -17,8 +17,6 @@ pub struct HoleCards {
     //card_lo: Card
 }
 
-pub const SIMPLE_RANGE_INDEX_LEN: usize = 169;
-
 impl HoleCards {
     pub fn new(card1: Card, card2: Card) -> Result<Self, PokerError> {
         let card1_index: u8 = card1.into();

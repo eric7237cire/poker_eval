@@ -1,9 +1,10 @@
 use boomphf::Mphf;
 
+use crate::pre_calc::NUMBER_OF_SIMPLE_HOLE_CARDS;
 use crate::pre_calc::fast_eval::fast_hand_eval;
 use crate::pre_calc::rank::Rank;
 use crate::web::{PlayerFlopResults, PlayerPreFlopState, PreflopPlayerInfo, ResultType};
-use crate::{Card, HoleCards, PokerError, NUM_RANK_FAMILIES, SIMPLE_RANGE_INDEX_LEN};
+use crate::{Card, HoleCards, PokerError, NUM_RANK_FAMILIES};
 
 pub struct RankResults {
     pub(crate) num_iterations: ResultType,
@@ -25,8 +26,8 @@ pub struct RankResults {
 impl Default for RankResults {
     fn default() -> Self {
         Self {
-            eq_by_range_index: vec![0.0; SIMPLE_RANGE_INDEX_LEN],
-            num_it_by_range_index: vec![0; SIMPLE_RANGE_INDEX_LEN],
+            eq_by_range_index: vec![0.0; NUMBER_OF_SIMPLE_HOLE_CARDS],
+            num_it_by_range_index: vec![0; NUMBER_OF_SIMPLE_HOLE_CARDS],
             win_rank_family_count: [0.0; NUM_RANK_FAMILIES],
             lose_rank_family_count: [0; NUM_RANK_FAMILIES],
             num_iterations: 0,

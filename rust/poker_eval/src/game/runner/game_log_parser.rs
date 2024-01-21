@@ -26,7 +26,7 @@ player_id_regex: Regex::new(r#"(?x) # Enable verbose mode
 (?:\#[^\n\r]*\n)?         # comment in prev line; Non-capturing group for # and anything after it, greedy
 \s*
 \b{start-half}          # Non consuming word boundary
-(?P<player_id>[0-9A-Za-z_\ \%]+?)  # Capture player id, non greedy for no trailing whitespace, can have % in name
+(?P<player_id>[0-9A-Za-z_\ \%\(\)]+?)  # Capture player id, non greedy for no trailing whitespace, can have % in name
 (?-u:\b{end-half})            # Non consuming word boundary
 \ +
 ((wins|loses|bets|raises|calls|folds|checks|-))  # Capture ending
@@ -203,7 +203,8 @@ chip_amount_regex: Regex::new(r#"(?x) # Enable verbose mode
             .section_name_regex
             .captures(s)
             .ok_or(PokerError::from_string(format!(
-                "Expected section *** section name *** in {:.100}",
+                "Did find section string, looking for *** {:?} *** in {:.100}",
+                expected.as_ref(),
                 &s
             )))?;
 

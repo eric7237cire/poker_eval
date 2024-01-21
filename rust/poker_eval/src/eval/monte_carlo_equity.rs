@@ -83,7 +83,7 @@ pub fn calc_equity(
                 deck.choose_available_in_range(player_possible_hold_cards)?;
         }
 
-        for board_index in board.get_num_cards()..5 {
+        for board_index in board.len()..5 {
             let card = deck.get_unused_card().unwrap();
             board_cards[board_index] = card;
         }
@@ -140,7 +140,7 @@ pub fn calc_equity_vs_random(
 ) -> Result<f64, PokerError> {
     assert!(num_players >= 2 && num_players <= 10);
     assert!(num_community_cards >= 3 && num_community_cards <= 5);
-    assert!(board.get_num_cards() <= num_community_cards);
+    assert!(board.len() <= num_community_cards);
 
     let hash_func = load_boomperfect_hash();
 
@@ -182,7 +182,7 @@ pub fn calc_equity_vs_random(
             player_hole_cards[player_index] = HoleCards::new(card1, card2)?;
         }
 
-        for board_index in board.get_num_cards()..num_community_cards {
+        for board_index in board.len()..num_community_cards {
             let card = deck.get_unused_card().unwrap();
             board_cards[board_index] = card;
         }

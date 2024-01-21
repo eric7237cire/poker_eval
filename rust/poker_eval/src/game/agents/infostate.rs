@@ -3,7 +3,7 @@ use std::{
     collections::HashMap,
     fmt::{Display, Formatter},
     mem,
-    rc::Rc,
+    rc::Rc, fs,
 };
 
 use log::info;
@@ -13,9 +13,9 @@ use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDe
 use crate::{
     board_eval_cache_redb::{get_data_path, EvalCacheEnum},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
-    game::core::{ActionEnum, GameState, PlayerAction},
+    game::core::{ActionEnum, GameState, PlayerAction, Round},
     monte_carlo_equity::get_equivalent_hole_board,
-    HoleCards, ALL_HOLE_CARDS,
+    HoleCards, ALL_HOLE_CARDS, pre_calc::NUMBER_OF_SIMPLE_HOLE_CARDS,
 };
 
 #[derive(Eq, PartialEq, Hash)]
@@ -97,7 +97,7 @@ pub static HOLE_CARDS_CATEGORY: Lazy<Vec<u8>> = Lazy::new(|| {
         }
     }
 
-    let mut ret = vec![u8::MAX; ALL_HOLE_CARDS.len()];
+    let mut ret = vec![u8::MAX; NUMBER_OF_SIMPLE_HOLE_CARDS];
 
     for hc in ALL_HOLE_CARDS.iter() {
         let simple_range_string = hc.simple_range_string();
@@ -147,16 +147,22 @@ impl InfoState {
 
         let board = game_state.board.as_slice_card();
         assert_eq!(board.len(), game_state.current_round.get_num_board_cards());
-        let (eq_hole_cards, mut eq_board) = get_equivalent_hole_board(&player_hole_cards, board);
-        eq_board.get_index();
-
+        
         assert!(ps.non_folded_players >= 2);
         assert!(ps.non_folded_players <= 10);
 
-        let eq = monte_carlo_db
+        let eq =
+        if ps.round > Round::Preflop {
+            let (eq_hole_cards, mut eq_board) = get_equivalent_hole_board(&player_hole_cards, board);
+            eq_board.get_index();
+         monte_carlo_db
             .borrow_mut()
             .get_put(&eq_board, &eq_hole_cards, ps.non_folded_players)
-            .unwrap();
+            .unwrap()
+        } else {
+            //Don't calculate equity for preflop
+            0.0
+        };
 
         let equity = if eq < 0.33 {
             0
@@ -216,8 +222,14 @@ pub struct InfoStateDb {
 
 impl InfoStateDb {
     //each different struct should get its own db path
-    pub fn new() -> Result<Self, ReDbError> {
+    pub fn new(clean: bool) -> Result<Self, ReDbError> {
         let db_name = get_data_path(EvalCacheEnum::InfostateTraining);
+
+        if clean && db_name.exists() {
+            info!("Deleting db {:?} since exists and clean=true", db_name);
+            fs::remove_file(&db_name).unwrap();
+        }
+
         info!("Opening db {:?}", db_name);
         let db = Database::create(db_name)?;
         {
@@ -232,7 +244,7 @@ impl InfoStateDb {
         Ok(Self { db })
     }
 
-    fn get(
+    pub fn get(
         &mut self,
         infostate: &InfoState,
     ) -> Result<Option<[InfoStateActionValueType; info_state_actions::NUM_ACTIONS]>, ReDbError>
@@ -242,12 +254,13 @@ impl InfoStateDb {
 
         let index = infostate.to_bytes();
         let data = table.get(index.as_slice())?;
+        let num_bytes_per_element = mem::size_of::<InfoStateActionValueType>();
         if let Some(data) = data {
             let bytes = data.value();
             let mut ret = [0.0; info_state_actions::NUM_ACTIONS];
             for i in 0..info_state_actions::NUM_ACTIONS {
                 ret[i] = InfoStateActionValueType::from_le_bytes(
-                    bytes[i * 8..(i + 1) * 8].try_into().unwrap(),
+                    bytes[i * num_bytes_per_element..(i + 1) * num_bytes_per_element].try_into().unwrap(),
                 );
             }
             Ok(Some(ret))
@@ -256,7 +269,7 @@ impl InfoStateDb {
         }
     }
 
-    fn put(
+    pub fn put(
         &mut self,
         infostate: &InfoState,
         result: [InfoStateActionValueType; info_state_actions::NUM_ACTIONS],

@@ -185,28 +185,39 @@ impl GameLog {
         s.push_str(&url);
         s.push_str("\n");
 
-        let mut last_action_for_player = Vec::with_capacity(player_names.len());
-        for pi in 0..player_names.len() {
-            let last_action = self
-                .actions
-                .iter()
-                .rev()
-                .find(|a| a.player_index == pi)
-                .unwrap();
-            last_action_for_player.push(last_action.get_fields_after_action());
-        }
+        if with_player_comments {
+            let mut last_action_for_player = Vec::with_capacity(player_names.len());
+            for pi in 0..player_names.len() {
+                let last_action = self
+                    .actions
+                    .iter()
+                    .rev()
+                    .find(|a| a.player_index == pi)
+                    .unwrap();
+                last_action_for_player.push(last_action.get_fields_after_action());
+            }
 
-        for (pi, player_state) in self.players.iter().enumerate() {
-            s.push_str(&format!(
-                "{:width$} - {} # {} Started with {} change {}; put in pot {}\n",
-                &player_names[pi],
-                self.final_stacks[pi],
-                self.get_final_eval_comment(pi),
-                player_state.stack,
-                self.final_stacks[pi] as i64 - (player_state.stack as i64),
-                last_action_for_player[pi].total_amount_put_in_pot,
-                width = max_player_id_width
-            ));
+            for (pi, player_state) in self.players.iter().enumerate() {
+                s.push_str(&format!(
+                    "{:width$} - {} # {} Started with {} change {}; put in pot {}\n",
+                    &player_names[pi],
+                    self.final_stacks[pi],
+                    self.get_final_eval_comment(pi),
+                    player_state.stack,
+                    self.final_stacks[pi] as i64 - (player_state.stack as i64),
+                    last_action_for_player[pi].total_amount_put_in_pot,
+                    width = max_player_id_width
+                ));
+            }
+        } else {
+            for (pi, _player_state) in self.players.iter().enumerate() {
+                s.push_str(&format!(
+                    "{:width$} - {}\n",
+                    &player_names[pi],
+                    self.final_stacks[pi],
+                    width = max_player_id_width
+                ));
+            }
         }
 
         s

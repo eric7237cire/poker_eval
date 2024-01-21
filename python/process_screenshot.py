@@ -58,7 +58,9 @@ def process_screenshots():
         results = detect_model.predict(
             image_file, conf=0.25, 
             imgsz=cfg.DETECT_IMG_SZ,
-            save=True
+            # True puts the ultralytics annotated version in runs/predict 
+            # but we are annotaning it ourselves to add the card classification
+            save=False
         )
         result = results[0]
 
@@ -230,6 +232,7 @@ def plot_one_box(x, image, color=None, label: Optional[str]=None, line_thickness
     cv2.rectangle(image, c1, c2, color, -1, cv2.LINE_AA)  # filled
     cv2.putText(image, label, (c1[0], c1[1] - 2), 0, tl / 3,
                 [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
+
 
 def draw_box_on_image(image_path: Path, classes: List[str], colors, output_path: Path):
     """

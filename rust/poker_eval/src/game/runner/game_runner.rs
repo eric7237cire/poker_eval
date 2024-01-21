@@ -17,7 +17,7 @@ use crate::{CardUsedType, HoleCards, PokerError};
 
 use boomphf::Mphf;
 
-use log::trace;
+use log::{trace, warn};
 
 // Enforces the poker rules
 #[derive(Clone)]
@@ -327,13 +327,16 @@ impl GameRunner {
             );
         }
 
+        let not_folded_count =
+            self.game_state.total_active_players + self.game_state.total_players_all_in;
+
         //Add a short cut if only 1 non folded left
-        if self.game_state.total_active_players == 1 && self.game_state.total_players_all_in == 0 {
+        if not_folded_count == 1 {
             let player_index = self
                 .game_state
                 .player_states
                 .iter()
-                .position(|p| p.is_active())
+                .position(|p| !p.is_folded())
                 .unwrap();
 
             self.game_state.player_states[player_index].stack += self.game_state.pot();
@@ -347,11 +350,14 @@ impl GameRunner {
             self.game_state.total_active_players > 1 || self.game_state.total_players_all_in > 0
         );
 
+        // if self.game_state.board.len() < 3 {
+        //     let log = self.to_game_log().unwrap().to_game_log_string(false, true, 0);
+        //     warn!("Game finished with board len {}\n{}", self.game_state.board.len(), log);
+        // }
+        assert!(self.game_state.board.len() >= 3);
+
         let mut hand_rankings: Vec<(Rank, usize)> = Vec::new();
-        //let mut hand_ranking_strings: Vec<Option<String>> = vec![None; self.game_state.player_states.len()];
-
-        //let mut eval_cards = self.game_state.board.as_slice_card().to_vec();
-
+        
         for player_index in 0..self.game_state.player_states.len() {
             let p_data = &self.game_state.player_states[player_index];
 
@@ -935,7 +941,8 @@ impl GameRunner {
             .game_state
             .player_states
             .iter()
-            .map(|p| p.final_state.unwrap().clone())
+            //.map(|p| p.final_state.unwrap().clone())
+            .map(|p| p.final_state.unwrap_or(FinalPlayerState::Folded(Round::River)).clone())
             .collect();
 
         let game_log: GameLog = GameLog {
@@ -1392,5 +1399,56 @@ L3 - 385
         assert_eq!(game_runner.game_state.player_states[0].stack, 75);
         assert_eq!(game_runner.game_state.player_states[1].stack, 105);
         assert_eq!(game_runner.game_state.player_states[2].stack, 205);
+    }
+
+    #[test]
+    fn test_fold_to_preflop_allin() {
+        let hh = "
+*** Players ***
+EqPsvAgent5 (5s2d) - 500 - 5s2d
+EqPsvAgent4 (Js4c) - 500 - Js4c
+EqPsvAgent2 (8s8h) - 500 - 8s8h
+PanicAgent (Ah9d)  - 500 - Ah9d
+EqAggroB (QhJc)    - 500 - QhJc
+HeroDeux (QdQc)    - 500 - QdQc
+Hero (Ad2s)        - 500 - Ad2s
+EqAggroA (7d2c)    - 500 - 7d2c
+EqPsvAgent3 (7c5d) - 500 - 7c5d
+*** Blinds ***
+EqPsvAgent5 (5s2d) - 2
+EqPsvAgent4 (Js4c) - 5
+*** Preflop ***
+EqPsvAgent2 (8s8h) raises 10 to 15 # 
+PanicAgent (Ah9d)  raises 30 to 45 # 
+EqAggroB (QhJc)    folds # 
+HeroDeux (QdQc)    raises 90 to 135 # 
+Hero (Ad2s)        folds # 
+EqAggroA (7d2c)    folds # 
+EqPsvAgent3 (7c5d) folds # 
+EqPsvAgent5 (5s2d) folds # 
+EqPsvAgent4 (Js4c) folds # 
+EqPsvAgent2 (8s8h) folds # 
+PanicAgent (Ah9d)  raises 270 to 405 # 
+HeroDeux (QdQc)    raises 95 to 500 # 
+PanicAgent (Ah9d)  folds # 
+*** Summary *** 
+EqPsvAgent5 (5s2d) - 498
+EqPsvAgent4 (Js4c) - 495
+EqPsvAgent2 (8s8h) - 485
+PanicAgent (Ah9d)  - 95
+EqAggroB (QhJc)    - 500
+HeroDeux (QdQc)    - 700
+Hero (Ad2s)        - 500
+EqAggroA (7d2c)    - 500
+EqPsvAgent3 (7c5d) - 500";
+
+let game_log: GameLog = hh.parse().unwrap();
+
+let game_runner = run_gamelog(game_log);
+
+assert_eq!(game_runner.game_state.player_states[0].stack, 498);
+assert_eq!(game_runner.game_state.player_states[3].stack, 95);
+assert_eq!(game_runner.game_state.player_states[5].stack, 500+405+22);
+
     }
 }

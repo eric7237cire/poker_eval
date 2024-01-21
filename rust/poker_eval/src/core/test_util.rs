@@ -33,15 +33,8 @@ pub fn init_logger() {
     let _ = env_logger::builder()
         .is_test(false)
         .filter_level(log::LevelFilter::Trace)
-        .filter_module("poker_eval::game::runner", log::LevelFilter::Debug)
-        .filter_module(
-            "poker_eval::game::agents::agent_source",
-            log::LevelFilter::Debug,
-        )
-        .filter_module("poker_eval::game::game_log", log::LevelFilter::Debug)
-        .filter_module("poker_eval::eval::rank", log::LevelFilter::Debug)
-        .filter_module("poker_eval::eval::board_texture", log::LevelFilter::Debug)
-        .filter_module("poker_eval::core::bool_range", log::LevelFilter::Debug)
+        //.filter_module("poker_eval::game::runner", log::LevelFilter::Trace)        
+        .filter_module("poker_eval", log::LevelFilter::Debug)
         .format(|buf, record| {
             writeln!(
                 buf,

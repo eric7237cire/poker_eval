@@ -1,14 +1,15 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, time::Instant};
 
 
 
+use log::{info, debug};
 use poker_eval::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
     game::{
-        agents::run_full_game_tree,
+        agents::{run_full_game_tree, InfoStateDb, info_state_actions},
         runner::GameRunnerSourceEnum,
     },
     game::{agents::PanicAgent, core::InitialPlayerState},
@@ -82,6 +83,7 @@ fn build_agents(
 
     agents.push(Box::new(tag));
 
+    // Since we are training the agent, this one should be asked for an action
     agents.push(Box::new(PanicAgent::new("PanicAgent")));
 
     let mut i = 0;
@@ -101,6 +103,8 @@ fn build_agents(
 
 // cargo run --release --bin train_agent
 pub fn main() {
+    let mut last_status_update = Instant::now();
+
     init_logger();
 
     //Building what the agents need
@@ -120,10 +124,8 @@ pub fn main() {
 
     let mut agent_deck = Deck::new();
 
-    //we want to track the worst loses
-    //let mut heap: BinaryHeap<(i64, i32, GameLog)> = BinaryHeap::new();
 
-    let num_total_iterations = 1;
+    let num_total_iterations = 10_000;
 
     let num_players = 9;
 
@@ -135,7 +137,16 @@ pub fn main() {
 
     let hero_name = "PanicAgent";
 
-    for _it_num in 0..num_total_iterations {
+    //Start with clean database
+    let mut info_state_db = InfoStateDb::new(true).unwrap();
+
+    for it_num in 0..num_total_iterations {
+
+        if last_status_update.elapsed().as_secs() > 10 {
+            last_status_update = Instant::now();
+            debug!("Iteration: {} of {}", it_num, num_total_iterations);
+        }
+
         agent_deck.reset();
 
         let mut agents = build_agents(
@@ -164,37 +175,18 @@ pub fn main() {
 
         let mut game_source = GameRunnerSourceEnum::from(agent_source);
 
-        run_full_game_tree(&mut game_source, board, hero_index, rcref_mcedb.clone()).unwrap();
+        let infostate_values = run_full_game_tree(&mut game_source, board, hero_index, rcref_mcedb.clone()).unwrap();
 
-        // let _change = game_runner.game_state.player_states[hero_index].stack as i64
-        //     - game_runner.game_state.player_states[hero_index].initial_stack as i64;
-
-        // if it_num % 100 == 0 {
-        //     debug!(
-        //         "Iteration {}",
-        //         it_num,
-        //     );
-        // }
-
-        // let mut game_log = game_runner.to_game_log().unwrap();
-
-        // game_log.calc_best_hands();
-        // let json_str = serde_json::to_string_pretty(&game_log).unwrap();
-        // let json_filename = format!("{}.json", it_num);
-        // let file_path = json_hh_path.join(&json_filename);
-        // json_filenames.push(json_filename);
-        // fs::write(file_path, json_str).unwrap();
+        for (infostate, action) in infostate_values {
+            //println!("{} {:?}", infostate, action);
+            let mut infostate_weights = info_state_db.get(&infostate).unwrap().unwrap_or([0.0; info_state_actions::NUM_ACTIONS]);
+            for i in 0..infostate_weights.len() {
+                infostate_weights[i] += action[i];
+            }
+            info_state_db.put(&infostate, infostate_weights).unwrap();
+        }
+        
     }
 
-    // let mut overview: HashMap<String, serde_json::Value> = HashMap::new();
-    // overview.insert(
-    //     "json_filenames".to_string(),
-    //     serde_json::to_value(json_filenames).unwrap(),
-    // );
-    // let overview_filename = json_hh_path.join("overview.json");
-    // fs::write(
-    //     overview_filename,
-    //     serde_json::to_string_pretty(&overview).unwrap(),
-    // )
-    // .unwrap();
+    
 }

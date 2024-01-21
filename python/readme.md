@@ -65,20 +65,24 @@ run convert_to_yolo.py following instructions below
 
 ### Importing live
 
-#### Import dir
+1. Import dir creation
 
 mkdir ${REPO_ROOT}/python/label_studio_import
 chmod 777 -R ${REPO_ROOT}/python/label_studio_import
 
 This is where the json goes
 
-#### 
+2.  Classes & Notes 
 Live dir should already exist from process_screenshots, which created labels.txt and placed images in yolo format
 
 cp ${REPO_ROOT}/python/datasets/all/classes.txt ${REPO_ROOT}/python/datasets/live/classes.txt 
 cp ${REPO_ROOT}/python/datasets/all/notes.json ${REPO_ROOT}/python/datasets/live/notes.json
 
-####
+3.  Create import json
+
+be in python dir
+
+. ../dev/local.env
 export DATASET_NAME=live
 
 Use all images link in the url, because that's where they will stay

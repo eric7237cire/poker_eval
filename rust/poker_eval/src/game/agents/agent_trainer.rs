@@ -12,7 +12,7 @@
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use log::info;
+use log::{info, trace, warn};
 
 use crate::{
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
@@ -27,10 +27,16 @@ use super::{info_state_actions, InfoState, InfoStateActionValueType};
 
 pub struct AgentTrainer {}
 
+/*
+Returns best value for each infostate
+
+*/
 pub fn run_full_game_tree<T: GameRunnerSource>(
+    //Contains other agents as well as hole cards
     game_source: &mut T,
     board: Vec<Card>,
     hero_index: usize,
+    //Used to calculate equity vs random hole cards
     monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
 ) -> Result<
     HashMap<InfoState, [InfoStateActionValueType; info_state_actions::NUM_ACTIONS]>,
@@ -52,22 +58,8 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
     while !game_runner_queue.is_empty() {
         let mut current_game_runner = game_runner_queue.pop().unwrap();
 
-        //Need to check if this is already done
-        if current_game_runner.game_state.player_states[0]
-            .final_state
-            .is_some()
-        {
-            process_finished_gamestate(
-                current_game_runner,
-                hero_index,
-                &game_source.get_hole_cards(hero_index)?,
-                &mut ret,
-                monte_carlo_db.clone(),
-            );
-            continue;
-        }
-
         //action loop
+        //We go until we get to a decision the agent being trained needs to make
         for _ in 0..2000 {
             //If we have a choice, need to run with those choices, then actually take the best one to
             //evaluate the value of preceeding actions
@@ -121,72 +113,103 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
                 //Are we facing a bet?
                 if hero_helpers.call_amount > 0 {
                     //Fold, call, raise
-                    let mut fold_game_runner = current_game_runner.clone();
+                    
                     let fold_action = CommentedAction {
                         action: ActionEnum::Fold,
                         comment: None,
                     };
-                    fold_game_runner.process_next_action(&fold_action).unwrap();
-                    game_runner_queue.push(fold_game_runner);
-
-                    let mut call_game_runner = current_game_runner.clone();
+                    
+                    process_or_push(current_game_runner.clone(),
+                        fold_action,
+                        &mut game_runner_queue,
+                        hero_index,
+                        &game_source.get_hole_cards(hero_index)?,
+                        &mut ret,
+                        monte_carlo_db.clone(),
+                    );
+                    
                     let call_action = CommentedAction {
                         action: ActionEnum::Call(hero_helpers.call_amount),
                         comment: None,
                     };
-                    call_game_runner.process_next_action(&call_action).unwrap();
-                    game_runner_queue.push(call_game_runner);
+                    process_or_push(current_game_runner.clone(),
+                        call_action,
+                        &mut game_runner_queue,
+                        hero_index,
+                        &game_source.get_hole_cards(hero_index)?,
+                        &mut ret,
+                        monte_carlo_db.clone(),
+                    );
 
                     if hero_helpers.can_raise {
-                        let mut raise_game_runner = current_game_runner.clone();
                         let raise_action = hero_helpers.build_raise_to(
-                            &raise_game_runner.game_state,
-                            raise_game_runner.game_state.current_to_call * 3,
+                            &current_game_runner.game_state,
+                            current_game_runner.game_state.current_to_call * 3,
                             "".to_string(),
                         );
 
-                        raise_game_runner
-                            .process_next_action(&raise_action)
-                            .unwrap();
-                        game_runner_queue.push(raise_game_runner);
+                        process_or_push(current_game_runner.clone(),
+                            raise_action,
+                            &mut game_runner_queue,
+                            hero_index,
+                            &game_source.get_hole_cards(hero_index)?,
+                            &mut ret,
+                            monte_carlo_db.clone(),
+                        );
                     }
 
-                    //out of action loop
-                    break;
                 } else {
                     //no bet
-                    let mut check_game_runner = current_game_runner.clone();
                     let check_action = CommentedAction {
                         action: ActionEnum::Check,
                         comment: None,
                     };
-                    check_game_runner
-                        .process_next_action(&check_action)
-                        .unwrap();
-                    game_runner_queue.push(check_game_runner);
+                    process_or_push(current_game_runner.clone(),
+                            check_action,
+                            &mut game_runner_queue,
+                            hero_index,
+                            &game_source.get_hole_cards(hero_index)?,
+                            &mut ret,
+                            monte_carlo_db.clone(),
+                        );
 
                     if current_game_runner.game_state.current_round == Round::Preflop {
                         //3 bet in bb; 1 is always the big blind player index
                         assert_eq!(hero_index, 1);
-                        let mut bet_game_runner = current_game_runner.clone();
                         let bet_action = hero_helpers.build_raise_to(
                             &current_game_runner.game_state,
                             current_game_runner.game_state.current_to_call * 3,
                             "".to_string(),
                         );
-                        bet_game_runner.process_next_action(&bet_action).unwrap();
-                        game_runner_queue.push(bet_game_runner);
+                        process_or_push(current_game_runner.clone(),
+                            bet_action,
+                            &mut game_runner_queue,
+                            hero_index,
+                            &game_source.get_hole_cards(hero_index)?,
+                            &mut ret,
+                            monte_carlo_db.clone(),
+                        );
                     } else {
                         //bet half pot
-                        let mut bet_game_runner = current_game_runner.clone();
+                        
                         let bet_action = hero_helpers
-                            .build_bet(bet_game_runner.game_state.pot() / 2, "".to_string());
-                        bet_game_runner.process_next_action(&bet_action).unwrap();
-                        game_runner_queue.push(bet_game_runner);
+                            .build_bet(current_game_runner.game_state.pot() / 2, "".to_string());
+                        process_or_push(current_game_runner.clone(),
+                            bet_action,
+                            &mut game_runner_queue,
+                            hero_index,
+                            &game_source.get_hole_cards(hero_index)?,
+                            &mut ret,
+                            monte_carlo_db.clone(),
+                        );
                     }
 
-                    break;
                 }
+
+                //We added all the new game runners from the different choices the agent being trained could make
+                //so we process the queue from the top again
+                //This breaks the action loop
+                break;
             } else {
                 let action = game_source
                     .get_action(
@@ -216,6 +239,32 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
     Ok(ret)
 }
 
+fn process_or_push(
+    mut game_runner: GameRunner,
+    action: CommentedAction,
+    game_runner_queue: &mut Vec<GameRunner>,
+    hero_index: usize,
+    player_hole_cards: &HoleCards,
+    info_state_value: &mut HashMap<
+        InfoState,
+        [InfoStateActionValueType; info_state_actions::NUM_ACTIONS],
+    >,
+    monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
+) {
+    let r = game_runner.process_next_action(&action).unwrap();
+    if r {
+        process_finished_gamestate(
+            game_runner,
+            hero_index,
+            player_hole_cards,
+            info_state_value,
+            monte_carlo_db,
+        );
+    } else {
+        game_runner_queue.push(game_runner);
+    }
+}
+
 fn process_finished_gamestate(
     game_runner: GameRunner,
     hero_index: usize,
@@ -226,7 +275,13 @@ fn process_finished_gamestate(
     >,
     monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
 ) {
-    info!("Processing finished gamestate");
+    trace!("Processing finished gamestate");
+    if game_runner.game_state.player_states[hero_index]
+    .final_state
+    .is_none() {
+        let s = game_runner.to_game_log().unwrap().to_game_log_string(false, true, hero_index);
+        warn!("Game log:\n{}\nwhere hero did not have final state", s)
+    }
     assert!(game_runner.game_state.player_states[hero_index]
         .final_state
         .is_some());
@@ -237,12 +292,16 @@ fn process_finished_gamestate(
 
     //assign the max ev for each infostate in the game
     for action in game_runner.game_state.actions.iter() {
-        info!(
+        trace!(
             "Action {}, info_state_value len {} value {}",
             action,
             info_state_value.len(),
             value
         );
+        //For debugging we might leave in actions that aren't the hero's
+        if action.player_index != hero_index {
+            continue;
+        }
         assert_eq!(hero_index, action.player_index);
 
         let (info_state, action_id) = InfoState::from(
