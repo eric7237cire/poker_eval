@@ -8,7 +8,7 @@ use poker_eval::{
     },
     game::agents::{
         build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
-        EqAgentConfig, Tag,
+        EqAgentConfig, Tag, DebugJsonWriter,
     },
     game::{agents::PanicAgent, core::InitialPlayerState},
     game::{
@@ -16,7 +16,6 @@ use poker_eval::{
         runner::GameRunnerSourceEnum,
     },
     init_logger,
-    pre_calc::get_repo_root,
     Card, Deck,
 };
 use rand::seq::SliceRandom;
@@ -120,20 +119,16 @@ pub fn main() {
 
     let mut agent_deck = Deck::new();
 
-    let num_total_iterations = 10_000;
+    let num_total_iterations = 500;
 
     let num_players = 9;
-
-    let repo_root = get_repo_root();
-
-    let _json_hh_path = repo_root.join("vue-poker/src/assets/hand_history");
-
-    //let mut json_filenames = Vec::new();
 
     let hero_name = "PanicAgent";
 
     //Start with clean database
     let mut info_state_db = InfoStateDb::new(true).unwrap();
+
+    let mut debug_json_writer = DebugJsonWriter::new();
 
     for it_num in 0..num_total_iterations {
         if last_status_update.elapsed().as_secs() > 10 {
@@ -170,7 +165,11 @@ pub fn main() {
         let mut game_source = GameRunnerSourceEnum::from(agent_source);
 
         let infostate_values =
-            run_full_game_tree(&mut game_source, board, hero_index, rcref_mcedb.clone()).unwrap();
+            run_full_game_tree(&mut game_source, 
+                board, hero_index, rcref_mcedb.clone(), 
+                // &mut Some(&mut debug_json_writer)
+                &mut None
+                ).unwrap();
 
         for (infostate, action) in infostate_values {
             //println!("{} {:?}", infostate, action);
@@ -179,7 +178,7 @@ pub fn main() {
                 .unwrap()
                 .unwrap_or([0.0; info_state_actions::NUM_ACTIONS]);
 
-            if infostate.num_players == 5
+            if infostate.num_players == 4
                 && infostate.hole_card_category == 3
                 && infostate.equity == 0
                 && infostate.bet_situation == 1
@@ -196,4 +195,6 @@ pub fn main() {
             info_state_db.put(&infostate, infostate_weights).unwrap();
         }
     }
+
+    debug_json_writer.write_overview();
 }

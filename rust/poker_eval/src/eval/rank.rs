@@ -52,240 +52,37 @@ impl OldRank {
     }
 
     pub fn print_winning(&self, cards: &[Card]) -> String {
-        let low_set_mask: u32 = 0b1_1111_1111_1111;
+        
+        let winning_cards = self.get_winning(cards);
+        let winning_cards_str = winning_cards.iter().map(|c| c.to_string()).join(" ");
+
         match self {
-            OldRank::HighCard(k) => {
-                let mut r = "High Card - ".to_string();
-                let bvs: ValueSetType = ValueSetType::new([*k]);
-                assert_eq!(5, bvs.count_ones());
-
-                for set_bit in bvs.iter_ones().rev() {
-                    let value: CardValue = set_bit.try_into().unwrap();
-                    let card = cards.iter().find(|c| c.value == value).unwrap();
-                    r.push_str(&format!("{} ", card));
-                }
-
-                r.pop().unwrap();
-                r
+            OldRank::HighCard(_) => {
+                format!("High Card - {}", winning_cards_str)
             }
-            OldRank::OnePair(k) => {
-                let pair_value_u32 = (k >> 13).trailing_zeros();
-                let pair_value: CardValue = (pair_value_u32 as u8).try_into().unwrap();
-                let mut r = "One Pair - ".to_string();
-
-                let first_card = cards.iter().find(|c| c.value == pair_value).unwrap();
-                let second_card = cards.iter().rev().find(|c| c.value == pair_value).unwrap();
-
-                r.push_str(&format!("{} {}", first_card, second_card));
-
-                let bvs = ValueSetType::new([*k & low_set_mask]);
-
-                for set_bit in bvs.iter_ones().rev() {
-                    let value: CardValue = set_bit.try_into().unwrap();
-                    let card = cards.iter().find(|c| c.value == value).unwrap();
-                    r.push_str(&format!(" {}", card));
-                }
-
-                r
+            OldRank::OnePair(_) => {
+                format!("One Pair - {}", winning_cards_str)
             }
-            OldRank::TwoPair(k) => {
-                let pair_values_u32 = k >> 13;
-                let pv_bvs = ValueSetType::new([pair_values_u32]);
-
-                let mut r = "Two Pair - ".to_string();
-
-                for set_bit in pv_bvs.iter_ones().rev() {
-                    let pair_value: CardValue = set_bit.try_into().unwrap();
-                    let first_card = cards.iter().find(|c| c.value == pair_value).unwrap();
-                    let second_card = cards.iter().rev().find(|c| c.value == pair_value).unwrap();
-
-                    r.push_str(&format!("{} {} ", first_card, second_card));
-                }
-
-                let last_kicker = (*k & low_set_mask).trailing_zeros();
-                let last_kicker_value: CardValue = (last_kicker as u8).try_into().unwrap();
-                let card = cards.iter().find(|c| c.value == last_kicker_value).unwrap();
-                r.push_str(&format!("{}", card));
-
-                r
+            OldRank::TwoPair(_) => {                
+                format!("Two Pair - {}", winning_cards_str)
             }
-            OldRank::ThreeOfAKind(k) => {
-                let trips_value_u32 = (k >> 13).trailing_zeros();
-                let trips_value: CardValue = (trips_value_u32 as u8).try_into().unwrap();
-                let mut r = "Trips - ".to_string();
-
-                let cards_str = cards
-                    .iter()
-                    .filter(|c| c.value == trips_value)
-                    .map(|c| c.to_string())
-                    .join(" ");
-
-                r.push_str(&cards_str);
-
-                let bvs = ValueSetType::new([*k & low_set_mask]);
-
-                for set_bit in bvs.iter_ones().rev() {
-                    let value: CardValue = set_bit.try_into().unwrap();
-                    let card = cards.iter().find(|c| c.value == value).unwrap();
-                    r.push_str(&format!(" {}", card));
-                }
-
-                r
+            OldRank::ThreeOfAKind(_) => {
+                format!("Trips - {}", winning_cards_str)
             }
-            OldRank::Straight(k) => {
-                let straight_value = if *k == 0 {
-                    CardValue::Five
-                } else {
-                    //let straight_value_u32 = k.trailing_zeros();
-                    let straight_value: CardValue = ((*k + 3) as u8).try_into().unwrap();
-                    straight_value
-                };
-
-                let mut r = "Straight - ".to_string();
-
-                trace!(
-                    "Straight value {}=={}, is wheel {}",
-                    straight_value,
-                    straight_value as u8,
-                    straight_value == CardValue::Five
-                );
-
-                if straight_value == CardValue::Five {
-                    //Find the ace
-                    let ace = cards.iter().find(|c| c.value == CardValue::Ace).unwrap();
-                    r.push_str(&format!("{} ", ace));
-
-                    for card_value in CardValueRange::new(CardValue::Two, CardValue::Five) {
-                        let card = cards.iter().find(|c| c.value == card_value).unwrap();
-                        r.push_str(&format!("{} ", card));
-                    }
-                } else {
-                    let start = CardValue::try_from(straight_value as u8 - 4).unwrap();
-
-                    for card_value in CardValueRange::new(start, straight_value) {
-                        let card = cards.iter().find(|c| c.value == card_value).unwrap();
-                        r.push_str(&format!("{} ", card));
-                    }
-                }
-
-                r.pop().unwrap();
-
-                r
+            OldRank::Straight(_) => {
+                format!("Straight - {}", winning_cards_str)
             }
-            OldRank::Flush(k) => {
-                let mut r = "Flush - ".to_string();
-                let bvs: ValueSetType = ValueSetType::new([*k]);
-                assert_eq!(5, bvs.count_ones());
-
-                for set_bit in bvs.iter_ones().rev() {
-                    let value: CardValue = set_bit.try_into().unwrap();
-                    let card = cards.iter().find(|c| c.value == value).unwrap();
-                    r.push_str(&format!("{} ", card));
-                }
-
-                r.pop().unwrap();
-                r
+            OldRank::Flush(_) => {
+                format!("Flush - {}", winning_cards_str)
             }
-            OldRank::FullHouse(k) => {
-                let trips_values_u32 = k >> 13;
-                let pair_value_u32 = k & low_set_mask;
-                let trips_value: CardValue = (trips_values_u32.trailing_zeros() as u8)
-                    .try_into()
-                    .unwrap();
-                let pair_value: CardValue =
-                    (pair_value_u32.trailing_zeros() as u8).try_into().unwrap();
-
-                let mut r = "Full House - ".to_string();
-
-                let trips_cards_str = cards.iter().filter(|c| c.value == trips_value).join(" ");
-                let pair_cards_str = cards.iter().filter(|c| c.value == pair_value).join(" ");
-
-                r.push_str(&format!("{} {}", trips_cards_str, pair_cards_str));
-
-                r
+            OldRank::FullHouse(_) => {
+                format!("Full House - {}", winning_cards_str)
             }
-            OldRank::FourOfAKind(k) => {
-                let quads_value_u32 = (k >> 13).trailing_zeros();
-                let quads_value: CardValue = (quads_value_u32 as u8).try_into().unwrap();
-                let mut r = "Quads - ".to_string();
-
-                let cards_str = cards
-                    .iter()
-                    .filter(|c| c.value == quads_value)
-                    .map(|c| c.to_string())
-                    .join(" ");
-
-                r.push_str(&cards_str);
-
-                let bvs = ValueSetType::new([*k & low_set_mask]);
-
-                for set_bit in bvs.iter_ones().rev() {
-                    let value: CardValue = set_bit.try_into().unwrap();
-                    let card = cards.iter().find(|c| c.value == value).unwrap();
-                    r.push_str(&format!(" {}", card));
-                }
-
-                r
+            OldRank::FourOfAKind(_) => {
+                format!("Quads - {}", winning_cards_str)
             }
-            OldRank::StraightFlush(k) => {
-                let straight_value = if *k == 0 {
-                    CardValue::Five
-                } else {
-                    //let straight_value_u32 = k.trailing_zeros();
-                    let straight_value: CardValue = ((*k + 3) as u8).try_into().unwrap();
-                    straight_value
-                };
-
-                let mut r = "Straight Flush - ".to_string();
-
-                //Find most common suit
-                let mut suit_counts = [0; 4];
-                for card in cards.iter() {
-                    suit_counts[card.suit as usize] += 1;
-                }
-                let (max_suit, _max_suit_count) = suit_counts
-                    .iter()
-                    .enumerate()
-                    .max_by_key(|&(_, count)| count)
-                    .unwrap();
-                let max_suit_class: Suit = (max_suit as u8).try_into().unwrap();
-
-                let suited_cards = cards
-                    .iter()
-                    .filter(|c| c.suit == max_suit_class)
-                    .collect::<Vec<_>>();
-
-                trace!(
-                    "Straight value {}=={}, is wheel {}",
-                    straight_value,
-                    straight_value as u8,
-                    straight_value == CardValue::Five
-                );
-
-                if straight_value == CardValue::Five {
-                    //Find the ace
-                    let ace = suited_cards
-                        .iter()
-                        .find(|c| c.value == CardValue::Ace)
-                        .unwrap();
-                    r.push_str(&format!("{} ", ace));
-
-                    for cv in CardValueRange::new(CardValue::Two, CardValue::Five) {
-                        let card = suited_cards.iter().find(|c| c.value == cv).unwrap();
-                        r.push_str(&format!("{} ", card));
-                    }
-                } else {
-                    let start = CardValue::try_from(straight_value as u8 - 4).unwrap();
-
-                    for cv in CardValueRange::new(start, straight_value) {
-                        let card = suited_cards.iter().find(|c| c.value == cv).unwrap();
-                        r.push_str(&format!("{} ", card));
-                    }
-                }
-
-                r.pop().unwrap();
-
-                r
+            OldRank::StraightFlush(_) => {
+                format!("Straight Flush - {}", winning_cards_str)
             }
         }
     }
@@ -975,6 +772,13 @@ mod tests {
         let rank = rank_cards(cards.as_slice_card().iter());
         assert_eq!(
             "Straight Flush - 7s 8s 9s Ts Js",
+            rank.print_winning(cards.as_slice_card())
+        );
+
+        let cards: Board = "Qc 2d 5c 8d 3h As 4d".parse().unwrap();
+        let rank = rank_cards(cards.as_slice_card().iter());
+        assert_eq!(
+            "Straight - As 2d 3h 4d 5c",
             rank.print_winning(cards.as_slice_card())
         );
     }

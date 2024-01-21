@@ -10,9 +10,9 @@
 
 //For subsequent actions, we'll maybe just have additional infostates to update
 
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc, fs};
 
-use log::{trace, warn};
+use log::{trace, debug};
 
 use crate::{
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
@@ -20,7 +20,7 @@ use crate::{
         core::{ActionEnum, CommentedAction, Round},
         runner::{GameRunner, GameRunnerSource},
     },
-    Card, HoleCards, PokerError,
+    Card, HoleCards, PokerError, pre_calc::get_repo_root,
 };
 
 use super::{info_state_actions, InfoState, InfoStateActionValueType};
@@ -41,6 +41,8 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
     hero_index: usize,
     //Used to calculate equity vs random hole cards
     monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
+    
+    debug_json_writer: &mut Option<&mut DebugJsonWriter>
 ) -> Result<ActionHashMap, PokerError> {
     let mut ret: ActionHashMap = HashMap::new();
 
@@ -126,6 +128,7 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
                         &game_source.get_hole_cards(hero_index)?,
                         &mut ret,
                         monte_carlo_db.clone(),
+                        debug_json_writer
                     );
 
                     let call_action = CommentedAction {
@@ -140,6 +143,7 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
                         &game_source.get_hole_cards(hero_index)?,
                         &mut ret,
                         monte_carlo_db.clone(),
+                        debug_json_writer
                     );
 
                     if hero_helpers.can_raise {
@@ -157,6 +161,7 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
                             &game_source.get_hole_cards(hero_index)?,
                             &mut ret,
                             monte_carlo_db.clone(),
+                            debug_json_writer
                         );
                     }
                 } else {
@@ -173,6 +178,7 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
                         &game_source.get_hole_cards(hero_index)?,
                         &mut ret,
                         monte_carlo_db.clone(),
+                        debug_json_writer
                     );
 
                     if current_game_runner.game_state.current_round == Round::Preflop {
@@ -191,6 +197,7 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
                             &game_source.get_hole_cards(hero_index)?,
                             &mut ret,
                             monte_carlo_db.clone(),
+                            debug_json_writer
                         );
                     } else {
                         //bet half pot
@@ -205,6 +212,7 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
                             &game_source.get_hole_cards(hero_index)?,
                             &mut ret,
                             monte_carlo_db.clone(),
+                            debug_json_writer
                         );
                     }
                 }
@@ -223,7 +231,9 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
                 let r = current_game_runner.process_next_action(&action).unwrap();
 
                 //We don't keep the action if it's not the hero's
-                current_game_runner.game_state.actions.pop().unwrap();
+                if debug_json_writer.is_some() {
+                    current_game_runner.game_state.actions.pop().unwrap();
+                }
 
                 if r {
                     process_finished_gamestate(
@@ -232,6 +242,7 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
                         &game_source.get_hole_cards(hero_index)?,
                         &mut ret,
                         monte_carlo_db.clone(),
+                        debug_json_writer,
                     );
                     break;
                 }
@@ -250,6 +261,7 @@ fn process_or_push(
     player_hole_cards: &HoleCards,
     info_state_value: &mut ActionHashMap,
     monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
+    debug_json_writer: &mut Option<&mut DebugJsonWriter>
 ) {
     let r = game_runner.process_next_action(&action).unwrap();
     if r {
@@ -259,9 +271,58 @@ fn process_or_push(
             player_hole_cards,
             info_state_value,
             monte_carlo_db,
+            debug_json_writer
         );
     } else {
         game_runner_queue.push(game_runner);
+    }
+}
+
+pub struct DebugJsonWriter {
+    json_filenames: Vec<String>,
+    current_num: usize,
+}
+
+impl DebugJsonWriter {
+    pub fn new() -> Self {
+        Self {
+            json_filenames: Vec::new(),
+            current_num: 0,
+        }
+    }
+
+    pub fn write_json(&mut self, game_runner: &GameRunner) {
+        let repo_root = get_repo_root();
+        let json_hh_path = repo_root.join("vue-poker/src/assets/hand_history");
+
+        let mut game_log = game_runner.to_game_log().unwrap();
+
+        game_log.calc_best_hands();
+        let json_str = serde_json::to_string_pretty(&game_log).unwrap();
+        let json_filename = format!("{}.json", self.current_num);
+        let file_path = json_hh_path.join(&json_filename);
+
+        debug!("Writing json to {}", file_path.to_str().unwrap());
+        self.json_filenames.push(json_filename);
+        fs::write(file_path, json_str).unwrap();
+
+        self.current_num += 1;
+    }
+
+    pub fn write_overview(&self) {
+        let mut overview: HashMap<String, serde_json::Value> = HashMap::new();
+        overview.insert(
+            "json_filenames".to_string(),
+            serde_json::to_value(&self.json_filenames).unwrap(),
+        );
+        let repo_root = get_repo_root();
+        let json_hh_path = repo_root.join("vue-poker/src/assets/hand_history");
+        let overview_filename = json_hh_path.join("overview.json");
+        fs::write(
+            overview_filename,
+            serde_json::to_string_pretty(&overview).unwrap(),
+        )
+        .unwrap();
     }
 }
 
@@ -271,18 +332,10 @@ fn process_finished_gamestate(
     player_hole_cards: &HoleCards,
     info_state_value: &mut ActionHashMap,
     monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
+    debug_json_writer: &mut Option<&mut DebugJsonWriter>
 ) {
     trace!("Processing finished gamestate");
-    if game_runner.game_state.player_states[hero_index]
-        .final_state
-        .is_none()
-    {
-        let s = game_runner
-            .to_game_log()
-            .unwrap()
-            .to_game_log_string(false, true, hero_index);
-        warn!("Game log:\n{}\nwhere hero did not have final state", s)
-    }
+    
     assert!(game_runner.game_state.player_states[hero_index]
         .final_state
         .is_some());
@@ -311,6 +364,17 @@ fn process_finished_gamestate(
             &player_hole_cards,
             monte_carlo_db.clone(),
         );
+
+        if let Some(debug_json_writer) = debug_json_writer.as_mut() {
+            /*
+            InfoState: middle Num Players: 4 Hole Card Cat: 3 < 10% facing raise preflop
+             */
+            if info_state.position == 1 && info_state.num_players == 4 && 
+            info_state.hole_card_category == 3 && info_state.round == 0 && action_id > 0 && value > 5.0 {
+                debug_json_writer.write_json(&game_runner);
+            }
+        }
+
         info_state_value
             .entry(info_state)
             .and_modify(|cv| {
@@ -481,6 +545,7 @@ mod tests {
             board.as_slice_card().to_vec(),
             1,
             rcref_mcedb,
+            &mut None
         )
         .unwrap();
 
@@ -534,6 +599,7 @@ mod tests {
             board.as_slice_card().to_vec(),
             1,
             rcref_mcedb,
+            &mut None
         )
         .unwrap();
 

@@ -14,10 +14,10 @@ use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDe
 use crate::{
     board_eval_cache_redb::{get_data_path, EvalCacheEnum},
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
-    game::core::{ActionEnum, GameState, PlayerAction, PlayerState, Round},
+    game::core::{ActionEnum, GameState, PlayerAction, PlayerState, Round, ChipType},
     monte_carlo_equity::get_equivalent_hole_board,
     pre_calc::NUMBER_OF_SIMPLE_HOLE_CARDS,
-    HoleCards, ALL_HOLE_CARDS,
+    HoleCards, ALL_HOLE_CARDS, Card,
 };
 
 #[derive(Eq, PartialEq, Hash)]
@@ -34,7 +34,7 @@ pub struct InfoState {
     //1 to 5
     pub hole_card_category: u8,
 
-    //high/medium/low
+    //high/medium/low/very low
     pub equity: u8,
 
     //unbet, facing bet, facing raise
@@ -53,9 +53,11 @@ impl Display for InfoState {
         };
 
         let eq_str = match self.equity {
-            0 => "low eq",
-            1 => "medium eq",
-            2 => "high eq",
+            0 => "< 10%",
+            1 => "10 - 30%",
+            2 => "30 - 50%",
+            3 => "50 - 70%",
+            4 => "70+%",
             _ => "unknown",
         };
 
@@ -137,52 +139,8 @@ impl InfoState {
         player_hole_cards: &HoleCards,
         monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
     ) -> (Self, u8) {
-        let position = if ps.players_left_to_act == 0 {
-            2
-        } else if ps.players_left_to_act == ps.non_folded_players {
-            //If the round starts, but everyone folds to this player, then they are first to act
-            0
-        } else {
-            1
-        };
-
-        let hole_card_category = HOLE_CARDS_CATEGORY[player_hole_cards.simple_range_index()];
-
-        let bet_situation = if ps.current_amt_to_call == 0 {
-            0 //unbet
-        } else if ps.amount_put_in_pot_this_round > 0 {
-            2 //facing raise
-        } else {
-            1 //facing bet
-        };
-
-        let board = game_state.board.as_slice_card();
-        assert_eq!(board.len(), game_state.current_round.get_num_board_cards());
-
-        assert!(ps.non_folded_players >= 2);
-        assert!(ps.non_folded_players <= 10);
-
-        let eq = if ps.round > Round::Preflop {
-            let (eq_hole_cards, mut eq_board) =
-                get_equivalent_hole_board(&player_hole_cards, board);
-            eq_board.get_index();
-            monte_carlo_db
-                .borrow_mut()
-                .get_put(&eq_board, &eq_hole_cards, ps.non_folded_players)
-                .unwrap()
-        } else {
-            //Don't calculate equity for preflop
-            0.0
-        };
-
-        let equity = if eq < 0.33 {
-            0
-        } else if eq < 0.66 {
-            1
-        } else {
-            2
-        };
-
+        
+               
         let info_state_action: u8 = match ps.action {
             ActionEnum::Fold => info_state_actions::FOLD,
             ActionEnum::Call(_) => info_state_actions::CALL,
@@ -198,19 +156,22 @@ impl InfoState {
         };
 
         (
-            Self {
-                position,
-                num_players: min(4, ps.non_folded_players),
-                hole_card_category,
-                equity,
-                bet_situation,
-                round: ps.round as usize as u8,
-            },
+            
+            Self::new(
+                ps.non_folded_players,
+                ps.players_left_to_act,
+                player_hole_cards,
+                monte_carlo_db.clone(),
+                ps.current_amt_to_call,
+                ps.amount_put_in_pot_this_round,
+                &game_state.board.as_slice_card()[0..ps.round.get_num_board_cards()], 
+                ps.round
+            ),
             info_state_action,
         )
     }
 
-    //Used by the agent
+    //Used by the agent when game_state is right before infostate agent acts
     pub fn from_game_state(
         game_state: &GameState,
         player_state: &PlayerState,
@@ -219,9 +180,37 @@ impl InfoState {
     ) -> Self {
         let non_folded_players = game_state.total_active_players + game_state.total_players_all_in;
 
-        let position = if game_state.num_left_to_act == 0 {
+        assert!(non_folded_players >= 2);
+        assert!(non_folded_players <= 10);
+
+        Self::new(
+            non_folded_players,
+            game_state.num_left_to_act,
+            player_hole_cards,
+            monte_carlo_db.clone(),
+            game_state.current_to_call,
+            player_state.cur_round_putting_in_pot,
+            game_state.board.as_slice_card(),
+            game_state.current_round
+        )
+    }
+
+    fn new(
+        num_non_folded_players: u8,
+        num_left_to_act: u8,
+        player_hole_cards: &HoleCards,
+        monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
+        current_to_call: ChipType,
+        cur_round_putting_in_pot: ChipType,
+        board: &[Card],
+        current_round: Round
+    ) -> Self {
+
+        assert!(num_left_to_act <= num_non_folded_players);
+        
+        let position = if num_left_to_act == 0 {
             2
-        } else if game_state.num_left_to_act == non_folded_players {
+        } else if num_left_to_act == num_non_folded_players {
             0
         } else {
             1
@@ -229,48 +218,52 @@ impl InfoState {
 
         let hole_card_category = HOLE_CARDS_CATEGORY[player_hole_cards.simple_range_index()];
 
-        let bet_situation = if game_state.current_to_call == 0 {
+        let bet_situation = if current_to_call == 0 {
             0 //unbet
-        } else if player_state.cur_round_putting_in_pot > 0 {
+        } else if cur_round_putting_in_pot > 0 {
             2 //facing raise
         } else {
             1 //facing bet
         };
 
-        let board = game_state.board.as_slice_card();
-        assert_eq!(board.len(), game_state.current_round.get_num_board_cards());
+        
+        assert_eq!(board.len(), current_round.get_num_board_cards());
 
-        assert!(non_folded_players >= 2);
-        assert!(non_folded_players <= 10);
+        assert!(num_non_folded_players >= 2);
+        assert!(num_non_folded_players <= 10);
 
-        let eq = if game_state.current_round > Round::Preflop {
+        let eq = if current_round > Round::Preflop {
             let (eq_hole_cards, mut eq_board) =
                 get_equivalent_hole_board(&player_hole_cards, board);
             eq_board.get_index();
             monte_carlo_db
                 .borrow_mut()
-                .get_put(&eq_board, &eq_hole_cards, non_folded_players)
+                .get_put(&eq_board, &eq_hole_cards, num_non_folded_players)
                 .unwrap()
         } else {
             //Don't calculate equity for preflop
             0.0
         };
 
-        let equity = if eq < 0.33 {
+        let equity = if eq < 0.10 {
             0
-        } else if eq < 0.66 {
+        } else if eq < 0.30 {
             1
-        } else {
+        } else if eq < 0.50 {
             2
+        } else if eq < 0.70 {
+            3
+        } else {
+            4
         };
 
         Self {
             position,
-            num_players: min(4, non_folded_players),
+            num_players: min(4, num_non_folded_players),
             hole_card_category,
             equity,
             bet_situation,
-            round: game_state.current_round as usize as u8,
+            round: current_round as usize as u8,
         }
     }
 }
