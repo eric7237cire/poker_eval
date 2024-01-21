@@ -17,7 +17,7 @@ use crate::{CardUsedType, HoleCards, PokerError};
 
 use boomphf::Mphf;
 
-use log::{trace, warn};
+use log::trace;
 
 // Enforces the poker rules
 #[derive(Clone)]

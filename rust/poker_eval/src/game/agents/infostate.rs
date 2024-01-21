@@ -65,14 +65,21 @@ impl Display for InfoState {
             _ => "unknown",
         };
 
+        let bet_situation_str = match self.bet_situation {
+            0 => "unbet",
+            1 => "facing bet",
+            2 => "facing raise",
+            _ => "unknown",
+        };
+
         write!(
             f,
-            "InfoState: {} {} {} {} {} {}",
+            "InfoState: {} Num Players: {} Hole Card Cat: {} {} {} {}",
             pos_str,
             self.num_players,
             self.hole_card_category,
             eq_str,
-            self.bet_situation,
+            bet_situation_str,
             round_str
         )
     }
@@ -131,6 +138,7 @@ impl InfoState {
         let position = if ps.players_left_to_act == 0 {
             2
         } else if ps.players_left_to_act == ps.non_folded_players {
+            //If the round starts, but everyone folds to this player, then they are first to act
             0
         } else {
             1
@@ -418,5 +426,33 @@ mod tests {
         for i in 0..169 {
             assert!(HOLE_CARDS_CATEGORY[i] < 5);
         }
+    }
+
+    #[test]
+    fn test_normalize_array() {
+        let test_values = [0.0, 0.5, 1.0, 5.0, -3.0, -1.0, 4.0];
+
+        let normalized = super::InfoStateDb::normalize_array(&test_values);
+
+        assert_eq!(normalized[0], 3.0 / 8.0);
+        assert_eq!(normalized[1], 3.5 / 8.0);
+        assert_eq!(normalized[2], 4.0 / 8.0);
+        assert_eq!(normalized[3], 1.0);
+        assert_eq!(normalized[4], 0.0);
+        assert_eq!(normalized[5], 2.0 / 8.0);
+        assert_eq!(normalized[6], 7.0 / 8.0);
+
+        let test_values = [0.0, 0.5, 1.0, f32::MAX, -3.0, f32::MIN, 4.0];
+
+        let normalized = super::InfoStateDb::normalize_array(&test_values);
+
+        assert_eq!(normalized[0], 0.0 / 8.0);
+        //assert_eq!(normalized[1], 3.5 / 8.0);
+        //assert_eq!(normalized[2], 4.0 / 8.0);
+        assert_eq!(normalized[3], 1.0);
+        //assert_eq!(normalized[4], 0.0);
+        assert_eq!(normalized[5], 0.0 / 8.0);
+        assert_eq!(normalized[6], 7.0 / 8.0);
+
     }
 }

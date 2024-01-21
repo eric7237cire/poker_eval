@@ -12,7 +12,7 @@
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use log::{info, trace, warn};
+use log::{trace, warn};
 
 use crate::{
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
@@ -24,6 +24,11 @@ use crate::{
 };
 
 use super::{info_state_actions, InfoState, InfoStateActionValueType};
+
+type ActionHashMap = HashMap<
+InfoState,
+[Option<InfoStateActionValueType>; info_state_actions::NUM_ACTIONS],
+>;
 
 pub struct AgentTrainer {}
 
@@ -39,10 +44,10 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
     //Used to calculate equity vs random hole cards
     monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
 ) -> Result<
-    HashMap<InfoState, [InfoStateActionValueType; info_state_actions::NUM_ACTIONS]>,
+ActionHashMap,
     PokerError,
 > {
-    let mut ret: HashMap<InfoState, [InfoStateActionValueType; info_state_actions::NUM_ACTIONS]> =
+    let mut ret: ActionHashMap =
         HashMap::new();
 
     let game_runner = GameRunner::new(
@@ -245,10 +250,7 @@ fn process_or_push(
     game_runner_queue: &mut Vec<GameRunner>,
     hero_index: usize,
     player_hole_cards: &HoleCards,
-    info_state_value: &mut HashMap<
-        InfoState,
-        [InfoStateActionValueType; info_state_actions::NUM_ACTIONS],
-    >,
+    info_state_value: &mut ActionHashMap,
     monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
 ) {
     let r = game_runner.process_next_action(&action).unwrap();
@@ -269,10 +271,7 @@ fn process_finished_gamestate(
     game_runner: GameRunner,
     hero_index: usize,
     player_hole_cards: &HoleCards,
-    info_state_value: &mut HashMap<
-        InfoState,
-        [InfoStateActionValueType; info_state_actions::NUM_ACTIONS],
-    >,
+    info_state_value: &mut ActionHashMap,
     monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
 ) {
     trace!("Processing finished gamestate");
@@ -313,13 +312,14 @@ fn process_finished_gamestate(
         info_state_value
             .entry(info_state)
             .and_modify(|cv| {
-                if cv[action_id as usize] < value {
-                    cv[action_id as usize] = value;
-                }
+                let cv_action = cv[action_id as usize];
+                if cv_action.is_none() || cv_action.unwrap() < value {
+                    cv[action_id as usize] = Some(value);
+                }                
             })
             .or_insert_with(|| {
-                let mut ret = [InfoStateActionValueType::MIN; info_state_actions::NUM_ACTIONS];
-                ret[action_id as usize] = value as InfoStateActionValueType;
+                let mut ret = [None; info_state_actions::NUM_ACTIONS];
+                ret[action_id as usize] = Some(value as InfoStateActionValueType);
                 ret
             });
     }
@@ -469,7 +469,7 @@ mod tests {
                 if info_state.round == round_u8 {
                     found = true;
                     info!("{} {:?}", info_state, value);
-                    assert_eq!(value[BET_HALF as usize], -35.0 / 19.0);
+                    assert_eq!(value[BET_HALF as usize], Some(-35.0 / 19.0));
                     break;
                 }
             }
@@ -484,7 +484,7 @@ mod tests {
                 found = true;
                 info!("{} {:?}", info_state, value);
 
-                assert_eq!(value[BET_HALF as usize], 2.0);
+                assert_eq!(value[BET_HALF as usize], Some(2.0));
             }
         }
         assert!(found);

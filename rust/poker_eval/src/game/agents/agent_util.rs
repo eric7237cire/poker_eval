@@ -3,7 +3,7 @@ use crate::{
     Card, Deck, HoleCards,
 };
 
-use super::{AgentEnum};
+use super::AgentEnum;
 use crate::game::agents::agent_trait::Agent;
 
 pub fn set_agent_hole_cards(deck: &mut Deck, agents: &mut Vec<AgentEnum>) {

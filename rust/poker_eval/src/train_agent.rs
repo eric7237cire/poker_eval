@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc, time::Instant};
 
 
 
-use log::{info, debug};
+use log::debug;
 use poker_eval::{
     board_eval_cache_redb::{EvalCacheReDb, ProduceFlopTexture},
     board_hc_eval_cache_redb::{
@@ -13,12 +13,10 @@ use poker_eval::{
         runner::GameRunnerSourceEnum,
     },
     game::{agents::PanicAgent, core::InitialPlayerState},
-    game::{
-        agents::{
+    game::agents::{
             build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
             EqAgentConfig, Tag,
         },
-    },
     init_logger,
     pre_calc::get_repo_root,
     Card, Deck,
@@ -181,7 +179,7 @@ pub fn main() {
             //println!("{} {:?}", infostate, action);
             let mut infostate_weights = info_state_db.get(&infostate).unwrap().unwrap_or([0.0; info_state_actions::NUM_ACTIONS]);
             for i in 0..infostate_weights.len() {
-                infostate_weights[i] += action[i];
+                infostate_weights[i] += action[i].unwrap_or(0.0);
             }
             info_state_db.put(&infostate, infostate_weights).unwrap();
         }

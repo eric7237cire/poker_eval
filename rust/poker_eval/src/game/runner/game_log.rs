@@ -1043,9 +1043,7 @@ impl Eq for GameLog {}
 #[cfg(test)]
 mod tests {
     use crate::{
-        game::runner::{
-            test_util::run_gamelog,
-        },
+        game::runner::test_util::run_gamelog,
         init_test_logger,
         pre_calc::perfect_hash::load_boomperfect_hash,
         HoleCards,

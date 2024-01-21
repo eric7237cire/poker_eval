@@ -2,6 +2,7 @@ use log::debug;
 
 use super::{GameLog, GameLogSource, GameRunner, GameRunnerSource, GameRunnerSourceEnum};
 
+#[allow(dead_code)]
 pub fn run_gamelog(game_log: GameLog) -> GameRunner {
     let board = game_log.board.clone();
     let game_log_source = GameLogSource::new(game_log);
