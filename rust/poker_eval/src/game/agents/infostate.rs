@@ -6,7 +6,7 @@ use std::{
     fs, mem,
     rc::Rc,
 };
-
+use enum_dispatch::enum_dispatch;
 use log::info;
 use once_cell::sync::Lazy;
 use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDefinition};
@@ -17,10 +17,10 @@ use crate::{
     game::core::{ActionEnum, GameState, PlayerAction, PlayerState, Round, ChipType},
     monte_carlo_equity::get_equivalent_hole_board,
     pre_calc::NUMBER_OF_SIMPLE_HOLE_CARDS,
-    HoleCards, ALL_HOLE_CARDS, Card,
+    HoleCards, ALL_HOLE_CARDS, Card, PokerError,
 };
 
-#[derive(Eq, PartialEq, Hash)]
+#[derive(Eq, PartialEq, Hash, Clone)]
 pub struct InfoState {
     //For now limited to 0 1st position, 1 middle, 2 last
     //This depends on the round too
@@ -195,7 +195,7 @@ impl InfoState {
         )
     }
 
-    fn new(
+    pub fn new(
         num_non_folded_players: u8,
         num_left_to_act: u8,
         player_hole_cards: &HoleCards,
@@ -271,19 +271,105 @@ impl InfoState {
 pub type InfoStateActionValueType = f32;
 
 pub mod info_state_actions {
-    pub const FOLD: u8 = 0;
-    pub const CHECK: u8 = 1;
-    pub const CALL: u8 = 2;
-    pub const BET_HALF: u8 = 3;
-    pub const BET_POT: u8 = 4;
-    pub const RAISE_3X: u8 = 5;
-    pub const ALL_IN: u8 = 6;
 
-    pub const NUM_ACTIONS: usize = 7;
+    //When have an incoming bet
+    pub const FOLD: u8 = 0;
+    pub const CALL: u8 = 1;
+    pub const RAISE_3X: u8 = 2;
+
+    //With no incoming bet (though bb means put in pot == to call)
+    pub const CHECK: u8 = 0;    
+    pub const BET_HALF: u8 = 1;
+    pub const BET_POT: u8 = 2;
+    
+    //pub const ALL_IN: u8 = 6;
+
+    pub const NUM_ACTIONS: usize = 3;
 }
 
 const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("eval_cache");
 
+#[enum_dispatch]
+pub enum InfoStateDbEnum {
+    InfoStateDb,
+    InfoStateMemory
+}
+
+#[enum_dispatch(InfoStateDbEnum)]
+pub trait InfoStateDbTrait {
+    fn get(
+        &self,
+        infostate: &InfoState,
+    ) -> Result<Option<[InfoStateActionValueType; info_state_actions::NUM_ACTIONS]>, PokerError>;
+
+    fn put(
+        &mut self,
+        infostate: &InfoState,
+        result: [InfoStateActionValueType; info_state_actions::NUM_ACTIONS],
+    ) -> Result<(), PokerError>;
+}
+
+impl From<ReDbError> for PokerError {
+    fn from(e: ReDbError) -> Self {
+        PokerError::from_string(e.to_string())
+    }
+}
+
+
+impl InfoStateDbTrait for InfoStateDb {
+    fn get(
+        &self,
+        infostate: &InfoState,
+    ) -> Result<Option<[InfoStateActionValueType; info_state_actions::NUM_ACTIONS]>, PokerError>
+    {
+        let read_txn: ReadTransaction = self.db.begin_read().unwrap();
+        let table = read_txn.open_table(TABLE).unwrap();
+
+        let index = infostate.to_bytes();
+        let data = table.get(index.as_slice()).unwrap();
+        let num_bytes_per_element = mem::size_of::<InfoStateActionValueType>();
+        if let Some(data) = data {
+            let bytes = data.value();
+            let mut ret = [0.0; info_state_actions::NUM_ACTIONS];
+            for i in 0..info_state_actions::NUM_ACTIONS {
+                ret[i] = InfoStateActionValueType::from_le_bytes(
+                    bytes[i * num_bytes_per_element..(i + 1) * num_bytes_per_element]
+                        .try_into()
+                        .unwrap(),
+                );
+            }
+            Ok(Some(ret))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn put(
+        &mut self,
+        infostate: &InfoState,
+        result: [InfoStateActionValueType; info_state_actions::NUM_ACTIONS],
+    ) -> Result<(), PokerError> {
+        let write_txn = self.db.begin_write().unwrap();
+        {
+            let mut table = write_txn.open_table(TABLE).unwrap();
+
+            let index = infostate.to_bytes();
+
+            let mut bytes = Vec::with_capacity(
+                info_state_actions::NUM_ACTIONS * mem::size_of::<InfoStateActionValueType>(),
+            );
+
+            for i in 0..info_state_actions::NUM_ACTIONS {
+                bytes.extend_from_slice(&result[i].to_le_bytes());
+            }
+
+            table.insert(index.as_slice(), bytes.as_slice()).unwrap();
+        }
+
+        write_txn.commit().unwrap();
+        Ok(())
+    }
+}
 pub struct InfoStateDb {
     db: Database,
 }
@@ -312,58 +398,7 @@ impl InfoStateDb {
         Ok(Self { db })
     }
 
-    pub fn get(
-        &self,
-        infostate: &InfoState,
-    ) -> Result<Option<[InfoStateActionValueType; info_state_actions::NUM_ACTIONS]>, ReDbError>
-    {
-        let read_txn: ReadTransaction = self.db.begin_read()?;
-        let table = read_txn.open_table(TABLE)?;
-
-        let index = infostate.to_bytes();
-        let data = table.get(index.as_slice())?;
-        let num_bytes_per_element = mem::size_of::<InfoStateActionValueType>();
-        if let Some(data) = data {
-            let bytes = data.value();
-            let mut ret = [0.0; info_state_actions::NUM_ACTIONS];
-            for i in 0..info_state_actions::NUM_ACTIONS {
-                ret[i] = InfoStateActionValueType::from_le_bytes(
-                    bytes[i * num_bytes_per_element..(i + 1) * num_bytes_per_element]
-                        .try_into()
-                        .unwrap(),
-                );
-            }
-            Ok(Some(ret))
-        } else {
-            Ok(None)
-        }
-    }
-
-    pub fn put(
-        &mut self,
-        infostate: &InfoState,
-        result: [InfoStateActionValueType; info_state_actions::NUM_ACTIONS],
-    ) -> Result<(), ReDbError> {
-        let write_txn = self.db.begin_write()?;
-        {
-            let mut table = write_txn.open_table(TABLE)?;
-
-            let index = infostate.to_bytes();
-
-            let mut bytes = Vec::with_capacity(
-                info_state_actions::NUM_ACTIONS * mem::size_of::<InfoStateActionValueType>(),
-            );
-
-            for i in 0..info_state_actions::NUM_ACTIONS {
-                bytes.extend_from_slice(&result[i].to_le_bytes());
-            }
-
-            table.insert(index.as_slice(), bytes.as_slice())?;
-        }
-
-        write_txn.commit()?;
-        Ok(())
-    }
+    
 
     pub fn normalize_array(
         arr: &[InfoStateActionValueType],
@@ -392,21 +427,27 @@ impl InfoStateDb {
         ret
     }
 
-    pub fn normalized_array_to_string(arr: &[InfoStateActionValueType]) -> String {
+    pub fn normalized_array_to_string(arr: &[InfoStateActionValueType], incoming_bet: bool) -> String {
         assert_eq!(arr.len(), info_state_actions::NUM_ACTIONS);
 
         let mut ret = String::new();
 
         for i in 0..info_state_actions::NUM_ACTIONS as u8 {
-            let action_name = match i {
-                info_state_actions::FOLD => "FOLD",
-                info_state_actions::CHECK => "CHECK",
-                info_state_actions::CALL => "CALL",
-                info_state_actions::BET_HALF => "BET_HALF",
-                info_state_actions::BET_POT => "BET_POT",
-                info_state_actions::RAISE_3X => "RAISE_3X",
-                info_state_actions::ALL_IN => "ALL_IN",
-                _ => "UNKNOWN",
+            let action_name = if incoming_bet {
+                 match i {
+                    info_state_actions::FOLD => "FOLD",
+                    info_state_actions::CALL => "CALL",
+                    info_state_actions::RAISE_3X => "RAISE_3X",
+                    //info_state_actions::ALL_IN => "ALL_IN",
+                    _ => "UNKNOWN",
+                }
+            } else {
+                match i {
+                    info_state_actions::CHECK => "CHECK",
+                    info_state_actions::BET_HALF => "BET_HALF",
+                    info_state_actions::BET_POT => "BET_POT",
+                    _ => "UNKNOWN",
+                }
             };
 
             //treat it as impossible
@@ -417,6 +458,40 @@ impl InfoStateDb {
             ret.push_str(&format!(";{} -> {:.1}", action_name, arr[i as usize]));
         }
         ret
+    }
+}
+
+
+//For testing, to have the infostate action values
+pub struct InfoStateMemory {
+    hash_map: HashMap<InfoState, [InfoStateActionValueType; info_state_actions::NUM_ACTIONS]>,
+}
+
+impl InfoStateDbTrait for InfoStateMemory {
+    fn get(&self,infostate: &InfoState,) -> Result<Option<[InfoStateActionValueType;
+info_state_actions::NUM_ACTIONS]>,PokerError> {
+        let v = self.hash_map.get(infostate);
+        if v.is_some() {
+            Ok(Some(*v.unwrap()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn put(&mut self,infostate: &InfoState,result:[InfoStateActionValueType;
+info_state_actions::NUM_ACTIONS],) -> Result<(),PokerError> {
+        let info_state: InfoState = infostate.clone();
+        self.hash_map.insert(info_state, result);
+
+        Ok(())
+    }
+}
+
+impl InfoStateMemory {
+    pub fn new() -> Self {
+        Self {
+            hash_map: HashMap::new(),
+        }
     }
 }
 

@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use crate::board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval};
 use crate::game::agents::{
-    info_state_actions, Agent, InfoState, InfoStateActionValueType, InfoStateDb,
+    info_state_actions, Agent, InfoState, InfoStateActionValueType, InfoStateDb, InfoStateDbTrait,
 };
 use crate::game::core::{ActionEnum, CommentedAction, GameState, PlayerState};
 use crate::monte_carlo_equity::get_equivalent_hole_board;
@@ -56,16 +56,16 @@ impl Agent for InfoStateAgent {
 
         assert_eq!(action_values.len(), info_state_actions::NUM_ACTIONS);
 
-        action_values[info_state_actions::ALL_IN as usize] = InfoStateActionValueType::MIN;
-        action_values[info_state_actions::BET_POT as usize] = InfoStateActionValueType::MIN;
+        // action_values[info_state_actions::ALL_IN as usize] = InfoStateActionValueType::MIN;
+        // action_values[info_state_actions::BET_POT as usize] = InfoStateActionValueType::MIN;
 
-        if game_state.current_to_call > 0 {
-            action_values[info_state_actions::CHECK as usize] = InfoStateActionValueType::MIN;
-            action_values[info_state_actions::BET_HALF as usize] = InfoStateActionValueType::MIN;
-        } else {
-            action_values[info_state_actions::RAISE_3X as usize] = InfoStateActionValueType::MIN;
-            action_values[info_state_actions::CALL as usize] = InfoStateActionValueType::MIN;
-        }
+        // if game_state.current_to_call > 0 {
+        //     action_values[info_state_actions::CHECK as usize] = InfoStateActionValueType::MIN;
+        //     action_values[info_state_actions::BET_HALF as usize] = InfoStateActionValueType::MIN;
+        // } else {
+        //     action_values[info_state_actions::RAISE_3X as usize] = InfoStateActionValueType::MIN;
+        //     action_values[info_state_actions::CALL as usize] = InfoStateActionValueType::MIN;
+        // }
 
         let max_action_index = action_values
             .iter()
@@ -74,10 +74,12 @@ impl Agent for InfoStateAgent {
             .unwrap()
             .0 as u8;
 
+        let incoming_bet = game_state.current_to_call > 0;
+
         //let normalized = InfoStateDb::normalize_array(&action_values);
         //let common_comment = InfoStateDb::normalized_array_to_string(&normalized);
 
-        let common_comment_is = InfoStateDb::normalized_array_to_string(&action_values);
+        let common_comment_is = InfoStateDb::normalized_array_to_string(&action_values, incoming_bet);
 
         let (eq_hole_cards, mut eq_board) =
             get_equivalent_hole_board(&self.hole_cards.unwrap(), game_state.board.as_slice_card());
@@ -104,48 +106,54 @@ impl Agent for InfoStateAgent {
 
         let helpers = player_state.get_helpers(game_state);
 
-        match max_action_index {
-            info_state_actions::FOLD => CommentedAction {
-                action: ActionEnum::Fold,
-                comment: Some(format!("[{}]; folded {}", &info_state, &common_comment)),
-            },
-            info_state_actions::CHECK => CommentedAction {
-                action: ActionEnum::Check,
-                comment: Some(format!("[{}]; checked {}", &info_state, &common_comment)),
-            },
-            info_state_actions::CALL => CommentedAction {
-                action: ActionEnum::Call(helpers.call_amount),
-                comment: Some(format!("[{}]; called {}", &info_state, &common_comment)),
-            },
-            info_state_actions::BET_HALF => helpers.build_bet(
-                game_state.pot() / 2,
-                format!("[{}]; bet {}", &info_state, &common_comment),
-            ),
-            info_state_actions::BET_POT => helpers.build_bet(
-                game_state.pot(),
-                format!("[{}]; bet {}", &info_state, &common_comment),
-            ),
-            info_state_actions::RAISE_3X => helpers.build_raise_to(
-                game_state,
-                game_state.current_to_call * 3,
-                format!("[{}]; raised {}", &info_state, &common_comment),
-            ),
-            info_state_actions::ALL_IN => {
-                if game_state.current_to_call == 0 {
-                    helpers.build_bet(
-                        helpers.max_can_raise,
-                        format!("[{}]; Bet All In {}", &info_state, &common_comment),
-                    )
-                } else {
-                    helpers.build_raise_to(
-                        game_state,
-                        helpers.max_can_raise,
-                        format!("[{}]; Raise All In {}", &info_state, &common_comment),
-                    )
+        if incoming_bet {
+            match max_action_index {
+                info_state_actions::FOLD => {
+                    //1 case, we can check big blind
+                    if player_state.cur_round_putting_in_pot == game_state.current_to_call {
+                        CommentedAction {
+                            action: ActionEnum::Check,
+                            comment: Some(format!("[{}]; checked big blind {}", &info_state, &common_comment)),
+                        }
+                    } else {
+                        CommentedAction {
+                            action: ActionEnum::Fold,
+                            comment: Some(format!("[{}]; folded {}", &info_state, &common_comment)),
+                        }
+                    }
+                },           
+                info_state_actions::CALL => CommentedAction {
+                    action: ActionEnum::Call(helpers.call_amount),
+                    comment: Some(format!("[{}]; called {}", &info_state, &common_comment)),
+                },
+                info_state_actions::RAISE_3X => helpers.build_raise_to(
+                    game_state,
+                    game_state.current_to_call * 3,
+                    format!("[{}]; raised {}", &info_state, &common_comment),
+                ),
+                
+                _ => {
+                    panic!("Unknown action index {}", max_action_index);
                 }
             }
-            _ => {
-                panic!("Unknown action index {}", max_action_index);
+        } else {
+            match max_action_index {
+                
+                info_state_actions::CHECK => CommentedAction {
+                    action: ActionEnum::Check,
+                    comment: Some(format!("[{}]; checked {}", &info_state, &common_comment)),
+                },
+                info_state_actions::BET_HALF => helpers.build_bet(
+                    game_state.pot() / 2,
+                    format!("[{}]; bet {}", &info_state, &common_comment),
+                ),
+                info_state_actions::BET_POT => helpers.build_bet(
+                    game_state.pot(),
+                    format!("[{}]; bet {}", &info_state, &common_comment),
+                ),
+                _ => {
+                    panic!("Unknown action index {}", max_action_index);
+                }
             }
         }
     }

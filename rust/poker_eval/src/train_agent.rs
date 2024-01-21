@@ -8,7 +8,7 @@ use poker_eval::{
     },
     game::agents::{
         build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
-        EqAgentConfig, Tag, DebugJsonWriter,
+        EqAgentConfig, Tag, DebugJsonWriter, InfoStateDbEnum, InfoStateDbTrait,
     },
     game::{agents::PanicAgent, core::InitialPlayerState},
     game::{
@@ -126,7 +126,8 @@ pub fn main() {
     let hero_name = "PanicAgent";
 
     //Start with clean database
-    let mut info_state_db = InfoStateDb::new(true).unwrap();
+    let mut info_state_db = InfoStateDbEnum::from(InfoStateDb::new(true).unwrap());
+    let rcref_info_state_db = Rc::new(RefCell::new(info_state_db));
 
     let mut debug_json_writer = DebugJsonWriter::new();
 
@@ -168,12 +169,13 @@ pub fn main() {
             run_full_game_tree(&mut game_source, 
                 board, hero_index, rcref_mcedb.clone(), 
                 // &mut Some(&mut debug_json_writer)
-                &mut None
+                None,
+                rcref_info_state_db.clone()
                 ).unwrap();
 
         for (infostate, action) in infostate_values {
             //println!("{} {:?}", infostate, action);
-            let mut infostate_weights = info_state_db
+            let mut infostate_weights = rcref_info_state_db.borrow()
                 .get(&infostate)
                 .unwrap()
                 .unwrap_or([0.0; info_state_actions::NUM_ACTIONS]);
@@ -192,7 +194,7 @@ pub fn main() {
             for i in 0..infostate_weights.len() {
                 infostate_weights[i] += action[i].unwrap_or(0.0);
             }
-            info_state_db.put(&infostate, infostate_weights).unwrap();
+            rcref_info_state_db.borrow_mut().put(&infostate, infostate_weights).unwrap();
         }
     }
 
