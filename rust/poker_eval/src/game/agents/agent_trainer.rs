@@ -547,7 +547,18 @@ mod tests {
 
         let mut info_state_db_enum = InfoStateDbEnum::from(InfoStateMemory::new());
 
-        let info_turn_river: InfoState = InfoState::new(
+        let info_state_flop: InfoState = InfoState::new(
+            3,
+            1,
+            &game_source.get_hole_cards(1).unwrap(),
+            rcref_mcedb.clone(),
+            0,
+            0,
+            board.as_slice_card(),
+            Round::Flop,
+        );
+
+        let info_state_turn: InfoState = InfoState::new(
             3,
             1,
             &game_source.get_hole_cards(1).unwrap(),
@@ -558,7 +569,8 @@ mod tests {
             Round::Turn,
         );
 
-        info_state_db_enum.put(&info_turn_river, [0.2, 0.7, 0.1]).unwrap();
+        info_state_db_enum.put(&info_state_flop, [0.9, 0.05, 0.05]).unwrap();
+        info_state_db_enum.put(&info_state_turn, [0.2, 0.7, 0.1]).unwrap();
 
         let rcref_is_db = Rc::new(RefCell::new(info_state_db_enum));
 
@@ -575,8 +587,6 @@ mod tests {
         for (is_idx, (info_state, value)) in best_values.iter().enumerate() {
             info!("#{}: {} {:?}", is_idx, info_state, value);
         }
-
-
 
         let info_state_river: InfoState = InfoState::new(
             3,
@@ -601,33 +611,17 @@ mod tests {
         //lets say checking is currently @ 0.2, bet half @ 0.7 bet pot @ .1
         //But question, do we need to discount possibility that we are in an unbet pot to begin with?  Let's not for now...
 
-        //find info state for betting preflop,flop,turn
-        for round in &[Round::Flop, Round::Turn] {
-            let mut found = false;
-            let round_u8 = (*round) as usize as u8;
-            for (info_state, value) in best_values.iter() {
-                if info_state.round == round_u8 {
-                    found = true;
-                    info!("{} {:?}", info_state, value);
-                    assert_eq!(value[BET_HALF as usize], Some(-35.0 / 19.0));
-                    break;
-                }
-            }
-            assert!(found);
-        }
+        //What if those probabilities are 0, those values would get lost, so maybe have the min be at least 5% or 10% or something
+        let values = best_values.get(&info_state_turn).unwrap();
+        assert_eq!(values[info_state_actions::CHECK as usize], Some(2.0*0.2));
+        assert_eq!(values[info_state_actions::BET_HALF as usize], Some(0.0));
+        assert_eq!(values[info_state_actions::BET_POT as usize], Some(0.0));
 
-        let mut found = false;
-        let round_u8 = Round::River as usize as u8;
-        for (info_state, value) in best_values.iter() {
-            if info_state.round == round_u8 {
-                assert!(!found);
-                found = true;
-                info!("{} {:?}", info_state, value);
+        let values = best_values.get(&info_state_flop).unwrap();
+        assert_eq!(values[info_state_actions::CHECK as usize], Some(2.0 * 0.2 * 0.9));
+        assert_eq!(values[info_state_actions::BET_HALF as usize], Some(0.0));
+        assert_eq!(values[info_state_actions::BET_POT as usize], Some(0.0));
 
-                assert_eq!(value[info_state_actions::BET_HALF as usize], Some(2.0));
-            }
-        }
-        assert!(found);
     }
 
     #[test]
