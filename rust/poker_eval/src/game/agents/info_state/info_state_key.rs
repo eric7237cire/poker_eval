@@ -20,7 +20,7 @@ use crate::{
 use crate::game::agents::info_state::info_state_actions;
 
 #[derive(Eq, PartialEq, Hash, Clone)]
-pub struct InfoState {
+pub struct InfoStateKey {
     //For now limited to 0 1st position, 1 middle, 2 last
     //This depends on the round too
     //So Preflop this could be middle, and flop could be last
@@ -42,7 +42,7 @@ pub struct InfoState {
     pub round: u8,
 }
 
-impl Display for InfoState {
+impl Display for InfoStateKey {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let pos_str = match self.position {
             0 => "first",
@@ -118,7 +118,7 @@ pub static HOLE_CARDS_CATEGORY: Lazy<Vec<u8>> = Lazy::new(|| {
     ret
 });
 
-impl InfoState {
+impl InfoStateKey {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(5);
         bytes.push(self.position);

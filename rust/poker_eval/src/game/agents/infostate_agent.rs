@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use crate::board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval};
 use crate::game::agents::info_state::{
-    info_state_actions, InfoState, InfoStateDb, InfoStateDbTrait,
+    info_state_actions, InfoStateKey, InfoStateDb, InfoStateDbTrait,
 };
 use crate::game::agents::Agent;
 use crate::game::core::{ActionEnum, CommentedAction, GameState, PlayerState};
@@ -35,7 +35,7 @@ impl InfoStateAgent {
 
 impl Agent for InfoStateAgent {
     fn decide(&mut self, player_state: &PlayerState, game_state: &GameState) -> CommentedAction {
-        let info_state = InfoState::from_game_state(
+        let info_state = InfoStateKey::from_game_state(
             game_state,
             player_state,
             self.hole_cards.as_ref().unwrap(),

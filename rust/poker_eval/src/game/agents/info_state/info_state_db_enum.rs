@@ -3,7 +3,7 @@ use enum_dispatch::enum_dispatch;
 use crate::PokerError;
 
 use crate::game::agents::info_state::{
-    info_state_actions, InfoState, InfoStateActionValueType, InfoStateDb, InfoStateMemory,
+    InfoStateKey, InfoStateValue, InfoStateDb, InfoStateMemory,
 };
 
 #[enum_dispatch]
@@ -16,12 +16,12 @@ pub enum InfoStateDbEnum {
 pub trait InfoStateDbTrait {
     fn get(
         &self,
-        infostate: &InfoState,
-    ) -> Result<Option<[InfoStateActionValueType; info_state_actions::NUM_ACTIONS]>, PokerError>;
+        key: &InfoStateKey,
+    ) -> Result<Option<InfoStateValue>, PokerError>;
 
     fn put(
         &mut self,
-        infostate: &InfoState,
-        result: [InfoStateActionValueType; info_state_actions::NUM_ACTIONS],
+        key: &InfoStateKey,
+        result: &InfoStateValue,
     ) -> Result<(), PokerError>;
 }

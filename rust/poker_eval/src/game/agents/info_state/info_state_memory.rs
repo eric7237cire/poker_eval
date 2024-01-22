@@ -5,18 +5,18 @@ use redb::ReadableTable;
 use crate::PokerError;
 
 use crate::game::agents::info_state::{
-    info_state_actions, InfoState, InfoStateActionValueType, InfoStateDbTrait,
+    info_state_actions, InfoStateKey, InfoStateActionValueType, InfoStateDbTrait,
 };
 
 //For testing, to have the infostate action values
 pub struct InfoStateMemory {
-    hash_map: HashMap<InfoState, [InfoStateActionValueType; info_state_actions::NUM_ACTIONS]>,
+    hash_map: HashMap<InfoStateKey, [InfoStateActionValueType; info_state_actions::NUM_ACTIONS]>,
 }
 
 impl InfoStateDbTrait for InfoStateMemory {
     fn get(
         &self,
-        infostate: &InfoState,
+        infostate: &InfoStateKey,
     ) -> Result<Option<[InfoStateActionValueType; info_state_actions::NUM_ACTIONS]>, PokerError>
     {
         let v = self.hash_map.get(infostate);
@@ -29,10 +29,10 @@ impl InfoStateDbTrait for InfoStateMemory {
 
     fn put(
         &mut self,
-        infostate: &InfoState,
+        infostate: &InfoStateKey,
         result: [InfoStateActionValueType; info_state_actions::NUM_ACTIONS],
     ) -> Result<(), PokerError> {
-        let info_state: InfoState = infostate.clone();
+        let info_state: InfoStateKey = infostate.clone();
         self.hash_map.insert(info_state, result);
 
         Ok(())

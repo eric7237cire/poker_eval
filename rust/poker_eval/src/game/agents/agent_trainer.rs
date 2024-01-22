@@ -25,11 +25,11 @@ use crate::{
 };
 
 use crate::game::agents::info_state::{
-    info_state_actions, InfoState, InfoStateActionValueType, InfoStateDbEnum,
+    info_state_actions, InfoStateKey, InfoStateActionValueType, InfoStateDbEnum,
 };
 
 type ActionHashMap =
-    HashMap<InfoState, [Option<InfoStateActionValueType>; info_state_actions::NUM_ACTIONS]>;
+    HashMap<InfoStateKey, [Option<InfoStateActionValueType>; info_state_actions::NUM_ACTIONS]>;
 
 pub struct AgentTrainer {}
 
@@ -329,6 +329,8 @@ fn process_finished_gamestate(
     assert!(game_runner.game_state.player_states[hero_index]
         .final_state
         .is_some());
+
+    
     let player_state = &game_runner.game_state.player_states[hero_index];
     let value = (player_state.stack as f64 / game_runner.game_state.bb as f64
         - player_state.initial_stack as f64 / game_runner.game_state.bb as f64)
@@ -354,27 +356,27 @@ fn process_finished_gamestate(
         }
         assert_eq!(hero_index, action.player_index);
 
-        let (info_state, action_id) = InfoState::from_player_action(
+        let (info_state, action_id) = InfoStateKey::from_player_action(
             &action,
             &game_runner.game_state,
             &player_hole_cards,
             monte_carlo_db.clone(),
         );
 
-        if let Some(debug_json_writer) = debug_json_writer.as_mut() {
-            /*
-            InfoState: middle Num Players: 4 Hole Card Cat: 3 < 10% facing raise preflop
-             */
-            if info_state.position == 1
-                && info_state.num_players == 4
-                && info_state.hole_card_category == 3
-                && info_state.round == 0
-                && action_id > 0
-                && value > 5.0
-            {
-                debug_json_writer.write_json(&game_runner);
-            }
-        }
+        // if let Some(debug_json_writer) = debug_json_writer.as_mut() {
+        //     /*
+        //     InfoState: middle Num Players: 4 Hole Card Cat: 3 < 10% facing raise preflop
+        //      */
+        //     if info_state.position == 1
+        //         && info_state.num_players == 4
+        //         && info_state.hole_card_category == 3
+        //         && info_state.round == 0
+        //         && action_id > 0
+        //         && value > 5.0
+        //     {
+        //         debug_json_writer.write_json(&game_runner);
+        //     }
+        // }
 
         info_state_value
             .entry(info_state)
@@ -405,7 +407,7 @@ mod tests {
         game::{
             agents::info_state::{
                 info_state_actions::{self, BET_HALF},
-                InfoState, InfoStateDbEnum, InfoStateMemory, InfoStateDbTrait,
+                InfoStateKey, InfoStateDbEnum, InfoStateMemory, InfoStateDbTrait,
             },
             core::{
                 ActionEnum, ChipType, CommentedAction, GameState, InitialPlayerState, PlayerState,
@@ -547,7 +549,7 @@ mod tests {
 
         let mut info_state_db_enum = InfoStateDbEnum::from(InfoStateMemory::new());
 
-        let info_state_flop: InfoState = InfoState::new(
+        let info_state_flop: InfoStateKey = InfoStateKey::new(
             3,
             1,
             &game_source.get_hole_cards(1).unwrap(),
@@ -558,7 +560,7 @@ mod tests {
             Round::Flop,
         );
 
-        let info_state_turn: InfoState = InfoState::new(
+        let info_state_turn: InfoStateKey = InfoStateKey::new(
             3,
             1,
             &game_source.get_hole_cards(1).unwrap(),
@@ -588,7 +590,7 @@ mod tests {
             info!("#{}: {} {:?}", is_idx, info_state, value);
         }
 
-        let info_state_river: InfoState = InfoState::new(
+        let info_state_river: InfoStateKey = InfoStateKey::new(
             3,
             1,
             &game_source.get_hole_cards(1).unwrap(),

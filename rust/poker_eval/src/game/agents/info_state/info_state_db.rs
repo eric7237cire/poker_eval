@@ -10,7 +10,7 @@ use crate::{
 };
 
 use crate::game::agents::info_state::{
-    info_state_actions, InfoState, InfoStateActionValueType, InfoStateDbTrait,
+    info_state_actions, InfoStateKey, InfoStateActionValueType, InfoStateDbTrait,
 };
 
 const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("eval_cache");
@@ -18,7 +18,7 @@ const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("eval_cache");
 impl InfoStateDbTrait for InfoStateDb {
     fn get(
         &self,
-        infostate: &InfoState,
+        infostate: &InfoStateKey,
     ) -> Result<Option<[InfoStateActionValueType; info_state_actions::NUM_ACTIONS]>, PokerError>
     {
         let read_txn: ReadTransaction = self.db.begin_read().unwrap();
@@ -45,7 +45,7 @@ impl InfoStateDbTrait for InfoStateDb {
 
     fn put(
         &mut self,
-        infostate: &InfoState,
+        infostate: &InfoStateKey,
         result: [InfoStateActionValueType; info_state_actions::NUM_ACTIONS],
     ) -> Result<(), PokerError> {
         let write_txn = self.db.begin_write().unwrap();

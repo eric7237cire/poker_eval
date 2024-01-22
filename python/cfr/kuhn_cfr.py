@@ -19,7 +19,7 @@ class Kunh:
         self.deck = np.array([0, 1, 2])
         self.n_actions = 2
 
-    def train(self, n_iterations=50000):
+    def train(self, n_iterations=3):
         expected_game_value = 0
         for _ in range(n_iterations):
             shuffle(self.deck)
@@ -144,13 +144,24 @@ class Node:
         self.key = key
         self.n_actions = n_actions
         self.regret_sum = np.zeros(self.n_actions)
+
+        # length = # of actions
+        # sum == self.reach_pr_sum
         self.strategy_sum = np.zeros(self.n_actions)
         self.action_dict = action_dict
+        
+        # length = # of actions
+        # sum == 1
         self.strategy = np.repeat(1/self.n_actions, self.n_actions)
+        
+        # probability that this node is reached, in this iteration
         self.reach_pr = 0
+
+        # sum of probability that this node is reached, in all iterations
         self.reach_pr_sum = 0
 
     def update_strategy(self):
+        print(f"Reach pr: {self.reach_pr}.  Strategy: {self.strategy}.  Strategy Sum: {self.strategy_sum}.  Reach PR Sum: {self.reach_pr_sum} Regret Sum: {self.regret_sum}  Key: {self.key}")
         self.strategy_sum += self.reach_pr * self.strategy
         self.reach_pr_sum += self.reach_pr
         self.strategy = self.get_strategy()
