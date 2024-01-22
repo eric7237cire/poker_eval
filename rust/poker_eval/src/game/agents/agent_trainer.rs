@@ -405,7 +405,7 @@ mod tests {
         game::{
             agents::info_state::{
                 info_state_actions::{self, BET_HALF},
-                InfoState, InfoStateDbEnum, InfoStateMemory,
+                InfoState, InfoStateDbEnum, InfoStateMemory, InfoStateDbTrait,
             },
             core::{
                 ActionEnum, ChipType, CommentedAction, GameState, InitialPlayerState, PlayerState,
@@ -545,7 +545,20 @@ mod tests {
         let mut game_source = TestGameSource::new(1);
         let board: Board = "3s 4c 5h 7d 8h".parse().unwrap();
 
-        let info_state_db_enum = InfoStateDbEnum::from(InfoStateMemory::new());
+        let mut info_state_db_enum = InfoStateDbEnum::from(InfoStateMemory::new());
+
+        let info_turn_river: InfoState = InfoState::new(
+            3,
+            1,
+            &game_source.get_hole_cards(1).unwrap(),
+            rcref_mcedb.clone(),
+            0,
+            0,
+            board.as_slice_card(),
+            Round::Turn,
+        );
+
+        info_state_db_enum.put(&info_turn_river, [0.2, 0.7, 0.1]).unwrap();
 
         let rcref_is_db = Rc::new(RefCell::new(info_state_db_enum));
 
@@ -563,6 +576,8 @@ mod tests {
             info!("#{}: {} {:?}", is_idx, info_state, value);
         }
 
+
+
         let info_state_river: InfoState = InfoState::new(
             3,
             1,
@@ -577,7 +592,14 @@ mod tests {
         assert!(best_values.contains_key(&info_state_river));
 
         //In this test, the other 2 players, despite having the best hands will fold only to a river bet
-        let _values = best_values.get(&info_state_river).unwrap();
+        let values = best_values.get(&info_state_river).unwrap();
+        assert_eq!(values[info_state_actions::CHECK as usize], Some(0.0));
+        assert_eq!(values[info_state_actions::BET_HALF as usize], Some(2.0));
+        assert_eq!(values[info_state_actions::BET_POT as usize], Some(2.0));
+
+        //In the turn, we need to modify the above values by the current weight/probabilities;
+        //lets say checking is currently @ 0.2, bet half @ 0.7 bet pot @ .1
+        //But question, do we need to discount possibility that we are in an unbet pot to begin with?  Let's not for now...
 
         //find info state for betting preflop,flop,turn
         for round in &[Round::Flop, Round::Turn] {
