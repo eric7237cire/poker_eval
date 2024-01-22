@@ -249,7 +249,6 @@ struct ProcessOrPushArgs {
     info_state_db_enum: Rc<RefCell<InfoStateDbEnum>>
 }
 
-
 fn process_or_push(
     mut game_runner: GameRunner,
     action: CommentedAction,
@@ -570,7 +569,7 @@ mod tests {
         assert!(best_values.contains_key(&info_state_river));
 
         //In this test, the other 2 players, despite having the best hands will fold only to a river bet
-        let values = best_values.get(&info_state_river).unwrap();
+        let _values = best_values.get(&info_state_river).unwrap();
 
         //find info state for betting preflop,flop,turn
         for round in &[Round::Flop, Round::Turn] {

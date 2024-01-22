@@ -4,7 +4,7 @@ use std::rc::Rc;
 use crate::board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval};
 use crate::game::agents::Agent;
 use crate::game::agents::info_state::{
-    info_state_actions, InfoState, InfoStateActionValueType, InfoStateDb, InfoStateDbTrait,
+    info_state_actions, InfoState, InfoStateDb, InfoStateDbTrait,
 };
 use crate::game::core::{ActionEnum, CommentedAction, GameState, PlayerState};
 use crate::monte_carlo_equity::get_equivalent_hole_board;
@@ -53,7 +53,7 @@ impl Agent for InfoStateAgent {
             };
         }
 
-        let mut action_values = action_values.unwrap();
+        let action_values = action_values.unwrap();
 
         assert_eq!(action_values.len(), info_state_actions::NUM_ACTIONS);
 

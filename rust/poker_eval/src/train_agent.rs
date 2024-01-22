@@ -127,10 +127,10 @@ pub fn main() {
     let hero_name = "PanicAgent";
 
     //Start with clean database
-    let mut info_state_db = InfoStateDbEnum::from(InfoStateDb::new(true).unwrap());
+    let info_state_db = InfoStateDbEnum::from(InfoStateDb::new(true).unwrap());
     let rcref_info_state_db = Rc::new(RefCell::new(info_state_db));
 
-    let mut debug_json_writer = DebugJsonWriter::new();
+    let debug_json_writer = DebugJsonWriter::new();
 
     for it_num in 0..num_total_iterations {
         if last_status_update.elapsed().as_secs() > 10 {
