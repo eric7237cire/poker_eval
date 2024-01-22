@@ -10,7 +10,7 @@ use crate::{
 };
 
 use crate::game::agents::info_state::{
-    info_state_actions, InfoStateKey, InfoStateActionValueType, InfoStateDbTrait,
+    info_state_actions, InfoStateKey, InfoStateValue, InfoStateActionValueType, InfoStateDbTrait,
 };
 
 const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("eval_cache");
@@ -18,26 +18,19 @@ const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("eval_cache");
 impl InfoStateDbTrait for InfoStateDb {
     fn get(
         &self,
-        infostate: &InfoStateKey,
-    ) -> Result<Option<[InfoStateActionValueType; info_state_actions::NUM_ACTIONS]>, PokerError>
+        key: &InfoStateKey,
+    ) -> Result<Option<InfoStateValue>, PokerError>
     {
         let read_txn: ReadTransaction = self.db.begin_read().unwrap();
         let table = read_txn.open_table(TABLE).unwrap();
 
-        let index = infostate.to_bytes();
+        let index = key.to_bytes();
         let data = table.get(index.as_slice()).unwrap();
-        let num_bytes_per_element = mem::size_of::<InfoStateActionValueType>();
+        
         if let Some(data) = data {
             let bytes = data.value();
-            let mut ret = [0.0; info_state_actions::NUM_ACTIONS];
-            for i in 0..info_state_actions::NUM_ACTIONS {
-                ret[i] = InfoStateActionValueType::from_le_bytes(
-                    bytes[i * num_bytes_per_element..(i + 1) * num_bytes_per_element]
-                        .try_into()
-                        .unwrap(),
-                );
-            }
-            Ok(Some(ret))
+            let value: InfoStateValue = bincode::deserialize(&data.value()).unwrap();
+            Ok(Some(value))
         } else {
             Ok(None)
         }
@@ -45,24 +38,18 @@ impl InfoStateDbTrait for InfoStateDb {
 
     fn put(
         &mut self,
-        infostate: &InfoStateKey,
-        result: [InfoStateActionValueType; info_state_actions::NUM_ACTIONS],
+        key: &InfoStateKey,
+        value: &InfoStateValue,
     ) -> Result<(), PokerError> {
         let write_txn = self.db.begin_write().unwrap();
         {
             let mut table = write_txn.open_table(TABLE).unwrap();
 
-            let index = infostate.to_bytes();
+            let index = key.to_bytes();
 
-            let mut bytes = Vec::with_capacity(
-                info_state_actions::NUM_ACTIONS * mem::size_of::<InfoStateActionValueType>(),
-            );
+            let value_bytes: Vec<u8> = bincode::serialize(value).unwrap();
 
-            for i in 0..info_state_actions::NUM_ACTIONS {
-                bytes.extend_from_slice(&result[i].to_le_bytes());
-            }
-
-            table.insert(index.as_slice(), bytes.as_slice()).unwrap();
+            table.insert(index.as_slice(), value_bytes.as_slice()).unwrap();
         }
 
         write_txn.commit().unwrap();
@@ -150,12 +137,7 @@ impl InfoStateDb {
                 }
             };
 
-            //treat it as impossible
-            if arr[i as usize] < -1_000_000_000.0 {
-                continue;
-            }
-
-            ret.push_str(&format!(";{} -> {:.1}", action_name, arr[i as usize]));
+            ret.push_str(&format!(";{} -> {:.1}", action_name, 100.0 * arr[i as usize]));
         }
         ret
     }

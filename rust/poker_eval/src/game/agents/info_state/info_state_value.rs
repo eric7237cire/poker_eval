@@ -1,5 +1,8 @@
+use serde::{Serialize, Deserialize};
+
 use super::{info_state_actions::NUM_ACTIONS, InfoStateActionValueType};
 
+#[derive(Serialize, Deserialize, Clone)]
 pub struct InfoStateValue {
     /*
     sum == 1
@@ -21,4 +24,15 @@ pub struct InfoStateValue {
     
     // sum of probability that this node is reached, in all iterations
     pub reach_pr_sum: f64 
+}
+
+impl Default for InfoStateValue {
+    fn default() -> Self {
+        InfoStateValue {
+            strategy: [1.0/NUM_ACTIONS as InfoStateActionValueType; NUM_ACTIONS],
+            regret_sum: [0.0; NUM_ACTIONS],
+            strategy_sum: [0.0; NUM_ACTIONS],
+            reach_pr_sum: 0.0,
+        }
+    }
 }

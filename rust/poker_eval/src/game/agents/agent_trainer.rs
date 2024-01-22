@@ -571,8 +571,8 @@ mod tests {
             Round::Turn,
         );
 
-        info_state_db_enum.put(&info_state_flop, [0.9, 0.05, 0.05]).unwrap();
-        info_state_db_enum.put(&info_state_turn, [0.2, 0.7, 0.1]).unwrap();
+        //info_state_db_enum.put(&info_state_flop, [0.9, 0.05, 0.05]).unwrap();
+        //info_state_db_enum.put(&info_state_turn, [0.2, 0.7, 0.1]).unwrap();
 
         let rcref_is_db = Rc::new(RefCell::new(info_state_db_enum));
 

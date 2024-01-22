@@ -53,7 +53,7 @@ impl Agent for InfoStateAgent {
             };
         }
 
-        let action_values = action_values.unwrap();
+        let action_values = &action_values.unwrap().strategy;
 
         assert_eq!(action_values.len(), info_state_actions::NUM_ACTIONS);
 
@@ -77,11 +77,8 @@ impl Agent for InfoStateAgent {
 
         let incoming_bet = game_state.current_to_call > 0;
 
-        //let normalized = InfoStateDb::normalize_array(&action_values);
-        //let common_comment = InfoStateDb::normalized_array_to_string(&normalized);
-
         let common_comment_is =
-            InfoStateDb::normalized_array_to_string(&action_values, incoming_bet);
+            InfoStateDb::normalized_array_to_string(action_values, incoming_bet);
 
         let (eq_hole_cards, mut eq_board) =
             get_equivalent_hole_board(&self.hole_cards.unwrap(), game_state.board.as_slice_card());

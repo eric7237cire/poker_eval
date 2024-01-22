@@ -184,26 +184,26 @@ pub fn main() {
                 .borrow()
                 .get(&infostate)
                 .unwrap()
-                .unwrap_or([0.0; info_state_actions::NUM_ACTIONS]);
+                .unwrap_or_default();
 
-            if infostate.num_players == 4
-                && infostate.hole_card_category == 3
-                && infostate.equity == 0
-                && infostate.bet_situation == 1
-                && infostate.round == 0
-            {
-                debug!(
-                    "#{} Info state weights: {:?}\nAdding {:?}",
-                    it_num, &infostate_weights, &action
-                );
-            }
-            for i in 0..infostate_weights.len() {
-                infostate_weights[i] += action[i].unwrap_or(0.0);
-            }
-            rcref_info_state_db
-                .borrow_mut()
-                .put(&infostate, infostate_weights)
-                .unwrap();
+            // if infostate.num_players == 4
+            //     && infostate.hole_card_category == 3
+            //     && infostate.equity == 0
+            //     && infostate.bet_situation == 1
+            //     && infostate.round == 0
+            // {
+            //     debug!(
+            //         "#{} Info state weights: {:?}\nAdding {:?}",
+            //         it_num, &infostate_weights, &action
+            //     );
+            // }
+            // for i in 0..infostate_weights.len() {
+            //     infostate_weights[i] += action[i].unwrap_or(0.0);
+            // }
+            // rcref_info_state_db
+            //     .borrow_mut()
+            //     .put(&infostate, infostate_weights)
+            //     .unwrap();
         }
     }
 
