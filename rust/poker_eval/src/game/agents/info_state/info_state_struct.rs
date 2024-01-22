@@ -6,16 +6,15 @@ use std::{
     rc::Rc,
 };
 
-
 use once_cell::sync::Lazy;
-use redb::{ReadableTable};
+use redb::ReadableTable;
 
 use crate::{
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
-    game::core::{ActionEnum, GameState, PlayerAction, PlayerState, Round, ChipType},
+    game::core::{ActionEnum, ChipType, GameState, PlayerAction, PlayerState, Round},
     monte_carlo_equity::get_equivalent_hole_board,
     pre_calc::NUMBER_OF_SIMPLE_HOLE_CARDS,
-    HoleCards, ALL_HOLE_CARDS, Card,
+    Card, HoleCards, ALL_HOLE_CARDS,
 };
 
 use crate::game::agents::info_state::info_state_actions;
@@ -139,8 +138,6 @@ impl InfoState {
         player_hole_cards: &HoleCards,
         monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
     ) -> (Self, u8) {
-        
-               
         let info_state_action: u8 = match ps.action {
             ActionEnum::Fold => info_state_actions::FOLD,
             ActionEnum::Call(_) => info_state_actions::CALL,
@@ -156,7 +153,6 @@ impl InfoState {
         };
 
         (
-            
             Self::new(
                 ps.non_folded_players,
                 ps.players_left_to_act,
@@ -164,8 +160,8 @@ impl InfoState {
                 monte_carlo_db.clone(),
                 ps.current_amt_to_call,
                 ps.amount_put_in_pot_this_round,
-                &game_state.board.as_slice_card()[0..ps.round.get_num_board_cards()], 
-                ps.round
+                &game_state.board.as_slice_card()[0..ps.round.get_num_board_cards()],
+                ps.round,
             ),
             info_state_action,
         )
@@ -191,7 +187,7 @@ impl InfoState {
             game_state.current_to_call,
             player_state.cur_round_putting_in_pot,
             game_state.board.as_slice_card(),
-            game_state.current_round
+            game_state.current_round,
         )
     }
 
@@ -203,11 +199,10 @@ impl InfoState {
         current_to_call: ChipType,
         cur_round_putting_in_pot: ChipType,
         board: &[Card],
-        current_round: Round
+        current_round: Round,
     ) -> Self {
-
         assert!(num_left_to_act <= num_non_folded_players);
-        
+
         let position = if num_left_to_act == 0 {
             2
         } else if num_left_to_act == num_non_folded_players {
@@ -226,7 +221,6 @@ impl InfoState {
             1 //facing bet
         };
 
-        
         assert_eq!(board.len(), current_round.get_num_board_cards());
 
         assert!(num_non_folded_players >= 2);
@@ -268,10 +262,9 @@ impl InfoState {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::game::agents::info_state::{HOLE_CARDS_CATEGORY, InfoStateDb};
+    use crate::game::agents::info_state::{InfoStateDb, HOLE_CARDS_CATEGORY};
 
     #[test]
     fn test_hole_cards_category() {

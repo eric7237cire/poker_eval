@@ -52,7 +52,6 @@ impl OldRank {
     }
 
     pub fn print_winning(&self, cards: &[Card]) -> String {
-        
         let winning_cards = self.get_winning(cards);
         let winning_cards_str = winning_cards.iter().map(|c| c.to_string()).join(" ");
 
@@ -63,7 +62,7 @@ impl OldRank {
             OldRank::OnePair(_) => {
                 format!("One Pair - {}", winning_cards_str)
             }
-            OldRank::TwoPair(_) => {                
+            OldRank::TwoPair(_) => {
                 format!("Two Pair - {}", winning_cards_str)
             }
             OldRank::ThreeOfAKind(_) => {

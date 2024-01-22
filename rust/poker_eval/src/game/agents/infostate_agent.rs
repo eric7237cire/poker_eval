@@ -2,10 +2,10 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval};
-use crate::game::agents::Agent;
 use crate::game::agents::info_state::{
     info_state_actions, InfoState, InfoStateDb, InfoStateDbTrait,
 };
+use crate::game::agents::Agent;
 use crate::game::core::{ActionEnum, CommentedAction, GameState, PlayerState};
 use crate::monte_carlo_equity::get_equivalent_hole_board;
 use crate::HoleCards;
@@ -80,7 +80,8 @@ impl Agent for InfoStateAgent {
         //let normalized = InfoStateDb::normalize_array(&action_values);
         //let common_comment = InfoStateDb::normalized_array_to_string(&normalized);
 
-        let common_comment_is = InfoStateDb::normalized_array_to_string(&action_values, incoming_bet);
+        let common_comment_is =
+            InfoStateDb::normalized_array_to_string(&action_values, incoming_bet);
 
         let (eq_hole_cards, mut eq_board) =
             get_equivalent_hole_board(&self.hole_cards.unwrap(), game_state.board.as_slice_card());
@@ -114,7 +115,10 @@ impl Agent for InfoStateAgent {
                     if player_state.cur_round_putting_in_pot == game_state.current_to_call {
                         CommentedAction {
                             action: ActionEnum::Check,
-                            comment: Some(format!("[{}]; checked big blind {}", &info_state, &common_comment)),
+                            comment: Some(format!(
+                                "[{}]; checked big blind {}",
+                                &info_state, &common_comment
+                            )),
                         }
                     } else {
                         CommentedAction {
@@ -122,7 +126,7 @@ impl Agent for InfoStateAgent {
                             comment: Some(format!("[{}]; folded {}", &info_state, &common_comment)),
                         }
                     }
-                },           
+                }
                 info_state_actions::CALL => CommentedAction {
                     action: ActionEnum::Call(helpers.call_amount),
                     comment: Some(format!("[{}]; called {}", &info_state, &common_comment)),
@@ -132,14 +136,13 @@ impl Agent for InfoStateAgent {
                     game_state.current_to_call * 3,
                     format!("[{}]; raised {}", &info_state, &common_comment),
                 ),
-                
+
                 _ => {
                     panic!("Unknown action index {}", max_action_index);
                 }
             }
         } else {
             match max_action_index {
-                
                 info_state_actions::CHECK => CommentedAction {
                     action: ActionEnum::Check,
                     comment: Some(format!("[{}]; checked {}", &info_state, &common_comment)),

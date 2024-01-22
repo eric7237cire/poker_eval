@@ -1,15 +1,15 @@
 use enum_dispatch::enum_dispatch;
 
-use crate::{
-    PokerError,
-};
+use crate::PokerError;
 
-use crate::game::agents::info_state::{InfoState, InfoStateDb, InfoStateMemory, InfoStateActionValueType, info_state_actions};
+use crate::game::agents::info_state::{
+    info_state_actions, InfoState, InfoStateActionValueType, InfoStateDb, InfoStateMemory,
+};
 
 #[enum_dispatch]
 pub enum InfoStateDbEnum {
     InfoStateDb,
-    InfoStateMemory
+    InfoStateMemory,
 }
 
 #[enum_dispatch(InfoStateDbEnum)]

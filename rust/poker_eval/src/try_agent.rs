@@ -9,15 +9,15 @@ use poker_eval::{
     },
     game::runner::{GameRunner, GameRunnerSourceEnum},
     game::{
+        agents::info_state::InfoStateDb,
         agents::{
             build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
             EqAgentConfig, Tag,
         },
         runner::GameRunnerSource,
-        agents::info_state::InfoStateDb
     },
     game::{
-        agents::{AgentEnum, InfoStateAgent, },
+        agents::{AgentEnum, InfoStateAgent},
         core::InitialPlayerState,
     },
     init_logger,

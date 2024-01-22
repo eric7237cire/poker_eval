@@ -6,18 +6,19 @@ use poker_eval::{
     board_hc_eval_cache_redb::{
         EvalCacheWithHcReDb, ProduceMonteCarloEval, ProducePartialRankCards,
     },
-    game::agents::{
-        build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
-        EqAgentConfig, Tag, DebugJsonWriter, 
+    game::agents::info_state::{
+        info_state_actions, InfoStateDb, InfoStateDbEnum, InfoStateDbTrait,
     },
-    game::agents::info_state::{InfoStateDbEnum, InfoStateDbTrait,info_state_actions, InfoStateDb},
+    game::agents::{
+        build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource,
+        DebugJsonWriter, EqAgent, EqAgentConfig, Tag,
+    },
     game::{agents::PanicAgent, core::InitialPlayerState},
     game::{
-        agents::{ run_full_game_tree, AgentEnum,},
+        agents::{run_full_game_tree, AgentEnum},
         runner::GameRunnerSourceEnum,
     },
-    init_logger,
-    Card, Deck,
+    init_logger, Card, Deck,
 };
 use rand::seq::SliceRandom;
 
@@ -166,17 +167,21 @@ pub fn main() {
 
         let mut game_source = GameRunnerSourceEnum::from(agent_source);
 
-        let infostate_values =
-            run_full_game_tree(&mut game_source, 
-                board, hero_index, rcref_mcedb.clone(), 
-                // &mut Some(&mut debug_json_writer)
-                None,
-                rcref_info_state_db.clone()
-                ).unwrap();
+        let infostate_values = run_full_game_tree(
+            &mut game_source,
+            board,
+            hero_index,
+            rcref_mcedb.clone(),
+            // &mut Some(&mut debug_json_writer)
+            None,
+            rcref_info_state_db.clone(),
+        )
+        .unwrap();
 
         for (infostate, action) in infostate_values {
             //println!("{} {:?}", infostate, action);
-            let mut infostate_weights = rcref_info_state_db.borrow()
+            let mut infostate_weights = rcref_info_state_db
+                .borrow()
                 .get(&infostate)
                 .unwrap()
                 .unwrap_or([0.0; info_state_actions::NUM_ACTIONS]);
@@ -195,7 +200,10 @@ pub fn main() {
             for i in 0..infostate_weights.len() {
                 infostate_weights[i] += action[i].unwrap_or(0.0);
             }
-            rcref_info_state_db.borrow_mut().put(&infostate, infostate_weights).unwrap();
+            rcref_info_state_db
+                .borrow_mut()
+                .put(&infostate, infostate_weights)
+                .unwrap();
         }
     }
 

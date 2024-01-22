@@ -1,19 +1,19 @@
-use std::{
-    fs, mem,
-};
+use std::{fs, mem};
 
 use log::info;
 
 use redb::{Database, Error as ReDbError, ReadTransaction, ReadableTable, TableDefinition};
 
 use crate::{
-    board_eval_cache_redb::{get_data_path, EvalCacheEnum}, PokerError,
+    board_eval_cache_redb::{get_data_path, EvalCacheEnum},
+    PokerError,
 };
 
-use crate::game::agents::info_state::{InfoState, InfoStateActionValueType, info_state_actions, InfoStateDbTrait};
+use crate::game::agents::info_state::{
+    info_state_actions, InfoState, InfoStateActionValueType, InfoStateDbTrait,
+};
 
 const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("eval_cache");
-
 
 impl InfoStateDbTrait for InfoStateDb {
     fn get(
@@ -97,8 +97,6 @@ impl InfoStateDb {
         Ok(Self { db })
     }
 
-    
-
     pub fn normalize_array(
         arr: &[InfoStateActionValueType],
     ) -> [InfoStateActionValueType; info_state_actions::NUM_ACTIONS] {
@@ -126,14 +124,17 @@ impl InfoStateDb {
         ret
     }
 
-    pub fn normalized_array_to_string(arr: &[InfoStateActionValueType], incoming_bet: bool) -> String {
+    pub fn normalized_array_to_string(
+        arr: &[InfoStateActionValueType],
+        incoming_bet: bool,
+    ) -> String {
         assert_eq!(arr.len(), info_state_actions::NUM_ACTIONS);
 
         let mut ret = String::new();
 
         for i in 0..info_state_actions::NUM_ACTIONS as u8 {
             let action_name = if incoming_bet {
-                 match i {
+                match i {
                     info_state_actions::FOLD => "FOLD",
                     info_state_actions::CALL => "CALL",
                     info_state_actions::RAISE_3X => "RAISE_3X",
@@ -159,4 +160,3 @@ impl InfoStateDb {
         ret
     }
 }
-
