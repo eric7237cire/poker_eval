@@ -14,9 +14,10 @@ use poker_eval::{
             EqAgentConfig, Tag,
         },
         runner::GameRunnerSource,
+        agents::info_state::InfoStateDb
     },
     game::{
-        agents::{AgentEnum, InfoStateAgent, InfoStateDb},
+        agents::{AgentEnum, InfoStateAgent, },
         core::InitialPlayerState,
     },
     init_logger,

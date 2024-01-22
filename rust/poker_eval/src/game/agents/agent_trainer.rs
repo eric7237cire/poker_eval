@@ -23,7 +23,7 @@ use crate::{
     Card, HoleCards, PokerError, pre_calc::get_repo_root,
 };
 
-use super::{info_state_actions, InfoState, InfoStateActionValueType, InfoStateDbEnum};
+use crate::game::agents::info_state::{info_state_actions, InfoState, InfoStateActionValueType, InfoStateDbEnum};
 
 type ActionHashMap =
     HashMap<InfoState, [Option<InfoStateActionValueType>; info_state_actions::NUM_ACTIONS]>;
@@ -400,7 +400,7 @@ mod tests {
     use crate::{
         board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
         game::{
-            agents::{info_state_actions::{self, BET_HALF}, InfoState, InfoStateMemory, InfoStateDbEnum},
+            agents::info_state::{info_state_actions::{self, BET_HALF}, InfoState, InfoStateMemory, InfoStateDbEnum},
             core::{
                 ActionEnum, ChipType, CommentedAction, GameState, InitialPlayerState, PlayerState,
                 Round,
@@ -561,10 +561,16 @@ mod tests {
         }
 
         let info_state_river: InfoState = InfoState::new(
-            3, 1, &game_source.get_hole_cards(1).unwrap(),
+            3, 
+            1, &game_source.get_hole_cards(1).unwrap(),
             rcref_mcedb.clone(), 0, 0, board.as_slice_card(),
             Round::River
         );
+
+        assert!(best_values.contains_key(&info_state_river));
+
+        //In this test, the other 2 players, despite having the best hands will fold only to a river bet
+        let values = best_values.get(&info_state_river).unwrap();
 
         //find info state for betting preflop,flop,turn
         for round in &[Round::Flop, Round::Turn] {

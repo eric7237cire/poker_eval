@@ -8,11 +8,12 @@ use poker_eval::{
     },
     game::agents::{
         build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource, EqAgent,
-        EqAgentConfig, Tag, DebugJsonWriter, InfoStateDbEnum, InfoStateDbTrait,
+        EqAgentConfig, Tag, DebugJsonWriter, 
     },
+    game::agents::info_state::{InfoStateDbEnum, InfoStateDbTrait,info_state_actions, InfoStateDb},
     game::{agents::PanicAgent, core::InitialPlayerState},
     game::{
-        agents::{info_state_actions, run_full_game_tree, AgentEnum, InfoStateDb},
+        agents::{ run_full_game_tree, AgentEnum,},
         runner::GameRunnerSourceEnum,
     },
     init_logger,
@@ -139,7 +140,7 @@ pub fn main() {
 
         agent_deck.reset();
 
-        let mut agents = build_agents(
+        let mut agents: Vec<AgentEnum> = build_agents(
             rcref_ftdb.clone(),
             rcref_pdb.clone(),
             rcref_mcedb.clone(),

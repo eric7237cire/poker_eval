@@ -2,8 +2,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval};
-use crate::game::agents::{
-    info_state_actions, Agent, InfoState, InfoStateActionValueType, InfoStateDb, InfoStateDbTrait,
+use crate::game::agents::Agent;
+use crate::game::agents::info_state::{
+    info_state_actions, InfoState, InfoStateActionValueType, InfoStateDb, InfoStateDbTrait,
 };
 use crate::game::core::{ActionEnum, CommentedAction, GameState, PlayerState};
 use crate::monte_carlo_equity::get_equivalent_hole_board;

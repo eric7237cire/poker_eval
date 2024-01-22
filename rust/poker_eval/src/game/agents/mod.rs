@@ -8,7 +8,7 @@ mod tag;
 
 mod agent_trainer;
 mod eq_agent;
-mod infostate;
+pub mod info_state;
 mod infostate_agent;
 mod panic_agent;
 
@@ -17,7 +17,7 @@ pub use agent_trainer::*;
 pub use agent_trait::*;
 pub use agent_util::*;
 pub use eq_agent::*;
-pub use infostate::*;
+
 pub use infostate_agent::*;
 pub use panic_agent::*;
 pub use passive_calling_station::*;
