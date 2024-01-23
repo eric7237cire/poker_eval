@@ -17,8 +17,7 @@ use log::{debug, trace};
 use crate::{
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
     game::{
-        core::{ActionEnum, CommentedAction, Round},
-        runner::{GameRunner, GameRunnerSource},
+        agents::info_state::InfoStateDbTrait, core::{ActionEnum, CommentedAction, Round}, runner::{GameRunner, GameRunnerSource}
     },
     pre_calc::get_repo_root,
     Card, HoleCards, PokerError,
@@ -28,7 +27,7 @@ use crate::game::agents::info_state::{
     info_state_actions, InfoStateKey, InfoStateActionValueType, InfoStateDbEnum,
 };
 
-type ActionHashMap =
+type UtilityHashMap =
     HashMap<InfoStateKey, [Option<InfoStateActionValueType>; info_state_actions::NUM_ACTIONS]>;
 
 pub struct AgentTrainer {}
@@ -47,8 +46,8 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
 
     debug_json_writer: Option<DebugJsonWriter>,
     info_state_db_enum: Rc<RefCell<InfoStateDbEnum>>,
-) -> Result<ActionHashMap, PokerError> {
-    let mut ret: ActionHashMap = HashMap::new();
+) -> Result<UtilityHashMap, PokerError> {
+    let mut ret: UtilityHashMap = HashMap::new();
 
     let game_runner = GameRunner::new(
         game_source.get_initial_players(),
@@ -256,7 +255,7 @@ fn process_or_push(
     mut game_runner: GameRunner,
     action: CommentedAction,
     game_runner_queue: &mut Vec<GameRunner>,
-    info_state_value: &mut ActionHashMap,
+    info_state_value: &mut UtilityHashMap,
     proc_or_push_args: &mut ProcessOrPushArgs,
 ) {
     let r = game_runner.process_next_action(&action).unwrap();
@@ -317,7 +316,8 @@ impl DebugJsonWriter {
 
 fn process_finished_gamestate(
     game_runner: GameRunner,
-    info_state_value: &mut ActionHashMap,
+    // Computing action_utils[act] from kuhn_cfr.py
+    action_utils: &mut UtilityHashMap,
     proc_or_push_args: &mut ProcessOrPushArgs,
 ) {
     trace!("Processing finished gamestate");
@@ -340,14 +340,27 @@ fn process_finished_gamestate(
     Actions at the leaves have 'full value' but the parents need to multiply by the
     normalized weight of taking that action / probability
 
+    For the leaf nodes,
+    action_utils[act] is the chips/bb won / lost *
+    the current strategy of the info set
+
+    For a parent node,
+    it's the strategy[action] * total utility of the child node
+
+    This is updated piece meal, so can add
+
+    One problem is arriving at river infosets via different paths
+        maybe it's ok?
      */
 
+    let mut current_strategy_probability = 1.0;
+
     //assign the max ev for each infostate in the game
-    for action in game_runner.game_state.actions.iter() {
+    for action in game_runner.game_state.actions.iter().rev() {
         trace!(
             "Action {}, info_state_value len {} value {}",
             action,
-            info_state_value.len(),
+            action_utils.len(),
             value
         );
         //For debugging we might leave in actions that aren't the hero's
@@ -356,12 +369,21 @@ fn process_finished_gamestate(
         }
         assert_eq!(hero_index, action.player_index);
 
-        let (info_state, action_id) = InfoStateKey::from_player_action(
+        let (info_state_key, action_id) = InfoStateKey::from_player_action(
             &action,
             &game_runner.game_state,
             &player_hole_cards,
             monte_carlo_db.clone(),
         );
+
+        let prob_played_action = if let Some(iv) =
+            proc_or_push_args.info_state_db_enum.borrow().get(&info_state_key).unwrap() {
+                iv.strategy[action_id as usize]
+            } else {
+                1.0 / info_state_actions::NUM_ACTIONS as InfoStateActionValueType
+            };
+
+        current_strategy_probability *= prob_played_action;
 
         // if let Some(debug_json_writer) = debug_json_writer.as_mut() {
         //     /*
@@ -378,17 +400,18 @@ fn process_finished_gamestate(
         //     }
         // }
 
-        info_state_value
-            .entry(info_state)
+        let adjusted_value = current_strategy_probability * value;
+
+        action_utils
+            .entry(info_state_key)
             .and_modify(|cv| {
-                let cv_action = cv[action_id as usize];
-                if cv_action.is_none() || cv_action.unwrap() < value {
-                    cv[action_id as usize] = Some(value);
-                }
+                let cv_action = cv[action_id as usize].unwrap_or(0.0);
+                cv[action_id as usize] = Some(adjusted_value+cv_action);
+                
             })
             .or_insert_with(|| {
                 let mut ret = [None; info_state_actions::NUM_ACTIONS];
-                ret[action_id as usize] = Some(value as InfoStateActionValueType);
+                ret[action_id as usize] = Some(adjusted_value);
                 ret
             });
     }
