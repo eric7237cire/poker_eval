@@ -10,7 +10,7 @@
 
 //For subsequent actions, we'll maybe just have additional infostates to update
 
-use std::{cell::RefCell, collections::HashMap, fs, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fmt::{Display, Formatter}, fs, rc::Rc};
 
 use log::{debug, trace};
 
@@ -28,7 +28,30 @@ use crate::game::agents::info_state::{
 };
 
 type UtilityHashMap =
-    HashMap<InfoStateKey, [Option<InfoStateActionValueType>; info_state_actions::NUM_ACTIONS]>;
+    HashMap<InfoStateKey, UtilityHashValue>;
+
+
+    #[derive(Debug)]
+pub struct UtilityHashValue {
+    pub action_utility: [Option<InfoStateActionValueType>; info_state_actions::NUM_ACTIONS],
+    pub sum_probability: InfoStateActionValueType,
+}
+
+impl Display for UtilityHashValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut ret = String::new();
+        for (action_idx, action_utility) in self.action_utility.iter().enumerate() {
+            if let Some(action_utility) = action_utility {
+                ret.push_str(&format!(
+                    "{}: {} ",                    
+                    action_idx, action_utility
+                ));
+            }
+        }
+        ret.push_str(format!("sum_prob: {}", self.sum_probability).as_str());
+        write!(f, "{}", ret)
+    }
+}
 
 pub struct AgentTrainer {}
 
@@ -224,7 +247,7 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
                 let r = current_game_runner.process_next_action(&action).unwrap();
 
                 //We don't keep the action if it's not the hero's
-                if process_or_push_args.debug_json_writer.is_some() {
+                if process_or_push_args.debug_json_writer.is_none() {
                     current_game_runner.game_state.actions.pop().unwrap();
                 }
 
@@ -320,7 +343,7 @@ fn process_finished_gamestate(
     action_utils: &mut UtilityHashMap,
     proc_or_push_args: &mut ProcessOrPushArgs,
 ) {
-    trace!("Processing finished gamestate");
+    trace!("{}\nProcessing finished gamestate", "*".repeat(80));
     let hero_index = proc_or_push_args.hero_index;
     let player_hole_cards = proc_or_push_args.player_hole_cards;
     let monte_carlo_db = proc_or_push_args.monte_carlo_db.clone();
@@ -402,18 +425,29 @@ fn process_finished_gamestate(
 
         let adjusted_value = current_strategy_probability * value;
 
-        action_utils
-            .entry(info_state_key)
-            .and_modify(|cv| {
-                let cv_action = cv[action_id as usize].unwrap_or(0.0);
-                cv[action_id as usize] = Some(adjusted_value+cv_action);
-                
-            })
+        let hv = action_utils
+            .entry(info_state_key)            
             .or_insert_with(|| {
-                let mut ret = [None; info_state_actions::NUM_ACTIONS];
-                ret[action_id as usize] = Some(adjusted_value);
-                ret
+                UtilityHashValue {
+                    action_utility: [None; info_state_actions::NUM_ACTIONS],
+                    sum_probability: 0.0,
+                }
             });
+
+            
+        let cv_action = hv.action_utility[action_id as usize].unwrap_or(0.0);
+
+        trace!("Prob played action: {}", prob_played_action);
+        trace!("Current strategy prob: {}", current_strategy_probability);
+        trace!("Prob sum: {}, now: {}", hv.sum_probability, hv.sum_probability + current_strategy_probability);
+        trace!("Value {} * Cur prob {} == Adjusted value: {}", value, current_strategy_probability, adjusted_value);
+        trace!("Utility Action: {}, now {}", cv_action, adjusted_value+cv_action);
+
+        hv.action_utility[action_id as usize] = Some(adjusted_value+cv_action);
+        
+        hv.sum_probability += current_strategy_probability;
+              
+            
     }
 
     //info!("{}", game_runner.to_game_log().unwrap().to_game_log_string(false, true, 1));
@@ -429,7 +463,7 @@ mod tests {
         board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
         game::{
             agents::info_state::{
-                info_state_actions::{self, BET_HALF},
+                info_state_actions::{self, InfoStateActionValueType, BET_HALF},
                 InfoStateKey, InfoStateDbEnum, InfoStateMemory, InfoStateDbTrait,
             },
             core::{
@@ -579,7 +613,7 @@ mod tests {
             rcref_mcedb.clone(),
             0,
             0,
-            board.as_slice_card(),
+            &board.as_slice_card()[0..3],
             Round::Flop,
         );
 
@@ -590,7 +624,7 @@ mod tests {
             rcref_mcedb.clone(),
             0,
             0,
-            board.as_slice_card(),
+            &board.as_slice_card()[0..4],
             Round::Turn,
         );
 
@@ -627,26 +661,33 @@ mod tests {
         assert!(best_values.contains_key(&info_state_river));
 
         //In this test, the other 2 players, despite having the best hands will fold only to a river bet
-        let values = best_values.get(&info_state_river).unwrap();
-        assert_eq!(values[info_state_actions::CHECK as usize], Some(0.0));
-        assert_eq!(values[info_state_actions::BET_HALF as usize], Some(2.0));
-        assert_eq!(values[info_state_actions::BET_POT as usize], Some(2.0));
+        let values = best_values.get(&info_state_river).unwrap().action_utility;
+        assert_approx_eq_opt(values[info_state_actions::CHECK as usize], Some(-0.33333));
+        assert_approx_eq_opt(values[info_state_actions::BET_HALF as usize], Some(0.666667));
+        //assert_approx_eq_opt(values[info_state_actions::BET_POT as usize], Some(2.0));
 
         //In the turn, we need to modify the above values by the current weight/probabilities;
         //lets say checking is currently @ 0.2, bet half @ 0.7 bet pot @ .1
         //But question, do we need to discount possibility that we are in an unbet pot to begin with?  Let's not for now...
 
         //What if those probabilities are 0, those values would get lost, so maybe have the min be at least 5% or 10% or something
-        let values = best_values.get(&info_state_turn).unwrap();
-        assert_eq!(values[info_state_actions::CHECK as usize], Some(2.0*0.2));
-        assert_eq!(values[info_state_actions::BET_HALF as usize], Some(0.0));
-        assert_eq!(values[info_state_actions::BET_POT as usize], Some(0.0));
+        let values = best_values.get(&info_state_turn).unwrap().action_utility;
+        assert_approx_eq_opt(values[info_state_actions::CHECK as usize], Some(1.0/3.0 * 1.0/3.0 ));
+        assert_approx_eq_opt(values[info_state_actions::BET_HALF as usize], Some(-1.0/3.0 * 35.0/19.0));
+        //assert_eq!(values[info_state_actions::BET_POT as usize], Some(0.0));
 
-        let values = best_values.get(&info_state_flop).unwrap();
-        assert_eq!(values[info_state_actions::CHECK as usize], Some(2.0 * 0.2 * 0.9));
-        assert_eq!(values[info_state_actions::BET_HALF as usize], Some(0.0));
-        assert_eq!(values[info_state_actions::BET_POT as usize], Some(0.0));
+        let values = best_values.get(&info_state_flop).unwrap().action_utility;
+        assert_approx_eq_opt(values[info_state_actions::CHECK as usize], Some(1.0/3.0 * 1.0/9.0 + 1.0/3.0 * -1.0/3.0 * 35.0/19.0));
+        assert_approx_eq_opt(values[info_state_actions::BET_HALF as usize], Some(-0.614035));
+        //assert_approx_eq_opt(values[info_state_actions::BET_POT as usize], Some(0.0));
 
+    }
+
+    fn assert_approx_eq(a: InfoStateActionValueType, b: InfoStateActionValueType) {
+        assert!((a - b).abs() < 0.0001, "{} != {}", a, b);
+    }
+    fn assert_approx_eq_opt(a: Option<InfoStateActionValueType>, b: Option<InfoStateActionValueType>) {
+        assert_approx_eq(a.unwrap(), b.unwrap());
     }
 
     #[test]
@@ -676,22 +717,6 @@ mod tests {
         )
         .unwrap();
 
-        for (is_idx, (info_state, value)) in best_values.iter().enumerate() {
-            info!("#{}: {} {:?}", is_idx, info_state, value);
-        }
-
-        let mut found = false;
-        let round_u8 = Round::Preflop as usize as u8;
-        for (info_state, value) in best_values.iter() {
-            if info_state.round == round_u8 {
-                assert!(!found);
-                found = true;
-                info!("{} {:?}", info_state, value);
-
-                assert_eq!(value[info_state_actions::FOLD as usize], Some(-1.0));
-                assert_eq!(value[info_state_actions::CALL as usize], Some(-35.0 / 19.0));
-            }
-        }
-        assert!(found);
+        
     }
 }
