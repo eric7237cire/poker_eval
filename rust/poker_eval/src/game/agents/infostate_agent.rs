@@ -35,7 +35,7 @@ impl InfoStateAgent {
 
 impl Agent for InfoStateAgent {
     fn decide(&mut self, player_state: &PlayerState, game_state: &GameState) -> CommentedAction {
-        let info_state = InfoStateKey::from_game_state(
+        let info_state_key = InfoStateKey::from_game_state(
             game_state,
             player_state,
             self.hole_cards.as_ref().unwrap(),
@@ -44,16 +44,16 @@ impl Agent for InfoStateAgent {
 
         let info_state_db = self.info_state_db.borrow();
 
-        let action_values = info_state_db.get(&info_state).unwrap();
+        let info_state_value = info_state_db.get(&info_state_key).unwrap();
 
-        if action_values.is_none() {
+        if info_state_value.is_none() {
             return CommentedAction {
                 action: ActionEnum::Fold,
-                comment: Some(format!("[{}]; did not exist, so folding", &info_state)),
+                comment: Some(format!("[{}]; did not exist, so folding", &info_state_key)),
             };
         }
 
-        let action_values = &action_values.unwrap().strategy;
+        let action_values = &info_state_value.as_ref().unwrap().strategy;
 
         assert_eq!(action_values.len(), info_state_actions::NUM_ACTIONS);
 
@@ -95,7 +95,9 @@ impl Agent for InfoStateAgent {
             .unwrap();
 
         let common_comment = format!(
-            "Eq {:.2}% with {} players in round;Non Folded Player Count: {} left to act: {};{}",
+            "Infostate Key: [{}];Value: [{}];Eq {:.2}% with {} players in round;Non Folded Player Count: {} left to act: {};{}",
+            &info_state_key,
+            &info_state_value.as_ref().unwrap(),
             eq * 100.0,
             game_state.num_players_at_round_start(),
             game_state.num_non_folded_players(),
@@ -114,24 +116,24 @@ impl Agent for InfoStateAgent {
                             action: ActionEnum::Check,
                             comment: Some(format!(
                                 "[{}]; checked big blind {}",
-                                &info_state, &common_comment
+                                &info_state_key, &common_comment
                             )),
                         }
                     } else {
                         CommentedAction {
                             action: ActionEnum::Fold,
-                            comment: Some(format!("[{}]; folded {}", &info_state, &common_comment)),
+                            comment: Some(format!("[{}]; folded {}", &info_state_key, &common_comment)),
                         }
                     }
                 }
                 info_state_actions::CALL => CommentedAction {
                     action: ActionEnum::Call(helpers.call_amount),
-                    comment: Some(format!("[{}]; called {}", &info_state, &common_comment)),
+                    comment: Some(format!("[{}]; called {}", &info_state_key, &common_comment)),
                 },
                 info_state_actions::RAISE_3X => helpers.build_raise_to(
                     game_state,
                     game_state.current_to_call * 3,
-                    format!("[{}]; raised {}", &info_state, &common_comment),
+                    format!("[{}]; raised {}", &info_state_key, &common_comment),
                 ),
 
                 _ => {
@@ -142,15 +144,15 @@ impl Agent for InfoStateAgent {
             match max_action_index {
                 info_state_actions::CHECK => CommentedAction {
                     action: ActionEnum::Check,
-                    comment: Some(format!("[{}]; checked {}", &info_state, &common_comment)),
+                    comment: Some(format!("[{}]; checked {}", &info_state_key, &common_comment)),
                 },
                 info_state_actions::BET_HALF => helpers.build_bet(
                     game_state.pot() / 2,
-                    format!("[{}]; bet {}", &info_state, &common_comment),
+                    format!("[{}]; bet {}", &info_state_key, &common_comment),
                 ),
                 info_state_actions::BET_POT => helpers.build_bet(
                     game_state.pot(),
-                    format!("[{}]; bet {}", &info_state, &common_comment),
+                    format!("[{}]; bet {}", &info_state_key, &common_comment),
                 ),
                 _ => {
                     panic!("Unknown action index {}", max_action_index);

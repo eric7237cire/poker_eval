@@ -33,7 +33,9 @@ type UtilityHashMap =
 
     #[derive(Debug)]
 pub struct UtilityHashValue {
+    //action_utils
     pub action_utility: [Option<InfoStateActionValueType>; info_state_actions::NUM_ACTIONS],
+    //reach_pr
     pub sum_probability: InfoStateActionValueType,
 }
 
@@ -222,7 +224,18 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
                         //bet half pot
 
                         let bet_action = hero_helpers
-                            .build_bet(current_game_runner.game_state.pot() / 2, "".to_string());
+                            .build_bet(current_game_runner.game_state.pot() / 2, "1".to_string());
+                        process_or_push(
+                            current_game_runner.clone(),
+                            bet_action,
+                            &mut game_runner_queue,
+                            &mut ret,
+                            &mut process_or_push_args,
+                        );
+
+                        //bet pot
+                        let bet_action = hero_helpers
+                            .build_bet(current_game_runner.game_state.pot(), "2".to_string());
                         process_or_push(
                             current_game_runner.clone(),
                             bet_action,
