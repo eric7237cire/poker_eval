@@ -193,9 +193,11 @@ pub fn main() {
                 "Strategy and action length mismatch",
             );
             //compute action_utils * strategy
-            let util = infostate_value.strategy.iter().enumerate().fold(0.0, |acc, (i, v)| {
-                acc + *v * action_utils_and_pr.action_utility[i].unwrap_or(0.0)
-            });
+            // In agent trainer::420, we already multiplied by the strategies
+            // let util = infostate_value.strategy.iter().enumerate().fold(0.0, |acc, (i, v)| {
+            //     acc + *v * action_utils_and_pr.action_utility[i].unwrap_or(0.0)
+            // });
+            let util = action_utils_and_pr.action_utility.iter().map(|au| au.unwrap_or(0.0)).sum::<InfoStateActionValueType>();
             let regrets = action_utils_and_pr.action_utility.map(|au| au.unwrap_or(0.0) - util);
 
             let mut normalizing_sum = 0.0;

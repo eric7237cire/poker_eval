@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::cmp::min;
 
 use serde::Serialize;
@@ -138,7 +139,7 @@ impl AgentDecisionHelpers {
         comment: String,
     ) -> CommentedAction {
         //Apply max
-        let raise_to = min(raise_to, self.max_can_raise);
+        let raise_to = min( self.max_can_raise, max(raise_to, self.min_can_raise));
 
         if self.can_raise {
             CommentedAction {
@@ -155,7 +156,9 @@ impl AgentDecisionHelpers {
 
     pub fn build_bet(&self, bet: ChipType, comment: String) -> CommentedAction {
         //Apply max (we can use raise since if we are betting, the amt we already put in is 0)
-        let bet_amt = min(self.max_can_raise, bet);
+        //Apply max last
+        //But first we make sure we are betting at least the minimum
+        let bet_amt = min(self.max_can_raise, max(bet, self.min_can_raise));
 
         CommentedAction {
             action: ActionEnum::Bet(bet_amt),

@@ -189,28 +189,25 @@ impl Tag {
         //let half_pot = min(max_can_raise, current_pot / 2);
         let third_pot = min(max_can_raise, current_pot / 3);
 
+        let helpers = player_state.get_helpers(game_state);
+
         if likes_hand_response.likes_hand >= LikesHandLevel::SmallBet
             && game_state.board.get_round().unwrap() < Round::River
         {
-            return CommentedAction {
-                action: ActionEnum::Bet(third_pot),
-                comment: Some(format!(
+            return helpers.build_bet(third_pot, format!(
                     "Bets 1/3 pot because likes hand @ {}: +1 {}; -1 {}",
                     likes_hand_response.likes_hand,
                     likes_hand_response.likes_hand_comments.join(", "),
                     likes_hand_response.not_like_hand_comments.join(", ")
-                )),
-            };
+                ));
         } else if likes_hand_response.likes_hand >= LikesHandLevel::LargeBet {
-            return CommentedAction {
-                action: ActionEnum::Bet(third_pot),
-                comment: Some(format!(
+            //only river bet if we like hand a lot
+            return helpers.build_bet(third_pot, format!(
                     "Bets 1/3 pot on river because likes hand @ {}: +1 {}; -1 {}",
                     likes_hand_response.likes_hand,
                     likes_hand_response.likes_hand_comments.join(", "),
                     likes_hand_response.not_like_hand_comments.join(", ")
-                )),
-            };
+                ));
         } else {
             return CommentedAction {
                 action: ActionEnum::Check,
