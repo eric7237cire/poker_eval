@@ -7,7 +7,6 @@ use std::{
 };
 
 use once_cell::sync::Lazy;
-use redb::ReadableTable;
 
 use crate::{
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
@@ -143,7 +142,7 @@ impl InfoStateKey {
             ActionEnum::Call(_) => info_state_actions::CALL,
             ActionEnum::Check => info_state_actions::CHECK,
             ActionEnum::Bet(amt) => {
-                if amt <= game_state.pot() / 2 {
+                if amt <= ps.pot / 2 {
                     info_state_actions::BET_HALF
                 } else {
                     info_state_actions::BET_POT

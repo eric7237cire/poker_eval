@@ -72,7 +72,7 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
     //Used to calculate equity vs random hole cards
     monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
 
-    debug_json_writer: Option<DebugJsonWriter>,
+    debug_json_writer: Option<&mut DebugJsonWriter>,
     info_state_db_enum: Rc<RefCell<InfoStateDbEnum>>,
 ) -> Result<UtilityHashMap, PokerError> {
     let mut ret: UtilityHashMap = HashMap::new();
@@ -83,6 +83,8 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
         game_source.get_big_blind(),
         &board,
     )?;
+
+    //debug!("Starting run_full_game_tree");
 
     let mut process_or_push_args = ProcessOrPushArgs {
         hero_index,
@@ -282,11 +284,11 @@ pub fn run_full_game_tree<T: GameRunnerSource>(
     Ok(ret)
 }
 
-struct ProcessOrPushArgs {
+struct ProcessOrPushArgs<'a> {
     hero_index: usize,
     player_hole_cards: HoleCards,
     monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
-    debug_json_writer: Option<DebugJsonWriter>,
+    debug_json_writer: Option<&'a mut DebugJsonWriter>,
     info_state_db_enum: Rc<RefCell<InfoStateDbEnum>>,
 }
 
@@ -427,25 +429,10 @@ fn process_finished_gamestate(
 
         current_strategy_probability *= prob_played_action;
 
-        // if let Some(debug_json_writer) = debug_json_writer.as_mut() {
-        //     /*
-        //     InfoState: middle Num Players: 4 Hole Card Cat: 3 < 10% facing raise preflop
-        //      */
-        //     if info_state.position == 1
-        //         && info_state.num_players == 4
-        //         && info_state.hole_card_category == 3
-        //         && info_state.round == 0
-        //         && action_id > 0
-        //         && value > 5.0
-        //     {
-        //         debug_json_writer.write_json(&game_runner);
-        //     }
-        // }
-
         let adjusted_value = current_strategy_probability * value;
 
         let hv = action_utils
-            .entry(info_state_key)
+            .entry(info_state_key.clone())
             .or_insert_with(|| UtilityHashValue {
                 action_utility: [None; info_state_actions::NUM_ACTIONS],
                 sum_probability: 0.0,
@@ -471,6 +458,49 @@ fn process_finished_gamestate(
             cv_action,
             adjusted_value + cv_action
         );
+
+        if let Some(debug_json_writer) = debug_json_writer.as_mut() {
+            /*
+            InfoState: middle Num Players: 4 Hole Card Cat: 3 < 10% facing raise preflop
+
+            InfoState: middle Num Players: 4 Hole Card Cat: 1 10 - 30% unbet flop
+             */
+            if info_state_key.position == 1
+                && info_state_key.num_players == 4
+                && info_state_key.hole_card_category == 1
+                && info_state_key.equity == 1
+                && info_state_key.bet_situation == 0   
+                && info_state_key.round == 1             
+            {
+                debug!(
+                    "Action {}, value {}",
+                    action,
+                    value
+                );
+                debug!("Prob played action: {}", prob_played_action);
+                debug!("Current strategy prob: {}", current_strategy_probability);
+                debug!(
+                    "Prob sum: {}, now: {}",
+                    hv.sum_probability,
+                    hv.sum_probability + current_strategy_probability
+                );
+                debug!(
+                    "Value {} * Cur prob {} == Adjusted value: {}",
+                    value,
+                    current_strategy_probability,
+                    adjusted_value
+                );
+                debug!(
+                    "Utility Action id={} is {}, now {}",
+                    action_id,
+                    cv_action,
+                    adjusted_value + cv_action
+                );
+                debug_json_writer.write_json(&game_runner);
+
+
+            }
+        }
 
         hv.action_utility[action_id as usize] = Some(adjusted_value + cv_action);
 

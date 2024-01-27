@@ -1,5 +1,7 @@
 use std::io::Write;
 
+use env_logger::Target;
+
 pub fn init_test_logger() {
     let _ = env_logger::builder()
         .is_test(true)
@@ -46,6 +48,7 @@ pub fn init_logger() {
                 record.args()
             )
         })
+        .target(Target::Stdout)
         .try_init();
 }
 

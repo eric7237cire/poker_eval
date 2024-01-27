@@ -134,7 +134,7 @@ pub fn main() {
     let info_state_db = InfoStateDbEnum::from(InfoStateDb::new(true).unwrap());
     let rcref_info_state_db = Rc::new(RefCell::new(info_state_db));
 
-    let debug_json_writer = DebugJsonWriter::new();
+    let mut debug_json_writer = DebugJsonWriter::new();
 
     for it_num in 0..num_total_iterations {
         if last_status_update.elapsed().as_secs() > 10 {
@@ -176,15 +176,16 @@ pub fn main() {
             hero_index,
             rcref_mcedb.clone(),
             None,
+            //Some(&mut debug_json_writer),
             rcref_info_state_db.clone(),
         )
         .unwrap();
 
-        for (infostate, action_utils_and_pr) in infostate_values {
+        for (infostate_key, action_utils_and_pr) in infostate_values {
             //println!("{} {:?}", infostate, action);
             let mut infostate_value = rcref_info_state_db
                 .borrow()
-                .get(&infostate)
+                .get(&infostate_key)
                 .unwrap()
                 .unwrap_or_default();
 
@@ -237,20 +238,23 @@ pub fn main() {
 
             rcref_info_state_db
                 .borrow_mut()
-                .put(&infostate, &infostate_value)
+                .put(&infostate_key, &infostate_value)
                 .unwrap();
 
-            // if infostate.num_players == 4
-            //     && infostate.hole_card_category == 3
-            //     && infostate.equity == 0
-            //     && infostate.bet_situation == 1
-            //     && infostate.round == 0
-            // {
-            //     debug!(
-            //         "#{} Info state weights: {:?}\nAdding {:?}",
-            //         it_num, &infostate_weights, &action
-            //     );
-            // }
+            if infostate_key.num_players == 4
+                && infostate_key.hole_card_category == 1
+                && infostate_key.equity == 1
+                && infostate_key.bet_situation == 0
+                && infostate_key.round == 1
+                && infostate_key.position == 1
+            {
+                debug!(
+                    "#{} Info state key: [{}] value: [{}]",
+                    it_num, 
+                    &infostate_key,
+                    &infostate_value
+                );
+            }
             // for i in 0..infostate_weights.len() {
             //     infostate_weights[i] += action[i].unwrap_or(0.0);
             // }
