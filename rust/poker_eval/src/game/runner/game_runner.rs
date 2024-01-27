@@ -503,7 +503,6 @@ impl GameRunner {
             self.game_state.num_left_to_act
         );
 
-        //Update before deciding, num_left_to_act == 0 on the player that can close the action
         assert!(self.game_state.num_left_to_act > 0);
         self.game_state.num_left_to_act -= 1;
 

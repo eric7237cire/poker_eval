@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use super::{info_state_actions::NUM_ACTIONS, InfoStateActionValueType};
 
@@ -20,18 +20,18 @@ pub struct InfoStateValue {
     pub regret_sum: [InfoStateActionValueType; NUM_ACTIONS],
 
     /*
-     sum == self.reach_pr_sum
-     */
+    sum == self.reach_pr_sum
+    */
     pub strategy_sum: [InfoStateActionValueType; NUM_ACTIONS],
-    
+
     // sum of probability that this node is reached, in all iterations
-    pub reach_pr_sum: InfoStateActionValueType, 
+    pub reach_pr_sum: InfoStateActionValueType,
 }
 
 impl Default for InfoStateValue {
     fn default() -> Self {
         InfoStateValue {
-            strategy: [1.0/NUM_ACTIONS as InfoStateActionValueType; NUM_ACTIONS],
+            strategy: [1.0 / NUM_ACTIONS as InfoStateActionValueType; NUM_ACTIONS],
             regret_sum: [0.0; NUM_ACTIONS],
             strategy_sum: [0.0; NUM_ACTIONS],
             reach_pr_sum: 0.0,
@@ -48,12 +48,12 @@ impl Display for InfoStateValue {
         }
 
         s.push_str("Strategy Sum: ");
-        
+
         for i in 0..NUM_ACTIONS {
             s.push_str(&format!("{:.2} ", self.regret_sum[i]));
         }
 
-        s.push_str(&format!("Reach Pr Sum: {:.2}", self.reach_pr_sum	));
+        s.push_str(&format!("Reach Pr Sum: {:.2}", self.reach_pr_sum));
 
         write!(f, "{}", s)
     }

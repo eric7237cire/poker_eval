@@ -194,20 +194,26 @@ impl Tag {
         if likes_hand_response.likes_hand >= LikesHandLevel::SmallBet
             && game_state.board.get_round().unwrap() < Round::River
         {
-            return helpers.build_bet(third_pot, format!(
+            return helpers.build_bet(
+                third_pot,
+                format!(
                     "Bets 1/3 pot because likes hand @ {}: +1 {}; -1 {}",
                     likes_hand_response.likes_hand,
                     likes_hand_response.likes_hand_comments.join(", "),
                     likes_hand_response.not_like_hand_comments.join(", ")
-                ));
+                ),
+            );
         } else if likes_hand_response.likes_hand >= LikesHandLevel::LargeBet {
             //only river bet if we like hand a lot
-            return helpers.build_bet(third_pot, format!(
+            return helpers.build_bet(
+                third_pot,
+                format!(
                     "Bets 1/3 pot on river because likes hand @ {}: +1 {}; -1 {}",
                     likes_hand_response.likes_hand,
                     likes_hand_response.likes_hand_comments.join(", "),
                     likes_hand_response.not_like_hand_comments.join(", ")
-                ));
+                ),
+            );
         } else {
             return CommentedAction {
                 action: ActionEnum::Check,

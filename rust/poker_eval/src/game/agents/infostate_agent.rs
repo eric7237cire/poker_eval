@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use crate::board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval};
 use crate::game::agents::info_state::{
-    info_state_actions, InfoStateKey, InfoStateDb, InfoStateDbTrait,
+    info_state_actions, InfoStateDb, InfoStateDbTrait, InfoStateKey,
 };
 use crate::game::agents::Agent;
 use crate::game::core::{ActionEnum, CommentedAction, GameState, PlayerState};
@@ -122,7 +122,10 @@ impl Agent for InfoStateAgent {
                     } else {
                         CommentedAction {
                             action: ActionEnum::Fold,
-                            comment: Some(format!("[{}]; folded {}", &info_state_key, &common_comment)),
+                            comment: Some(format!(
+                                "[{}]; folded {}",
+                                &info_state_key, &common_comment
+                            )),
                         }
                     }
                 }
@@ -144,7 +147,10 @@ impl Agent for InfoStateAgent {
             match max_action_index {
                 info_state_actions::CHECK => CommentedAction {
                     action: ActionEnum::Check,
-                    comment: Some(format!("[{}]; checked {}", &info_state_key, &common_comment)),
+                    comment: Some(format!(
+                        "[{}]; checked {}",
+                        &info_state_key, &common_comment
+                    )),
                 },
                 info_state_actions::BET_HALF => helpers.build_bet(
                     game_state.pot() / 2,

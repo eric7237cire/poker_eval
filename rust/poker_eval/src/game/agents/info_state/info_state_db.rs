@@ -10,23 +10,19 @@ use crate::{
 };
 
 use crate::game::agents::info_state::{
-    info_state_actions, InfoStateKey, InfoStateValue, InfoStateActionValueType, InfoStateDbTrait,
+    info_state_actions, InfoStateActionValueType, InfoStateDbTrait, InfoStateKey, InfoStateValue,
 };
 
 const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("eval_cache");
 
 impl InfoStateDbTrait for InfoStateDb {
-    fn get(
-        &self,
-        key: &InfoStateKey,
-    ) -> Result<Option<InfoStateValue>, PokerError>
-    {
+    fn get(&self, key: &InfoStateKey) -> Result<Option<InfoStateValue>, PokerError> {
         let read_txn: ReadTransaction = self.db.begin_read().unwrap();
         let table = read_txn.open_table(TABLE).unwrap();
 
         let index = key.to_bytes();
         let data = table.get(index.as_slice()).unwrap();
-        
+
         if let Some(data) = data {
             let bytes = data.value();
             let value: InfoStateValue = bincode::deserialize(&data.value()).unwrap();
@@ -36,11 +32,7 @@ impl InfoStateDbTrait for InfoStateDb {
         }
     }
 
-    fn put(
-        &mut self,
-        key: &InfoStateKey,
-        value: &InfoStateValue,
-    ) -> Result<(), PokerError> {
+    fn put(&mut self, key: &InfoStateKey, value: &InfoStateValue) -> Result<(), PokerError> {
         let write_txn = self.db.begin_write().unwrap();
         {
             let mut table = write_txn.open_table(TABLE).unwrap();
@@ -49,7 +41,9 @@ impl InfoStateDbTrait for InfoStateDb {
 
             let value_bytes: Vec<u8> = bincode::serialize(value).unwrap();
 
-            table.insert(index.as_slice(), value_bytes.as_slice()).unwrap();
+            table
+                .insert(index.as_slice(), value_bytes.as_slice())
+                .unwrap();
         }
 
         write_txn.commit().unwrap();
@@ -137,7 +131,11 @@ impl InfoStateDb {
                 }
             };
 
-            ret.push_str(&format!(";{} -> {:.1}", action_name, 100.0 * arr[i as usize]));
+            ret.push_str(&format!(
+                ";{} -> {:.1}",
+                action_name,
+                100.0 * arr[i as usize]
+            ));
         }
         ret
     }

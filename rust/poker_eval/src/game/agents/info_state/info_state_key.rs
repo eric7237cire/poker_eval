@@ -179,9 +179,13 @@ impl InfoStateKey {
         assert!(non_folded_players >= 2);
         assert!(non_folded_players <= 10);
 
+        assert!(game_state.num_left_to_act > 0);
+        assert!(game_state.num_left_to_act <= non_folded_players);
+
         Self::new(
             non_folded_players,
-            game_state.num_left_to_act,
+            //Game state is before player action has been taken into account
+            game_state.num_left_to_act - 1,
             player_hole_cards,
             monte_carlo_db.clone(),
             game_state.current_to_call,
@@ -276,11 +280,10 @@ mod tests {
 
     #[test]
     fn test_normalize_array() {
-        let test_values = [ 0.5, 5.0, -3.0];
+        let test_values = [0.5, 5.0, -3.0];
 
         let normalized = InfoStateDb::normalize_array(&test_values);
 
-        
         assert_eq!(normalized[0], 3.5 / 8.0);
         assert_eq!(normalized[1], 1.0);
         assert_eq!(normalized[2], 0.0);

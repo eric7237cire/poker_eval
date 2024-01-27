@@ -139,7 +139,7 @@ impl AgentDecisionHelpers {
         comment: String,
     ) -> CommentedAction {
         //Apply max
-        let raise_to = min( self.max_can_raise, max(raise_to, self.min_can_raise));
+        let raise_to = min(self.max_can_raise, max(raise_to, self.min_can_raise));
 
         if self.can_raise {
             CommentedAction {
@@ -180,6 +180,7 @@ pub struct GameState {
     //acted this round == total_active_players - num_left_to_act
     //note that if a player folds or goes all in, they are no longer counted as active
     //the last to act (unless they bet/raise) will have this == 0 when they decide
+    //Not changed until after player decides/acts
     pub num_left_to_act: u8,
     //active means not folded and not all in
     pub total_active_players: u8,

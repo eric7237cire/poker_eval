@@ -10,28 +10,34 @@
 
 //For subsequent actions, we'll maybe just have additional infostates to update
 
-use std::{cell::RefCell, collections::HashMap, fmt::{Display, Formatter}, fs, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    fmt::{Display, Formatter},
+    fs,
+    rc::Rc,
+};
 
 use log::{debug, trace};
 
 use crate::{
     board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
     game::{
-        agents::info_state::InfoStateDbTrait, core::{ActionEnum, CommentedAction, Round}, runner::{GameRunner, GameRunnerSource}
+        agents::info_state::InfoStateDbTrait,
+        core::{ActionEnum, CommentedAction, Round},
+        runner::{GameRunner, GameRunnerSource},
     },
     pre_calc::get_repo_root,
     Card, HoleCards, PokerError,
 };
 
 use crate::game::agents::info_state::{
-    info_state_actions, InfoStateKey, InfoStateActionValueType, InfoStateDbEnum,
+    info_state_actions, InfoStateActionValueType, InfoStateDbEnum, InfoStateKey,
 };
 
-type UtilityHashMap =
-    HashMap<InfoStateKey, UtilityHashValue>;
+type UtilityHashMap = HashMap<InfoStateKey, UtilityHashValue>;
 
-
-    #[derive(Debug)]
+#[derive(Debug)]
 pub struct UtilityHashValue {
     //action_utils
     pub action_utility: [Option<InfoStateActionValueType>; info_state_actions::NUM_ACTIONS],
@@ -44,10 +50,7 @@ impl Display for UtilityHashValue {
         let mut ret = String::new();
         for (action_idx, action_utility) in self.action_utility.iter().enumerate() {
             if let Some(action_utility) = action_utility {
-                ret.push_str(&format!(
-                    "{}: {} ",                    
-                    action_idx, action_utility
-                ));
+                ret.push_str(&format!("{}: {} ", action_idx, action_utility));
             }
         }
         ret.push_str(format!("sum_prob: {}", self.sum_probability).as_str());
@@ -366,7 +369,6 @@ fn process_finished_gamestate(
         .final_state
         .is_some());
 
-    
     let player_state = &game_runner.game_state.player_states[hero_index];
     let value = (player_state.stack as f64 / game_runner.game_state.bb as f64
         - player_state.initial_stack as f64 / game_runner.game_state.bb as f64)
@@ -412,12 +414,16 @@ fn process_finished_gamestate(
             monte_carlo_db.clone(),
         );
 
-        let prob_played_action = if let Some(iv) =
-            proc_or_push_args.info_state_db_enum.borrow().get(&info_state_key).unwrap() {
-                iv.strategy[action_id as usize]
-            } else {
-                1.0 / info_state_actions::NUM_ACTIONS as InfoStateActionValueType
-            };
+        let prob_played_action = if let Some(iv) = proc_or_push_args
+            .info_state_db_enum
+            .borrow()
+            .get(&info_state_key)
+            .unwrap()
+        {
+            iv.strategy[action_id as usize]
+        } else {
+            1.0 / info_state_actions::NUM_ACTIONS as InfoStateActionValueType
+        };
 
         current_strategy_probability *= prob_played_action;
 
@@ -439,28 +445,36 @@ fn process_finished_gamestate(
         let adjusted_value = current_strategy_probability * value;
 
         let hv = action_utils
-            .entry(info_state_key)            
-            .or_insert_with(|| {
-                UtilityHashValue {
-                    action_utility: [None; info_state_actions::NUM_ACTIONS],
-                    sum_probability: 0.0,
-                }
+            .entry(info_state_key)
+            .or_insert_with(|| UtilityHashValue {
+                action_utility: [None; info_state_actions::NUM_ACTIONS],
+                sum_probability: 0.0,
             });
 
-            
         let cv_action = hv.action_utility[action_id as usize].unwrap_or(0.0);
 
         trace!("Prob played action: {}", prob_played_action);
         trace!("Current strategy prob: {}", current_strategy_probability);
-        trace!("Prob sum: {}, now: {}", hv.sum_probability, hv.sum_probability + current_strategy_probability);
-        trace!("Value {} * Cur prob {} == Adjusted value: {}", value, current_strategy_probability, adjusted_value);
-        trace!("Utility Action: {}, now {}", cv_action, adjusted_value+cv_action);
+        trace!(
+            "Prob sum: {}, now: {}",
+            hv.sum_probability,
+            hv.sum_probability + current_strategy_probability
+        );
+        trace!(
+            "Value {} * Cur prob {} == Adjusted value: {}",
+            value,
+            current_strategy_probability,
+            adjusted_value
+        );
+        trace!(
+            "Utility Action: {}, now {}",
+            cv_action,
+            adjusted_value + cv_action
+        );
 
-        hv.action_utility[action_id as usize] = Some(adjusted_value+cv_action);
-        
+        hv.action_utility[action_id as usize] = Some(adjusted_value + cv_action);
+
         hv.sum_probability += current_strategy_probability;
-              
-            
     }
 
     //info!("{}", game_runner.to_game_log().unwrap().to_game_log_string(false, true, 1));
@@ -477,7 +491,7 @@ mod tests {
         game::{
             agents::info_state::{
                 info_state_actions::{self, InfoStateActionValueType, BET_HALF},
-                InfoStateKey, InfoStateDbEnum, InfoStateMemory, InfoStateDbTrait,
+                InfoStateDbEnum, InfoStateDbTrait, InfoStateKey, InfoStateMemory,
             },
             core::{
                 ActionEnum, ChipType, CommentedAction, GameState, InitialPlayerState, PlayerState,
@@ -676,7 +690,10 @@ mod tests {
         //In this test, the other 2 players, despite having the best hands will fold only to a river bet
         let values = best_values.get(&info_state_river).unwrap().action_utility;
         assert_approx_eq_opt(values[info_state_actions::CHECK as usize], Some(-0.33333));
-        assert_approx_eq_opt(values[info_state_actions::BET_HALF as usize], Some(0.666667));
+        assert_approx_eq_opt(
+            values[info_state_actions::BET_HALF as usize],
+            Some(0.666667),
+        );
         //assert_approx_eq_opt(values[info_state_actions::BET_POT as usize], Some(2.0));
 
         //In the turn, we need to modify the above values by the current weight/probabilities;
@@ -685,21 +702,35 @@ mod tests {
 
         //What if those probabilities are 0, those values would get lost, so maybe have the min be at least 5% or 10% or something
         let values = best_values.get(&info_state_turn).unwrap().action_utility;
-        assert_approx_eq_opt(values[info_state_actions::CHECK as usize], Some(1.0/3.0 * 1.0/3.0 ));
-        assert_approx_eq_opt(values[info_state_actions::BET_HALF as usize], Some(-1.0/3.0 * 35.0/19.0));
+        assert_approx_eq_opt(
+            values[info_state_actions::CHECK as usize],
+            Some(1.0 / 3.0 * 1.0 / 3.0),
+        );
+        assert_approx_eq_opt(
+            values[info_state_actions::BET_HALF as usize],
+            Some(-1.0 / 3.0 * 35.0 / 19.0),
+        );
         //assert_eq!(values[info_state_actions::BET_POT as usize], Some(0.0));
 
         let values = best_values.get(&info_state_flop).unwrap().action_utility;
-        assert_approx_eq_opt(values[info_state_actions::CHECK as usize], Some(1.0/3.0 * 1.0/9.0 + 1.0/3.0 * -1.0/3.0 * 35.0/19.0));
-        assert_approx_eq_opt(values[info_state_actions::BET_HALF as usize], Some(-0.614035));
+        assert_approx_eq_opt(
+            values[info_state_actions::CHECK as usize],
+            Some(1.0 / 3.0 * 1.0 / 9.0 + 1.0 / 3.0 * -1.0 / 3.0 * 35.0 / 19.0),
+        );
+        assert_approx_eq_opt(
+            values[info_state_actions::BET_HALF as usize],
+            Some(-0.614035),
+        );
         //assert_approx_eq_opt(values[info_state_actions::BET_POT as usize], Some(0.0));
-
     }
 
     fn assert_approx_eq(a: InfoStateActionValueType, b: InfoStateActionValueType) {
         assert!((a - b).abs() < 0.0001, "{} != {}", a, b);
     }
-    fn assert_approx_eq_opt(a: Option<InfoStateActionValueType>, b: Option<InfoStateActionValueType>) {
+    fn assert_approx_eq_opt(
+        a: Option<InfoStateActionValueType>,
+        b: Option<InfoStateActionValueType>,
+    ) {
         assert_approx_eq(a.unwrap(), b.unwrap());
     }
 
@@ -729,7 +760,5 @@ mod tests {
             rcref_is_db.clone(),
         )
         .unwrap();
-
-        
     }
 }

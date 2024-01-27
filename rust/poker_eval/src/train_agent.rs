@@ -13,7 +13,10 @@ use poker_eval::{
         build_initial_players_from_agents, set_agent_hole_cards, Agent, AgentSource,
         DebugJsonWriter, EqAgent, EqAgentConfig, Tag,
     },
-    game::{agents::{info_state::InfoStateActionValueType, PanicAgent}, core::InitialPlayerState},
+    game::{
+        agents::{info_state::InfoStateActionValueType, PanicAgent},
+        core::InitialPlayerState,
+    },
     game::{
         agents::{run_full_game_tree, AgentEnum},
         runner::GameRunnerSourceEnum,
@@ -197,8 +200,14 @@ pub fn main() {
             // let util = infostate_value.strategy.iter().enumerate().fold(0.0, |acc, (i, v)| {
             //     acc + *v * action_utils_and_pr.action_utility[i].unwrap_or(0.0)
             // });
-            let util = action_utils_and_pr.action_utility.iter().map(|au| au.unwrap_or(0.0)).sum::<InfoStateActionValueType>();
-            let regrets = action_utils_and_pr.action_utility.map(|au| au.unwrap_or(0.0) - util);
+            let util = action_utils_and_pr
+                .action_utility
+                .iter()
+                .map(|au| au.unwrap_or(0.0))
+                .sum::<InfoStateActionValueType>();
+            let regrets = action_utils_and_pr
+                .action_utility
+                .map(|au| au.unwrap_or(0.0) - util);
 
             let mut normalizing_sum = 0.0;
             for i in 0..action_utils_and_pr.action_utility.len() {
@@ -212,19 +221,24 @@ pub fn main() {
 
             //Do update strategy
             for i in 0..action_utils_and_pr.action_utility.len() {
-                infostate_value.strategy_sum[i] += action_utils_and_pr.sum_probability * infostate_value.strategy[i];
-                infostate_value.reach_pr_sum += action_utils_and_pr.sum_probability 
+                infostate_value.strategy_sum[i] +=
+                    action_utils_and_pr.sum_probability * infostate_value.strategy[i];
+                infostate_value.reach_pr_sum += action_utils_and_pr.sum_probability
             }
 
             for i in 0..action_utils_and_pr.action_utility.len() {
                 if normalizing_sum > 0.0 {
                     infostate_value.strategy[i] = infostate_value.regret_sum[i] / normalizing_sum;
                 } else {
-                    infostate_value.strategy[i] = 1.0 / action_utils_and_pr.action_utility.len() as InfoStateActionValueType;
+                    infostate_value.strategy[i] =
+                        1.0 / action_utils_and_pr.action_utility.len() as InfoStateActionValueType;
                 }
             }
 
-            rcref_info_state_db.borrow_mut().put(&infostate, &infostate_value).unwrap();
+            rcref_info_state_db
+                .borrow_mut()
+                .put(&infostate, &infostate_value)
+                .unwrap();
 
             // if infostate.num_players == 4
             //     && infostate.hole_card_category == 3
