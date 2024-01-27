@@ -50,7 +50,7 @@ impl Display for InfoStateValue {
         s.push_str("Strategy Sum: ");
 
         for i in 0..NUM_ACTIONS {
-            s.push_str(&format!("{:.2} ", self.regret_sum[i]));
+            s.push_str(&format!("{:.2} ", self.strategy_sum[i]));
         }
 
         s.push_str(&format!("Reach Pr Sum: {:.2}", self.reach_pr_sum));

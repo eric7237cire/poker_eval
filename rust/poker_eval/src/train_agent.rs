@@ -124,7 +124,7 @@ pub fn main() {
 
     let mut agent_deck = Deck::new();
 
-    let num_total_iterations = 100_000;
+    let num_total_iterations = 20_000;
 
     let num_players = 9;
 
@@ -210,9 +210,17 @@ pub fn main() {
                 .action_utility
                 .map(|au| au.unwrap_or(0.0) - util);
 
+            let non_null_count = action_utils_and_pr.action_utility.iter().filter(|f| f.is_some()).count();
+
+            assert!(non_null_count>0);
+
             let mut normalizing_sum = 0.0;
             for i in 0..action_utils_and_pr.action_utility.len() {
-                infostate_value.regret_sum[i] += regrets[i];
+
+                if action_utils_and_pr.action_utility[i].is_some() {
+                    //This action was not possible / didn't happen
+                    infostate_value.regret_sum[i] += regrets[i];
+                }
 
                 //zero out negatives
                 infostate_value.regret_sum[i] = infostate_value.regret_sum[i].max(0.0);
@@ -222,17 +230,18 @@ pub fn main() {
 
             //Do update strategy
             for i in 0..action_utils_and_pr.action_utility.len() {
+                
                 infostate_value.strategy_sum[i] +=
-                    action_utils_and_pr.sum_probability * infostate_value.strategy[i];
-                infostate_value.reach_pr_sum += action_utils_and_pr.sum_probability
+                    action_utils_and_pr.sum_probability * infostate_value.strategy[i];                
             }
+            infostate_value.reach_pr_sum += action_utils_and_pr.sum_probability;
 
-            for i in 0..action_utils_and_pr.action_utility.len() {
+            for i in 0..action_utils_and_pr.action_utility.len() {                
                 if normalizing_sum > 0.0 {
                     infostate_value.strategy[i] = infostate_value.regret_sum[i] / normalizing_sum;
                 } else {
                     infostate_value.strategy[i] =
-                        1.0 / action_utils_and_pr.action_utility.len() as InfoStateActionValueType;
+                        1.0 / non_null_count as InfoStateActionValueType;
                 }
             }
 
