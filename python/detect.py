@@ -189,4 +189,4 @@ if __name__ == "__main__":
     clean_run_dir()
 
     train()    
-    predict()
+    # predict()

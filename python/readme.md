@@ -28,7 +28,9 @@ https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&D
 cd git/poker_eval/python
 source ../dev/local.env
 
-docker-compose run --rm ultralytics_service
+(or use .env in ./python dir, same as docker-compose)
+
+docker-compose run --rm --service-ports ultralytics_service
 
 ## Tensorboard 
 
@@ -63,7 +65,17 @@ call `process_screenshots` not `process_screenshots_for_json`
 label studio exports bbox format, so
 run convert_to_yolo.py following instructions below
 
+### Checking for mistakes
+
+After running process screenshots, look in $REPO_ROOT/python/datasets/live_images
+
+See if it made a mistake
+
 ### Importing live
+
+The process_screenshots prepares the recently captured screenshots in yolo format.
+
+To import to label studio --
 
 1. Import dir creation
 
@@ -78,34 +90,19 @@ Live dir should already exist from process_screenshots, which created labels.txt
 cp ${REPO_ROOT}/python/datasets/all/classes.txt ${REPO_ROOT}/python/datasets/live/classes.txt 
 cp ${REPO_ROOT}/python/datasets/all/notes.json ${REPO_ROOT}/python/datasets/live/notes.json
 
-3.  Create import json
+3.  Run
 
-be in python dir
+import_to_all.sh in WSL
 
-. ../dev/local.env
-export DATASET_NAME=live
-
-Use all images link in the url, because that's where they will stay
-
-For import to all
-```
-docker-compose run --rm label_studio_service  \
-label-studio-converter import yolo \
--i /home/user/python-data/datasets/${DATASET_NAME} \
--o /home/user/python-data/label_studio_import/${DATASET_NAME}.json \
---image-ext .png --out-type annotations \
---image-root-url /data/local-files/?d=/home/user/python-data/datasets/all/images/
-```
-
-Copy images to all
-
-Import to all dataset
+4.  Import to all dataset
 
 Fix stuff
 
 (keep old all directory because the image links use that)
 
 Reexport to all / unzip
+
+Unzip to all2 and diff over
 
 Retrain
 
@@ -150,7 +147,7 @@ docker-compose up -d label_studio_service
 Import
 Copy xml from label_config.xml to view settings in ui
 
-```
+
 ```
 
 ## To fix dir permissions

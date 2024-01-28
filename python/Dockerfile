@@ -1,5 +1,5 @@
 # Use the base image from ultralytics
-FROM ultralytics/ultralytics:8.1.3
+FROM ultralytics/ultralytics:8.1.6
 
 # Install additional Python packages
 # RUN pip install torch==2.1.2 ultralytics==8.1.3
