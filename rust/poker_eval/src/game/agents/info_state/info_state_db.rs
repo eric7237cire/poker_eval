@@ -1,4 +1,4 @@
-use std::{fs, mem};
+use std::fs;
 
 use log::info;
 
@@ -23,8 +23,7 @@ impl InfoStateDbTrait for InfoStateDb {
         let index = key.to_bytes();
         let data = table.get(index.as_slice()).unwrap();
 
-        if let Some(data) = data {
-            let bytes = data.value();
+        if let Some(data) = data {            
             let value: InfoStateValue = bincode::deserialize(&data.value()).unwrap();
             Ok(Some(value))
         } else {

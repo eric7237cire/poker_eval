@@ -25,7 +25,7 @@ use crate::{
     game::{
         agents::info_state::InfoStateDbTrait,
         core::{ActionEnum, CommentedAction, Round},
-        runner::{GameRunner, GameRunnerSource},
+        runner::{GameRunner, GameRunnerSource, GameRunnerSourceEnum},
     },
     pre_calc::get_repo_root,
     Card, HoleCards, PokerError,
@@ -510,6 +510,325 @@ fn process_finished_gamestate(
     //info!("{}", game_runner.to_game_log().unwrap().to_game_log_string(false, true, 1));
 }
 
+
+//Recursive version
+pub fn run_full_game_tree_recursive(
+    game_source: &mut GameRunnerSourceEnum,
+    board: Vec<Card>,
+    //The agent being trained's index
+    hero_index: usize,
+    //Used to calculate equity vs random hole cards
+    monte_carlo_db: Rc<RefCell<EvalCacheWithHcReDb<ProduceMonteCarloEval>>>,
+    debug_json_writer: Option<&mut DebugJsonWriter>,
+    info_state_db_enum: Rc<RefCell<InfoStateDbEnum>>,
+) -> Result<InfoStateActionValueType, PokerError> {
+
+    let mut  game_runner = GameRunner::new(
+        game_source.get_initial_players(),
+        game_source.get_small_blind(),
+        game_source.get_big_blind(),
+        &board,
+    )?;
+
+    //debug!("Starting run_full_game_tree");
+
+    let mut process_or_push_args = ProcessOrPushArgs {
+        hero_index,
+        player_hole_cards: game_source.get_hole_cards(hero_index)?,
+        monte_carlo_db: monte_carlo_db.clone(),
+        debug_json_writer,
+        info_state_db_enum: info_state_db_enum.clone(),
+    };
+
+    run_full_game_tree_recursive_helper(game_source, &mut game_runner, &mut process_or_push_args, 1.0)
+}
+
+fn run_full_game_tree_recursive_helper(
+    game_source: &mut GameRunnerSourceEnum,
+    game_runner: &mut GameRunner,
+    proc_or_push_args: &mut ProcessOrPushArgs,
+    //Probability agent being trained took the actions to get to this point in game runner
+    hero_prob: InfoStateActionValueType,
+) -> Result<InfoStateActionValueType, PokerError> {
+
+    //Continue until it is our agent's turn or until the game is over
+    for _ in 0..2000 {
+        if game_runner
+                .get_current_player_state()
+                .player_index()
+                == proc_or_push_args.hero_index {
+            break;
+        }
+
+        let action = game_source
+                .get_action(
+                    game_runner.get_current_player_state(),
+                    &game_runner.game_state,
+                )
+                .unwrap();
+        let r = game_runner.process_next_action(&action).unwrap();
+
+        //No need to save history unless we're debugging
+        if proc_or_push_args.debug_json_writer.is_none() {
+            game_runner.game_state.actions.pop().unwrap();
+        }
+
+        if r {
+            //game is done, return how much hero won or lost
+            let player_state = &game_runner.game_state.player_states[proc_or_push_args.hero_index];
+            let value = (player_state.stack as f64 / game_runner.game_state.bb as f64
+                - player_state.initial_stack as f64 / game_runner.game_state.bb as f64)
+                as InfoStateActionValueType;
+            return Ok(value);
+        }
+    }
+
+    //At this point it's heros turn and the game is not over
+
+    let hero_helpers = game_runner
+        .get_current_player_state()
+        .get_helpers(&game_runner.game_state);
+
+    let mut action_utils: [Option<InfoStateActionValueType>; info_state_actions::NUM_ACTIONS] = [None; info_state_actions::NUM_ACTIONS];
+
+    let info_state_key = InfoStateKey::from_game_state(
+        &game_runner.game_state,
+        game_runner.get_current_player_state(),
+        &proc_or_push_args.player_hole_cards,
+        proc_or_push_args.monte_carlo_db.clone(),
+    );
+
+    let mut info_state_value = proc_or_push_args
+        .info_state_db_enum
+        .borrow()
+        .get(&info_state_key)
+        .unwrap()
+        .unwrap_or_default();
+
+    {
+        let prob_played_action = &info_state_value.strategy;
+
+        //Are we facing a bet?
+        if hero_helpers.call_amount > 0 {
+            //Fold, call, raise
+
+            let fold_action = CommentedAction {
+                action: ActionEnum::Fold,
+                comment: None,
+            };
+
+            let fold_value = play_action(
+                game_source,
+                game_runner,
+                fold_action,
+                proc_or_push_args,
+                prob_played_action[0] * hero_prob
+            )?;
+
+            action_utils[0] = Some(fold_value);
+
+            let call_action = CommentedAction {
+                action: ActionEnum::Call(hero_helpers.call_amount),
+                comment: None,
+            };
+            let call_value = play_action(
+                game_source,
+                game_runner,
+                call_action,
+                proc_or_push_args,
+                prob_played_action[1] * hero_prob
+            )?;
+
+            action_utils[1] = Some(call_value);
+
+            if hero_helpers.can_raise {
+                let raise_action = hero_helpers.build_raise_to(
+                    &game_runner.game_state,
+                    game_runner.game_state.current_to_call * 3,
+                    "2".to_string(),
+                );
+
+                let raise_value = play_action(
+                    game_source,
+                    game_runner,
+                    raise_action,
+                    proc_or_push_args,
+                    prob_played_action[2] * hero_prob
+                )?;
+
+                action_utils[2] = Some(raise_value);
+            }
+        } else {
+            //no bet (more correctly, we alreeday put in call amount, so bb would be here)
+            let check_action = CommentedAction {
+                action: ActionEnum::Check,
+                comment: None,
+            };
+
+            let check_value = play_action(
+                game_source,
+                game_runner,
+                check_action,
+                proc_or_push_args,
+                prob_played_action[0] * hero_prob
+            )?;
+
+            action_utils[0] = Some(check_value);
+
+            if game_runner.game_state.current_round == Round::Preflop {
+                //3 bet in bb; 1 is always the big blind player index
+                assert_eq!(proc_or_push_args.hero_index, 1);
+                let bet_action = hero_helpers.build_raise_to(
+                    &game_runner.game_state,
+                    game_runner.game_state.current_to_call * 3,
+                    "1".to_string(),
+                );
+                
+                let bet_value = play_action(
+                    game_source,
+                    game_runner,
+                    bet_action,
+                    proc_or_push_args,
+                    prob_played_action[1] * hero_prob
+                )?;
+
+                action_utils[1] = Some(bet_value);
+
+            } else {
+                //bet half pot
+
+                let bet_action = hero_helpers
+                    .build_bet(game_runner.game_state.pot() / 2, "1".to_string());
+                
+                let bet_value = play_action(
+                    game_source,
+                    game_runner,
+                    bet_action,
+                    proc_or_push_args,
+                    prob_played_action[1] * hero_prob
+                )?;
+
+                action_utils[1] = Some(bet_value);
+
+                if hero_helpers.max_can_raise > game_runner.game_state.pot() / 2 {
+                    //bet pot
+                    let bet_action = hero_helpers
+                        .build_bet(game_runner.game_state.pot(), "2".to_string());
+
+                
+                    
+                    let bet_value = play_action(
+                        game_source,
+                        game_runner,
+                        bet_action,
+                        proc_or_push_args,
+                        prob_played_action[2] * hero_prob
+                    )?;
+
+                    action_utils[2] = Some(bet_value);
+                }
+            }
+        }
+
+    }
+    //Here we have gone down each path and have the value of each action (in terms of bb won/lost)
+
+    let util = action_utils.iter().enumerate()
+    .map(|(i, au)| au.unwrap_or(0.0) * info_state_value.strategy[i]).sum::<InfoStateActionValueType>();
+
+    
+    let mut normalizing_sum = 0.0;
+    for action_id in 0..info_state_actions::NUM_ACTIONS {
+        if action_utils[action_id].is_none() {
+            continue;
+        }
+        let regret = action_utils[action_id].unwrap() - util;
+
+        //Normally this is multplied by the probability of chance / other players, but
+        //as we're using deterministic bots, it's * 1.0 
+        info_state_value.regret_sum[action_id] += regret;
+
+        if info_state_value.regret_sum[action_id] < 0.0 {
+            info_state_value.regret_sum[action_id] = 0.0;
+        }
+
+        normalizing_sum += info_state_value.regret_sum[action_id];
+    }
+
+    //Update strategy
+    for action_id in 0..info_state_actions::NUM_ACTIONS {
+        if normalizing_sum > 0.0 {
+            info_state_value.strategy[action_id] = info_state_value.regret_sum[action_id] / normalizing_sum;
+        } else {
+            //Lots of negative regret can make this happen
+            info_state_value.strategy[action_id] = 1.0 / info_state_actions::NUM_ACTIONS as InfoStateActionValueType;
+        }
+
+        info_state_value.strategy_sum[action_id] +=
+            hero_prob * info_state_value.strategy[action_id];
+    }
+
+    //Update fields for average strategy calculation
+    info_state_value.reach_pr_sum += hero_prob;
+
+    //Save the updated info state
+    proc_or_push_args
+        .info_state_db_enum
+        .borrow_mut()
+        .put(&info_state_key, &info_state_value)
+        .unwrap();
+
+    Ok(util)
+}
+
+fn play_action(
+    game_source: &mut GameRunnerSourceEnum,
+    game_runner: &mut GameRunner,
+    action: CommentedAction,        
+    proc_or_push_args: &mut ProcessOrPushArgs,
+    hero_prob: InfoStateActionValueType,
+) -> Result<InfoStateActionValueType, PokerError> {
+
+    
+
+    let cloned_game_state = game_runner.game_state.clone();
+    let cloned_board = game_runner.board_cards.clone();
+    let cloned_used_cards = game_runner.used_cards;
+    
+    assert_eq!(game_runner
+        .get_current_player_state()
+        .player_index(), proc_or_push_args.hero_index);
+
+    let r = game_runner.process_next_action(&action).unwrap();
+
+    //No need to save history unless we're debugging
+    if proc_or_push_args.debug_json_writer.is_none() {
+        game_runner.game_state.actions.pop().unwrap();
+    }
+
+    let value = if r {
+        let player_state = &game_runner.game_state.player_states[proc_or_push_args.hero_index];
+        (player_state.stack as f64 / game_runner.game_state.bb as f64
+                - player_state.initial_stack as f64 / game_runner.game_state.bb as f64)
+                as InfoStateActionValueType
+    } else {        
+        run_full_game_tree_recursive_helper(
+            game_source,
+            game_runner,
+            proc_or_push_args,
+            hero_prob
+        )?
+    };
+
+    //Put state back
+    game_runner.game_state = cloned_game_state;
+    game_runner.board_cards = cloned_board;
+    game_runner.used_cards = cloned_used_cards;
+
+    Ok(value)
+}
+
+
 #[cfg(test)]
 mod tests {
     use std::{cell::RefCell, rc::Rc};
@@ -520,8 +839,8 @@ mod tests {
         board_hc_eval_cache_redb::{EvalCacheWithHcReDb, ProduceMonteCarloEval},
         game::{
             agents::info_state::{
-                info_state_actions::{self, InfoStateActionValueType, BET_HALF},
-                InfoStateDbEnum, InfoStateDbTrait, InfoStateKey, InfoStateMemory,
+                info_state_actions::{self, InfoStateActionValueType},
+                InfoStateDbEnum, InfoStateKey, InfoStateMemory,
             },
             core::{
                 ActionEnum, ChipType, CommentedAction, GameState, InitialPlayerState, PlayerState,
@@ -661,7 +980,7 @@ mod tests {
         let mut game_source = TestGameSource::new(1);
         let board: Board = "3s 4c 5h 7d 8h".parse().unwrap();
 
-        let mut info_state_db_enum = InfoStateDbEnum::from(InfoStateMemory::new());
+        let info_state_db_enum = InfoStateDbEnum::from(InfoStateMemory::new());
 
         let info_state_flop: InfoStateKey = InfoStateKey::new(
             3,
@@ -781,7 +1100,7 @@ mod tests {
 
         let rcref_is_db = Rc::new(RefCell::new(info_state_db_enum));
 
-        let best_values = run_full_game_tree(
+        let _best_values = run_full_game_tree(
             &mut game_source,
             board.as_slice_card().to_vec(),
             1,

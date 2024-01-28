@@ -53,7 +53,7 @@ impl Agent for InfoStateAgent {
             };
         }
 
-        let action_values = &info_state_value.as_ref().unwrap().strategy;
+        let action_values = &info_state_value.as_ref().unwrap().strategy_sum;
 
         assert_eq!(action_values.len(), info_state_actions::NUM_ACTIONS);
 

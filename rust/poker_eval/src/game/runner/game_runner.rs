@@ -21,14 +21,14 @@ use log::trace;
 // Enforces the poker rules
 #[derive(Clone)]
 pub struct GameRunner {
-    used_cards: CardUsedType,
+    pub used_cards: CardUsedType,
 
     pub game_state: GameState,
 
     hash_func: Mphf<u32>,
 
-    //will pop off the back
-    board_cards: Vec<Card>,
+    //will pop off the back, these are the cards  to come
+    pub board_cards: Vec<Card>,
     player_cards: Vec<HoleCards>,
 }
 
@@ -543,8 +543,9 @@ impl GameRunner {
 
                 if amt_to_call == 0 {
                     return Err(format!(
-                        "Player {} named {} tried to call but there is no current to call",
-                        player_index, &self.game_state.player_states[player_index].player_name
+                        "Player {} named {} tried to call in round {} but there is no current to call",
+                        player_index, &self.game_state.player_states[player_index].player_name,
+                        self.game_state.current_round
                     )
                     .into());
                 }

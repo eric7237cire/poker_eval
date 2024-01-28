@@ -49,7 +49,9 @@ impl PassiveCallingStation {
         player_state: &PlayerState,
         game_state: &GameState,
     ) -> CommentedAction {
-        if game_state.current_to_call == 0 {
+
+
+        if game_state.current_to_call == player_state.cur_round_putting_in_pot {
             return CommentedAction {
                 action: ActionEnum::Check,
                 comment: Some("Checking".to_string()),
